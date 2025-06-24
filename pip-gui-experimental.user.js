@@ -1,15 +1,15 @@
 // ==UserScript==
-// @name        Spotify Lyrics+ Stable: With Playback Control (no offset)
+// @name         Spotify Lyrics+ Experimental: Playback Control, Offset
 // @namespace    http://tampermonkey.net/
-// @version      1.51
+// @version      1.52
 // @description  Add Lyrics+ button inside Spotify Web Player with LRCLIB and Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
 // @grant        none
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-playback-control.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-playback-control.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-experimental.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-experimental.user.js
 // ==/UserScript==
 
 (function () {
@@ -197,6 +197,22 @@ const Providers = {
 
   let highlightTimer = null;
 
+  const DEFAULT_OFFSETS = {
+  LRCLIB: 300,
+  Genius: 0,
+};
+
+const ProviderOffsets = {
+  get(name) {
+    const stored = localStorage.getItem(`lyricsPlusOffset_${name}`);
+    if (stored !== null) return parseInt(stored, 10);
+    return DEFAULT_OFFSETS[name] ?? 0;
+  },
+  set(name, val) {
+    localStorage.setItem(`lyricsPlusOffset_${name}`, val);
+  }
+};
+
   function removePopup() {
     if (highlightTimer) {
       clearInterval(highlightTimer);
@@ -316,6 +332,81 @@ const Providers = {
     tabs.appendChild(btn);
   });
   headerWrapper.appendChild(tabs);
+
+   // Offset control container
+  // Offset control container
+  const offsetContainer = document.createElement("div");
+  offsetContainer.style.padding = "12px";
+  offsetContainer.style.borderTop = "1px solid #333";
+  offsetContainer.style.borderBottom = "1px solid #333";
+  offsetContainer.style.backgroundColor = "#1a1a1a";
+  offsetContainer.style.color = "white";
+  offsetContainer.style.userSelect = "none";
+  offsetContainer.style.display = "flex";
+  offsetContainer.style.alignItems = "center";
+
+  const offsetLabel = document.createElement("label");
+  offsetLabel.textContent = "Sync offset (ms): ";
+  offsetLabel.style.marginRight = "8px";
+
+  const offsetInput = document.createElement("input");
+  offsetInput.type = "number";
+  offsetInput.min = "-2000";
+  offsetInput.max = "2000";
+  offsetInput.step = "50";
+  offsetInput.style.width = "80px";
+
+  offsetInput.style.color = "#fff";  // test
+  offsetInput.style.backgroundColor = "#222";
+  offsetInput.style.border = "1px solid #444";
+  offsetInput.style.fontWeight = "bold";
+  offsetInput.style.fontSize = "14px";
+  offsetInput.style.textAlign = "center";
+  offsetInput.style.borderRadius = "4px";
+  offsetInput.style.padding = "4px";
+
+  offsetInput.value = ProviderOffsets.get(Providers.current);
+
+  offsetInput.onchange = () => {
+    const val = parseInt(offsetInput.value, 10);
+    if (!isNaN(val)) {
+      ProviderOffsets.set(Providers.current, val);
+      // Optionally refresh lyrics immediately with new offset:
+      updateLyricsContent(popup, getCurrentTrackInfo());
+    }
+  };
+
+  offsetContainer.appendChild(offsetLabel);
+  offsetContainer.appendChild(offsetInput);
+
+  headerWrapper.appendChild(offsetContainer);
+
+ if (!document.getElementById("lyrics-plus-styles")) {
+  const style = document.createElement("style");
+  style.id = "lyrics-plus-styles";
+  style.textContent = `
+    /* Dark-themed number input */
+    input[type="number"] {
+      color: white;
+      background-color: #222;
+      border: 1px solid #555;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: inner-spin-button;
+      background-color: #444;
+      filter: brightness(0.6);
+      border-left: 1px solid #555;
+      border-right: 1px solid #555;
+    }
+    input[type="number"]::-webkit-outer-spin-button {
+      margin-left: 0;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
   // Lyrics container
   const lyricsContainer = document.createElement("div");

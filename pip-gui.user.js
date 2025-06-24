@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name        Spotify Lyrics+ No Playback Control
+// @name        Spotify Lyrics+ Stable: No Playback Control (no offset)
 // @namespace    http://tampermonkey.net/
-// @version      1.3456
+// @version      1.49
 // @description  Add Lyrics+ button inside Spotify Web Player with LRCLIB and Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
@@ -49,90 +49,118 @@ function timeoutPromise(ms) {
   }
 
   function parseLyrics(raw) {
-    const synced = [];
-    const unsynced = [];
+  const synced = [];
+  const unsynced = [];
 
-    const lines = raw.split(/\r?\n/);
-    const timeTagRegex = /\[(\d+):(\d+)(?:\.(\d+))?\]/g;
+  const lines = raw.split(/\r?\n/);
+  const timeTagRegex = /\[(\d+):(\d+)(?:\.(\d+))?\]/g;
 
-    for (const line of lines) {
-      let matched = false;
-      let lastIndex = 0;
-      let text = line;
+  for (const line of lines) {
+    let matched = false;
+    let lastIndex = 0;
+    let text = line;
 
-      const times = [];
-      let m;
-      while ((m = timeTagRegex.exec(line)) !== null) {
-        matched = true;
-        const min = parseInt(m[1], 10);
-        const sec = parseInt(m[2], 10);
-        const ms = m[3] ? parseInt(m[3].padEnd(3, '0'), 10) : 0;
-        const time = min * 60000 + sec * 1000 + ms;
-        times.push(time);
-        lastIndex = m.index + m[0].length;
-      }
-      if (matched) {
-        text = line.substring(lastIndex).trim();
-        times.forEach(time => {
-          synced.push({ time, text });
-        });
-      } else {
-        if (line.trim().length > 0) {
-          unsynced.push({ text: line.trim() });
-        }
+    const times = [];
+    let m;
+    while ((m = timeTagRegex.exec(line)) !== null) {
+      matched = true;
+      const min = parseInt(m[1], 10);
+      const sec = parseInt(m[2], 10);
+      const ms = m[3] ? parseInt(m[3].padEnd(3, '0'), 10) : 0;
+      const time = min * 60000 + sec * 1000 + ms;
+      times.push(time);
+      lastIndex = m.index + m[0].length;
+    }
+    if (matched) {
+      text = line.substring(lastIndex).trim();
+      times.forEach(time => {
+        synced.push({ time, text });
+      });
+    } else {
+      if (line.trim().length > 0) {
+        unsynced.push({ text: line.trim() });
       }
     }
-
-    synced.sort((a, b) => a.time - b.time);
-
-    return { synced: synced.length > 0 ? synced : null, unsynced: unsynced.length > 0 ? unsynced : null };
   }
 
-  const ProviderLRCLIB = {
-    async findLyrics(info) {
-      try {
-        const baseURL = "https://lrclib.net/api/get";
-        const durr = info.duration / 1000;
+  synced.sort((a, b) => a.time - b.time);
 
-       const params = {
-        track_name: info.title,
-        artist_name: info.artist,
-        album_name: info.album,
-        duration: durr,
-        };
-        const finalURL = `${baseURL}?${Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&")}`;
+  return {
+    synced: synced.length > 0 ? synced : null,
+    unsynced: unsynced.length > 0 ? unsynced : null
+  };
+}
 
-        const res = await fetch(finalURL, {
+const normalize = str =>
+  str?.normalize("NFKD")
+    .replace(/[’‘“”–]/g, "'")
+    .replace(/[^\w\s\-\.&!']/g, '')
+    .trim();
+
+const ProviderLRCLIB = {
+  async findLyrics(info) {
+    const baseURL = "https://lrclib.net/api/get";
+    const artist = normalize(info.artist);
+    const title = normalize(info.title);
+    const album = normalize(info.album);
+
+    const fullParams = {
+      track_name: title,
+      artist_name: artist,
+      album_name: album,
+      duration: Math.floor(info.duration / 1000)
+    };
+
+    const simpleParams = {
+      track_name: title,
+      artist_name: artist
+    };
+
+    const buildURL = (params) =>
+      `${baseURL}?${Object.entries(params)
+        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+        .join("&")}`;
+
+    try {
+      let res = await fetch(buildURL(fullParams), {
+        headers: { "x-user-agent": "lyrics-plus-userscript" },
+      });
+
+      // Retry with simpler request if no match
+      if (!res.ok) {
+        res = await fetch(buildURL(simpleParams), {
           headers: { "x-user-agent": "lyrics-plus-userscript" },
         });
-        if (!res.ok) return { error: "Track not found on LRCLIB" };
-        return await res.json();
-      } catch (e) {
-        return { error: e.message };
       }
-    },
-    getUnsynced(body) {
-      if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
-      if (!body?.plainLyrics) return null;
-      return parseLyrics(body.plainLyrics).unsynced;
-    },
-    getSynced(body) {
-      if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
-      if (!body?.syncedLyrics) return null;
-      return parseLyrics(body.syncedLyrics).synced;
-    }
-  };
 
-  const ProviderGenius = {
+      if (!res.ok) return { error: "Track not found on LRCLIB" };
+      return await res.json();
+    } catch (e) {
+      return { error: e.message };
+    }
+  },
+
+  getUnsynced(body) {
+    if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+    if (!body?.plainLyrics) return null;
+    return parseLyrics(body.plainLyrics).unsynced;
+  },
+
+  getSynced(body) {
+    if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+    if (!body?.syncedLyrics) return null;
+    return parseLyrics(body.syncedLyrics).synced;
+  }
+};
+
+const ProviderGenius = {
   async findLyrics(info) {
     try {
-      const artist = info.artist;
-      const title = info.title;
+      const artist = normalize(info.artist);
+      const title = normalize(info.title);
       const searchUrl = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
 
       const fetchPromise = fetch(searchUrl);
-
-      // Timeout after 2 seconds
       const res = await Promise.race([fetchPromise, timeoutPromise(1000)]);
 
       if (!res.ok) return { error: "Track not found on Genius" };
@@ -145,23 +173,28 @@ function timeoutPromise(ms) {
       return { error: e.message };
     }
   },
+
   getUnsynced(body) {
     if (!body?.plainLyrics) return null;
     return parseLyrics(body.plainLyrics).unsynced;
   },
-  getSynced() { return null; }
+
+  getSynced() {
+    return null;
+  }
 };
 
-  const Providers = {
-    list: ["LRCLIB", "Genius"],
-    map: {
-      "LRCLIB": ProviderLRCLIB,
-      "Genius": ProviderGenius,
-    },
-    current: "LRCLIB",
-    getCurrent() { return this.map[this.current]; },
-    setCurrent(name) { if (this.map[name]) this.current = name; }
-  };
+const Providers = {
+  list: ["LRCLIB", "Genius"],
+  map: {
+    "LRCLIB": ProviderLRCLIB,
+    "Genius": ProviderGenius,
+  },
+  current: "LRCLIB",
+  getCurrent() { return this.map[this.current]; },
+  setCurrent(name) { if (this.map[name]) this.current = name; }
+};
+
 
   let highlightTimer = null;
 
@@ -258,7 +291,7 @@ function timeoutPromise(ms) {
   header.appendChild(closeBtn);
   headerWrapper.appendChild(header);
 
-  // Tabs container
+   // Tabs container
   const tabs = document.createElement("div");
   tabs.style.display = "flex";
   tabs.style.marginTop = "12px";
