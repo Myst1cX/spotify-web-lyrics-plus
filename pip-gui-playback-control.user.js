@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name        Spotify Lyrics+ Stable: With Playback Control (no offset)
+// @name         Spotify Lyrics+ Stable: With Playback Control (no offset)
 // @namespace    http://tampermonkey.net/
-// @version      1.51
+// @version      1.55
 // @description  Add Lyrics+ button inside Spotify Web Player with LRCLIB and Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
@@ -14,11 +14,6 @@
 
 (function () {
   'use strict';
-
-// Timeout helper
-function timeoutPromise(ms) {
-  return new Promise((_, reject) => setTimeout(() => reject(new Error("Track not found on Genius")), ms));
-}
 
   function getCurrentTrackInfo() {
     const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
@@ -48,7 +43,205 @@ function timeoutPromise(ms) {
     return 0;
   }
 
-  function parseLyrics(raw) {
+const normalize = str =>
+  str?.normalize("NFKD")
+    .replace(/[’‘“”–]/g, "'")
+    .replace(/[^\w\s\-\.&!']/g, '')
+    .trim();
+
+ function parseLRCLibFormat(data) {
+  if (!data.syncedLyrics) return null;
+
+  const lines = data.syncedLyrics.split('\n');
+  const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2})\](.*)/;
+  const parsedLines = [];
+  const matches = [];
+
+  // Extract timestamps and text.
+  for (const line of lines) {
+    const match = timeRegex.exec(line);
+    if (match) {
+      const minutes = parseInt(match[1], 10);
+      const seconds = parseInt(match[2], 10);
+      const centiseconds = parseInt(match[3], 10);
+      const startTime = minutes * 60 + seconds + centiseconds / 100;
+      const text = match[4].trim();
+      matches.push({ startTime, text });
+    }
+  }
+
+  // Calculate end times.
+  for (let i = 0; i < matches.length; i++) {
+    const { startTime, text } = matches[i];
+    const endTime = (i < matches.length - 1)
+        ? matches[i + 1].startTime
+        : startTime + 4; // Default duration
+    if (text !== "") {
+      parsedLines.push({
+        text,
+        startTime,
+        endTime,
+        element: { singer: 'v1' }
+      });
+    }
+  }
+
+  return {
+    type: 'Line',
+    data: parsedLines,
+    metadata: {
+      title: data.trackName,
+      artist: data.artistName,
+      album: data.albumName,
+      duration: data.duration,
+      instrumental: data.instrumental,
+      source: "LRCLIB"
+    }
+  };
+}
+
+  async function fetchLRCLibLyrics(songInfo) {
+  const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
+      ? `&album_name=${encodeURIComponent(songInfo.album)}`
+      : '';
+  const url = `https://lrclib.net/api/get?artist_name=${encodeURIComponent(songInfo.artist)}&track_name=${encodeURIComponent(songInfo.title)}${albumParam}`;
+
+  const response = await fetch(url);
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  return parseLRCLibFormat(data);
+}
+
+const ProviderLRCLIB = {
+  async findLyrics(info) {
+    try {
+      const artist = normalize(info.artist);
+      const title = normalize(info.title);
+      const album = normalize(info.album);
+      const songInfo = { artist, title, album };
+
+      const result = await fetchLRCLibLyrics(songInfo);
+      if (!result) return { error: "Track not found on LRCLIB" };
+      return result;
+    } catch (e) {
+      return { error: e.message };
+    }
+  },
+
+  getUnsynced(body) {
+    if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+    if (!body?.data || !Array.isArray(body.data)) return null;
+    // Extract plain text lines without timing
+    return body.data.map(line => ({ text: line.text }));
+  },
+
+  getSynced(body) {
+    if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+    if (!body?.data || !Array.isArray(body.data)) return null;
+    return body.data.map(line => ({
+      time: Math.round(line.startTime * 1000),
+      text: line.text
+    }));
+  }
+};
+
+  function parseKPoeFormat(data) {
+  if (!Array.isArray(data.lyrics)) return null;
+
+  const metadata = {
+    ...data.metadata,
+    source: `${data.metadata.source} (KPoe)`
+  };
+
+  return {
+    type: data.type, // "Word" or "Line"
+    data: data.lyrics.map(item => {
+      const startTime = Number(item.time) || 0;
+      const duration = Number(item.duration) || 0;
+      const endTime = startTime + duration;
+
+      const parsedSyllabus = (item.syllabus || []).map(syllable => ({
+        text: syllable.text || '',
+        time: Number(syllable.time) || 0,
+        duration: Number(syllable.duration) || 0,
+        isLineEnding: Boolean(syllable.isLineEnding),
+        isBackground: Boolean(syllable.isBackground),
+        element: syllable.element || {}
+      }));
+
+      return {
+        text: item.text || '',
+        startTime: startTime / 1000,
+        duration: duration / 1000,
+        endTime: endTime / 1000,
+        syllabus: parsedSyllabus,
+        element: item.element || {}
+      };
+    }),
+    metadata
+  };
+}
+
+  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false) {
+  const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
+    ? `&album=${encodeURIComponent(songInfo.album)}`
+    : '';
+  const sourceParam = sourceOrder ? `&source=${encodeURIComponent(sourceOrder)}` : '';
+  let forceReloadParam = forceReload ? `&forceReload=true` : '';
+  let fetchOptions = {};
+
+  if (forceReload) {
+    fetchOptions = { cache: 'no-store' };
+    forceReloadParam = `&forceReload=true`;
+  }
+
+  const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
+
+  const response = await fetch(url, fetchOptions);
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  return parseKPoeFormat(data);
+}
+
+    const ProviderKPoe = {
+  async findLyrics(info) {
+    try {
+      const artist = normalize(info.artist);
+      const title = normalize(info.title);
+      const album = normalize(info.album);
+      const duration = Math.floor(info.duration / 1000);
+
+      const songInfo = { artist, title, album, duration };
+      const result = await fetchKPoeLyrics(songInfo);
+
+      if (!result) return { error: "Track not found on KPoe" };
+      return result;
+    } catch (e) {
+      return { error: e.message };
+    }
+  },
+
+  getUnsynced(body) {
+  if (!body?.data || !Array.isArray(body.data)) return null;
+
+  return body.data.map(line => ({
+    text: line.text
+  }));
+},
+
+  getSynced(body) {
+  if (!body?.data || !Array.isArray(body.data)) return null;
+
+  return body.data.map(line => ({
+    time: Math.round(line.startTime * 1000),
+    text: line.text
+  }));
+},
+};
+
+function parseGeniusLyrics(raw) {
   const synced = [];
   const unsynced = [];
 
@@ -90,68 +283,10 @@ function timeoutPromise(ms) {
     unsynced: unsynced.length > 0 ? unsynced : null
   };
 }
-
-const normalize = str =>
-  str?.normalize("NFKD")
-    .replace(/[’‘“”–]/g, "'")
-    .replace(/[^\w\s\-\.&!']/g, '')
-    .trim();
-
-const ProviderLRCLIB = {
-  async findLyrics(info) {
-    const baseURL = "https://lrclib.net/api/get";
-    const artist = normalize(info.artist);
-    const title = normalize(info.title);
-    const album = normalize(info.album);
-
-    const fullParams = {
-      track_name: title,
-      artist_name: artist,
-      album_name: album,
-      duration: Math.floor(info.duration / 1000)
-    };
-
-    const simpleParams = {
-      track_name: title,
-      artist_name: artist
-    };
-
-    const buildURL = (params) =>
-      `${baseURL}?${Object.entries(params)
-        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-        .join("&")}`;
-
-    try {
-      let res = await fetch(buildURL(fullParams), {
-        headers: { "x-user-agent": "lyrics-plus-userscript" },
-      });
-
-      // Retry with simpler request if no match
-      if (!res.ok) {
-        res = await fetch(buildURL(simpleParams), {
-          headers: { "x-user-agent": "lyrics-plus-userscript" },
-        });
-      }
-
-      if (!res.ok) return { error: "Track not found on LRCLIB" };
-      return await res.json();
-    } catch (e) {
-      return { error: e.message };
-    }
-  },
-
-  getUnsynced(body) {
-    if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
-    if (!body?.plainLyrics) return null;
-    return parseLyrics(body.plainLyrics).unsynced;
-  },
-
-  getSynced(body) {
-    if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
-    if (!body?.syncedLyrics) return null;
-    return parseLyrics(body.syncedLyrics).synced;
-  }
-};
+  // Timeout helper
+function timeoutPromise(ms) {
+  return new Promise((_, reject) => setTimeout(() => reject(new Error("Track not found on Genius")), ms));
+}
 
 const ProviderGenius = {
   async findLyrics(info) {
@@ -176,7 +311,7 @@ const ProviderGenius = {
 
   getUnsynced(body) {
     if (!body?.plainLyrics) return null;
-    return parseLyrics(body.plainLyrics).unsynced;
+    return parseGeniusLyrics(body.plainLyrics).unsynced;
   },
 
   getSynced() {
@@ -185,17 +320,17 @@ const ProviderGenius = {
 };
 
 const Providers = {
-  list: ["LRCLIB", "Genius"],
+  list: ["LRCLIB", "KPoe", "Genius"],
   map: {
     "LRCLIB": ProviderLRCLIB,
+    "KPoe": ProviderKPoe,
     "Genius": ProviderGenius,
   },
   current: "LRCLIB",
   getCurrent() { return this.map[this.current]; },
   setCurrent(name) { if (this.map[name]) this.current = name; }
 };
-
-  let highlightTimer = null;
+ let highlightTimer = null;
 
   function removePopup() {
     if (highlightTimer) {
@@ -410,17 +545,15 @@ function sendSpotifyCommand(command) {
   else console.warn("Spotify button not found for:", command);
 }
 
-// Create the custom play/pause button
 function createPlayPauseButton() {
   const playIcon = playSVG.cloneNode(true);
   const pauseIcon = pauseSVG.cloneNode(true);
 
-  // Initial styles
   playIcon.style.opacity = "1";
   pauseIcon.style.opacity = "0";
   playIcon.style.pointerEvents = "auto";
   pauseIcon.style.pointerEvents = "none";
-  playIcon.style.transition = "none";  // make sure no CSS transition
+  playIcon.style.transition = "none";
   pauseIcon.style.transition = "none";
 
   const btn = createControlBtn("", "Play/Pause", () => {
@@ -437,10 +570,9 @@ function createPlayPauseButton() {
       pauseIcon.style.opacity = "0";
       pauseIcon.style.pointerEvents = "none";
     }
-    sendSpotifyCommand("playpause");
 
-    // Optional forced repaint:
-    btn.offsetHeight;
+    sendSpotifyCommand("playpause");
+    btn.offsetHeight; // force repaint
   });
 
   btn.appendChild(playIcon);
@@ -453,6 +585,7 @@ function createPlayPauseButton() {
 
   function updateIcon() {
     const playing = isPlaying();
+
     if (playing && playIcon.style.opacity !== "0") {
       playIcon.style.opacity = "0";
       playIcon.style.pointerEvents = "none";
@@ -466,6 +599,7 @@ function createPlayPauseButton() {
       pauseIcon.style.opacity = "0";
       pauseIcon.style.pointerEvents = "none";
     }
+
     requestAnimationFrame(updateIcon);
   }
 
@@ -474,12 +608,10 @@ function createPlayPauseButton() {
   return btn;
 }
 
+
   // Create buttons (no shuffle, no repeat)
   const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
-  const btnPlayPause = createControlBtn(playSVG.cloneNode(true), "Play/Pause", () => {
-    sendSpotifyCommand("playpause");
-    updatePlayPauseIcon();
-  });
+  const btnPlayPause = createPlayPauseButton();
   const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
 
   // Create reset button manually to customize style (not green like others)
@@ -665,7 +797,7 @@ btnReset.onclick = () => {
     currentTrackId = newInfo.id;
     updateLyricsContent(popup, newInfo);
     updatePlayPauseIcon();
-  }, 3000);
+  }, 200);
 }
 
   function updateTabs(tabsContainer) {
@@ -712,7 +844,7 @@ btnReset.onclick = () => {
     if (activeP) {
       activeP.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, 500);
+  }, 50);
 }
 
 async function updateLyricsContent(popup, info) {
