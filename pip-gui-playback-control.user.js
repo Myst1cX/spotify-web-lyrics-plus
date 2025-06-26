@@ -507,10 +507,6 @@ offsetInput.addEventListener("change", () => {
 offsetWrapper.appendChild(offsetLabel);
 offsetWrapper.appendChild(offsetInput);
 
-// Insert just before the lyricsContainer
-popup.appendChild(offsetWrapper);
-popup.appendChild(lyricsContainer);
-
     // Playback Controls Bar
   const controlsBar = document.createElement("div");
   Object.assign(controlsBar.style, {
@@ -697,6 +693,7 @@ btnReset.onclick = () => {
   controlsBar.appendChild(btnNext);
 
   popup.appendChild(headerWrapper);
+  popup.appendChild(offsetWrapper);
   popup.appendChild(lyricsContainer);
   popup.appendChild(controlsBar);
 
