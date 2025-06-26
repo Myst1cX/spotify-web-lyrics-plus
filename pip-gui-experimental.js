@@ -12,8 +12,11 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
 // ==/UserScript==
 
+// Equal to Stable release (26.5.25)
+// Instance for debugging and testing
 // TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
 // TO DO: Play/Pause icon first click to resume/pause takes a bit to initialize but all subsequent are quick
+// Change font inside GUI, next to playbacktogglebtn (to the left; respecting same size and distance as is between playbacktogglebtn and offsettogglebtn
 
 (function () {
   'use strict';
