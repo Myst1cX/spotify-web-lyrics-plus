@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         skook. need to fix Play/Pause tooltip upon hover
+// @name         skook. collapse playback container and offsetwrapper mrbit
 // @namespace    http://tampermonkey.net/
 // @version      1.51
 // @description  Add Lyrics+ button inside Spotify Web Player with LRCLIB and Genius lyrics support.
@@ -425,7 +425,33 @@ let currentLyricsContainer = null;
     removePopup();
   };
 
+  // Toggle offset section
+const offsetToggleBtn = document.createElement("button");
+offsetToggleBtn.textContent = "⚙️";
+offsetToggleBtn.title = "Show/hide timing offset";
+offsetToggleBtn.style.marginRight = "4px";
+offsetToggleBtn.style.cursor = "pointer";
+offsetToggleBtn.style.background = "none";
+offsetToggleBtn.style.border = "none";
+offsetToggleBtn.style.color = "white";
+offsetToggleBtn.style.fontSize = "18px";
+offsetToggleBtn.style.lineHeight = "1";
+
+// Toggle controls bar
+const controlsToggleBtn = document.createElement("button");
+controlsToggleBtn.textContent = "⏯";
+controlsToggleBtn.title = "Show/hide playback controls";
+controlsToggleBtn.style.marginRight = "4px";
+controlsToggleBtn.style.cursor = "pointer";
+controlsToggleBtn.style.background = "none";
+controlsToggleBtn.style.border = "none";
+controlsToggleBtn.style.color = "white";
+controlsToggleBtn.style.fontSize = "16px";
+controlsToggleBtn.style.lineHeight = "1";
+
   header.appendChild(title);
+  header.appendChild(offsetToggleBtn);
+  header.appendChild(controlsToggleBtn);
   header.appendChild(closeBtn);
   headerWrapper.appendChild(header);
 
@@ -522,6 +548,46 @@ offsetWrapper.appendChild(offsetInput);
     backgroundColor: "#121212",
     userSelect: "none",
 });
+
+offsetWrapper.id = "lyrics-plus-offset-wrapper";
+controlsBar.id = "lyrics-plus-controls-bar";
+offsetWrapper.style.transition = "max-height 0.3s, opacity 0.3s";
+offsetWrapper.style.overflow = "hidden";
+controlsBar.style.transition = "max-height 0.3s, opacity 0.3s";
+controlsBar.style.overflow = "hidden";
+let offsetVisible = true;
+let controlsVisible = true;
+
+offsetToggleBtn.onclick = () => {
+  offsetVisible = !offsetVisible;
+  if (offsetVisible) {
+    offsetWrapper.style.maxHeight = "100px";
+    offsetWrapper.style.opacity = "1";
+    offsetWrapper.style.pointerEvents = "";
+  } else {
+    offsetWrapper.style.maxHeight = "0";
+    offsetWrapper.style.opacity = "0";
+    offsetWrapper.style.pointerEvents = "none";
+  }
+};
+
+controlsToggleBtn.onclick = () => {
+  controlsVisible = !controlsVisible;
+  if (controlsVisible) {
+    controlsBar.style.maxHeight = "80px";
+    controlsBar.style.opacity = "1";
+    controlsBar.style.pointerEvents = "";
+  } else {
+    controlsBar.style.maxHeight = "0";
+    controlsBar.style.opacity = "0";
+    controlsBar.style.pointerEvents = "none";
+  }
+};
+
+// Set initial state (open)
+offsetWrapper.style.maxHeight = "100px";
+controlsBar.style.maxHeight = "80px";
+
 
   // Helper to create control buttons with SVG for play/pause
 function createControlBtn(content, title, onClick) {
