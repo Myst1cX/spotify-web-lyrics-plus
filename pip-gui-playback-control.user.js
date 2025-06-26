@@ -469,20 +469,23 @@ let currentLyricsContainer = null;
     userSelect: "text",
   });
 
-  // Offset Setting UI
+// Offset Setting UI
 const offsetWrapper = document.createElement("div");
 offsetWrapper.style.display = "flex";
 offsetWrapper.style.alignItems = "center";
+offsetWrapper.style.justifyContent = "space-between"; // Spread label and input
 offsetWrapper.style.padding = "8px 12px";
-offsetWrapper.style.background = "#181818";
+offsetWrapper.style.background = "#121212";
 offsetWrapper.style.borderBottom = "1px solid #333";
 offsetWrapper.style.fontSize = "15px";
+offsetWrapper.style.width = "100%";
 
-const offsetLabel = document.createElement("label");
-offsetLabel.textContent = "Anticipation (ms):";
-offsetLabel.style.marginRight = "8px";
+// Left-aligned label with explanation
+const offsetLabel = document.createElement("div");
+offsetLabel.innerHTML = `Adjust lyrics timing (ms):<br><span style="font-size: 11px; color: #aaa;">lower = appear later, higher = appear earlier</span>`;
 offsetLabel.style.color = "#fff";
 
+// Right-aligned input
 const offsetInput = document.createElement("input");
 offsetInput.type = "number";
 offsetInput.min = "-2000";
@@ -490,12 +493,12 @@ offsetInput.max = "2000";
 offsetInput.step = "10";
 offsetInput.value = getAnticipationOffset();
 offsetInput.style.width = "70px";
-offsetInput.style.marginRight = "8px";
 offsetInput.style.background = "#222";
 offsetInput.style.color = "#fff";
 offsetInput.style.border = "1px solid #444";
 offsetInput.style.borderRadius = "6px";
 offsetInput.style.padding = "2px 6px";
+offsetInput.style.marginLeft = "16px"; // space from label
 
 offsetInput.addEventListener("change", () => {
   setAnticipationOffset(offsetInput.value);
