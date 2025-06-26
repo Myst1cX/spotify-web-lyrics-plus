@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         skook
+// @name         skook. need to fix Play/Pause tooltip upon hover
 // @namespace    http://tampermonkey.net/
 // @version      1.51
 // @description  Add Lyrics+ button inside Spotify Web Player with LRCLIB and Genius lyrics support.
@@ -469,22 +469,20 @@ let currentLyricsContainer = null;
     userSelect: "text",
   });
 
+  // Offset Setting UI
 const offsetWrapper = document.createElement("div");
 offsetWrapper.style.display = "flex";
 offsetWrapper.style.alignItems = "center";
-offsetWrapper.style.justifyContent = "space-between"; // Spread label and input
 offsetWrapper.style.padding = "8px 12px";
-offsetWrapper.style.background = "#121212";
+offsetWrapper.style.background = "#181818";
 offsetWrapper.style.borderBottom = "1px solid #333";
 offsetWrapper.style.fontSize = "15px";
-offsetWrapper.style.width = "100%";
 
-// Left-aligned label with explanation
-const offsetLabel = document.createElement("div");
-offsetLabel.innerHTML = `Adjust lyrics timing (ms):<br><span style="font-size: 11px; color: #aaa;">lower = appear later, higher = appear earlier</span>`;
+const offsetLabel = document.createElement("label");
+offsetLabel.textContent = "Anticipation (ms):";
+offsetLabel.style.marginRight = "8px";
 offsetLabel.style.color = "#fff";
 
-// Right-aligned input
 const offsetInput = document.createElement("input");
 offsetInput.type = "number";
 offsetInput.min = "-2000";
@@ -492,12 +490,12 @@ offsetInput.max = "2000";
 offsetInput.step = "10";
 offsetInput.value = getAnticipationOffset();
 offsetInput.style.width = "70px";
+offsetInput.style.marginRight = "8px";
 offsetInput.style.background = "#222";
 offsetInput.style.color = "#fff";
 offsetInput.style.border = "1px solid #444";
 offsetInput.style.borderRadius = "6px";
 offsetInput.style.padding = "2px 6px";
-offsetInput.style.marginLeft = "16px"; // space from label
 
 offsetInput.addEventListener("change", () => {
   setAnticipationOffset(offsetInput.value);
@@ -594,18 +592,7 @@ function createPlayPauseButton() {
 
   playIcon.style.opacity = "1";
   pauseIcon.style.opacity = "0";
-  playIcon.style.pointerEvents = "none";
-  pauseIcon.style.pointerEvents = "none";
-  playIcon.style.transition = "none";
-  pauseIcon.style.transition = "none";
-
-function createPlayPauseButton() {
-  const playIcon = playSVG.cloneNode(true);
-  const pauseIcon = pauseSVG.cloneNode(true);
-
-  playIcon.style.opacity = "1";
-  pauseIcon.style.opacity = "0";
-  playIcon.style.pointerEvents = "none";
+  playIcon.style.pointerEvents = "auto";
   pauseIcon.style.pointerEvents = "none";
   playIcon.style.transition = "none";
   pauseIcon.style.transition = "none";
@@ -613,14 +600,16 @@ function createPlayPauseButton() {
   const btn = createControlBtn("", "Play/Pause", () => {
     if (playIcon.style.opacity === "1") {
       playIcon.style.opacity = "0";
-      // playIcon.style.pointerEvents = "none"; // REMOVE
+      playIcon.style.pointerEvents = "none";
+
       pauseIcon.style.opacity = "1";
-      // pauseIcon.style.pointerEvents = "auto"; // REMOVE
+      pauseIcon.style.pointerEvents = "auto";
     } else {
       playIcon.style.opacity = "1";
-      // playIcon.style.pointerEvents = "auto"; // REMOVE
+      playIcon.style.pointerEvents = "auto";
+
       pauseIcon.style.opacity = "0";
-      // pauseIcon.style.pointerEvents = "none"; // REMOVE
+      pauseIcon.style.pointerEvents = "none";
     }
 
     sendSpotifyCommand("playpause");
@@ -640,14 +629,16 @@ function createPlayPauseButton() {
 
     if (playing && playIcon.style.opacity !== "0") {
       playIcon.style.opacity = "0";
-      // playIcon.style.pointerEvents = "none"; // REMOVE
+      playIcon.style.pointerEvents = "none";
+
       pauseIcon.style.opacity = "1";
-      // pauseIcon.style.pointerEvents = "auto"; // REMOVE
+      pauseIcon.style.pointerEvents = "auto";
     } else if (!playing && playIcon.style.opacity !== "1") {
       playIcon.style.opacity = "1";
-      // playIcon.style.pointerEvents = "auto"; // REMOVE
+      playIcon.style.pointerEvents = "auto";
+
       pauseIcon.style.opacity = "0";
-      // pauseIcon.style.pointerEvents = "none"; // REMOVE
+      pauseIcon.style.pointerEvents = "none";
     }
 
     requestAnimationFrame(updateIcon);
@@ -858,7 +849,7 @@ btnReset.onclick = () => {
   }
 
   function getAnticipationOffset() {
-  return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 1000); // default 1000ms
+  return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 300); // default 300ms
 }
 function setAnticipationOffset(val) {
   localStorage.setItem("lyricsPlusAnticipationOffset", val);
