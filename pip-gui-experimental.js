@@ -1,16 +1,18 @@
 // ==UserScript==
-// @name         skook. collapse playback container and offsetwrapper mrbit
+// @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
 // @version      1.51
-// @description  Add Lyrics+ button inside Spotify Web Player with LRCLIB and Genius lyrics support.
+// @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
 // @grant        none
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-playback-control.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-playback-control.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
 // ==/UserScript==
+
+// TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
 
 (function () {
   'use strict';
@@ -411,15 +413,21 @@ let currentLyricsContainer = null;
   closeBtn.textContent = "×";
   closeBtn.title = "Close Lyrics+";
   Object.assign(closeBtn.style, {
-    cursor: "pointer",
-    background: "none",
-    border: "none",
-    color: "white",
-    fontSize: "22px",
-    fontWeight: "bold",
-    lineHeight: "1",
-    userSelect: "auto",
-   });
+  cursor: "pointer",
+  background: "none",
+  border: "none",
+  color: "white",
+  fontSize: "18px",
+  fontWeight: "bold",
+  lineHeight: "1",
+  userSelect: "auto",
+  height: "32px",
+  display: "flex",
+  padding: "0 2px",
+  alignItems: "center",
+  justifyContent: "center",
+  boxSizing: "border-box",
+});
   closeBtn.onclick = () => {
     savePopupState(popup);
     removePopup();
@@ -429,7 +437,7 @@ let currentLyricsContainer = null;
 const offsetToggleBtn = document.createElement("button");
 offsetToggleBtn.textContent = "⚙️";
 offsetToggleBtn.title = "Show/hide timing offset";
-offsetToggleBtn.style.marginRight = "4px";
+offsetToggleBtn.style.marginRight = "6px";
 offsetToggleBtn.style.cursor = "pointer";
 offsetToggleBtn.style.background = "none";
 offsetToggleBtn.style.border = "none";
@@ -442,7 +450,7 @@ offsetToggleBtn.style.lineHeight = "1";
 const playbackToggleBtn = document.createElement("button");
 playbackToggleBtn.textContent = "🎛️"; // control knobs
 playbackToggleBtn.title = "Show/hide playback controls";
-playbackToggleBtn.style.marginRight = "4px";
+playbackToggleBtn.style.marginRight = "6px";
 playbackToggleBtn.style.cursor = "pointer";
 playbackToggleBtn.style.background = "none";
 playbackToggleBtn.style.border = "none";
