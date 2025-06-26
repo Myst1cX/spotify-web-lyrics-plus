@@ -345,6 +345,9 @@ const Providers = {
     if (existing) existing.remove();
   }
 
+let currentSyncedLyrics = null;
+let currentLyricsContainer = null;
+
   function createPopup() {
   removePopup();
 
@@ -496,6 +499,9 @@ offsetInput.style.padding = "2px 6px";
 
 offsetInput.addEventListener("change", () => {
   setAnticipationOffset(offsetInput.value);
+  if (currentSyncedLyrics && currentLyricsContainer) {
+    highlightSyncedLyrics(currentSyncedLyrics, currentLyricsContainer);
+  }
 });
 
 offsetWrapper.appendChild(offsetLabel);
@@ -872,9 +878,9 @@ function setAnticipationOffset(val) {
 
     let activeIndex = -1;
     for (let i = 0; i < lyrics.length; i++) {
-      if (curPosMs >= lyrics[i].time) activeIndex = i;
-      else break;
-    }
+  if (anticipatedMs >= lyrics[i].time) activeIndex = i;
+  else break;
+}
     if (activeIndex === -1) {
       pElements.forEach(p => {
         p.style.color = "white";
@@ -900,6 +906,10 @@ async function updateLyricsContent(popup, info) {
   const lyricsContainer = popup.querySelector("#lyrics-plus-content");
   if (!lyricsContainer) return;
 
+  // Store globally for anticipation refresh
+  currentLyricsContainer = lyricsContainer;
+  currentSyncedLyrics = null;
+
   // Clear early to avoid stale error text
   lyricsContainer.textContent = "Loading lyrics...";
 
@@ -923,6 +933,8 @@ async function updateLyricsContent(popup, info) {
       p.style.margin = "0 0 6px 0";
       lyricsContainer.appendChild(p);
     });
+    // Store synced globally for anticipation refresh
+    currentSyncedLyrics = synced;
     highlightSyncedLyrics(synced, lyricsContainer);
   } else if (unsynced && unsynced.length > 0) {
     unsynced.forEach(({ text }) => {
@@ -931,11 +943,12 @@ async function updateLyricsContent(popup, info) {
       p.style.margin = "0 0 6px 0";
       lyricsContainer.appendChild(p);
     });
+    currentSyncedLyrics = null; // No synced lines
   } else {
     lyricsContainer.textContent = "Lyrics not found.";
+    currentSyncedLyrics = null;
   }
 }
-
   function addButton(maxRetries = 10) {
   let attempts = 0;
 
