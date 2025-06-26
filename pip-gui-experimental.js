@@ -15,9 +15,11 @@
 // Equal to Stable release (26.5.25)
 // Instance for debugging and testing
 // TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
-// TO DO: Play/Pause icon first click to resume/pause takes a bit to initialize but all subsequent are quick
+// TO DO: Play/Pause icon first click to resume/pause takes a bit to initialize (delay) but all subsequent toggles are quick
 // Change lyric font size inside GUI, next to playbacktogglebtn (to the left; respecting same size and distance as is between playbacktogglebtn and offsettogglebtn
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
+// Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
+// Optimize drag and resize to work on mobile browser. (if possible) 
 
 (function () {
   'use strict';
