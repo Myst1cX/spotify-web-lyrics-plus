@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Stable
+// @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
 // @version      1.51
 // @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
@@ -838,9 +838,6 @@ height: "45vh",
       }
     });
   })(popup, resizer);
-
-    const btnPlayPause = createPlayPauseButton();
-updatePlayPauseIcon(); // Call once after creation
 
 function updatePlayPauseIcon() {
   const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
