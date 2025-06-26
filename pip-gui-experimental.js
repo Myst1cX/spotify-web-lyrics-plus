@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Experimental
+// @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
 // @version      1.51
 // @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
@@ -8,12 +8,11 @@
 // @grant        none
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
 // ==/UserScript==
 
 // TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
-// For debugging with Copilot
 
 (function () {
   'use strict';
@@ -674,30 +673,12 @@ function sendSpotifyCommand(command) {
 }
 
 function createPlayPauseButton() {
-  const playIcon = playSVG.cloneNode(true);
-  const pauseIcon = pauseSVG.cloneNode(true);
-
-  playIcon.style.opacity = "1";
-  pauseIcon.style.opacity = "0";
-  playIcon.style.pointerEvents = "auto";
-  pauseIcon.style.pointerEvents = "none";
-  playIcon.style.transition = "none";
-  pauseIcon.style.transition = "none";
-
-  const btn = createControlBtn("", "Play/Pause", () => {
-    if (playIcon.style.opacity === "1") {
-      playIcon.style.opacity = "0";
-      playIcon.style.pointerEvents = "none";
-
-      pauseIcon.style.opacity = "1";
-      pauseIcon.style.pointerEvents = "auto";
-    } else {
-      playIcon.style.opacity = "1";
-      playIcon.style.pointerEvents = "auto";
-
-      pauseIcon.style.opacity = "0";
-      pauseIcon.style.pointerEvents = "none";
-    }
+  // Empty button; SVG will be injected by updatePlayPauseIcon
+  return createControlBtn("", "Play/Pause", () => {
+    sendSpotifyCommand("playpause");
+    updatePlayPauseIcon();
+  });
+}
 
     sendSpotifyCommand("playpause");
     btn.offsetHeight; // force repaint
@@ -763,15 +744,15 @@ Object.assign(btnReset.style, {
   padding: "0",
 });
 btnReset.onclick = () => {
-  Object.assign(popup.style, {
-    position: "fixed",
-    bottom: "90px",
-    right: "20px",
-    left: "auto",
-    top: "auto",
-    width: "400px",
-    height: "60vh",
-  });
+Object.assign(popup.style, {
+position: "fixed",
+bottom: "0px",
+right: "0px",
+left: "auto",
+top: "auto",
+width: "320px",
+height: "45vh",
+});
   savePopupState(popup);
 };
   controlsBar.appendChild(btnReset);
@@ -896,15 +877,17 @@ btnReset.onclick = () => {
     });
   })(popup, resizer);
 
-  // Play/pause button icon update based on Spotify's play or pause button visibility
-  function updatePlayPauseIcon() {
-    const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
-    btnPlayPause.innerHTML = ""; // clear
-    if (pauseVisible) {
-      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-    } else {
-      btnPlayPause.appendChild(playSVG.cloneNode(true));
-   }
+    const btnPlayPause = createPlayPauseButton();
+updatePlayPauseIcon(); // Call once after creation
+
+function updatePlayPauseIcon() {
+  const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
+  btnPlayPause.innerHTML = "";
+  if (pauseVisible) {
+    btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+  } else {
+    btnPlayPause.appendChild(playSVG.cloneNode(true));
+  }
 }
 
   // Your existing code to load track info and update lyrics
