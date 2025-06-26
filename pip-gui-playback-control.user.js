@@ -452,6 +452,20 @@ const Providers = {
   });
   headerWrapper.appendChild(tabs);
 
+  // Lyrics container
+  const lyricsContainer = document.createElement("div");
+  lyricsContainer.id = "lyrics-plus-content";
+  Object.assign(lyricsContainer.style, {
+    flex: "1",
+    overflowY: "auto",
+    padding: "12px",
+    whiteSpace: "pre-wrap",
+    fontSize: "22px", //if big screen:38px; if small pip window: 22px
+    lineHeight: "1.5",
+    backgroundColor: "#121212", //remove this line for transparent background
+    userSelect: "text",
+  });
+
   // Offset Setting UI
 const offsetWrapper = document.createElement("div");
 offsetWrapper.style.display = "flex";
@@ -490,20 +504,6 @@ offsetWrapper.appendChild(offsetInput);
 // Insert just before the lyricsContainer
 popup.appendChild(offsetWrapper);
 popup.appendChild(lyricsContainer);
-
-  // Lyrics container
-  const lyricsContainer = document.createElement("div");
-  lyricsContainer.id = "lyrics-plus-content";
-  Object.assign(lyricsContainer.style, {
-    flex: "1",
-    overflowY: "auto",
-    padding: "12px",
-    whiteSpace: "pre-wrap",
-    fontSize: "22px", //if big screen:38px; if small pip window: 22px
-    lineHeight: "1.5",
-    backgroundColor: "#121212", //remove this line for transparent background
-    userSelect: "text",
-  });
 
     // Playback Controls Bar
   const controlsBar = document.createElement("div");
