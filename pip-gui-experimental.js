@@ -13,6 +13,7 @@
 // ==/UserScript==
 
 // TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
+// For debugging with Copilot
 
 (function () {
   'use strict';
