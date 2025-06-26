@@ -21,6 +21,7 @@
 // Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
 // Optimize drag and resize to work on mobile browser. (if possible) 
 // Add "expand button to the right of next track button in playback controls container. Its icon should fit nicely with the rest of playback control buttons. Its function is that on click, the popup gets expanded to fit the screen (if im on mobile and zoomed in, its supposed to fit that screen, and not the whole Spotify site.Only part of Spotify site to remain visible - Spotify's bottom container - the one that has the volume toggle, playback control buttons, seekbar etc). While expanded if click the button again, it returns to the previous position state or if that's too hard to implement, to the restore default position.
+// Playback control buttons not responsible on mobile bc desktop mode and smol interface i suppose so I can't click, also difficult to drag and resize as mentioned, on mobile. on pc fine
 
 (function () {
   'use strict';
