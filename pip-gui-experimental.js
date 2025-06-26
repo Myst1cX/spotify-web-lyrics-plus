@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Experimental
+// @name         Spotify Lyrics+ Exp
 // @namespace    http://tampermonkey.net/
 // @version      1.51
 // @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
@@ -8,8 +8,8 @@
 // @grant        none
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
 // ==/UserScript==
 
 // TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
@@ -460,30 +460,12 @@ playbackToggleBtn.style.lineHeight = "1";
 
 header.appendChild(title);
 
-// Create font size input
-const fontSizeInput = document.createElement("input");
-fontSizeInput.type = "number";
-fontSizeInput.min = "12";
-fontSizeInput.max = "48";
-fontSizeInput.step = "1";
-fontSizeInput.value = localStorage.getItem("lyricsPlusFontSize") || "22";
-fontSizeInput.title = "Change lyrics font size";
-fontSizeInput.style.width = "44px";
-fontSizeInput.style.marginRight = "6px";
-fontSizeInput.style.background = "#222";
-fontSizeInput.style.color = "#fff";
-fontSizeInput.style.border = "1px solid #444";
-fontSizeInput.style.borderRadius = "6px";
-fontSizeInput.style.fontSize = "14px";
-fontSizeInput.style.textAlign = "center";
-
 // Create a right-side button group container
 const buttonGroup = document.createElement("div");
 buttonGroup.style.display = "flex";
 buttonGroup.style.alignItems = "center";
 buttonGroup.appendChild(playbackToggleBtn);  // 🎛️
 buttonGroup.appendChild(offsetToggleBtn);    // ⚙️
-buttonGroup.appendChild(fontSizeInput);      // Font button
 buttonGroup.appendChild(closeBtn);           // ×
 
 header.appendChild(buttonGroup);
@@ -530,10 +512,6 @@ headerWrapper.appendChild(header);
     backgroundColor: "#121212", //remove this line for transparent background
     userSelect: "text",
   });
-
-  fontSizeInput.addEventListener("input", () => {
-  localStorage.setItem("lyricsPlusFontSize", fontSizeInput.value);
-});
 
 // Offset Setting UI
 const offsetWrapper = document.createElement("div");
@@ -718,18 +696,34 @@ function sendSpotifyCommand(command) {
   else console.warn("Spotify button not found for:", command);
 }
 
-function createPlayPauseButton() {
-  // Empty button; SVG will be injected by updatePlayPauseIcon
-  return createControlBtn("", "Play/Pause", () => {
-    sendSpotifyCommand("playpause");
-    updatePlayPauseIcon();
-  });
+    // Create buttons (no shuffle, no repeat)
+const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
+const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
+
+// This function should NOT be nested!
+function updatePlayPauseIcon(btnPlayPause) {
+  const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
+  btnPlayPause.innerHTML = "";
+  if (pauseVisible) {
+    btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+  } else {
+    btnPlayPause.appendChild(playSVG.cloneNode(true));
+  }
 }
 
-  // Create buttons (no shuffle, no repeat)
-  const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
-  const btnPlayPause = createPlayPauseButton();
-  const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
+function createPlayPauseButton() {
+  // Create the button
+  const btnPlayPause = createControlBtn("", "Play/Pause", () => {
+    sendSpotifyCommand("playpause");
+    updatePlayPauseIcon(btnPlayPause);
+  });
+  // Set initial icon
+  updatePlayPauseIcon(btnPlayPause);
+  return btnPlayPause;
+}
+
+// Then create the button:
+const btnPlayPause = createPlayPauseButton();
 
   // Create reset button manually to customize style (not green like others)
 const btnReset = document.createElement("button");
@@ -770,10 +764,7 @@ height: "45vh",
 
   popup.appendChild(headerWrapper);
   popup.appendChild(offsetWrapper);
-
   popup.appendChild(lyricsContainer);
-  lyricsContainer.style.fontSize = fontSizeInput.value + "px";
-
   popup.appendChild(controlsBar);
 
   document.body.appendChild(popup);
@@ -887,16 +878,6 @@ height: "45vh",
       }
     });
   })(popup, resizer);
-
-function updatePlayPauseIcon() {
-  const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
-  btnPlayPause.innerHTML = "";
-  if (pauseVisible) {
-    btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-  } else {
-    btnPlayPause.appendChild(playSVG.cloneNode(true));
-  }
-}
 
   function updateTabs(tabsContainer) {
     [...tabsContainer.children].forEach(btn => {
