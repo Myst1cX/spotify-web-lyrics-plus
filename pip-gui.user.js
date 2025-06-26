@@ -899,7 +899,7 @@ function updatePlayPauseIcon() {
   }
 
   function getAnticipationOffset() {
-  return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 300); // default 300ms
+  return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 1000); // default 1000ms
 }
 function setAnticipationOffset(val) {
   localStorage.setItem("lyricsPlusAnticipationOffset", val);
