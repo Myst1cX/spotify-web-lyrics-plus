@@ -434,26 +434,35 @@ offsetToggleBtn.style.cursor = "pointer";
 offsetToggleBtn.style.background = "none";
 offsetToggleBtn.style.border = "none";
 offsetToggleBtn.style.color = "white";
-offsetToggleBtn.style.fontSize = "18px";
+offsetToggleBtn.style.fontSize = "16px";
 offsetToggleBtn.style.lineHeight = "1";
 
 // Toggle controls bar
-const controlsToggleBtn = document.createElement("button");
-controlsToggleBtn.textContent = "⏯";
-controlsToggleBtn.title = "Show/hide playback controls";
-controlsToggleBtn.style.marginRight = "4px";
-controlsToggleBtn.style.cursor = "pointer";
-controlsToggleBtn.style.background = "none";
-controlsToggleBtn.style.border = "none";
-controlsToggleBtn.style.color = "white";
-controlsToggleBtn.style.fontSize = "16px";
-controlsToggleBtn.style.lineHeight = "1";
+// Toggle playback controls bar - use a better icon
+const playbackToggleBtn = document.createElement("button");
+playbackToggleBtn.textContent = "🎛️"; // control knobs
+playbackToggleBtn.title = "Show/hide playback controls";
+playbackToggleBtn.style.marginRight = "4px";
+playbackToggleBtn.style.cursor = "pointer";
+playbackToggleBtn.style.background = "none";
+playbackToggleBtn.style.border = "none";
+playbackToggleBtn.style.color = "white";
+playbackToggleBtn.style.fontSize = "14px";
+playbackToggleBtn.style.lineHeight = "1";
 
-  header.appendChild(title);
-  header.appendChild(offsetToggleBtn);
-  header.appendChild(controlsToggleBtn);
-  header.appendChild(closeBtn);
-  headerWrapper.appendChild(header);
+header.appendChild(title);
+
+// Create a right-side button group container
+const buttonGroup = document.createElement("div");
+buttonGroup.style.display = "flex";
+buttonGroup.style.alignItems = "center";
+buttonGroup.appendChild(playbackToggleBtn);  // 🎛️
+buttonGroup.appendChild(offsetToggleBtn);    // ⚙️
+buttonGroup.appendChild(closeBtn);           // ×
+
+header.appendChild(buttonGroup);
+
+headerWrapper.appendChild(header);
 
    // Tabs container
   const tabs = document.createElement("div");
@@ -571,7 +580,7 @@ offsetToggleBtn.onclick = () => {
   }
 };
 
-controlsToggleBtn.onclick = () => {
+playbackToggleBtn.onclick = () => {
   controlsVisible = !controlsVisible;
   if (controlsVisible) {
     controlsBar.style.maxHeight = "80px";
