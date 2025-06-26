@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Stable: With Playback Control (no offset)
+// @name         skook
 // @namespace    http://tampermonkey.net/
-// @version      1.55
+// @version      1.51
 // @description  Add Lyrics+ button inside Spotify Web Player with LRCLIB and Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
@@ -452,6 +452,45 @@ const Providers = {
   });
   headerWrapper.appendChild(tabs);
 
+  // Offset Setting UI
+const offsetWrapper = document.createElement("div");
+offsetWrapper.style.display = "flex";
+offsetWrapper.style.alignItems = "center";
+offsetWrapper.style.padding = "8px 12px";
+offsetWrapper.style.background = "#181818";
+offsetWrapper.style.borderBottom = "1px solid #333";
+offsetWrapper.style.fontSize = "15px";
+
+const offsetLabel = document.createElement("label");
+offsetLabel.textContent = "Anticipation (ms):";
+offsetLabel.style.marginRight = "8px";
+offsetLabel.style.color = "#fff";
+
+const offsetInput = document.createElement("input");
+offsetInput.type = "number";
+offsetInput.min = "-2000";
+offsetInput.max = "2000";
+offsetInput.step = "10";
+offsetInput.value = getAnticipationOffset();
+offsetInput.style.width = "70px";
+offsetInput.style.marginRight = "8px";
+offsetInput.style.background = "#222";
+offsetInput.style.color = "#fff";
+offsetInput.style.border = "1px solid #444";
+offsetInput.style.borderRadius = "6px";
+offsetInput.style.padding = "2px 6px";
+
+offsetInput.addEventListener("change", () => {
+  setAnticipationOffset(offsetInput.value);
+});
+
+offsetWrapper.appendChild(offsetLabel);
+offsetWrapper.appendChild(offsetInput);
+
+// Insert just before the lyricsContainer
+popup.appendChild(offsetWrapper);
+popup.appendChild(lyricsContainer);
+
   // Lyrics container
   const lyricsContainer = document.createElement("div");
   lyricsContainer.id = "lyrics-plus-content";
@@ -806,6 +845,13 @@ btnReset.onclick = () => {
     });
   }
 
+  function getAnticipationOffset() {
+  return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 300); // default 300ms
+}
+function setAnticipationOffset(val) {
+  localStorage.setItem("lyricsPlusAnticipationOffset", val);
+}
+
   function highlightSyncedLyrics(lyrics, container) {
   if (!lyrics || lyrics.length === 0) return;
 
@@ -821,6 +867,8 @@ btnReset.onclick = () => {
     const posEl = document.querySelector('[data-testid="playback-position"]');
     if (!posEl) return;
     const curPosMs = timeStringToMs(posEl.textContent);
+    // Use offset for anticipation
+    const anticipatedMs = curPosMs + getAnticipationOffset();
 
     let activeIndex = -1;
     for (let i = 0; i < lyrics.length; i++) {
