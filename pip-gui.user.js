@@ -12,8 +12,6 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
 // ==/UserScript==
 
-// TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
-
 (function () {
   'use strict';
 
@@ -572,11 +570,17 @@ offsetWrapper.style.transition = "max-height 0.3s, opacity 0.3s";
 offsetWrapper.style.overflow = "hidden";
 controlsBar.style.transition = "max-height 0.3s, opacity 0.3s";
 controlsBar.style.overflow = "hidden";
-let offsetVisible = true;
-let controlsVisible = true;
+let offsetVisible = localStorage.getItem('lyricsPlusOffsetVisible');
+if (offsetVisible === null) offsetVisible = true;
+else offsetVisible = JSON.parse(offsetVisible);
+
+let controlsVisible = localStorage.getItem('lyricsPlusControlsVisible');
+if (controlsVisible === null) controlsVisible = true;
+else controlsVisible = JSON.parse(controlsVisible);
 
 offsetToggleBtn.onclick = () => {
   offsetVisible = !offsetVisible;
+  localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
   if (offsetVisible) {
     offsetWrapper.style.maxHeight = "100px";
     offsetWrapper.style.opacity = "1";
@@ -590,6 +594,7 @@ offsetToggleBtn.onclick = () => {
 
 playbackToggleBtn.onclick = () => {
   controlsVisible = !controlsVisible;
+  localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
   if (controlsVisible) {
     controlsBar.style.maxHeight = "80px";
     controlsBar.style.opacity = "1";
@@ -602,9 +607,25 @@ playbackToggleBtn.onclick = () => {
 };
 
 // Set initial state (open)
-offsetWrapper.style.maxHeight = "100px";
-controlsBar.style.maxHeight = "80px";
+if (offsetVisible) {
+  offsetWrapper.style.maxHeight = "100px";
+  offsetWrapper.style.opacity = "1";
+  offsetWrapper.style.pointerEvents = "";
+} else {
+  offsetWrapper.style.maxHeight = "0";
+  offsetWrapper.style.opacity = "0";
+  offsetWrapper.style.pointerEvents = "none";
+}
 
+if (controlsVisible) {
+  controlsBar.style.maxHeight = "80px";
+  controlsBar.style.opacity = "1";
+  controlsBar.style.pointerEvents = "";
+} else {
+  controlsBar.style.maxHeight = "0";
+  controlsBar.style.opacity = "0";
+  controlsBar.style.pointerEvents = "none";
+}
 
   // Helper to create control buttons with SVG for play/pause
 function createControlBtn(content, title, onClick) {
@@ -673,68 +694,12 @@ function sendSpotifyCommand(command) {
 }
 
 function createPlayPauseButton() {
-  const playIcon = playSVG.cloneNode(true);
-  const pauseIcon = pauseSVG.cloneNode(true);
-
-  playIcon.style.opacity = "1";
-  pauseIcon.style.opacity = "0";
-  playIcon.style.pointerEvents = "auto";
-  pauseIcon.style.pointerEvents = "none";
-  playIcon.style.transition = "none";
-  pauseIcon.style.transition = "none";
-
-  const btn = createControlBtn("", "Play/Pause", () => {
-    if (playIcon.style.opacity === "1") {
-      playIcon.style.opacity = "0";
-      playIcon.style.pointerEvents = "none";
-
-      pauseIcon.style.opacity = "1";
-      pauseIcon.style.pointerEvents = "auto";
-    } else {
-      playIcon.style.opacity = "1";
-      playIcon.style.pointerEvents = "auto";
-
-      pauseIcon.style.opacity = "0";
-      pauseIcon.style.pointerEvents = "none";
-    }
-
+  // Empty button; SVG will be injected by updatePlayPauseIcon
+  return createControlBtn("", "Play/Pause", () => {
     sendSpotifyCommand("playpause");
-    btn.offsetHeight; // force repaint
+    updatePlayPauseIcon();
   });
-
-  btn.appendChild(playIcon);
-  btn.appendChild(pauseIcon);
-
-  function isPlaying() {
-    const pauseBtn = document.querySelector('[aria-label="Pause"]');
-    return !!pauseBtn && pauseBtn.offsetParent !== null;
-  }
-
-  function updateIcon() {
-    const playing = isPlaying();
-
-    if (playing && playIcon.style.opacity !== "0") {
-      playIcon.style.opacity = "0";
-      playIcon.style.pointerEvents = "none";
-
-      pauseIcon.style.opacity = "1";
-      pauseIcon.style.pointerEvents = "auto";
-    } else if (!playing && playIcon.style.opacity !== "1") {
-      playIcon.style.opacity = "1";
-      playIcon.style.pointerEvents = "auto";
-
-      pauseIcon.style.opacity = "0";
-      pauseIcon.style.pointerEvents = "none";
-    }
-
-    requestAnimationFrame(updateIcon);
-  }
-
-  requestAnimationFrame(updateIcon);
-
-  return btn;
 }
-
 
   // Create buttons (no shuffle, no repeat)
   const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
@@ -762,15 +727,15 @@ Object.assign(btnReset.style, {
   padding: "0",
 });
 btnReset.onclick = () => {
-  Object.assign(popup.style, {
-    position: "fixed",
-    bottom: "90px",
-    right: "20px",
-    left: "auto",
-    top: "auto",
-    width: "400px",
-    height: "60vh",
-  });
+Object.assign(popup.style, {
+position: "fixed",
+bottom: "0px",
+right: "0px",
+left: "auto",
+top: "auto",
+width: "320px",
+height: "45vh",
+});
   savePopupState(popup);
 };
   controlsBar.appendChild(btnReset);
@@ -895,15 +860,14 @@ btnReset.onclick = () => {
     });
   })(popup, resizer);
 
-  // Play/pause button icon update based on Spotify's play or pause button visibility
-  function updatePlayPauseIcon() {
-    const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
-    btnPlayPause.innerHTML = ""; // clear
-    if (pauseVisible) {
-      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-    } else {
-      btnPlayPause.appendChild(playSVG.cloneNode(true));
-   }
+function updatePlayPauseIcon() {
+  const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
+  btnPlayPause.innerHTML = "";
+  if (pauseVisible) {
+    btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+  } else {
+    btnPlayPause.appendChild(playSVG.cloneNode(true));
+  }
 }
 
   // Your existing code to load track info and update lyrics
