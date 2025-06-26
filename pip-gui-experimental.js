@@ -12,18 +12,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
 // ==/UserScript==
 
-// Equal to Stable release (26.5.25)
-// Instance for debugging and testing
 // TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
-// TO DO: Play/Pause icon first click to resume/pause takes a bit to initialize (delay) but all subsequent toggles are quick
-// Upon song change (be it from seek buttons or from manual track selection or from automatic queue) i have to manually click on provider or on Lyrics+ button to refresh lyrcis. They should always automatically for next song.. By the way I'd prefer it if clicking Lyrics+ button while the popup container is already open, would just close the gui, instead of what its currently doing which is reloading lyrics. For lyrics reload clicking on provider button already does it.
-// Also: Currently LRCLIB set as default provider when i open Lyrics. But I actually want it to be set to automatically open provider which has the lyrics. The order should be as follows. Prefer synced over unsynced. Prefer LRCLib > Kpoe > Genius order. Example song: SA Gi Tu by MIRA, rares (currently have lrclib as default provider so it loads lrc and says track not found, bc lrclib doesnt have this song's lyrics so i then had to manually switch to kpoe which had the lyrics. basically make it autodetect with the prefer order i told u, which provider to open first. 
-// Change lyric font size inside GUI, next to playbacktogglebtn (to the left; respecting same size and distance as is between playbacktogglebtn and offsettogglebtn
-// Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
-// Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
-// Optimize drag and resize to work on mobile browser. (if possible) 
-// Add "expand button to the right of next track button in playback controls container. Its icon should fit nicely with the rest of playback control buttons. Its function is that on click, the popup gets expanded to fit the screen (if im on mobile and zoomed in, its supposed to fit that screen (the Spotify website). If possible to implement I'd also suggest that Spotify's bottom container - the one that has the volume toggle, playback control buttons, seekbar etc - remains visible while the rest of the website gets overtaken by the popup gui). While expanded if click the button again, it returns to the previous position state or if that's too hard to implement, to the restore default position.
-// Playback control buttons not responsible on mobile bc desktop mode and smol interface i suppose so I can't click, also difficult to drag and resize as mentioned, on mobile. on pc fine
 
 (function () {
   'use strict';
@@ -508,6 +497,7 @@ headerWrapper.appendChild(header);
     tabs.appendChild(btn);
   });
   headerWrapper.appendChild(tabs);
+  popup._lyricsTabs = tabs;
 
   // Lyrics container
   const lyricsContainer = document.createElement("div");
@@ -883,28 +873,6 @@ function updatePlayPauseIcon() {
   }
 }
 
-  // Your existing code to load track info and update lyrics
-  let info = getCurrentTrackInfo();
-  if (!info) return;
-
-  currentTrackId = info.id;
-  updateLyricsContent(popup, info);
-  updatePlayPauseIcon();
-
-  pollingInterval = setInterval(() => {
-    const newInfo = getCurrentTrackInfo();
-    if (!newInfo || newInfo.id === currentTrackId) {
-      // Still update play/pause icon regardless
-      updatePlayPauseIcon();
-      return;
-    }
-
-    currentTrackId = newInfo.id;
-    updateLyricsContent(popup, newInfo);
-    updatePlayPauseIcon();
-  }, 200);
-}
-
   function updateTabs(tabsContainer) {
     [...tabsContainer.children].forEach(btn => {
       btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
@@ -912,7 +880,7 @@ function updatePlayPauseIcon() {
   }
 
   function getAnticipationOffset() {
-  return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 1000); // default 1000ms
+  return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 300); // default 300ms
 }
 function setAnticipationOffset(val) {
   localStorage.setItem("lyricsPlusAnticipationOffset", val);
@@ -1009,6 +977,57 @@ async function updateLyricsContent(popup, info) {
     currentSyncedLyrics = null;
   }
 }
+
+async function autodetectProviderAndLoad(popup, info) {
+  const providerOrder = ["LRCLIB", "KPoe", "Genius"];
+  for (const name of providerOrder) {
+    const provider = Providers.map[name];
+    const result = await provider.findLyrics(info);
+    let hasLyrics = false;
+    if (!result.error) {
+      if (name === "Genius") {
+        hasLyrics = provider.getUnsynced(result)?.length > 0;
+      } else {
+        hasLyrics = (provider.getSynced(result)?.length > 0) || (provider.getUnsynced(result)?.length > 0);
+      }
+    }
+    if (hasLyrics) {
+      Providers.setCurrent(name);
+      // Update tabs if they exist
+      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+      await updateLyricsContent(popup, info);
+      return;
+    }
+  }
+  // If none found, fallback to LRCLIB
+  Providers.setCurrent("LRCLIB");
+  if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+  await updateLyricsContent(popup, info);
+}
+
+    // Load track info and update lyrics
+  let info = getCurrentTrackInfo();
+  if (!info) return;
+
+  currentTrackId = info.id;
+  autodetectProviderAndLoad(popup, info);
+  updatePlayPauseIcon();
+
+  pollingInterval = setInterval(() => {
+    const newInfo = getCurrentTrackInfo();
+    if (!newInfo || newInfo.id === currentTrackId) {
+      // Still update play/pause icon regardless
+      updatePlayPauseIcon();
+      return;
+    }
+
+    currentTrackId = newInfo.id;
+    autodetectProviderAndLoad(popup, newInfo);
+    updatePlayPauseIcon();
+  }, 200);
+}
+
+
   function addButton(maxRetries = 10) {
   let attempts = 0;
 
@@ -1092,4 +1111,3 @@ if (appRoot) {
 
 init();
 })();
-
