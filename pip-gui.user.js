@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name        Spotify Lyrics+ Stable: No Playback Control (no offset)
+// @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      1.49
-// @description  Add Lyrics+ button inside Spotify Web Player with LRCLIB and Genius lyrics support.
+// @version      1.51
+// @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -12,13 +12,10 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
 // ==/UserScript==
 
+// TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
+
 (function () {
   'use strict';
-
-// Timeout helper
-function timeoutPromise(ms) {
-  return new Promise((_, reject) => setTimeout(() => reject(new Error("Track not found on Genius")), ms));
-}
 
   function getCurrentTrackInfo() {
     const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
@@ -48,7 +45,205 @@ function timeoutPromise(ms) {
     return 0;
   }
 
-  function parseLyrics(raw) {
+const normalize = str =>
+  str?.normalize("NFKD")
+    .replace(/[’‘“”–]/g, "'")
+    .replace(/[^\w\s\-\.&!']/g, '')
+    .trim();
+
+ function parseLRCLibFormat(data) {
+  if (!data.syncedLyrics) return null;
+
+  const lines = data.syncedLyrics.split('\n');
+  const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2})\](.*)/;
+  const parsedLines = [];
+  const matches = [];
+
+  // Extract timestamps and text.
+  for (const line of lines) {
+    const match = timeRegex.exec(line);
+    if (match) {
+      const minutes = parseInt(match[1], 10);
+      const seconds = parseInt(match[2], 10);
+      const centiseconds = parseInt(match[3], 10);
+      const startTime = minutes * 60 + seconds + centiseconds / 100;
+      const text = match[4].trim();
+      matches.push({ startTime, text });
+    }
+  }
+
+  // Calculate end times.
+  for (let i = 0; i < matches.length; i++) {
+    const { startTime, text } = matches[i];
+    const endTime = (i < matches.length - 1)
+        ? matches[i + 1].startTime
+        : startTime + 4; // Default duration
+    if (text !== "") {
+      parsedLines.push({
+        text,
+        startTime,
+        endTime,
+        element: { singer: 'v1' }
+      });
+    }
+  }
+
+  return {
+    type: 'Line',
+    data: parsedLines,
+    metadata: {
+      title: data.trackName,
+      artist: data.artistName,
+      album: data.albumName,
+      duration: data.duration,
+      instrumental: data.instrumental,
+      source: "LRCLIB"
+    }
+  };
+}
+
+  async function fetchLRCLibLyrics(songInfo) {
+  const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
+      ? `&album_name=${encodeURIComponent(songInfo.album)}`
+      : '';
+  const url = `https://lrclib.net/api/get?artist_name=${encodeURIComponent(songInfo.artist)}&track_name=${encodeURIComponent(songInfo.title)}${albumParam}`;
+
+  const response = await fetch(url);
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  return parseLRCLibFormat(data);
+}
+
+const ProviderLRCLIB = {
+  async findLyrics(info) {
+    try {
+      const artist = normalize(info.artist);
+      const title = normalize(info.title);
+      const album = normalize(info.album);
+      const songInfo = { artist, title, album };
+
+      const result = await fetchLRCLibLyrics(songInfo);
+      if (!result) return { error: "Track not found on LRCLIB" };
+      return result;
+    } catch (e) {
+      return { error: e.message };
+    }
+  },
+
+  getUnsynced(body) {
+    if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+    if (!body?.data || !Array.isArray(body.data)) return null;
+    // Extract plain text lines without timing
+    return body.data.map(line => ({ text: line.text }));
+  },
+
+  getSynced(body) {
+    if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+    if (!body?.data || !Array.isArray(body.data)) return null;
+    return body.data.map(line => ({
+      time: Math.round(line.startTime * 1000),
+      text: line.text
+    }));
+  }
+};
+
+  function parseKPoeFormat(data) {
+  if (!Array.isArray(data.lyrics)) return null;
+
+  const metadata = {
+    ...data.metadata,
+    source: `${data.metadata.source} (KPoe)`
+  };
+
+  return {
+    type: data.type, // "Word" or "Line"
+    data: data.lyrics.map(item => {
+      const startTime = Number(item.time) || 0;
+      const duration = Number(item.duration) || 0;
+      const endTime = startTime + duration;
+
+      const parsedSyllabus = (item.syllabus || []).map(syllable => ({
+        text: syllable.text || '',
+        time: Number(syllable.time) || 0,
+        duration: Number(syllable.duration) || 0,
+        isLineEnding: Boolean(syllable.isLineEnding),
+        isBackground: Boolean(syllable.isBackground),
+        element: syllable.element || {}
+      }));
+
+      return {
+        text: item.text || '',
+        startTime: startTime / 1000,
+        duration: duration / 1000,
+        endTime: endTime / 1000,
+        syllabus: parsedSyllabus,
+        element: item.element || {}
+      };
+    }),
+    metadata
+  };
+}
+
+  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false) {
+  const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
+    ? `&album=${encodeURIComponent(songInfo.album)}`
+    : '';
+  const sourceParam = sourceOrder ? `&source=${encodeURIComponent(sourceOrder)}` : '';
+  let forceReloadParam = forceReload ? `&forceReload=true` : '';
+  let fetchOptions = {};
+
+  if (forceReload) {
+    fetchOptions = { cache: 'no-store' };
+    forceReloadParam = `&forceReload=true`;
+  }
+
+  const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
+
+  const response = await fetch(url, fetchOptions);
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  return parseKPoeFormat(data);
+}
+
+    const ProviderKPoe = {
+  async findLyrics(info) {
+    try {
+      const artist = normalize(info.artist);
+      const title = normalize(info.title);
+      const album = normalize(info.album);
+      const duration = Math.floor(info.duration / 1000);
+
+      const songInfo = { artist, title, album, duration };
+      const result = await fetchKPoeLyrics(songInfo);
+
+      if (!result) return { error: "Track not found on KPoe" };
+      return result;
+    } catch (e) {
+      return { error: e.message };
+    }
+  },
+
+  getUnsynced(body) {
+  if (!body?.data || !Array.isArray(body.data)) return null;
+
+  return body.data.map(line => ({
+    text: line.text
+  }));
+},
+
+  getSynced(body) {
+  if (!body?.data || !Array.isArray(body.data)) return null;
+
+  return body.data.map(line => ({
+    time: Math.round(line.startTime * 1000),
+    text: line.text
+  }));
+},
+};
+
+function parseGeniusLyrics(raw) {
   const synced = [];
   const unsynced = [];
 
@@ -90,68 +285,10 @@ function timeoutPromise(ms) {
     unsynced: unsynced.length > 0 ? unsynced : null
   };
 }
-
-const normalize = str =>
-  str?.normalize("NFKD")
-    .replace(/[’‘“”–]/g, "'")
-    .replace(/[^\w\s\-\.&!']/g, '')
-    .trim();
-
-const ProviderLRCLIB = {
-  async findLyrics(info) {
-    const baseURL = "https://lrclib.net/api/get";
-    const artist = normalize(info.artist);
-    const title = normalize(info.title);
-    const album = normalize(info.album);
-
-    const fullParams = {
-      track_name: title,
-      artist_name: artist,
-      album_name: album,
-      duration: Math.floor(info.duration / 1000)
-    };
-
-    const simpleParams = {
-      track_name: title,
-      artist_name: artist
-    };
-
-    const buildURL = (params) =>
-      `${baseURL}?${Object.entries(params)
-        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-        .join("&")}`;
-
-    try {
-      let res = await fetch(buildURL(fullParams), {
-        headers: { "x-user-agent": "lyrics-plus-userscript" },
-      });
-
-      // Retry with simpler request if no match
-      if (!res.ok) {
-        res = await fetch(buildURL(simpleParams), {
-          headers: { "x-user-agent": "lyrics-plus-userscript" },
-        });
-      }
-
-      if (!res.ok) return { error: "Track not found on LRCLIB" };
-      return await res.json();
-    } catch (e) {
-      return { error: e.message };
-    }
-  },
-
-  getUnsynced(body) {
-    if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
-    if (!body?.plainLyrics) return null;
-    return parseLyrics(body.plainLyrics).unsynced;
-  },
-
-  getSynced(body) {
-    if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
-    if (!body?.syncedLyrics) return null;
-    return parseLyrics(body.syncedLyrics).synced;
-  }
-};
+  // Timeout helper
+function timeoutPromise(ms) {
+  return new Promise((_, reject) => setTimeout(() => reject(new Error("Track not found on Genius")), ms));
+}
 
 const ProviderGenius = {
   async findLyrics(info) {
@@ -176,7 +313,7 @@ const ProviderGenius = {
 
   getUnsynced(body) {
     if (!body?.plainLyrics) return null;
-    return parseLyrics(body.plainLyrics).unsynced;
+    return parseGeniusLyrics(body.plainLyrics).unsynced;
   },
 
   getSynced() {
@@ -185,18 +322,17 @@ const ProviderGenius = {
 };
 
 const Providers = {
-  list: ["LRCLIB", "Genius"],
+  list: ["LRCLIB", "KPoe", "Genius"],
   map: {
     "LRCLIB": ProviderLRCLIB,
+    "KPoe": ProviderKPoe,
     "Genius": ProviderGenius,
   },
   current: "LRCLIB",
   getCurrent() { return this.map[this.current]; },
   setCurrent(name) { if (this.map[name]) this.current = name; }
 };
-
-
-  let highlightTimer = null;
+ let highlightTimer = null;
 
   function removePopup() {
     if (highlightTimer) {
@@ -210,6 +346,9 @@ const Providers = {
     const existing = document.getElementById("lyrics-plus-popup");
     if (existing) existing.remove();
   }
+
+let currentSyncedLyrics = null;
+let currentLyricsContainer = null;
 
   function createPopup() {
   removePopup();
@@ -245,8 +384,8 @@ const Providers = {
     flexDirection: "column",
     overflow: "hidden",
     padding: "0",
-    userSelect: "none", // prevent text selection while dragging
-  });
+    userSelect: "none",
+ });
 
   // Header with title and close button - drag handle
   const headerWrapper = document.createElement("div");
@@ -257,12 +396,13 @@ const Providers = {
     zIndex: 10,
     cursor: "move",
     userSelect: "none",
-  });
+ });
 
   const header = document.createElement("div");
   header.style.display = "flex";
   header.style.justifyContent = "space-between";
   header.style.alignItems = "center";
+
 
   const title = document.createElement("h3");
   title.textContent = "Lyrics+";
@@ -273,23 +413,64 @@ const Providers = {
   closeBtn.textContent = "×";
   closeBtn.title = "Close Lyrics+";
   Object.assign(closeBtn.style, {
-    cursor: "pointer",
-    background: "none",
-    border: "none",
-    color: "white",
-    fontSize: "22px",
-    fontWeight: "bold",
-    lineHeight: "1",
-    userSelect: "auto",
-  });
+  cursor: "pointer",
+  background: "none",
+  border: "none",
+  color: "white",
+  fontSize: "18px",
+  fontWeight: "bold",
+  lineHeight: "1",
+  userSelect: "auto",
+  height: "32px",
+  display: "flex",
+  padding: "0 2px",
+  alignItems: "center",
+  justifyContent: "center",
+  boxSizing: "border-box",
+});
   closeBtn.onclick = () => {
     savePopupState(popup);
     removePopup();
   };
 
-  header.appendChild(title);
-  header.appendChild(closeBtn);
-  headerWrapper.appendChild(header);
+  // Toggle offset section
+const offsetToggleBtn = document.createElement("button");
+offsetToggleBtn.textContent = "⚙️";
+offsetToggleBtn.title = "Show/hide timing offset";
+offsetToggleBtn.style.marginRight = "6px";
+offsetToggleBtn.style.cursor = "pointer";
+offsetToggleBtn.style.background = "none";
+offsetToggleBtn.style.border = "none";
+offsetToggleBtn.style.color = "white";
+offsetToggleBtn.style.fontSize = "16px";
+offsetToggleBtn.style.lineHeight = "1";
+
+// Toggle controls bar
+// Toggle playback controls bar - use a better icon
+const playbackToggleBtn = document.createElement("button");
+playbackToggleBtn.textContent = "🎛️"; // control knobs
+playbackToggleBtn.title = "Show/hide playback controls";
+playbackToggleBtn.style.marginRight = "6px";
+playbackToggleBtn.style.cursor = "pointer";
+playbackToggleBtn.style.background = "none";
+playbackToggleBtn.style.border = "none";
+playbackToggleBtn.style.color = "white";
+playbackToggleBtn.style.fontSize = "14px";
+playbackToggleBtn.style.lineHeight = "1";
+
+header.appendChild(title);
+
+// Create a right-side button group container
+const buttonGroup = document.createElement("div");
+buttonGroup.style.display = "flex";
+buttonGroup.style.alignItems = "center";
+buttonGroup.appendChild(playbackToggleBtn);  // 🎛️
+buttonGroup.appendChild(offsetToggleBtn);    // ⚙️
+buttonGroup.appendChild(closeBtn);           // ×
+
+header.appendChild(buttonGroup);
+
+headerWrapper.appendChild(header);
 
    // Tabs container
   const tabs = document.createElement("div");
@@ -325,14 +506,283 @@ const Providers = {
     overflowY: "auto",
     padding: "12px",
     whiteSpace: "pre-wrap",
-    fontSize: "38px", //if big screen:38px; if small pip window: 22px
+    fontSize: "22px", //if big screen:38px; if small pip window: 22px
     lineHeight: "1.5",
     backgroundColor: "#121212", //remove this line for transparent background
     userSelect: "text",
   });
 
+// Offset Setting UI
+const offsetWrapper = document.createElement("div");
+offsetWrapper.style.display = "flex";
+offsetWrapper.style.alignItems = "center";
+offsetWrapper.style.justifyContent = "space-between"; // Spread label and input
+offsetWrapper.style.padding = "8px 12px";
+offsetWrapper.style.background = "#121212";
+offsetWrapper.style.borderBottom = "1px solid #333";
+offsetWrapper.style.fontSize = "15px";
+offsetWrapper.style.width = "100%";
+
+// Left-aligned label with explanation
+const offsetLabel = document.createElement("div");
+offsetLabel.innerHTML = `Adjust lyrics timing (ms):<br><span style="font-size: 11px; color: #aaa;">lower = appear later, higher = appear earlier</span>`;
+offsetLabel.style.color = "#fff";
+
+// Right-aligned input
+const offsetInput = document.createElement("input");
+offsetInput.type = "number";
+offsetInput.min = "-2000";
+offsetInput.max = "2000";
+offsetInput.step = "10";
+offsetInput.value = getAnticipationOffset();
+offsetInput.style.width = "70px";
+offsetInput.style.background = "#222";
+offsetInput.style.color = "#fff";
+offsetInput.style.border = "1px solid #444";
+offsetInput.style.borderRadius = "6px";
+offsetInput.style.padding = "2px 6px";
+offsetInput.style.marginLeft = "16px"; // space from label
+
+offsetInput.addEventListener("change", () => {
+  setAnticipationOffset(offsetInput.value);
+  if (currentSyncedLyrics && currentLyricsContainer) {
+    highlightSyncedLyrics(currentSyncedLyrics, currentLyricsContainer);
+  }
+});
+
+offsetWrapper.appendChild(offsetLabel);
+offsetWrapper.appendChild(offsetInput);
+
+    // Playback Controls Bar
+  const controlsBar = document.createElement("div");
+  Object.assign(controlsBar.style, {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "12px",
+    padding: "8px 12px",
+    borderTop: "1px solid #333",
+    backgroundColor: "#121212",
+    userSelect: "none",
+});
+
+offsetWrapper.id = "lyrics-plus-offset-wrapper";
+controlsBar.id = "lyrics-plus-controls-bar";
+offsetWrapper.style.transition = "max-height 0.3s, opacity 0.3s";
+offsetWrapper.style.overflow = "hidden";
+controlsBar.style.transition = "max-height 0.3s, opacity 0.3s";
+controlsBar.style.overflow = "hidden";
+let offsetVisible = true;
+let controlsVisible = true;
+
+offsetToggleBtn.onclick = () => {
+  offsetVisible = !offsetVisible;
+  if (offsetVisible) {
+    offsetWrapper.style.maxHeight = "100px";
+    offsetWrapper.style.opacity = "1";
+    offsetWrapper.style.pointerEvents = "";
+  } else {
+    offsetWrapper.style.maxHeight = "0";
+    offsetWrapper.style.opacity = "0";
+    offsetWrapper.style.pointerEvents = "none";
+  }
+};
+
+playbackToggleBtn.onclick = () => {
+  controlsVisible = !controlsVisible;
+  if (controlsVisible) {
+    controlsBar.style.maxHeight = "80px";
+    controlsBar.style.opacity = "1";
+    controlsBar.style.pointerEvents = "";
+  } else {
+    controlsBar.style.maxHeight = "0";
+    controlsBar.style.opacity = "0";
+    controlsBar.style.pointerEvents = "none";
+  }
+};
+
+// Set initial state (open)
+offsetWrapper.style.maxHeight = "100px";
+controlsBar.style.maxHeight = "80px";
+
+
+  // Helper to create control buttons with SVG for play/pause
+function createControlBtn(content, title, onClick) {
+  const btn = document.createElement("button");
+  btn.title = title;
+  Object.assign(btn.style, {
+    cursor: "pointer",
+    background: "#1db954",
+    border: "none",
+    borderRadius: "50%",
+    width: "32px",
+    height: "32px",
+    color: "white",
+    fontWeight: "bold",
+    fontSize: "18px",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    userSelect: "none",
+    padding: "0",
+  });
+  if (typeof content === "string") {
+    btn.textContent = content;
+  } else {
+    btn.appendChild(content);
+  }
+  btn.onclick = onClick;
+  return btn;
+}
+
+// SVG icons for play and pause (white)
+const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+playSVG.setAttribute("viewBox", "0 0 24 24");
+playSVG.setAttribute("width", "20");
+playSVG.setAttribute("height", "20");
+playSVG.setAttribute("fill", "white");
+playSVG.innerHTML = `<path d="M8 5v14l11-7z"/>`; // play triangle
+
+const pauseSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+pauseSVG.setAttribute("viewBox", "0 0 24 24");
+pauseSVG.setAttribute("width", "20");
+pauseSVG.setAttribute("height", "20");
+pauseSVG.setAttribute("fill", "white");
+pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`; // pause bars
+
+// Helper to simulate clicks on Spotify Web Player buttons by aria-label
+function sendSpotifyCommand(command) {
+  let selector;
+  switch (command) {
+    case "playpause":
+      selector = '[aria-label="Play"], [aria-label="Pause"]';
+      break;
+    case "next":
+      selector = '[aria-label="Next"]';
+      break;
+    case "previous":
+      selector = '[aria-label="Previous"]';
+      break;
+    default:
+      console.warn("Unknown Spotify command:", command);
+      return;
+  }
+  const btn = document.querySelector(selector);
+  if (btn) btn.click();
+  else console.warn("Spotify button not found for:", command);
+}
+
+function createPlayPauseButton() {
+  const playIcon = playSVG.cloneNode(true);
+  const pauseIcon = pauseSVG.cloneNode(true);
+
+  playIcon.style.opacity = "1";
+  pauseIcon.style.opacity = "0";
+  playIcon.style.pointerEvents = "auto";
+  pauseIcon.style.pointerEvents = "none";
+  playIcon.style.transition = "none";
+  pauseIcon.style.transition = "none";
+
+  const btn = createControlBtn("", "Play/Pause", () => {
+    if (playIcon.style.opacity === "1") {
+      playIcon.style.opacity = "0";
+      playIcon.style.pointerEvents = "none";
+
+      pauseIcon.style.opacity = "1";
+      pauseIcon.style.pointerEvents = "auto";
+    } else {
+      playIcon.style.opacity = "1";
+      playIcon.style.pointerEvents = "auto";
+
+      pauseIcon.style.opacity = "0";
+      pauseIcon.style.pointerEvents = "none";
+    }
+
+    sendSpotifyCommand("playpause");
+    btn.offsetHeight; // force repaint
+  });
+
+  btn.appendChild(playIcon);
+  btn.appendChild(pauseIcon);
+
+  function isPlaying() {
+    const pauseBtn = document.querySelector('[aria-label="Pause"]');
+    return !!pauseBtn && pauseBtn.offsetParent !== null;
+  }
+
+  function updateIcon() {
+    const playing = isPlaying();
+
+    if (playing && playIcon.style.opacity !== "0") {
+      playIcon.style.opacity = "0";
+      playIcon.style.pointerEvents = "none";
+
+      pauseIcon.style.opacity = "1";
+      pauseIcon.style.pointerEvents = "auto";
+    } else if (!playing && playIcon.style.opacity !== "1") {
+      playIcon.style.opacity = "1";
+      playIcon.style.pointerEvents = "auto";
+
+      pauseIcon.style.opacity = "0";
+      pauseIcon.style.pointerEvents = "none";
+    }
+
+    requestAnimationFrame(updateIcon);
+  }
+
+  requestAnimationFrame(updateIcon);
+
+  return btn;
+}
+
+
+  // Create buttons (no shuffle, no repeat)
+  const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
+  const btnPlayPause = createPlayPauseButton();
+  const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
+
+  // Create reset button manually to customize style (not green like others)
+const btnReset = document.createElement("button");
+btnReset.textContent = "↻"; // Reload icon
+btnReset.title = "Restore Default Position and Size";
+Object.assign(btnReset.style, {
+  cursor: "pointer",
+  background: "#555", // darker gray background, change as you like
+  border: "none",
+  borderRadius: "50%",
+  width: "32px",
+  height: "32px",
+  color: "white",
+  fontWeight: "bold",
+  fontSize: "18px",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  userSelect: "none",
+  padding: "0",
+});
+btnReset.onclick = () => {
+  Object.assign(popup.style, {
+    position: "fixed",
+    bottom: "90px",
+    right: "20px",
+    left: "auto",
+    top: "auto",
+    width: "400px",
+    height: "60vh",
+  });
+  savePopupState(popup);
+};
+  controlsBar.appendChild(btnReset);
+  controlsBar.appendChild(btnPrevious);
+  controlsBar.appendChild(btnPlayPause);
+  controlsBar.appendChild(btnNext);
+
   popup.appendChild(headerWrapper);
+  popup.appendChild(offsetWrapper);
   popup.appendChild(lyricsContainer);
+  popup.appendChild(controlsBar);
+
   document.body.appendChild(popup);
 
   // Save popup state to localStorage
@@ -356,13 +806,9 @@ const Providers = {
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
-
-      // Get current position
       const rect = el.getBoundingClientRect();
       origX = rect.left;
       origY = rect.top;
-
-      // Disable user-select during drag
       document.body.style.userSelect = "none";
     });
 
@@ -370,17 +816,12 @@ const Providers = {
       if (!isDragging) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-
       let newX = origX + dx;
       let newY = origY + dy;
-
-      // Keep inside viewport
       const maxX = window.innerWidth - el.offsetWidth;
       const maxY = window.innerHeight - el.offsetHeight;
-
       newX = Math.min(Math.max(0, newX), maxX);
       newY = Math.min(Math.max(0, newY), maxY);
-
       el.style.left = `${newX}px`;
       el.style.top = `${newY}px`;
       el.style.right = "auto";
@@ -406,7 +847,7 @@ const Providers = {
     right: "4px",
     bottom: "4px",
     cursor: "nwse-resize",
-    backgroundColor: "rgba(255, 255, 255, 0.1)", // lighter and more transparent
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderTop: "1.5px solid rgba(255, 255, 255, 0.15)",
     borderLeft: "1.5px solid rgba(255, 255, 255, 0.15)",
     boxSizing: "border-box",
@@ -435,17 +876,12 @@ const Providers = {
       if (!isResizing) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-
       let newWidth = startWidth + dx;
       let newHeight = startHeight + dy;
-
-      // Minimum size constraints
       newWidth = Math.max(newWidth, 200);
       newHeight = Math.max(newHeight, 100);
-      // Maximum size constraints (viewport)
       newWidth = Math.min(newWidth, window.innerWidth - el.getBoundingClientRect().left);
       newHeight = Math.min(newHeight, window.innerHeight - el.getBoundingClientRect().top);
-
       el.style.width = newWidth + "px";
       el.style.height = newHeight + "px";
     });
@@ -459,20 +895,37 @@ const Providers = {
     });
   })(popup, resizer);
 
+  // Play/pause button icon update based on Spotify's play or pause button visibility
+  function updatePlayPauseIcon() {
+    const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
+    btnPlayPause.innerHTML = ""; // clear
+    if (pauseVisible) {
+      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+    } else {
+      btnPlayPause.appendChild(playSVG.cloneNode(true));
+   }
+}
+
   // Your existing code to load track info and update lyrics
   let info = getCurrentTrackInfo();
   if (!info) return;
 
   currentTrackId = info.id;
   updateLyricsContent(popup, info);
+  updatePlayPauseIcon();
 
   pollingInterval = setInterval(() => {
     const newInfo = getCurrentTrackInfo();
-    if (!newInfo || newInfo.id === currentTrackId) return;
+    if (!newInfo || newInfo.id === currentTrackId) {
+      // Still update play/pause icon regardless
+      updatePlayPauseIcon();
+      return;
+    }
 
     currentTrackId = newInfo.id;
     updateLyricsContent(popup, newInfo);
-  }, 3000);
+    updatePlayPauseIcon();
+  }, 200);
 }
 
   function updateTabs(tabsContainer) {
@@ -480,6 +933,13 @@ const Providers = {
       btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
     });
   }
+
+  function getAnticipationOffset() {
+  return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 300); // default 300ms
+}
+function setAnticipationOffset(val) {
+  localStorage.setItem("lyricsPlusAnticipationOffset", val);
+}
 
   function highlightSyncedLyrics(lyrics, container) {
   if (!lyrics || lyrics.length === 0) return;
@@ -496,12 +956,14 @@ const Providers = {
     const posEl = document.querySelector('[data-testid="playback-position"]');
     if (!posEl) return;
     const curPosMs = timeStringToMs(posEl.textContent);
+    // Use offset for anticipation
+    const anticipatedMs = curPosMs + getAnticipationOffset();
 
     let activeIndex = -1;
     for (let i = 0; i < lyrics.length; i++) {
-      if (curPosMs >= lyrics[i].time) activeIndex = i;
-      else break;
-    }
+  if (anticipatedMs >= lyrics[i].time) activeIndex = i;
+  else break;
+}
     if (activeIndex === -1) {
       pElements.forEach(p => {
         p.style.color = "white";
@@ -519,13 +981,17 @@ const Providers = {
     if (activeP) {
       activeP.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, 500);
+  }, 50);
 }
 
 async function updateLyricsContent(popup, info) {
   if (!info) return;
   const lyricsContainer = popup.querySelector("#lyrics-plus-content");
   if (!lyricsContainer) return;
+
+  // Store globally for anticipation refresh
+  currentLyricsContainer = lyricsContainer;
+  currentSyncedLyrics = null;
 
   // Clear early to avoid stale error text
   lyricsContainer.textContent = "Loading lyrics...";
@@ -550,6 +1016,8 @@ async function updateLyricsContent(popup, info) {
       p.style.margin = "0 0 6px 0";
       lyricsContainer.appendChild(p);
     });
+    // Store synced globally for anticipation refresh
+    currentSyncedLyrics = synced;
     highlightSyncedLyrics(synced, lyricsContainer);
   } else if (unsynced && unsynced.length > 0) {
     unsynced.forEach(({ text }) => {
@@ -558,11 +1026,12 @@ async function updateLyricsContent(popup, info) {
       p.style.margin = "0 0 6px 0";
       lyricsContainer.appendChild(p);
     });
+    currentSyncedLyrics = null; // No synced lines
   } else {
     lyricsContainer.textContent = "Lyrics not found.";
+    currentSyncedLyrics = null;
   }
 }
-
   function addButton(maxRetries = 10) {
   let attempts = 0;
 
