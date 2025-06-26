@@ -680,44 +680,6 @@ function createPlayPauseButton() {
   });
 }
 
-    sendSpotifyCommand("playpause");
-    btn.offsetHeight; // force repaint
-  });
-
-  btn.appendChild(playIcon);
-  btn.appendChild(pauseIcon);
-
-  function isPlaying() {
-    const pauseBtn = document.querySelector('[aria-label="Pause"]');
-    return !!pauseBtn && pauseBtn.offsetParent !== null;
-  }
-
-  function updateIcon() {
-    const playing = isPlaying();
-
-    if (playing && playIcon.style.opacity !== "0") {
-      playIcon.style.opacity = "0";
-      playIcon.style.pointerEvents = "none";
-
-      pauseIcon.style.opacity = "1";
-      pauseIcon.style.pointerEvents = "auto";
-    } else if (!playing && playIcon.style.opacity !== "1") {
-      playIcon.style.opacity = "1";
-      playIcon.style.pointerEvents = "auto";
-
-      pauseIcon.style.opacity = "0";
-      pauseIcon.style.pointerEvents = "none";
-    }
-
-    requestAnimationFrame(updateIcon);
-  }
-
-  requestAnimationFrame(updateIcon);
-
-  return btn;
-}
-
-
   // Create buttons (no shuffle, no repeat)
   const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
   const btnPlayPause = createPlayPauseButton();
