@@ -20,7 +20,7 @@
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 // Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
 // Optimize drag and resize to work on mobile browser. (if possible) 
-// Add "expand button to the right of next track button in playback controls container. Its icon should fit nicely with the rest of playback control buttons. Its function is that on click, the popup gets expanded to fit the whole site.(except Spotify's bottom container that remains visible - the one that has the volume toggle, playback control buttons, seekbar etc). While expanded if click the button again, it returns to the previous position state or if that's too hard to implement, to the restore default position.
+// Add "expand button to the right of next track button in playback controls container. Its icon should fit nicely with the rest of playback control buttons. Its function is that on click, the popup gets expanded to fit the screen (if im on mobile and zoomed in, its supposed to fit that screen, and not the whole Spotify site.Only part of Spotify site to remain visible - Spotify's bottom container - the one that has the volume toggle, playback control buttons, seekbar etc). While expanded if click the button again, it returns to the previous position state or if that's too hard to implement, to the restore default position.
 
 (function () {
   'use strict';
