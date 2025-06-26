@@ -13,6 +13,7 @@
 // ==/UserScript==
 
 // TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
+// TO DO: Play/Pause icon first click to resume/pause takes a bit to initialize but all subsequent are quick
 
 (function () {
   'use strict';
@@ -572,11 +573,17 @@ offsetWrapper.style.transition = "max-height 0.3s, opacity 0.3s";
 offsetWrapper.style.overflow = "hidden";
 controlsBar.style.transition = "max-height 0.3s, opacity 0.3s";
 controlsBar.style.overflow = "hidden";
-let offsetVisible = true;
-let controlsVisible = true;
+let offsetVisible = localStorage.getItem('lyricsPlusOffsetVisible');
+if (offsetVisible === null) offsetVisible = true;
+else offsetVisible = JSON.parse(offsetVisible);
+
+let controlsVisible = localStorage.getItem('lyricsPlusControlsVisible');
+if (controlsVisible === null) controlsVisible = true;
+else controlsVisible = JSON.parse(controlsVisible);
 
 offsetToggleBtn.onclick = () => {
   offsetVisible = !offsetVisible;
+  localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
   if (offsetVisible) {
     offsetWrapper.style.maxHeight = "100px";
     offsetWrapper.style.opacity = "1";
@@ -590,6 +597,7 @@ offsetToggleBtn.onclick = () => {
 
 playbackToggleBtn.onclick = () => {
   controlsVisible = !controlsVisible;
+  localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
   if (controlsVisible) {
     controlsBar.style.maxHeight = "80px";
     controlsBar.style.opacity = "1";
@@ -602,9 +610,25 @@ playbackToggleBtn.onclick = () => {
 };
 
 // Set initial state (open)
-offsetWrapper.style.maxHeight = "100px";
-controlsBar.style.maxHeight = "80px";
+if (offsetVisible) {
+  offsetWrapper.style.maxHeight = "100px";
+  offsetWrapper.style.opacity = "1";
+  offsetWrapper.style.pointerEvents = "";
+} else {
+  offsetWrapper.style.maxHeight = "0";
+  offsetWrapper.style.opacity = "0";
+  offsetWrapper.style.pointerEvents = "none";
+}
 
+if (controlsVisible) {
+  controlsBar.style.maxHeight = "80px";
+  controlsBar.style.opacity = "1";
+  controlsBar.style.pointerEvents = "";
+} else {
+  controlsBar.style.maxHeight = "0";
+  controlsBar.style.opacity = "0";
+  controlsBar.style.pointerEvents = "none";
+}
 
   // Helper to create control buttons with SVG for play/pause
 function createControlBtn(content, title, onClick) {
