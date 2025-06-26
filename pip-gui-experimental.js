@@ -460,12 +460,30 @@ playbackToggleBtn.style.lineHeight = "1";
 
 header.appendChild(title);
 
+// Create font size input
+const fontSizeInput = document.createElement("input");
+fontSizeInput.type = "number";
+fontSizeInput.min = "12";
+fontSizeInput.max = "48";
+fontSizeInput.step = "1";
+fontSizeInput.value = localStorage.getItem("lyricsPlusFontSize") || "22";
+fontSizeInput.title = "Change lyrics font size";
+fontSizeInput.style.width = "44px";
+fontSizeInput.style.marginRight = "6px";
+fontSizeInput.style.background = "#222";
+fontSizeInput.style.color = "#fff";
+fontSizeInput.style.border = "1px solid #444";
+fontSizeInput.style.borderRadius = "6px";
+fontSizeInput.style.fontSize = "14px";
+fontSizeInput.style.textAlign = "center";
+
 // Create a right-side button group container
 const buttonGroup = document.createElement("div");
 buttonGroup.style.display = "flex";
 buttonGroup.style.alignItems = "center";
 buttonGroup.appendChild(playbackToggleBtn);  // 🎛️
 buttonGroup.appendChild(offsetToggleBtn);    // ⚙️
+buttonGroup.appendChild(fontSizeInput);      // Font button
 buttonGroup.appendChild(closeBtn);           // ×
 
 header.appendChild(buttonGroup);
@@ -512,6 +530,11 @@ headerWrapper.appendChild(header);
     backgroundColor: "#121212", //remove this line for transparent background
     userSelect: "text",
   });
+
+  fontSizeInput.addEventListener("input", () => {
+  lyricsContainer.style.fontSize = fontSizeInput.value + "px";
+  localStorage.setItem("lyricsPlusFontSize", fontSizeInput.value);
+});
 
 // Offset Setting UI
 const offsetWrapper = document.createElement("div");
@@ -1111,3 +1134,4 @@ if (appRoot) {
 
 init();
 })();
+
