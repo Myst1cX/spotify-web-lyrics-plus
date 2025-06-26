@@ -532,7 +532,6 @@ headerWrapper.appendChild(header);
   });
 
   fontSizeInput.addEventListener("input", () => {
-  lyricsContainer.style.fontSize = fontSizeInput.value + "px";
   localStorage.setItem("lyricsPlusFontSize", fontSizeInput.value);
 });
 
@@ -771,7 +770,10 @@ height: "45vh",
 
   popup.appendChild(headerWrapper);
   popup.appendChild(offsetWrapper);
+
   popup.appendChild(lyricsContainer);
+  lyricsContainer.style.fontSize = fontSizeInput.value + "px";
+
   popup.appendChild(controlsBar);
 
   document.body.appendChild(popup);
