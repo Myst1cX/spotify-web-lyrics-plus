@@ -42,13 +42,11 @@
 
 > Remembers your popup settings and preferences
 
-* * *
 
 ## Screenshots
 
 (Coming Soon)
 
-* * *
 
 ## Installation
 
@@ -57,25 +55,22 @@
 > 3.  Open [Spotify Web Player](https://open.spotify.com/).
 > 4.  Click the **Lyrics+** button next to playback controls.
 
-* * *
 
 ## Usage
 
-> **Open/close popup:** Click the Lyrics+ button.
-> **Move/resize:** Drag the header or the triangle in the corner.
-> **Switch provider:** Use the top tabs.
-> **Change font size:** Use the dropdown at top right.
-> **Playback controls:** Use play, pause, next, previous inside the popup.
-> **Timing offset:** Click ⚙️, adjust ms if lyrics are early/late (collapsable).
-> **Show/hide controls:** Click 🎛️ for extra playback options (collapsable).
-> **Reset:** Click ↻ to restore default popup position/size.
-
+> 1. **Open/close popup:** Click the Lyrics+ button.
+> 2. **Move/resize:** Drag the header or the triangle in the corner.
+> 3. **Switch provider:** Use the top tabs.
+> 4. **Change font size:** Use the dropdown at top right.
+> 5. **Playback controls:** Use play, pause, next, previous inside the popup.
+> 6. **Timing offset:** Click ⚙️, adjust ms if lyrics are early/late (collapsable).
+> 7. **Show/hide controls:** Click 🎛️ for extra playback options (collapsable).
+> 8. **Reset:** Click ↻ to restore default popup position/size.
 
 * * *
 
 > **TIP:** All your settings are remembered, so you always return to where you left off!
 
-* * *
 
 ## Troubleshooting
 > **Lyrics out of sync?** Adjust the timing offset for perfect sync. 
@@ -93,7 +88,6 @@
 > Lyrics from [LRCLIB](https://lrclib.net/), [KPoe](https://github.com/ibratabian17/KPoe), [Genius](https://genius.com/).  
 > Powered by [Spotify](https://open.spotify.com/).
 
-* * *
 
 ## License
 
