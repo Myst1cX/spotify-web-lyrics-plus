@@ -16,6 +16,7 @@
 // Instance for debugging and testing
 
 // TO DO:
+// Add Spotify provider (synced and unsynced) - spotify synced should be prioritized over other synced sources. spotify unsynced is fallback before genius. api: https://github.com/akashrchandran/spotify-lyrics-api
 // For a song where neither of the providers has lyrics, instead of returning "Track not found on LRCLIB/Kpoe/Genius", return something like "Track not found on any of the providers." and maybe in that case also make the current provider gray, instead of green (to show none are currently pulling lyrics)
 // Remove limit from lyrics offset adjust. or hardcode it better, maybe to 2500 ms. currently max down and max up with arrow is 2000ms, but can set any value manually (bug.)
 // Focus lyrics (maybe the main lyric line can be slightly bigger than rest of lyric lines.
