@@ -12,6 +12,8 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
 // ==/UserScript==
 
+// TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
+
 (function () {
   'use strict';
 
@@ -495,6 +497,7 @@ headerWrapper.appendChild(header);
     tabs.appendChild(btn);
   });
   headerWrapper.appendChild(tabs);
+  popup._lyricsTabs = tabs;
 
   // Lyrics container
   const lyricsContainer = document.createElement("div");
@@ -870,28 +873,6 @@ function updatePlayPauseIcon() {
   }
 }
 
-  // Your existing code to load track info and update lyrics
-  let info = getCurrentTrackInfo();
-  if (!info) return;
-
-  currentTrackId = info.id;
-  updateLyricsContent(popup, info);
-  updatePlayPauseIcon();
-
-  pollingInterval = setInterval(() => {
-    const newInfo = getCurrentTrackInfo();
-    if (!newInfo || newInfo.id === currentTrackId) {
-      // Still update play/pause icon regardless
-      updatePlayPauseIcon();
-      return;
-    }
-
-    currentTrackId = newInfo.id;
-    updateLyricsContent(popup, newInfo);
-    updatePlayPauseIcon();
-  }, 200);
-}
-
   function updateTabs(tabsContainer) {
     [...tabsContainer.children].forEach(btn => {
       btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
@@ -899,7 +880,7 @@ function updatePlayPauseIcon() {
   }
 
   function getAnticipationOffset() {
-  return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 1000); // default 1000ms
+  return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 300); // default 300ms
 }
 function setAnticipationOffset(val) {
   localStorage.setItem("lyricsPlusAnticipationOffset", val);
@@ -996,6 +977,57 @@ async function updateLyricsContent(popup, info) {
     currentSyncedLyrics = null;
   }
 }
+
+async function autodetectProviderAndLoad(popup, info) {
+  const providerOrder = ["LRCLIB", "KPoe", "Genius"];
+  for (const name of providerOrder) {
+    const provider = Providers.map[name];
+    const result = await provider.findLyrics(info);
+    let hasLyrics = false;
+    if (!result.error) {
+      if (name === "Genius") {
+        hasLyrics = provider.getUnsynced(result)?.length > 0;
+      } else {
+        hasLyrics = (provider.getSynced(result)?.length > 0) || (provider.getUnsynced(result)?.length > 0);
+      }
+    }
+    if (hasLyrics) {
+      Providers.setCurrent(name);
+      // Update tabs if they exist
+      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+      await updateLyricsContent(popup, info);
+      return;
+    }
+  }
+  // If none found, fallback to LRCLIB
+  Providers.setCurrent("LRCLIB");
+  if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+  await updateLyricsContent(popup, info);
+}
+
+    // Load track info and update lyrics
+  let info = getCurrentTrackInfo();
+  if (!info) return;
+
+  currentTrackId = info.id;
+  autodetectProviderAndLoad(popup, info);
+  updatePlayPauseIcon();
+
+  pollingInterval = setInterval(() => {
+    const newInfo = getCurrentTrackInfo();
+    if (!newInfo || newInfo.id === currentTrackId) {
+      // Still update play/pause icon regardless
+      updatePlayPauseIcon();
+      return;
+    }
+
+    currentTrackId = newInfo.id;
+    autodetectProviderAndLoad(popup, newInfo);
+    updatePlayPauseIcon();
+  }, 200);
+}
+
+
   function addButton(maxRetries = 10) {
   let attempts = 0;
 
@@ -1079,3 +1111,4 @@ if (appRoot) {
 
 init();
 })();
+
