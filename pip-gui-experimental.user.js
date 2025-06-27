@@ -21,7 +21,7 @@
 // Lyric lines that are currently not main line (previous and next) could be slightly blurred.
 // Lyrics should be centered  
 // Converting the userscript into a browser extension (maybe eventually) > to possibilitate having a floating popup ui with spotify lyrics that works outside open.spotify.com
-// Make Cigi Spotify Translator userscript a part of my userscript, would need to tweak it to work inside my popup.ui 
+// Make Cigi Spotify Translator userscript a part of my userscript, would need to tweak it to work inside my popup ui 
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 // Mobile tweaks: Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
 // Optimize drag and resize to work smoothly on mobile browser.
