@@ -15,7 +15,7 @@
 // Equal to Stable release (Last update: 27.6.25)
 // Instance for debugging and testing
 
-// TO ADD:
+// TO DO:
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 // Mobile tweaks: Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
 // Optimize drag and resize to work smoothly on mobile browser. 
