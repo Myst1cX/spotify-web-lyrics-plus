@@ -15,6 +15,11 @@
 (function () {
   'use strict';
 
+  // Variables
+  let pollingInterval = null;
+  let currentTrackId = null;
+  let popup = null;
+
   function getCurrentTrackInfo() {
     const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
     const artistEl = document.querySelector('[data-testid="context-item-info-subtitles"]');
@@ -350,6 +355,7 @@ let currentLyricsContainer = null;
 
   function createPopup() {
   removePopup();
+  popup = null;
 
   // Load saved state from localStorage
   const savedState = localStorage.getItem('lyricsPlusPopupState');
@@ -362,7 +368,7 @@ let currentLyricsContainer = null;
     }
   }
 
-  const popup = document.createElement("div");
+  popup = document.createElement("div");
   popup.id = "lyrics-plus-popup";
   Object.assign(popup.style, {
     position: "fixed",
@@ -1059,17 +1065,15 @@ async function autodetectProviderAndLoad(popup, info) {
     updatePlayPauseIcon();
     return;
   }
-
   currentTrackId = newInfo.id;
   const lyricsContainer = document.getElementById("lyrics-plus-content");
   if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-
-  autodetectProviderAndLoad(popup, newInfo);
+  if (popup) autodetectProviderAndLoad(popup, newInfo); // always call this
   updatePlayPauseIcon();
 }, 200);
 }
 
-  function addButton(maxRetries = 10) {
+function addButton(maxRetries = 10) {
   let attempts = 0;
 
   const tryAdd = () => {
@@ -1106,18 +1110,14 @@ async function autodetectProviderAndLoad(popup, info) {
     });
 
     btn.onclick = () => {
-  console.log("Lyrics+ button clicked");
-  let popup = document.getElementById("lyrics-plus-popup");
-  if (popup) {
-    // If popup is open, close it (same as closeBtn)
-    removePopup();
-  } else {
-    // If popup is closed, open it
-    createPopup();
-    popup = document.getElementById("lyrics-plus-popup");
-    updateLyricsContent(popup, getCurrentTrackInfo());
-  }
-};
+      console.log("Lyrics+ button clicked");
+      let popup = document.getElementById("lyrics-plus-popup");
+      if (!popup) {
+        createPopup();
+        popup = document.getElementById("lyrics-plus-popup");
+      }
+      updateLyricsContent(popup, getCurrentTrackInfo());
+    };
 
     controls.appendChild(btn);
     console.log("Lyrics+ button added!");
@@ -1126,15 +1126,11 @@ async function autodetectProviderAndLoad(popup, info) {
   tryAdd();
 }
 
-  // Variables
-  let pollingInterval = null;
-  let currentTrackId = null;
 
 const observer = new MutationObserver(() => {
   addButton();
 });
 observer.observe(document.body, { childList: true, subtree: true });
-
 
 
 let lastTrackTitle = "";
@@ -1155,4 +1151,5 @@ if (appRoot) {
 }
 
 init();
+
 })();
