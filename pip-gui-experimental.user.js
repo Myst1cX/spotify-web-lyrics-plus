@@ -689,6 +689,7 @@ function updatePlayPauseIcon(btnPlayPause) {
         offsetWrapper.style.maxHeight = "0";
         offsetWrapper.style.opacity = "0";
         offsetWrapper.style.pointerEvents = "none";
+        offsetWrapper.style.padding = "0";
       }
     };
 
@@ -714,6 +715,7 @@ function updatePlayPauseIcon(btnPlayPause) {
       offsetWrapper.style.maxHeight = "0";
       offsetWrapper.style.opacity = "0";
       offsetWrapper.style.pointerEvents = "none";
+      offsetWrapper.style.padding = "0";
     }
 
     if (controlsVisible) {
