@@ -70,13 +70,16 @@
 > **Show/hide controls:** Click 🎛️ for extra playback options (collapsable).
 > **Reset:** Click ↻ to restore default popup position/size.
 
+
+* * *
+
 > **TIP:** All your settings are remembered, so you always return to where you left off!
 
 * * *
 
 ## Troubleshooting
-> **Lyrics out of sync?** Adjust the timing offset for perfect sync.
-> **Popup not showing?** Make sure you’re using [open.spotify.com](https://open.spotify.com/) and the userscript is enabled.
+> **Lyrics out of sync?** Adjust the timing offset for perfect sync. 
+> **Popup not showing?** Make sure you’re using [open.spotify.com](https://open.spotify.com/) and the userscript is enabled. 
 > **Mobile?** Use desktop mode for best experience. Will fine-tube for better compatibility soon.
 
 * * *
