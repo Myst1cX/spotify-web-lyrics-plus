@@ -81,7 +81,7 @@
 
 > Enjoy! For feedback or bug reports, open an issue:  
 > [https://github.com/Myst1cX/spotify-web-lyrics-plus/issues](https://github.com/Myst1cX/spotify-web-lyrics-plus/issues)
-* * *
+
 
 ## Credits
 
