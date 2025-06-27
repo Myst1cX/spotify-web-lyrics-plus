@@ -46,7 +46,7 @@
 
 ## Screenshots
 
-(Coming Soon!)
+(Coming Soon)
 
 * * *
 
@@ -74,58 +74,16 @@
 
 * * *
 
-## Feature Reference
-
-Feature
-
-What it does
-
-Provider Tabs
-
-Pick your lyrics source (LRCLIB, KPoe, Genius)
-
-Font Size Select
-
-Change lyrics text size
-
-Playback Controls
-
-Control Spotify from popup
-
-Offset Control
-
-Fix early/late lyrics for your setup
-
-Drag/Resize Popup
-
-Move and resize to fit your workspace
-
-Reset Button
-
-Restore popup to default position and size
-
-Auto-detect
-
-Picks best lyrics provider automatically
-
-State Saving
-
-Remembers all your settings and preferences
-
-* * *
-
 ## Troubleshooting
-
-> -   **No lyrics?** Try switching to another provider tab.
 > -   **Lyrics out of sync?** Adjust the timing offset for perfect sync.
 > -   **Popup not showing?** Make sure you’re using [open.spotify.com](https://open.spotify.com/) and the userscript is enabled.
-> -   **Mobile?** Use desktop mode for best experience.
+> -   **Mobile?** Use desktop mode for best experience. Will fine-tube for better compatibility soon.
 
 * * *
 
 ## Credits
 
-> Lyrics from [LRCLIB](https://lrclib.net/), [KPoe](https://github.com/kpoe-pl/lyrics-plus), [Genius](https://genius.com/).  
+> Lyrics from [LRCLIB](https://lrclib.net/), [KPoe](https://github.com/ibratabian17/KPoe), [Genius](https://genius.com/).  
 > Powered by [Spotify](https://open.spotify.com/).
 
 * * *
