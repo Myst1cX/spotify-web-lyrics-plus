@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      3.00
+// @version      3.1
 // @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
