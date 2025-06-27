@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      3.1
+// @version      3.3
 // @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
@@ -18,7 +18,7 @@
 // TO DO:
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 // Mobile tweaks: Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
-// Optimize drag and resize to work smoothly on mobile browser. 
+// Optimize drag and resize to work smoothly on mobile browser.
 // Add "expand" button to the right of next track button in playback controls container. Its icon should fit nicely with the rest of playback control buttons. Its function is that on click, the popup gets expanded to fit the screen (if im on mobile and zoomed in, its supposed to fit that screen (the Spotify website). If possible to implement I'd also suggest that Spotify's bottom container - the one that has the volume toggle, playback control buttons, seekbar etc - remains visible while the rest of the website gets overtaken by the popup gui). While expanded if click the button again, it returns to the previous position state or if that's too hard to implement, to the restore default position.
 // Playback control buttons not responsible on mobile bc desktop mode and smol interface i suppose so I can't click, also difficult to drag and resize as mentioned, on mobile. on pc fine
 
@@ -614,11 +614,12 @@ function updatePlayPauseIcon(btnPlayPause) {
     });
     lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
 
-    // Offset Setting UI
-    const offsetWrapper = document.createElement("div");
+// Offset Setting UI
+const offsetWrapper = document.createElement("div");
     offsetWrapper.style.display = "flex";
     offsetWrapper.style.alignItems = "center";
     offsetWrapper.style.justifyContent = "space-between";
+    offsetWrapper.style.boxSizing = "border-box";
     offsetWrapper.style.padding = "8px 12px";
     offsetWrapper.style.background = "#121212";
     offsetWrapper.style.borderBottom = "1px solid #333";
@@ -666,7 +667,7 @@ function updatePlayPauseIcon(btnPlayPause) {
 
     offsetWrapper.id = "lyrics-plus-offset-wrapper";
     controlsBar.id = "lyrics-plus-controls-bar";
-    offsetWrapper.style.transition = "max-height 0.3s, opacity 0.3s";
+    offsetWrapper.style.transition = "max-height 0.3s, opacity 0.3s, padding 0.3s";
     offsetWrapper.style.overflow = "hidden";
     controlsBar.style.transition = "max-height 0.3s, opacity 0.3s";
     controlsBar.style.overflow = "hidden";
@@ -678,20 +679,23 @@ function updatePlayPauseIcon(btnPlayPause) {
     if (controlsVisible === null) controlsVisible = true;
     else controlsVisible = JSON.parse(controlsVisible);
 
-    offsetToggleBtn.onclick = () => {
-      offsetVisible = !offsetVisible;
-      localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
-      if (offsetVisible) {
-        offsetWrapper.style.maxHeight = "100px";
-        offsetWrapper.style.opacity = "1";
-        offsetWrapper.style.pointerEvents = "";
-      } else {
-        offsetWrapper.style.maxHeight = "0";
-        offsetWrapper.style.opacity = "0";
-        offsetWrapper.style.pointerEvents = "none";
-        offsetWrapper.style.padding = "0";
-      }
-    };
+    const OFFSET_WRAPPER_PADDING = "8px 12px"; // Store the default padding
+
+offsetToggleBtn.onclick = () => {
+  offsetVisible = !offsetVisible;
+  localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
+  if (offsetVisible) {
+    offsetWrapper.style.maxHeight = "100px";
+    offsetWrapper.style.opacity = "1";
+    offsetWrapper.style.pointerEvents = "";
+    offsetWrapper.style.padding = OFFSET_WRAPPER_PADDING; // Restore padding
+  } else {
+    offsetWrapper.style.maxHeight = "0";
+    offsetWrapper.style.opacity = "0";
+    offsetWrapper.style.pointerEvents = "none";
+    offsetWrapper.style.padding = "0 12px"; // Remove padding
+  }
+};
 
     playbackToggleBtn.onclick = () => {
       controlsVisible = !controlsVisible;
@@ -708,25 +712,26 @@ function updatePlayPauseIcon(btnPlayPause) {
     };
 
     if (offsetVisible) {
-      offsetWrapper.style.maxHeight = "100px";
-      offsetWrapper.style.opacity = "1";
-      offsetWrapper.style.pointerEvents = "";
-    } else {
-      offsetWrapper.style.maxHeight = "0";
-      offsetWrapper.style.opacity = "0";
-      offsetWrapper.style.pointerEvents = "none";
-      offsetWrapper.style.padding = "0";
-    }
+  offsetWrapper.style.maxHeight = "100px";
+  offsetWrapper.style.opacity = "1";
+  offsetWrapper.style.pointerEvents = "";
+  offsetWrapper.style.padding = OFFSET_WRAPPER_PADDING; // Restore padding
+} else {
+  offsetWrapper.style.maxHeight = "0";
+  offsetWrapper.style.opacity = "0";
+  offsetWrapper.style.pointerEvents = "none";
+  offsetWrapper.style.padding = "0 12px"; // Remove padding
+}
 
-    if (controlsVisible) {
-      controlsBar.style.maxHeight = "80px";
-      controlsBar.style.opacity = "1";
-      controlsBar.style.pointerEvents = "";
-    } else {
-      controlsBar.style.maxHeight = "0";
-      controlsBar.style.opacity = "0";
-      controlsBar.style.pointerEvents = "none";
-    }
+   if (controlsVisible) {
+  controlsBar.style.maxHeight = "80px";
+  controlsBar.style.opacity = "1";
+  controlsBar.style.pointerEvents = "";
+} else {
+  controlsBar.style.maxHeight = "0";
+  controlsBar.style.opacity = "0";
+  controlsBar.style.pointerEvents = "none";
+}
 
     function createControlBtn(content, title, onClick) {
       const btn = document.createElement("button");
