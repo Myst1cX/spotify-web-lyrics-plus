@@ -1,4 +1,4 @@
-# SPOTIFY LYRICS+ (EXPERIMENTAL USERSCRIPT)
+# SPOTIFY WEB LYRICS PLUS USERSCRIPT
 
 > Injects a powerful lyrics popup into the Spotify Web Player.  
 > Supports synced & unsynced lyrics from multiple providers, popup customization, font controls, timing offset, and more.  
@@ -14,33 +14,33 @@
 
 #### POPUP WINDOW
 
-> -   Move and resize anywhere on your screen
-> -   Remembers position, size, font, provider
-> -   Reset button to restore default
+> Move and resize anywhere on your screen
+> Remembers position, size, font, provider
+> Reset button to restore default popup position/size 
 
 #### LYRICS TIMING OFFSET
 
-> -   ⚙️ Fine-tune lyric timing in milliseconds for perfect sync
+> ⚙️ Fine-tune lyric timing in milliseconds for perfect sync
 
 #### PLAYBACK CONTROLS
 
-> -   Play, pause, next, previous track directly from the popup
+>  Play, pause, next, previous track directly from the popup
 
 #### PROVIDER TABS
 
-> -   Instantly switch between lyric sources
+> Instantly switch between lyric sources
 
 #### FONT SIZE PICKER
 
-> -   Choose your favorite lyrics text size
+> Choose your favorite lyrics text size
 
 #### AUTO-DETECT
 
-> -   Script automatically picks the best provider for each track
+> Script automatically picks the best provider for each track
 
 #### STATE SAVING
 
-> -   Remembers your popup settings and preferences
+> Remembers your popup settings and preferences
 
 * * *
 
@@ -52,8 +52,8 @@
 
 ## Installation
 
-> 1.  Install [Violentmonkey](https://violentmonkey.github.io/) (or Tampermonkey).
-> 2.  [Click here to install the userscript.](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-experimental.user.js)
+> 1.  Install [Violentmonkey](https://violentmonkey.github.io/) 
+> 2.  [Click here to install the userscript.](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
 > 3.  Open [Spotify Web Player](https://open.spotify.com/).
 > 4.  Click the **Lyrics+** button next to playback controls.
 
@@ -66,9 +66,9 @@
 > -   **Switch provider:** Use the top tabs.
 > -   **Change font size:** Use the dropdown at top right.
 > -   **Playback controls:** Use play, pause, next, previous inside the popup.
-> -   **Timing offset:** Click ⚙️, adjust ms if lyrics are early/late.
-> -   **Show/hide controls:** Click 🎛️ for extra playback options.
-> -   **Reset:** Click ↻ to restore popup position/size.
+> -   **Timing offset:** Click ⚙️, adjust ms if lyrics are early/late (collapsable).
+> -   **Show/hide controls:** Click 🎛️ for extra playback options (collapsable).
+> -   **Reset:** Click ↻ to restore default popup position/size.
 
 > **TIP:** All your settings are remembered, so you always return to where you left off!
 
