@@ -20,6 +20,7 @@
 // Focus lyrics (maybe the main lyric line can be slightly bigger than rest of lyric lines.
 // Lyric lines that are currently not main line (previous and next) could be slightly blurred.
 // Lyrics should be centered  
+// Converting the userscript into a browser extension (maybe eventually) > to possibilitate having a floating popup ui with spotify lyrics that works outside open.spotify.com
 
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 // Mobile tweaks: Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
