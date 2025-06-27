@@ -1,24 +1,16 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Experimental
+// @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      1.51
+// @version      2.00
 // @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
 // @grant        none
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
 // ==/UserScript==
-
-// Equal to Stable release (27.5.25)
-// Instance for debugging and testing
-// Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
-// Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
-// Optimize drag and resize to work on mobile browser. (if possible) 
-// Add "expand button to the right of next track button in playback controls container. Its icon should fit nicely with the rest of playback control buttons. Its function is that on click, the popup gets expanded to fit the screen (if im on mobile and zoomed in, its supposed to fit that screen (the Spotify website). If possible to implement I'd also suggest that Spotify's bottom container - the one that has the volume toggle, playback control buttons, seekbar etc - remains visible while the rest of the website gets overtaken by the popup gui). While expanded if click the button again, it returns to the previous position state or if that's too hard to implement, to the restore default position.
-// Playback control buttons not responsible on mobile bc desktop mode and smol interface i suppose so I can't click, also difficult to drag and resize as mentioned, on mobile. on pc fine
 
 (function () {
   'use strict';
@@ -1077,7 +1069,6 @@ async function autodetectProviderAndLoad(popup, info) {
 }, 200);
 }
 
-
   function addButton(maxRetries = 10) {
   let attempts = 0;
 
@@ -1115,14 +1106,18 @@ async function autodetectProviderAndLoad(popup, info) {
     });
 
     btn.onclick = () => {
-      console.log("Lyrics+ button clicked");
-      let popup = document.getElementById("lyrics-plus-popup");
-      if (!popup) {
-        createPopup();
-        popup = document.getElementById("lyrics-plus-popup");
-      }
-      updateLyricsContent(popup, getCurrentTrackInfo());
-    };
+  console.log("Lyrics+ button clicked");
+  let popup = document.getElementById("lyrics-plus-popup");
+  if (popup) {
+    // If popup is open, close it (same as closeBtn)
+    removePopup();
+  } else {
+    // If popup is closed, open it
+    createPopup();
+    popup = document.getElementById("lyrics-plus-popup");
+    updateLyricsContent(popup, getCurrentTrackInfo());
+  }
+};
 
     controls.appendChild(btn);
     console.log("Lyrics+ button added!");
