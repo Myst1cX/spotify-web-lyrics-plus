@@ -1,24 +1,27 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Stable
+// @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      2.00
+// @version      1.51
 // @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
 // @grant        none
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.js
 // ==/UserScript==
+
+// Equal to Stable release (27.5.25)
+// Instance for debugging and testing
+// Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
+// Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
+// Optimize drag and resize to work on mobile browser. (if possible)
+// Add "expand button to the right of next track button in playback controls container. Its icon should fit nicely with the rest of playback control buttons. Its function is that on click, the popup gets expanded to fit the screen (if im on mobile and zoomed in, its supposed to fit that screen (the Spotify website). If possible to implement I'd also suggest that Spotify's bottom container - the one that has the volume toggle, playback control buttons, seekbar etc - remains visible while the rest of the website gets overtaken by the popup gui). While expanded if click the button again, it returns to the previous position state or if that's too hard to implement, to the restore default position.
+// Playback control buttons not responsible on mobile bc desktop mode and smol interface i suppose so I can't click, also difficult to drag and resize as mentioned, on mobile. on pc fine
 
 (function () {
   'use strict';
-
-  // Variables
-  let pollingInterval = null;
-  let currentTrackId = null;
-  let popup = null;
 
   function getCurrentTrackInfo() {
     const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
@@ -335,7 +338,12 @@ const Providers = {
   getCurrent() { return this.map[this.current]; },
   setCurrent(name) { if (this.map[name]) this.current = name; }
 };
- let highlightTimer = null;
+
+let highlightTimer = null;
+let pollingInterval = null;
+let currentTrackId = null;
+let currentSyncedLyrics = null;
+let currentLyricsContainer = null;
 
   function removePopup() {
     if (highlightTimer) {
@@ -350,12 +358,9 @@ const Providers = {
     if (existing) existing.remove();
   }
 
-let currentSyncedLyrics = null;
-let currentLyricsContainer = null;
 
   function createPopup() {
   removePopup();
-  popup = null;
 
   // Load saved state from localStorage
   const savedState = localStorage.getItem('lyricsPlusPopupState');
@@ -368,7 +373,7 @@ let currentLyricsContainer = null;
     }
   }
 
-  popup = document.createElement("div");
+  const popup = document.createElement("div");
   popup.id = "lyrics-plus-popup";
   Object.assign(popup.style, {
     position: "fixed",
@@ -389,7 +394,7 @@ let currentLyricsContainer = null;
     overflow: "hidden",
     padding: "0",
     userSelect: "none",
- });
+  });
 
   // Header with title and close button - drag handle
   const headerWrapper = document.createElement("div");
@@ -400,13 +405,12 @@ let currentLyricsContainer = null;
     zIndex: 10,
     cursor: "move",
     userSelect: "none",
- });
+  });
 
   const header = document.createElement("div");
   header.style.display = "flex";
   header.style.justifyContent = "space-between";
   header.style.alignItems = "center";
-
 
   const title = document.createElement("h3");
   title.textContent = "Lyrics+";
@@ -417,98 +421,94 @@ let currentLyricsContainer = null;
   closeBtn.textContent = "×";
   closeBtn.title = "Close Lyrics+";
   Object.assign(closeBtn.style, {
-  cursor: "pointer",
-  background: "none",
-  border: "none",
-  color: "white",
-  fontSize: "18px",
-  fontWeight: "bold",
-  lineHeight: "1",
-  userSelect: "auto",
-  height: "32px",
-  display: "flex",
-  padding: "0 2px",
-  alignItems: "center",
-  justifyContent: "center",
-  boxSizing: "border-box",
-});
+    cursor: "pointer",
+    background: "none",
+    border: "none",
+    color: "white",
+    fontSize: "18px",
+    fontWeight: "bold",
+    lineHeight: "1",
+    userSelect: "auto",
+    height: "32px",
+    display: "flex",
+    padding: "0 2px",
+    alignItems: "center",
+    justifyContent: "center",
+    boxSizing: "border-box",
+  });
   closeBtn.onclick = () => {
     savePopupState(popup);
     removePopup();
   };
 
   // Toggle offset section
-const offsetToggleBtn = document.createElement("button");
-offsetToggleBtn.textContent = "⚙️";
-offsetToggleBtn.title = "Show/hide timing offset";
-offsetToggleBtn.style.marginRight = "6px";
-offsetToggleBtn.style.cursor = "pointer";
-offsetToggleBtn.style.background = "none";
-offsetToggleBtn.style.border = "none";
-offsetToggleBtn.style.color = "white";
-offsetToggleBtn.style.fontSize = "16px";
-offsetToggleBtn.style.lineHeight = "1";
+  const offsetToggleBtn = document.createElement("button");
+  offsetToggleBtn.textContent = "⚙️";
+  offsetToggleBtn.title = "Show/hide timing offset";
+  offsetToggleBtn.style.marginRight = "6px";
+  offsetToggleBtn.style.cursor = "pointer";
+  offsetToggleBtn.style.background = "none";
+  offsetToggleBtn.style.border = "none";
+  offsetToggleBtn.style.color = "white";
+  offsetToggleBtn.style.fontSize = "16px";
+  offsetToggleBtn.style.lineHeight = "1";
 
-// Toggle controls bar
-// Toggle playback controls bar - use a better icon
-const playbackToggleBtn = document.createElement("button");
-playbackToggleBtn.textContent = "🎛️"; // control knobs
-playbackToggleBtn.title = "Show/hide playback controls";
-playbackToggleBtn.style.marginRight = "6px";
-playbackToggleBtn.style.cursor = "pointer";
-playbackToggleBtn.style.background = "none";
-playbackToggleBtn.style.border = "none";
-playbackToggleBtn.style.color = "white";
-playbackToggleBtn.style.fontSize = "14px";
-playbackToggleBtn.style.lineHeight = "1";
+  // Toggle controls bar
+  const playbackToggleBtn = document.createElement("button");
+  playbackToggleBtn.textContent = "🎛️";
+  playbackToggleBtn.title = "Show/hide playback controls";
+  playbackToggleBtn.style.marginRight = "6px";
+  playbackToggleBtn.style.cursor = "pointer";
+  playbackToggleBtn.style.background = "none";
+  playbackToggleBtn.style.border = "none";
+  playbackToggleBtn.style.color = "white";
+  playbackToggleBtn.style.fontSize = "14px";
+  playbackToggleBtn.style.lineHeight = "1";
 
-// 1. Create font size selector
-const fontSizeSelect = document.createElement("select");
-fontSizeSelect.title = "Change lyrics font size";
-fontSizeSelect.style.marginRight = "6px";
-fontSizeSelect.style.cursor = "pointer";
-fontSizeSelect.style.background = "#121212";
-fontSizeSelect.style.border = "none";
-fontSizeSelect.style.color = "white";
-fontSizeSelect.style.fontSize = "14px";
-fontSizeSelect.style.lineHeight = "1";
+  // Font size selector
+  const fontSizeSelect = document.createElement("select");
+  fontSizeSelect.title = "Change lyrics font size";
+  fontSizeSelect.style.marginRight = "6px";
+  fontSizeSelect.style.cursor = "pointer";
+  fontSizeSelect.style.background = "#121212";
+  fontSizeSelect.style.border = "none";
+  fontSizeSelect.style.color = "white";
+  fontSizeSelect.style.fontSize = "14px";
+  fontSizeSelect.style.lineHeight = "1";
 
-["16", "22", "28", "38"].forEach(size => {
-  const opt = document.createElement("option");
-  opt.value = size;
-  opt.textContent = size + "px";
-  fontSizeSelect.appendChild(opt);
-});
+  ["16", "22", "28", "38"].forEach(size => {
+    const opt = document.createElement("option");
+    opt.value = size;
+    opt.textContent = size + "px";
+    fontSizeSelect.appendChild(opt);
+  });
 
-// Load from storage or default
-fontSizeSelect.value = localStorage.getItem("lyricsPlusFontSize") || "22";
+  fontSizeSelect.value = localStorage.getItem("lyricsPlusFontSize") || "22";
+  fontSizeSelect.onchange = () => {
+    localStorage.setItem("lyricsPlusFontSize", fontSizeSelect.value);
+    const lyricsContent = document.getElementById("lyrics-plus-content");
+    if (lyricsContent) {
+      lyricsContent.style.fontSize = fontSizeSelect.value + "px";
+    }
+  };
 
-// 2. Change font size on selection
-fontSizeSelect.onchange = () => {
-  localStorage.setItem("lyricsPlusFontSize", fontSizeSelect.value);
-  const lyricsContent = document.getElementById("lyrics-plus-content");
-  if (lyricsContent) {
-    lyricsContent.style.fontSize = fontSizeSelect.value + "px";
-  }
-};
+  header.appendChild(title);
 
-header.appendChild(title);
+  // Button group
+  const buttonGroup = document.createElement("div");
+  buttonGroup.style.display = "flex";
+  buttonGroup.style.alignItems = "center";
+  buttonGroup.appendChild(playbackToggleBtn);
+  buttonGroup.appendChild(offsetToggleBtn);
+  buttonGroup.appendChild(closeBtn);
 
-// Create a right-side button group container
-const buttonGroup = document.createElement("div");
-buttonGroup.style.display = "flex";
-buttonGroup.style.alignItems = "center";
-buttonGroup.appendChild(playbackToggleBtn);  // 🎛️
-buttonGroup.appendChild(offsetToggleBtn);    // ⚙️
-buttonGroup.appendChild(closeBtn);           // ×
+  header.appendChild(buttonGroup);
 
-header.appendChild(buttonGroup);
+  headerWrapper.appendChild(header);
 
-headerWrapper.appendChild(header);
+  buttonGroup.insertBefore(fontSizeSelect, playbackToggleBtn);
 
-buttonGroup.insertBefore(fontSizeSelect, playbackToggleBtn);
-
-   // Tabs container
+  // Tabs container
   const tabs = document.createElement("div");
   tabs.style.display = "flex";
   tabs.style.marginTop = "12px";
@@ -543,57 +543,53 @@ buttonGroup.insertBefore(fontSizeSelect, playbackToggleBtn);
     overflowY: "auto",
     padding: "12px",
     whiteSpace: "pre-wrap",
-    fontSize: "22px", //if big screen:38px; if small pip window: 22px
+    fontSize: "22px",
     lineHeight: "1.5",
-    backgroundColor: "#121212", //remove this line for transparent background
+    backgroundColor: "#121212",
     userSelect: "text",
   });
+  lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
 
-// Set font size from storage or default
-lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
+  // Offset Setting UI
+  const offsetWrapper = document.createElement("div");
+  offsetWrapper.style.display = "flex";
+  offsetWrapper.style.alignItems = "center";
+  offsetWrapper.style.justifyContent = "space-between";
+  offsetWrapper.style.padding = "8px 12px";
+  offsetWrapper.style.background = "#121212";
+  offsetWrapper.style.borderBottom = "1px solid #333";
+  offsetWrapper.style.fontSize = "15px";
+  offsetWrapper.style.width = "100%";
 
-// Offset Setting UI
-const offsetWrapper = document.createElement("div");
-offsetWrapper.style.display = "flex";
-offsetWrapper.style.alignItems = "center";
-offsetWrapper.style.justifyContent = "space-between"; // Spread label and input
-offsetWrapper.style.padding = "8px 12px";
-offsetWrapper.style.background = "#121212";
-offsetWrapper.style.borderBottom = "1px solid #333";
-offsetWrapper.style.fontSize = "15px";
-offsetWrapper.style.width = "100%";
+  const offsetLabel = document.createElement("div");
+  offsetLabel.innerHTML = `Adjust lyrics timing (ms):<br><span style="font-size: 11px; color: #aaa;">lower = appear later, higher = appear earlier</span>`;
+  offsetLabel.style.color = "#fff";
 
-// Left-aligned label with explanation
-const offsetLabel = document.createElement("div");
-offsetLabel.innerHTML = `Adjust lyrics timing (ms):<br><span style="font-size: 11px; color: #aaa;">lower = appear later, higher = appear earlier</span>`;
-offsetLabel.style.color = "#fff";
+  const offsetInput = document.createElement("input");
+  offsetInput.type = "number";
+  offsetInput.min = "-2000";
+  offsetInput.max = "2000";
+  offsetInput.step = "10";
+  offsetInput.value = getAnticipationOffset();
+  offsetInput.style.width = "70px";
+  offsetInput.style.background = "#222";
+  offsetInput.style.color = "#fff";
+  offsetInput.style.border = "1px solid #444";
+  offsetInput.style.borderRadius = "6px";
+  offsetInput.style.padding = "2px 6px";
+  offsetInput.style.marginLeft = "16px";
 
-// Right-aligned input
-const offsetInput = document.createElement("input");
-offsetInput.type = "number";
-offsetInput.min = "-2000";
-offsetInput.max = "2000";
-offsetInput.step = "10";
-offsetInput.value = getAnticipationOffset();
-offsetInput.style.width = "70px";
-offsetInput.style.background = "#222";
-offsetInput.style.color = "#fff";
-offsetInput.style.border = "1px solid #444";
-offsetInput.style.borderRadius = "6px";
-offsetInput.style.padding = "2px 6px";
-offsetInput.style.marginLeft = "16px"; // space from label
+  offsetInput.addEventListener("change", () => {
+    setAnticipationOffset(offsetInput.value);
+    if (currentSyncedLyrics && currentLyricsContainer) {
+      highlightSyncedLyrics(currentSyncedLyrics, currentLyricsContainer);
+    }
+  });
 
-offsetInput.addEventListener("change", () => {
-  setAnticipationOffset(offsetInput.value);
-  if (currentSyncedLyrics && currentLyricsContainer) {
-    highlightSyncedLyrics(currentSyncedLyrics, currentLyricsContainer);
-  }
-});
+  offsetWrapper.appendChild(offsetLabel);
+  offsetWrapper.appendChild(offsetInput);
 
-offsetWrapper.appendChild(offsetLabel);
-offsetWrapper.appendChild(offsetInput);
-
-    // Playback Controls Bar
+  // Playback Controls Bar
   const controlsBar = document.createElement("div");
   Object.assign(controlsBar.style, {
     display: "flex",
@@ -604,25 +600,50 @@ offsetWrapper.appendChild(offsetInput);
     borderTop: "1px solid #333",
     backgroundColor: "#121212",
     userSelect: "none",
-});
+  });
 
-offsetWrapper.id = "lyrics-plus-offset-wrapper";
-controlsBar.id = "lyrics-plus-controls-bar";
-offsetWrapper.style.transition = "max-height 0.3s, opacity 0.3s";
-offsetWrapper.style.overflow = "hidden";
-controlsBar.style.transition = "max-height 0.3s, opacity 0.3s";
-controlsBar.style.overflow = "hidden";
-let offsetVisible = localStorage.getItem('lyricsPlusOffsetVisible');
-if (offsetVisible === null) offsetVisible = true;
-else offsetVisible = JSON.parse(offsetVisible);
+  offsetWrapper.id = "lyrics-plus-offset-wrapper";
+  controlsBar.id = "lyrics-plus-controls-bar";
+  offsetWrapper.style.transition = "max-height 0.3s, opacity 0.3s";
+  offsetWrapper.style.overflow = "hidden";
+  controlsBar.style.transition = "max-height 0.3s, opacity 0.3s";
+  controlsBar.style.overflow = "hidden";
+  let offsetVisible = localStorage.getItem('lyricsPlusOffsetVisible');
+  if (offsetVisible === null) offsetVisible = true;
+  else offsetVisible = JSON.parse(offsetVisible);
 
-let controlsVisible = localStorage.getItem('lyricsPlusControlsVisible');
-if (controlsVisible === null) controlsVisible = true;
-else controlsVisible = JSON.parse(controlsVisible);
+  let controlsVisible = localStorage.getItem('lyricsPlusControlsVisible');
+  if (controlsVisible === null) controlsVisible = true;
+  else controlsVisible = JSON.parse(controlsVisible);
 
-offsetToggleBtn.onclick = () => {
-  offsetVisible = !offsetVisible;
-  localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
+  offsetToggleBtn.onclick = () => {
+    offsetVisible = !offsetVisible;
+    localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
+    if (offsetVisible) {
+      offsetWrapper.style.maxHeight = "100px";
+      offsetWrapper.style.opacity = "1";
+      offsetWrapper.style.pointerEvents = "";
+    } else {
+      offsetWrapper.style.maxHeight = "0";
+      offsetWrapper.style.opacity = "0";
+      offsetWrapper.style.pointerEvents = "none";
+    }
+  };
+
+  playbackToggleBtn.onclick = () => {
+    controlsVisible = !controlsVisible;
+    localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
+    if (controlsVisible) {
+      controlsBar.style.maxHeight = "80px";
+      controlsBar.style.opacity = "1";
+      controlsBar.style.pointerEvents = "";
+    } else {
+      controlsBar.style.maxHeight = "0";
+      controlsBar.style.opacity = "0";
+      controlsBar.style.pointerEvents = "none";
+    }
+  };
+
   if (offsetVisible) {
     offsetWrapper.style.maxHeight = "100px";
     offsetWrapper.style.opacity = "1";
@@ -632,11 +653,7 @@ offsetToggleBtn.onclick = () => {
     offsetWrapper.style.opacity = "0";
     offsetWrapper.style.pointerEvents = "none";
   }
-};
 
-playbackToggleBtn.onclick = () => {
-  controlsVisible = !controlsVisible;
-  localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
   if (controlsVisible) {
     controlsBar.style.maxHeight = "80px";
     controlsBar.style.opacity = "1";
@@ -646,36 +663,104 @@ playbackToggleBtn.onclick = () => {
     controlsBar.style.opacity = "0";
     controlsBar.style.pointerEvents = "none";
   }
-};
 
-// Set initial state (open)
-if (offsetVisible) {
-  offsetWrapper.style.maxHeight = "100px";
-  offsetWrapper.style.opacity = "1";
-  offsetWrapper.style.pointerEvents = "";
-} else {
-  offsetWrapper.style.maxHeight = "0";
-  offsetWrapper.style.opacity = "0";
-  offsetWrapper.style.pointerEvents = "none";
-}
+  // Helper to create control buttons
+  function createControlBtn(content, title, onClick) {
+    const btn = document.createElement("button");
+    btn.title = title;
+    Object.assign(btn.style, {
+      cursor: "pointer",
+      background: "#1db954",
+      border: "none",
+      borderRadius: "50%",
+      width: "32px",
+      height: "32px",
+      color: "white",
+      fontWeight: "bold",
+      fontSize: "18px",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      userSelect: "none",
+      padding: "0",
+    });
+    if (typeof content === "string") {
+      btn.textContent = content;
+    } else {
+      btn.appendChild(content);
+    }
+    btn.onclick = onClick;
+    return btn;
+  }
 
-if (controlsVisible) {
-  controlsBar.style.maxHeight = "80px";
-  controlsBar.style.opacity = "1";
-  controlsBar.style.pointerEvents = "";
-} else {
-  controlsBar.style.maxHeight = "0";
-  controlsBar.style.opacity = "0";
-  controlsBar.style.pointerEvents = "none";
-}
+  // SVG icons for play and pause
+  const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  playSVG.setAttribute("viewBox", "0 0 24 24");
+  playSVG.setAttribute("width", "20");
+  playSVG.setAttribute("height", "20");
+  playSVG.setAttribute("fill", "white");
+  playSVG.innerHTML = `<path d="M8 5v14l11-7z"/>`;
 
-  // Helper to create control buttons with SVG for play/pause
-function createControlBtn(content, title, onClick) {
-  const btn = document.createElement("button");
-  btn.title = title;
-  Object.assign(btn.style, {
+  const pauseSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  pauseSVG.setAttribute("viewBox", "0 0 24 24");
+  pauseSVG.setAttribute("width", "20");
+  pauseSVG.setAttribute("height", "20");
+  pauseSVG.setAttribute("fill", "white");
+  pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+
+  function sendSpotifyCommand(command) {
+    let selector;
+    switch (command) {
+      case "playpause":
+        selector = '[aria-label="Play"], [aria-label="Pause"]';
+        break;
+      case "next":
+        selector = '[aria-label="Next"]';
+        break;
+      case "previous":
+        selector = '[aria-label="Previous"]';
+        break;
+      default:
+        console.warn("Unknown Spotify command:", command);
+        return;
+    }
+    const btn = document.querySelector(selector);
+    if (btn) btn.click();
+    else console.warn("Spotify button not found for:", command);
+  }
+
+  function updatePlayPauseIcon(btnPlayPause) {
+    const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
+    btnPlayPause.innerHTML = "";
+    if (pauseVisible) {
+      btnPlayPause.appendChild(playSVG.cloneNode(true));
+    } else {
+      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+    }
+  }
+
+  function createPlayPauseButton() {
+    const btnPlayPause = createControlBtn("", "Play/Pause", () => {
+      sendSpotifyCommand("playpause");
+      updatePlayPauseIcon(btnPlayPause);
+    });
+
+    btnPlayPause.innerHTML = "";
+    btnPlayPause.appendChild(playSVG.cloneNode(true));
+    updatePlayPauseIcon(btnPlayPause);
+    return btnPlayPause;
+  }
+
+  const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
+  const btnPlayPause = createPlayPauseButton();
+  const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
+
+  const btnReset = document.createElement("button");
+  btnReset.textContent = "↻";
+  btnReset.title = "Restore Default Position and Size";
+  Object.assign(btnReset.style, {
     cursor: "pointer",
-    background: "#1db954",
+    background: "#555",
     border: "none",
     borderRadius: "50%",
     width: "32px",
@@ -689,114 +774,19 @@ function createControlBtn(content, title, onClick) {
     userSelect: "none",
     padding: "0",
   });
-  if (typeof content === "string") {
-    btn.textContent = content;
-  } else {
-    btn.appendChild(content);
-  }
-  btn.onclick = onClick;
-  return btn;
-}
+  btnReset.onclick = () => {
+    Object.assign(popup.style, {
+      position: "fixed",
+      bottom: "0px",
+      right: "0px",
+      left: "auto",
+      top: "auto",
+      width: "320px",
+      height: "45vh",
+    });
+    savePopupState(popup);
+  };
 
-// SVG icons for play and pause (white)
-const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-playSVG.setAttribute("viewBox", "0 0 24 24");
-playSVG.setAttribute("width", "20");
-playSVG.setAttribute("height", "20");
-playSVG.setAttribute("fill", "white");
-playSVG.innerHTML = `<path d="M8 5v14l11-7z"/>`; // play triangle
-
-const pauseSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-pauseSVG.setAttribute("viewBox", "0 0 24 24");
-pauseSVG.setAttribute("width", "20");
-pauseSVG.setAttribute("height", "20");
-pauseSVG.setAttribute("fill", "white");
-pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`; // pause bars
-
-// Helper to simulate clicks on Spotify Web Player buttons by aria-label
-function sendSpotifyCommand(command) {
-  let selector;
-  switch (command) {
-    case "playpause":
-      selector = '[aria-label="Play"], [aria-label="Pause"]';
-      break;
-    case "next":
-      selector = '[aria-label="Next"]';
-      break;
-    case "previous":
-      selector = '[aria-label="Previous"]';
-      break;
-    default:
-      console.warn("Unknown Spotify command:", command);
-      return;
-  }
-  const btn = document.querySelector(selector);
-  if (btn) btn.click();
-  else console.warn("Spotify button not found for:", command);
-}
-
-function updatePlayPauseIcon(btnPlayPause) {
-  const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
-  btnPlayPause.innerHTML = "";
-  if (pauseVisible) {
-    btnPlayPause.appendChild(playSVG.cloneNode(true));
-  } else {
-    btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-  }
-}
-
-function createPlayPauseButton() {
-  // Create the button
-  const btnPlayPause = createControlBtn("", "Play/Pause", () => {
-    sendSpotifyCommand("playpause");
-    updatePlayPauseIcon(btnPlayPause);
-  });
-
-  btnPlayPause.innerHTML = "";
-  btnPlayPause.appendChild(playSVG.cloneNode(true));
-
-  updatePlayPauseIcon(btnPlayPause);
-
-  return btnPlayPause;
-}
-
-  // Create buttons (no shuffle, no repeat)
-  const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
-  const btnPlayPause = createPlayPauseButton();
-  const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
-
-  // Create reset button manually to customize style (not green like others)
-const btnReset = document.createElement("button");
-btnReset.textContent = "↻"; // Reload icon
-btnReset.title = "Restore Default Position and Size";
-Object.assign(btnReset.style, {
-  cursor: "pointer",
-  background: "#555", // darker gray background, change as you like
-  border: "none",
-  borderRadius: "50%",
-  width: "32px",
-  height: "32px",
-  color: "white",
-  fontWeight: "bold",
-  fontSize: "18px",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  userSelect: "none",
-  padding: "0",
-});
-btnReset.onclick = () => {
-Object.assign(popup.style, {
-position: "fixed",
-bottom: "0px",
-right: "0px",
-left: "auto",
-top: "auto",
-width: "320px",
-height: "45vh",
-});
-  savePopupState(popup);
-};
   controlsBar.appendChild(btnReset);
   controlsBar.appendChild(btnPrevious);
   controlsBar.appendChild(btnPlayPause);
@@ -820,7 +810,7 @@ height: "45vh",
     }));
   }
 
-  // Draggable implementation
+  // Drag and resize code...
   (function makeDraggable(el, handle) {
     let isDragging = false;
     let startX, startY;
@@ -862,7 +852,6 @@ height: "45vh",
     });
   })(popup, headerWrapper);
 
-  // Resizable implementation (bottom-right corner)
   const resizer = document.createElement("div");
   Object.assign(resizer.style, {
     width: "16px",
@@ -878,7 +867,6 @@ height: "45vh",
     zIndex: 20,
     clipPath: "polygon(100% 0, 0 100%, 100% 100%)"
   });
-
   popup.appendChild(resizer);
 
   (function makeResizable(el, handle) {
@@ -919,20 +907,14 @@ height: "45vh",
     });
   })(popup, resizer);
 
-  function updateTabs(tabsContainer) {
-    [...tabsContainer.children].forEach(btn => {
-      btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
-    });
-  }
-
-  function getAnticipationOffset() {
+function getAnticipationOffset() {
   return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 300); // default 300ms
 }
 function setAnticipationOffset(val) {
   localStorage.setItem("lyricsPlusAnticipationOffset", val);
 }
 
-  function highlightSyncedLyrics(lyrics, container) {
+ function highlightSyncedLyrics(lyrics, container) {
   if (!lyrics || lyrics.length === 0) return;
 
   const pElements = [...container.querySelectorAll("p")];
@@ -975,7 +957,7 @@ function setAnticipationOffset(val) {
   }, 50);
 }
 
-async function updateLyricsContent(popup, info) {
+  async function updateLyricsContent(popup, info) {
   if (!info) return;
   const lyricsContainer = popup.querySelector("#lyrics-plus-content");
   if (!lyricsContainer) return;
@@ -1024,56 +1006,7 @@ async function updateLyricsContent(popup, info) {
   }
 }
 
-async function autodetectProviderAndLoad(popup, info) {
-  const providerOrder = ["LRCLIB", "KPoe", "Genius"];
-  for (const name of providerOrder) {
-    const provider = Providers.map[name];
-    const result = await provider.findLyrics(info);
-    let hasLyrics = false;
-    if (!result.error) {
-      if (name === "Genius") {
-        hasLyrics = provider.getUnsynced(result)?.length > 0;
-      } else {
-        hasLyrics = (provider.getSynced(result)?.length > 0) || (provider.getUnsynced(result)?.length > 0);
-      }
-    }
-    if (hasLyrics) {
-      Providers.setCurrent(name);
-      // Update tabs if they exist
-      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-      await updateLyricsContent(popup, info);
-      return;
-    }
-  }
-  // If none found, fallback to LRCLIB
-  Providers.setCurrent("LRCLIB");
-  if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-  await updateLyricsContent(popup, info);
-}
-
-    // Load track info and update lyrics
-  let info = getCurrentTrackInfo();
-  if (!info) return;
-
-  currentTrackId = info.id;
-  autodetectProviderAndLoad(popup, info);
-  updatePlayPauseIcon();
-
-  pollingInterval = setInterval(() => {
-  const newInfo = getCurrentTrackInfo();
-  if (!newInfo || newInfo.id === currentTrackId) {
-    updatePlayPauseIcon();
-    return;
-  }
-  currentTrackId = newInfo.id;
-  const lyricsContainer = document.getElementById("lyrics-plus-content");
-  if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-  if (popup) autodetectProviderAndLoad(popup, newInfo); // always call this
-  updatePlayPauseIcon();
-}, 200);
-}
-
-function addButton(maxRetries = 10) {
+      function addButton(maxRetries = 10) {
   let attempts = 0;
 
   const tryAdd = () => {
@@ -1110,20 +1043,74 @@ function addButton(maxRetries = 10) {
     });
 
     btn.onclick = () => {
-      console.log("Lyrics+ button clicked");
-      let popup = document.getElementById("lyrics-plus-popup");
-      if (!popup) {
-        createPopup();
-        popup = document.getElementById("lyrics-plus-popup");
-      }
-      updateLyricsContent(popup, getCurrentTrackInfo());
-    };
-
-    controls.appendChild(btn);
-    console.log("Lyrics+ button added!");
-  };
+  console.log("Lyrics+ button clicked");
+  let popup = document.getElementById("lyrics-plus-popup");
+  if (popup) {
+    // If popup is open, close it (same as closeBtn)
+    removePopup();
+  } else {
+    // If popup is closed, open it
+    createPopup();
+    popup = document.getElementById("lyrics-plus-popup");
+    updateLyricsContent(popup, getCurrentTrackInfo());
+};
 
   tryAdd();
+}
+
+    function updateTabs(tabsContainer) {
+    [...tabsContainer.children].forEach(btn => {
+      btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
+    });
+  }
+
+  async function autodetectProviderAndLoad(popup, info) {
+  const providerOrder = ["LRCLIB", "KPoe", "Genius"];
+  for (const name of providerOrder) {
+    const provider = Providers.map[name];
+    const result = await provider.findLyrics(info);
+    let hasLyrics = false;
+    if (!result.error) {
+      if (name === "Genius") {
+        hasLyrics = provider.getUnsynced(result)?.length > 0;
+      } else {
+        hasLyrics = (provider.getSynced(result)?.length > 0) || (provider.getUnsynced(result)?.length > 0);
+      }
+    }
+    if (hasLyrics) {
+      Providers.setCurrent(name);
+      // Update tabs if they exist
+      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+      await updateLyricsContent(popup, info);
+      return;
+    }
+  }
+  // If none found, fallback to LRCLIB
+  Providers.setCurrent("LRCLIB");
+  if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+  await updateLyricsContent(popup, info);
+}
+
+  let info = getCurrentTrackInfo();
+  if (!info) return;
+
+  currentTrackId = info.id;
+  autodetectProviderAndLoad(popup, info);
+  updatePlayPauseIcon();
+
+  if (pollingInterval) clearInterval(pollingInterval);
+  pollingInterval = setInterval(() => {
+    const newInfo = getCurrentTrackInfo();
+    if (!newInfo || newInfo.id === currentTrackId) {
+      updatePlayPauseIcon();
+      return;
+    }
+    currentTrackId = newInfo.id;
+    const lyricsContainer = document.getElementById("lyrics-plus-content");
+    if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+    autodetectProviderAndLoad(popup, newInfo);
+    updatePlayPauseIcon();
+  }, 200);
 }
 
 
@@ -1133,11 +1120,11 @@ const observer = new MutationObserver(() => {
 observer.observe(document.body, { childList: true, subtree: true });
 
 
+
 let lastTrackTitle = "";
 
 function init() {
   addButton();
-  setupTrackChangeWatcher();
 }
 
 // Observe Spotify page changes to re-add button if necessary
@@ -1145,11 +1132,9 @@ const appRoot = document.querySelector('#main');
 if (appRoot) {
   const pageObserver = new MutationObserver(() => {
     addButton();
-    setupTrackChangeWatcher();
   });
   pageObserver.observe(appRoot, { childList: true, subtree: true });
 }
 
 init();
-
 })();
