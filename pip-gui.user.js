@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      1.51
+// @version      2.00
 // @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
@@ -11,8 +11,6 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
 // ==/UserScript==
-
-// TO DO: fix Play/Pause tooltip not showing upon hover over the icon.
 
 (function () {
   'use strict';
@@ -458,6 +456,36 @@ playbackToggleBtn.style.color = "white";
 playbackToggleBtn.style.fontSize = "14px";
 playbackToggleBtn.style.lineHeight = "1";
 
+// 1. Create font size selector
+const fontSizeSelect = document.createElement("select");
+fontSizeSelect.title = "Change lyrics font size";
+fontSizeSelect.style.marginRight = "6px";
+fontSizeSelect.style.cursor = "pointer";
+fontSizeSelect.style.background = "#121212";
+fontSizeSelect.style.border = "none";
+fontSizeSelect.style.color = "white";
+fontSizeSelect.style.fontSize = "14px";
+fontSizeSelect.style.lineHeight = "1";
+
+["16", "22", "28", "38"].forEach(size => {
+  const opt = document.createElement("option");
+  opt.value = size;
+  opt.textContent = size + "px";
+  fontSizeSelect.appendChild(opt);
+});
+
+// Load from storage or default
+fontSizeSelect.value = localStorage.getItem("lyricsPlusFontSize") || "22";
+
+// 2. Change font size on selection
+fontSizeSelect.onchange = () => {
+  localStorage.setItem("lyricsPlusFontSize", fontSizeSelect.value);
+  const lyricsContent = document.getElementById("lyrics-plus-content");
+  if (lyricsContent) {
+    lyricsContent.style.fontSize = fontSizeSelect.value + "px";
+  }
+};
+
 header.appendChild(title);
 
 // Create a right-side button group container
@@ -471,6 +499,8 @@ buttonGroup.appendChild(closeBtn);           // ×
 header.appendChild(buttonGroup);
 
 headerWrapper.appendChild(header);
+
+buttonGroup.insertBefore(fontSizeSelect, playbackToggleBtn);
 
    // Tabs container
   const tabs = document.createElement("div");
@@ -512,6 +542,9 @@ headerWrapper.appendChild(header);
     backgroundColor: "#121212", //remove this line for transparent background
     userSelect: "text",
   });
+
+// Set font size from storage or default
+lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
 
 // Offset Setting UI
 const offsetWrapper = document.createElement("div");
@@ -696,12 +729,29 @@ function sendSpotifyCommand(command) {
   else console.warn("Spotify button not found for:", command);
 }
 
+function updatePlayPauseIcon(btnPlayPause) {
+  const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
+  btnPlayPause.innerHTML = "";
+  if (pauseVisible) {
+    btnPlayPause.appendChild(playSVG.cloneNode(true));
+  } else {
+    btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+  }
+}
+
 function createPlayPauseButton() {
-  // Empty button; SVG will be injected by updatePlayPauseIcon
-  return createControlBtn("", "Play/Pause", () => {
+  // Create the button
+  const btnPlayPause = createControlBtn("", "Play/Pause", () => {
     sendSpotifyCommand("playpause");
-    updatePlayPauseIcon();
+    updatePlayPauseIcon(btnPlayPause);
   });
+
+  btnPlayPause.innerHTML = "";
+  btnPlayPause.appendChild(playSVG.cloneNode(true));
+
+  updatePlayPauseIcon(btnPlayPause);
+
+  return btnPlayPause;
 }
 
   // Create buttons (no shuffle, no repeat)
@@ -863,16 +913,6 @@ height: "45vh",
     });
   })(popup, resizer);
 
-function updatePlayPauseIcon() {
-  const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
-  btnPlayPause.innerHTML = "";
-  if (pauseVisible) {
-    btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-  } else {
-    btnPlayPause.appendChild(playSVG.cloneNode(true));
-  }
-}
-
   function updateTabs(tabsContainer) {
     [...tabsContainer.children].forEach(btn => {
       btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
@@ -1014,17 +1054,19 @@ async function autodetectProviderAndLoad(popup, info) {
   updatePlayPauseIcon();
 
   pollingInterval = setInterval(() => {
-    const newInfo = getCurrentTrackInfo();
-    if (!newInfo || newInfo.id === currentTrackId) {
-      // Still update play/pause icon regardless
-      updatePlayPauseIcon();
-      return;
-    }
-
-    currentTrackId = newInfo.id;
-    autodetectProviderAndLoad(popup, newInfo);
+  const newInfo = getCurrentTrackInfo();
+  if (!newInfo || newInfo.id === currentTrackId) {
     updatePlayPauseIcon();
-  }, 200);
+    return;
+  }
+
+  currentTrackId = newInfo.id;
+  const lyricsContainer = document.getElementById("lyrics-plus-content");
+  if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+
+  autodetectProviderAndLoad(popup, newInfo);
+  updatePlayPauseIcon();
+}, 200);
 }
 
 
@@ -1111,4 +1153,3 @@ if (appRoot) {
 
 init();
 })();
-
