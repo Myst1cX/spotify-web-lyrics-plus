@@ -1,19 +1,31 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      2.00
+// @version      3.00
 // @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
 // @grant        none
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.experimental.user.js
 // ==/UserScript==
+
+// Equal to Stable release (Last update: 27.6.25)
 
 (function () {
   'use strict';
+
+    // ------------------------
+  // State Variables
+  // ------------------------
+
+  let highlightTimer = null;
+  let pollingInterval = null;
+  let currentTrackId = null;
+  let currentSyncedLyrics = null;
+  let currentLyricsContainer = null;
 
   // ------------------------
   // Utility Functions
@@ -217,6 +229,32 @@
     });
   }
 
+  // --- Play/Pause Icon SVGs ---
+const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+playSVG.setAttribute("viewBox", "0 0 24 24");
+playSVG.setAttribute("width", "20");
+playSVG.setAttribute("height", "20");
+playSVG.setAttribute("fill", "white");
+playSVG.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+
+const pauseSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+pauseSVG.setAttribute("viewBox", "0 0 24 24");
+pauseSVG.setAttribute("width", "20");
+pauseSVG.setAttribute("height", "20");
+pauseSVG.setAttribute("fill", "white");
+pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+
+// --- Play/Pause Icon Updater ---
+function updatePlayPauseIcon(btnPlayPause) {
+  const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
+  btnPlayPause.innerHTML = "";
+  if (pauseVisible) {
+    btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+  } else {
+    btnPlayPause.appendChild(playSVG.cloneNode(true));
+  }
+}
+
   // ------------------------
   // Providers and Fetchers
   // ------------------------
@@ -347,16 +385,6 @@
   };
 
   // ------------------------
-  // State Variables
-  // ------------------------
-
-  let highlightTimer = null;
-  let pollingInterval = null;
-  let currentTrackId = null;
-  let currentSyncedLyrics = null;
-  let currentLyricsContainer = null;
-
-  // ------------------------
   // UI and Popup Functions
   // ------------------------
 
@@ -370,7 +398,24 @@
       pollingInterval = null;
     }
     const existing = document.getElementById("lyrics-plus-popup");
-    if (existing) existing.remove();
+    if (existing) {
+      if (existing._playPauseObserver) existing._playPauseObserver.disconnect();
+      existing._playPauseObserver = null;
+      existing._playPauseBtn = null;
+      existing.remove();
+    }
+  }
+
+  function observeSpotifyPlayPause(popup) {
+    if (!popup || !popup._playPauseBtn) return;
+    if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
+    const spBtn = document.querySelector('[aria-label="Play"], [aria-label="Pause"]');
+    if (!spBtn) return;
+    const observer = new MutationObserver(() => {
+      if (popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+    });
+    observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class'] });
+    popup._playPauseObserver = observer;
   }
 
   function createPopup() {
@@ -701,20 +746,6 @@
       return btn;
     }
 
-    const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    playSVG.setAttribute("viewBox", "0 0 24 24");
-    playSVG.setAttribute("width", "20");
-    playSVG.setAttribute("height", "20");
-    playSVG.setAttribute("fill", "white");
-    playSVG.innerHTML = `<path d="M8 5v14l11-7z"/>`;
-
-    const pauseSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    pauseSVG.setAttribute("viewBox", "0 0 24 24");
-    pauseSVG.setAttribute("width", "20");
-    pauseSVG.setAttribute("height", "20");
-    pauseSVG.setAttribute("fill", "white");
-    pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
-
     function sendSpotifyCommand(command) {
       let selector;
       switch (command) {
@@ -736,16 +767,6 @@
       else console.warn("Spotify button not found for:", command);
     }
 
-    function updatePlayPauseIcon(btnPlayPause) {
-      const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
-      btnPlayPause.innerHTML = "";
-      if (pauseVisible) {
-        btnPlayPause.appendChild(playSVG.cloneNode(true));
-      } else {
-        btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-      }
-    }
-
     function createPlayPauseButton() {
       const btnPlayPause = createControlBtn("", "Play/Pause", () => {
         sendSpotifyCommand("playpause");
@@ -760,6 +781,8 @@
     const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
     const btnPlayPause = createPlayPauseButton();
     const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
+
+    popup._playPauseBtn = btnPlayPause;
 
     const btnReset = document.createElement("button");
     btnReset.textContent = "↻";
@@ -905,7 +928,8 @@
       });
     })(popup, resizer);
 
-    // Start polling when popup is opened
+    observeSpotifyPlayPause(popup);
+
     const info = getCurrentTrackInfo();
     if (info) {
       currentTrackId = info.id;
@@ -956,12 +980,11 @@
   }
 
   async function autodetectProviderAndLoad(popup, info) {
-    // Prefer KPoe synced > LRCLIB synced > KPoe unsynced > LRCLIB unsynced > Genius unsynced
     const providerChecks = [
-      { name: "KPoe", type: "getSynced" },
       { name: "LRCLIB", type: "getSynced" },
-      { name: "KPoe", type: "getUnsynced" },
+      { name: "KPoe", type: "getSynced" },
       { name: "LRCLIB", type: "getUnsynced" },
+      { name: "KPoe", type: "getUnsynced" },
       { name: "Genius", type: "getUnsynced" }
     ];
     for (const { name, type } of providerChecks) {
@@ -977,7 +1000,6 @@
         }
       }
     }
-    // fallback if none found
     Providers.setCurrent("LRCLIB");
     if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
     await updateLyricsContent(popup, info);
@@ -993,7 +1015,9 @@
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
         autodetectProviderAndLoad(popup, info);
+        observeSpotifyPlayPause(popup);
       }
+      if (popup && popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
     }, 400);
   }
 
@@ -1050,7 +1074,6 @@
     tryAdd();
   }
 
-  // --- OBSERVERS & INIT ---
   const observer = new MutationObserver(() => {
     addButton();
   });
@@ -1069,5 +1092,4 @@
   }
 
   init();
-
 })();
