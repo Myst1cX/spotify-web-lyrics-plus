@@ -78,6 +78,9 @@
 > **Lyrics out of sync?** Adjust the timing offset for perfect sync.
 > **Popup not showing?** Make sure you’re using [open.spotify.com](https://open.spotify.com/) and the userscript is enabled.
 > **Mobile?** Use desktop mode for best experience. Will fine-tube for better compatibility soon.
+
+* * *
+
 > Enjoy! For feedback or bug reports, open an issue:  
 > [https://github.com/Myst1cX/spotify-web-lyrics-plus/issues](https://github.com/Myst1cX/spotify-web-lyrics-plus/issues)
 * * *
