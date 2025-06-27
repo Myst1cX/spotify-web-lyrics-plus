@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Experimental
+// @name         Spotify Experimental
 // @namespace    http://tampermonkey.net/
-// @version      3.3
+// @version      3.4
 // @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
 // @author       you
 // @match        https://open.spotify.com/*
@@ -615,11 +615,10 @@ function updatePlayPauseIcon(btnPlayPause) {
     lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
 
 // Offset Setting UI
-const offsetWrapper = document.createElement("div");
+    const offsetWrapper = document.createElement("div");
     offsetWrapper.style.display = "flex";
     offsetWrapper.style.alignItems = "center";
     offsetWrapper.style.justifyContent = "space-between";
-    offsetWrapper.style.boxSizing = "border-box";
     offsetWrapper.style.padding = "8px 12px";
     offsetWrapper.style.background = "#121212";
     offsetWrapper.style.borderBottom = "1px solid #333";
@@ -667,9 +666,9 @@ const offsetWrapper = document.createElement("div");
 
     offsetWrapper.id = "lyrics-plus-offset-wrapper";
     controlsBar.id = "lyrics-plus-controls-bar";
-    offsetWrapper.style.transition = "max-height 0.3s, opacity 0.3s, padding 0.3s";
+    offsetWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     offsetWrapper.style.overflow = "hidden";
-    controlsBar.style.transition = "max-height 0.3s, opacity 0.3s";
+    controlsBar.style.transition = "max-height 0.3s";
     controlsBar.style.overflow = "hidden";
     let offsetVisible = localStorage.getItem('lyricsPlusOffsetVisible');
     if (offsetVisible === null) offsetVisible = true;
@@ -686,14 +685,12 @@ offsetToggleBtn.onclick = () => {
   localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
   if (offsetVisible) {
     offsetWrapper.style.maxHeight = "100px";
-    offsetWrapper.style.opacity = "1";
     offsetWrapper.style.pointerEvents = "";
-    offsetWrapper.style.padding = OFFSET_WRAPPER_PADDING; // Restore padding
+    offsetWrapper.style.padding = "8px 12px";
   } else {
     offsetWrapper.style.maxHeight = "0";
-    offsetWrapper.style.opacity = "0";
     offsetWrapper.style.pointerEvents = "none";
-    offsetWrapper.style.padding = "0 12px"; // Remove padding
+    offsetWrapper.style.padding = "0 12px";
   }
 };
 
@@ -711,26 +708,24 @@ offsetToggleBtn.onclick = () => {
       }
     };
 
-    if (offsetVisible) {
+   if (offsetVisible) {
   offsetWrapper.style.maxHeight = "100px";
-  offsetWrapper.style.opacity = "1";
   offsetWrapper.style.pointerEvents = "";
-  offsetWrapper.style.padding = OFFSET_WRAPPER_PADDING; // Restore padding
+  offsetWrapper.style.padding = "8px 12px";
 } else {
   offsetWrapper.style.maxHeight = "0";
-  offsetWrapper.style.opacity = "0";
   offsetWrapper.style.pointerEvents = "none";
-  offsetWrapper.style.padding = "0 12px"; // Remove padding
+  offsetWrapper.style.padding = "0 12px";
 }
 
-   if (controlsVisible) {
-  controlsBar.style.maxHeight = "80px";
-  controlsBar.style.opacity = "1";
-  controlsBar.style.pointerEvents = "";
-} else {
-  controlsBar.style.maxHeight = "0";
-  controlsBar.style.opacity = "0";
-  controlsBar.style.pointerEvents = "none";
+    if (controlsVisible) {
+      controlsBar.style.maxHeight = "80px";
+      controlsBar.style.opacity = "1";
+      controlsBar.style.pointerEvents = "";
+    } else {
+      controlsBar.style.maxHeight = "0";
+      controlsBar.style.opacity = "0";
+      controlsBar.style.pointerEvents = "none";
 }
 
     function createControlBtn(content, title, onClick) {
