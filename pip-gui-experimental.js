@@ -20,7 +20,7 @@
 // Add "expand button to the right of next track button in playback controls container. Its icon should fit nicely with the rest of playback control buttons. Its function is that on click, the popup gets expanded to fit the screen (if im on mobile and zoomed in, its supposed to fit that screen (the Spotify website). If possible to implement I'd also suggest that Spotify's bottom container - the one that has the volume toggle, playback control buttons, seekbar etc - remains visible while the rest of the website gets overtaken by the popup gui). While expanded if click the button again, it returns to the previous position state or if that's too hard to implement, to the restore default position.
 // Playback control buttons not responsible on mobile bc desktop mode and smol interface i suppose so I can't click, also difficult to drag and resize as mentioned, on mobile. on pc fine
 
-(function () {
+(function() {
   'use strict';
 
   function getCurrentTrackInfo() {
@@ -51,13 +51,13 @@
     return 0;
   }
 
-const normalize = str =>
-  str?.normalize("NFKD")
-    .replace(/[’‘“”–]/g, "'")
-    .replace(/[^\w\s\-\.&!']/g, '')
-    .trim();
+  const normalize = str =>
+str?.normalize("NFKD")
+  .replace(/[’‘“”–]/g, "'")
+  .replace(/[^\w\s\-\.&!']/g, '')
+  .trim();
 
- function parseLRCLibFormat(data) {
+  function parseLRCLibFormat(data) {
   if (!data.syncedLyrics) return null;
 
   const lines = data.syncedLyrics.split('\n');
@@ -121,7 +121,7 @@ const normalize = str =>
   return parseLRCLibFormat(data);
 }
 
-const ProviderLRCLIB = {
+  const ProviderLRCLIB = {
   async findLyrics(info) {
     try {
       const artist = normalize(info.artist);
@@ -249,7 +249,7 @@ const ProviderLRCLIB = {
 },
 };
 
-function parseGeniusLyrics(raw) {
+  function parseGeniusLyrics(raw) {
   const synced = [];
   const unsynced = [];
 
@@ -292,11 +292,11 @@ function parseGeniusLyrics(raw) {
   };
 }
   // Timeout helper
-function timeoutPromise(ms) {
+  function timeoutPromise(ms) {
   return new Promise((_, reject) => setTimeout(() => reject(new Error("Track not found on Genius")), ms));
 }
 
-const ProviderGenius = {
+  const ProviderGenius = {
   async findLyrics(info) {
     try {
       const artist = normalize(info.artist);
@@ -907,10 +907,10 @@ let currentLyricsContainer = null;
     });
   })(popup, resizer);
 
-function getAnticipationOffset() {
+  function getAnticipationOffset() {
   return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 300); // default 300ms
 }
-function setAnticipationOffset(val) {
+  function setAnticipationOffset(val) {
   localStorage.setItem("lyricsPlusAnticipationOffset", val);
 }
 
@@ -1006,12 +1006,10 @@ function setAnticipationOffset(val) {
   }
 }
 
-      function addButton(maxRetries = 10) {
+  function addButton(maxRetries = 10) {
   let attempts = 0;
-
   const tryAdd = () => {
     const controls = document.querySelector('[data-testid="control-button-skip-forward"]')?.parentElement;
-
     if (!controls) {
       if (attempts < maxRetries) {
         attempts++;
@@ -1022,9 +1020,7 @@ function setAnticipationOffset(val) {
       }
       return;
     }
-
     if (document.getElementById("lyrics-plus-btn")) return;
-
     const btn = document.createElement("button");
     btn.id = "lyrics-plus-btn";
     btn.title = "Show Lyrics+";
@@ -1041,28 +1037,28 @@ function setAnticipationOffset(val) {
       marginLeft: "8px",
       userSelect: "none",
     });
-
     btn.onclick = () => {
-  console.log("Lyrics+ button clicked");
-  let popup = document.getElementById("lyrics-plus-popup");
-  if (popup) {
-    // If popup is open, close it (same as closeBtn)
-    removePopup();
-  } else {
-    // If popup is closed, open it
-    createPopup();
-    popup = document.getElementById("lyrics-plus-popup");
-    updateLyricsContent(popup, getCurrentTrackInfo());
-};
-
+      console.log("Lyrics+ button clicked");
+      let popup = document.getElementById("lyrics-plus-popup");
+      if (popup) {
+        removePopup();
+      } else {
+        createPopup();
+        popup = document.getElementById("lyrics-plus-popup");
+        updateLyricsContent(popup, getCurrentTrackInfo());
+      }
+    };
+    controls.appendChild(btn);
+    console.log("Lyrics+ button added!");
+  };
   tryAdd();
 }
 
-    function updateTabs(tabsContainer) {
-    [...tabsContainer.children].forEach(btn => {
-      btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
-    });
-  }
+  function updateTabs(tabsContainer) {
+  [...tabsContainer.children].forEach(btn => {
+    btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
+  });
+}
 
   async function autodetectProviderAndLoad(popup, info) {
   const providerOrder = ["LRCLIB", "KPoe", "Genius"];
@@ -1079,55 +1075,29 @@ function setAnticipationOffset(val) {
     }
     if (hasLyrics) {
       Providers.setCurrent(name);
-      // Update tabs if they exist
       if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
       await updateLyricsContent(popup, info);
       return;
     }
   }
-  // If none found, fallback to LRCLIB
   Providers.setCurrent("LRCLIB");
   if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
   await updateLyricsContent(popup, info);
 }
 
-  let info = getCurrentTrackInfo();
-  if (!info) return;
+// --- UI Setup/Bootstrap ---
 
-  currentTrackId = info.id;
-  autodetectProviderAndLoad(popup, info);
-  updatePlayPauseIcon();
-
-  if (pollingInterval) clearInterval(pollingInterval);
-  pollingInterval = setInterval(() => {
-    const newInfo = getCurrentTrackInfo();
-    if (!newInfo || newInfo.id === currentTrackId) {
-      updatePlayPauseIcon();
-      return;
-    }
-    currentTrackId = newInfo.id;
-    const lyricsContainer = document.getElementById("lyrics-plus-content");
-    if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-    autodetectProviderAndLoad(popup, newInfo);
-    updatePlayPauseIcon();
-  }, 200);
-}
-
-
-const observer = new MutationObserver(() => {
+  const observer = new MutationObserver(() => {
   addButton();
 });
-observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, { childList: true, subtree: true });
 
+  let lastTrackTitle = "";
 
-
-let lastTrackTitle = "";
-
-function init() {
+  function init() {
   addButton();
 }
 
-// Observe Spotify page changes to re-add button if necessary
 const appRoot = document.querySelector('#main');
 if (appRoot) {
   const pageObserver = new MutationObserver(() => {
