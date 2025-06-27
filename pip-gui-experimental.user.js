@@ -16,6 +16,11 @@
 // Instance for debugging and testing
 
 // TO DO:
+// Remove limit from lyrics offset adjust. or hardcode it better, maybe to 2500 ms. currently max down and max up with arrow is 2000ms, but can set any value manually (bug.)
+// Focus lyrics (maybe the main lyric line can be slightly bigger than rest of lyric lines.
+// Lyric lines that are currently not main line (previous and next) could be slightly blurred.
+// Lyrics should be centered  
+
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 // Mobile tweaks: Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
 // Optimize drag and resize to work smoothly on mobile browser.
