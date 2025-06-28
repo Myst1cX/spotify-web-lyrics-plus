@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         testing
+// @name         testing 2
 // @namespace    http://tampermonkey.net/
 // @version      4.0
 // @description  Synced + unsynced lyrics: LRCLIB, KPoe, Musixmatch, Netease, Genius. All logic + UI updated from official lyrics-plus. Util functions ported; Musixmatch token prompt for userscript compatibility. Full code, nothing omitted.
@@ -131,7 +131,7 @@
   }
 
   function timeoutPromise(ms) {
-    return new Promise((_, reject) => setTimeout(() => reject(new Error("Track not found")), ms));
+    return new Promise((_, reject) => setTimeout(() => reject(new Error("Lyrics not found")), ms));
   }
 
   function getAnticipationOffset() {
@@ -241,7 +241,7 @@
         if (!data || (!data.syncedLyrics && !data.plainLyrics)) {
           data = await fetchLRCLibLyrics(info, true); // try without album
         }
-        if (!data) return { error: "Track not found on LRCLIB" };
+        if (!data) return { error: "Lyrics not found on LRCLIB" };
         return data;
       } catch (e) {
         return { error: e.message || "LRCLIB fetch failed" };
@@ -318,7 +318,7 @@
         const duration = Math.floor(info.duration / 1000);
         const songInfo = { artist, title, album, duration };
         const result = await fetchKPoeLyrics(songInfo);
-        if (!result) return { error: "Track not found on KPoe" };
+        if (!result) return { error: "Lyrics not found on KPoe" };
         return parseKPoeFormat(result);
       } catch (e) {
         return { error: e.message };
@@ -352,7 +352,7 @@
   return token;
 }
 
-   function showMusixmatchTokenModal() {
+      function showMusixmatchTokenModal() {
   // Remove any existing modal
   const old = document.getElementById("lyrics-plus-musixmatch-modal");
   if (old) old.remove();
@@ -369,10 +369,11 @@
       }
       #lyrics-plus-musixmatch-modal-box {
         background: #181818; color: #fff; border-radius: 14px;
-        padding: 28px 28px 20px 28px; min-width: 350px; max-width: 90vw;
+        padding: 30px 28px 22px 28px; min-width: 350px; max-width: 90vw;
         box-shadow: 0 2px 24px #000b;
         font-family: inherit;
         position: relative;
+        box-sizing: border-box;
       }
       #lyrics-plus-musixmatch-modal-title {
         color: #1db954;
@@ -383,24 +384,59 @@
         letter-spacing: 0.3px;
       }
       #lyrics-plus-musixmatch-modal .modal-footer {
-        display: flex; justify-content: flex-end; gap: 15px; margin-top: 18px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 25px;
+        margin-top: 18px;
+        padding: 0;
       }
-      #lyrics-plus-musixmatch-modal button {
-        background: #181818;
-        color: #1db954;
-        border: 2px solid #1db954;
-        border-radius: 6px;
-        padding: 8px 22px;
-        font-size: 1em;
+      #lyrics-plus-musixmatch-modal .lyrics-btn {
+        background: #222;
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        padding: 8px 0;
+        font-size: 15px;
         font-weight: 600;
         cursor: pointer;
-        transition: background .12s, color .12s, border-color .12s;
+        box-shadow: 0 1px 4px #0003;
+        transition: background 0.13s, color 0.13s;
         outline: none;
+        min-width: 90px;
+        width: 90px;
+        text-align: center;
+        flex: 0 0 90px;
+        margin: 0;
       }
-      #lyrics-plus-musixmatch-modal button:hover {
+      #lyrics-plus-musixmatch-modal .lyrics-btn:hover {
         background: #1db954;
         color: #181818;
-        border-color: #1db954;
+      }
+      #lyrics-plus-musixmatch-modal-close {
+        background: #222;
+        color: #fff;
+        border: none;
+        border-radius: 14px;
+        font-size: 1.25em;
+        font-weight: 700;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        cursor: pointer;
+        transition: background 0.13s, color 0.13s;
+        z-index: 1;
+        line-height: 1;
+        margin: 0;
+      }
+      #lyrics-plus-musixmatch-modal-close:hover {
+        background: #1db954;
+        color: #181818;
       }
       #lyrics-plus-musixmatch-modal a {
         color: #1db954;
@@ -422,21 +458,8 @@
         padding: 8px 10px;
         margin: 14px 0 8px 0;
         font-size: 1em;
-      }
-      #lyrics-plus-musixmatch-modal-close {
-        position: absolute;
-        right: 13px; top: 9px;
-        color: #aaa;
-        background: none;
-        border: none;
-        font-size: 1.2em;
-        cursor: pointer;
-        padding: 0 4px;
-        line-height: 1;
-        transition: color .12s;
-      }
-      #lyrics-plus-musixmatch-modal-close:hover {
-        color: #fff;
+        box-sizing: border-box;
+        display: block;
       }
     `;
     document.head.appendChild(style);
@@ -449,23 +472,23 @@
   box.id = "lyrics-plus-musixmatch-modal-box";
   box.innerHTML = `
     <button id="lyrics-plus-musixmatch-modal-close" title="Close">&times;</button>
-    <div id="lyrics-plus-musixmatch-modal-title">Set your Musixmatch Token</div>
+    <div id="lyrics-plus-musixmatch-modal-title">Set your Musixmatch User Token</div>
     <div style="font-size:14px;line-height:1.6;margin-bottom:12px">
-      <b>How to get your token:</b><br>
-      1. Go to <a href="https://www.musixmatch.com/" target="_blank">Musixmatch</a> and login.<br>
-      2. Press F12 (DevTools), go to Network &gt; www.musixmatch.com &gt; Cookies.<br>
-      3. Copy <code>musixmatchUserToken</code> value.<br>
-      4. Optionally, process at <a href="https://jsonformatter.curiousconcept.com/" target="_blank">JSON Formatter</a>.<br>
-      5. Paste your token below and Save.<br>
-      <a href="https://github.com/Myst1cX/spotify-web-lyrics-plus?tab=readme-ov-file#musixmatch-token" target="_blank">Full Instructions</a>
+      <b>How to retrieve your token:</b><br>
+      1. Go to <a href="https://www.musixmatch.com/" target="_blank">Musixmatch</a> and click on Login.<br>
+      2. Select [Community] as your product.<br>
+      3. Open DevTools (Press F12 or Right click and Inspect). <br>
+      4. Go to the Network tab &gt; www.musixmatch.com &gt; Cookies.<br>
+      3. Right-click on the content of the musixmatchUserToken and select Copy value.<br>
+      4. Go to <a href="https://jsonformatter.curiousconcept.com/" target="_blank">JSON Formatter</a> &gt; Paste the content &gt; Click Process.<br>
+      5. Copy the value of web-desktop-app-v1.0 > Paste the token below and press Save.<br>
     </div>
   `;
 
   const input = document.createElement("input");
   input.type = "text";
-  input.placeholder = "Paste Musixmatch token here";
+  input.placeholder = "Enter your Musixmatch user token here";
   input.value = localStorage.getItem("lyricsPlusMusixmatchToken") || "";
-
   box.appendChild(input);
 
   // Footer with Save & Cancel
@@ -474,6 +497,7 @@
 
   const btnSave = document.createElement("button");
   btnSave.textContent = "Save";
+  btnSave.className = "lyrics-btn";
   btnSave.onclick = () => {
     localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
     modal.remove();
@@ -482,6 +506,7 @@
 
   const btnCancel = document.createElement("button");
   btnCancel.textContent = "Cancel";
+  btnCancel.className = "lyrics-btn";
   btnCancel.onclick = () => modal.remove();
 
   footer.appendChild(btnSave);
@@ -565,7 +590,7 @@ if (!token) {
     async findLyrics(info) {
       try {
         const data = await fetchMusixmatchLyrics(info);
-        if (!data || data.error) return { error: data.error || "Track not found on Musixmatch" };
+        if (!data || data.error) return { error: data.error || "Lyrics not found on Musixmatch" };
         return data;
       } catch (e) {
         return { error: e.message };
@@ -638,7 +663,7 @@ if (!token) {
     async findLyrics(info) {
       try {
         const data = await fetchNeteaseLyrics(info);
-        if (!data) return { error: "Track not found on Netease" };
+        if (!data) return { error: "Lyrics not found on Netease" };
         return data;
       } catch (e) {
         return { error: e.message || "Netease fetch failed" };
@@ -668,7 +693,7 @@ if (!token) {
         continue;
       }
     }
-    return { error: "Track not found on Genius" };
+    return { error: "Lyrics not found on Genius" };
   }
   function parseGeniusLyrics(raw) {
     return Utils.parseLocalLyrics(raw);
@@ -677,7 +702,7 @@ if (!token) {
     async findLyrics(info) {
       try {
         const data = await fetchGeniusLyrics(info);
-        if (!data || data.error) return { error: data.error || "Track not found on Genius" };
+        if (!data || data.error) return { error: data.error || "Lyrics not found on Genius" };
         return data;
       } catch (e) {
         return { error: e.message };
