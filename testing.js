@@ -351,6 +351,153 @@
   }
   return token;
 }
+
+   function showMusixmatchTokenModal() {
+  // Remove any existing modal
+  const old = document.getElementById("lyrics-plus-musixmatch-modal");
+  if (old) old.remove();
+
+  // Inject style for the modal, only once
+  if (!document.getElementById("lyrics-plus-musixmatch-modal-style")) {
+    const style = document.createElement("style");
+    style.id = "lyrics-plus-musixmatch-modal-style";
+    style.textContent = `
+      #lyrics-plus-musixmatch-modal {
+        position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.7); z-index: 100001; display: flex;
+        align-items: center; justify-content: center;
+      }
+      #lyrics-plus-musixmatch-modal-box {
+        background: #181818; color: #fff; border-radius: 14px;
+        padding: 28px 28px 20px 28px; min-width: 350px; max-width: 90vw;
+        box-shadow: 0 2px 24px #000b;
+        font-family: inherit;
+        position: relative;
+      }
+      #lyrics-plus-musixmatch-modal-title {
+        color: #1db954;
+        font-size: 1.35em;
+        font-weight: 700;
+        margin-bottom: 13px;
+        text-align: center;
+        letter-spacing: 0.3px;
+      }
+      #lyrics-plus-musixmatch-modal .modal-footer {
+        display: flex; justify-content: flex-end; gap: 15px; margin-top: 18px;
+      }
+      #lyrics-plus-musixmatch-modal button {
+        background: #181818;
+        color: #1db954;
+        border: 2px solid #1db954;
+        border-radius: 6px;
+        padding: 8px 22px;
+        font-size: 1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .12s, color .12s, border-color .12s;
+        outline: none;
+      }
+      #lyrics-plus-musixmatch-modal button:hover {
+        background: #1db954;
+        color: #181818;
+        border-color: #1db954;
+      }
+      #lyrics-plus-musixmatch-modal a {
+        color: #1db954;
+        text-decoration: none;
+        transition: color .12s;
+        font-weight: 600;
+      }
+      #lyrics-plus-musixmatch-modal a:hover {
+        color: #fff;
+        text-decoration: underline;
+      }
+      #lyrics-plus-musixmatch-modal input[type="text"],
+      #lyrics-plus-musixmatch-modal input[type="password"] {
+        background: #222;
+        color: #fff;
+        border: 1px solid #333;
+        border-radius: 5px;
+        width: 100%;
+        padding: 8px 10px;
+        margin: 14px 0 8px 0;
+        font-size: 1em;
+      }
+      #lyrics-plus-musixmatch-modal-close {
+        position: absolute;
+        right: 13px; top: 9px;
+        color: #aaa;
+        background: none;
+        border: none;
+        font-size: 1.2em;
+        cursor: pointer;
+        padding: 0 4px;
+        line-height: 1;
+        transition: color .12s;
+      }
+      #lyrics-plus-musixmatch-modal-close:hover {
+        color: #fff;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const modal = document.createElement("div");
+  modal.id = "lyrics-plus-musixmatch-modal";
+
+  const box = document.createElement("div");
+  box.id = "lyrics-plus-musixmatch-modal-box";
+  box.innerHTML = `
+    <button id="lyrics-plus-musixmatch-modal-close" title="Close">&times;</button>
+    <div id="lyrics-plus-musixmatch-modal-title">Set your Musixmatch Token</div>
+    <div style="font-size:14px;line-height:1.6;margin-bottom:12px">
+      <b>How to get your token:</b><br>
+      1. Go to <a href="https://www.musixmatch.com/" target="_blank">Musixmatch</a> and login.<br>
+      2. Press F12 (DevTools), go to Network &gt; www.musixmatch.com &gt; Cookies.<br>
+      3. Copy <code>musixmatchUserToken</code> value.<br>
+      4. Optionally, process at <a href="https://jsonformatter.curiousconcept.com/" target="_blank">JSON Formatter</a>.<br>
+      5. Paste your token below and Save.<br>
+      <a href="https://github.com/Myst1cX/spotify-web-lyrics-plus?tab=readme-ov-file#musixmatch-token" target="_blank">Full Instructions</a>
+    </div>
+  `;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "Paste Musixmatch token here";
+  input.value = localStorage.getItem("lyricsPlusMusixmatchToken") || "";
+
+  box.appendChild(input);
+
+  // Footer with Save & Cancel
+  const footer = document.createElement("div");
+  footer.className = "modal-footer";
+
+  const btnSave = document.createElement("button");
+  btnSave.textContent = "Save";
+  btnSave.onclick = () => {
+    localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
+    modal.remove();
+    // Optionally: reload lyrics if popup open and provider is Musixmatch
+  };
+
+  const btnCancel = document.createElement("button");
+  btnCancel.textContent = "Cancel";
+  btnCancel.onclick = () => modal.remove();
+
+  footer.appendChild(btnSave);
+  footer.appendChild(btnCancel);
+  box.appendChild(footer);
+
+  // Close (X) button
+  box.querySelector('#lyrics-plus-musixmatch-modal-close').onclick = () => modal.remove();
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+
+  // Focus input for fast paste
+  input.focus();
+}
+
   async function fetchMusixmatchLyrics(songInfo) {
     const token = getMusixmatchToken(false); // false = don't show prompt automatically
 if (!token) {
@@ -427,66 +574,6 @@ if (!token) {
     getUnsynced: musixmatchGetUnsynced,
     getSynced: musixmatchGetSynced
   };
-
-  function showMusixmatchTokenModal() {
-  // Remove any existing modal
-  const old = document.getElementById("lyrics-plus-musixmatch-modal");
-  if (old) old.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "lyrics-plus-musixmatch-modal";
-  Object.assign(modal.style, {
-    position: "fixed", left: 0, top: 0, width: "100vw", height: "100vh",
-    background: "rgba(0,0,0,0.7)", zIndex: 100001, display: "flex", alignItems: "center", justifyContent: "center"
-  });
-
-  const box = document.createElement("div");
-  Object.assign(box.style, {
-    background: "#181818", color: "#fff", borderRadius: "12px", padding: "24px", minWidth: "370px", maxWidth: "90vw",
-    boxShadow: "0 2px 24px #000"
-  });
-
-  box.innerHTML = `
-    <h3>Set Musixmatch Token</h3>
-    <div style="font-size:14px;line-height:1.6;margin-bottom:10px">
-      <b>How to get your token:</b><br>
-      1. Go to <a href="https://www.musixmatch.com/" target="_blank">Musixmatch</a> and login.<br>
-      2. Press F12 (DevTools), go to Network &gt; www.musixmatch.com &gt; Cookies.<br>
-      3. Copy <code>musixmatchUserToken</code> value.<br>
-      4. Optionally, process at <a href="https://jsonformatter.curiousconcept.com/" target="_blank">JSON Formatter</a>.<br>
-      5. Paste your token below and Save.<br>
-      <a href="https://github.com/Myst1cX/spotify-web-lyrics-plus/edit/main/README.md" target="_blank">Full Instructions</a>
-    </div>
-  `;
-
-  const input = document.createElement("input");
-  input.type = "text";
-  input.style.width = "100%";
-  input.style.fontSize = "15px";
-  input.style.padding = "4px 8px";
-  input.style.marginBottom = "10px";
-  input.value = localStorage.getItem("lyricsPlusMusixmatchToken") || "";
-  box.appendChild(input);
-
-  const btnSave = document.createElement("button");
-  btnSave.textContent = "Save";
-  btnSave.style.marginRight = "12px";
-  btnSave.onclick = () => {
-    localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
-    modal.remove();
-    // optionally trigger reload of lyrics if popup is open and provider is Musixmatch
-  };
-
-  const btnCancel = document.createElement("button");
-  btnCancel.textContent = "Cancel";
-  btnCancel.onclick = () => modal.remove();
-
-  box.appendChild(btnSave);
-  box.appendChild(btnCancel);
-
-  modal.appendChild(box);
-  document.body.appendChild(modal);
-}
 
   // --- Netease ---
   async function fetchNeteaseLyrics(info) {
@@ -795,12 +882,6 @@ if (!token) {
     buttonGroup.appendChild(playbackToggleBtn);
     buttonGroup.appendChild(offsetToggleBtn);
     buttonGroup.appendChild(closeBtn);
-    const musixmatchTokenBtn = document.createElement("button");
-    musixmatchTokenBtn.textContent = "Musixmatch Token";
-    musixmatchTokenBtn.title = "View or change your Musixmatch user token";
-    // (style accordingly)
-    musixmatchTokenBtn.onclick = showMusixmatchTokenModal;
-    buttonGroup.insertBefore(musixmatchTokenBtn, closeBtn);
 
     header.appendChild(buttonGroup);
     headerWrapper.appendChild(header);
@@ -813,23 +894,30 @@ if (!token) {
     tabs.style.gap = "8px";
 
     Providers.list.forEach(name => {
-      const btn = document.createElement("button");
-      btn.textContent = name;
-      btn.style.flex = "1";
-      btn.style.padding = "6px";
-      btn.style.borderRadius = "6px";
-      btn.style.border = "none";
-      btn.style.cursor = "pointer";
-      btn.style.backgroundColor = (Providers.current === name) ? "#1db954" : "#333";
-      btn.style.color = "white";
-      btn.style.fontWeight = "600";
-      btn.onclick = async () => {
-        Providers.setCurrent(name);
-        updateTabs(tabs);
-        await updateLyricsContent(popup, getCurrentTrackInfo());
-      };
-      tabs.appendChild(btn);
-    });
+  const btn = document.createElement("button");
+  btn.textContent = name;
+  btn.style.flex = "1";
+  btn.style.padding = "6px";
+  btn.style.borderRadius = "6px";
+  btn.style.border = "none";
+  btn.style.cursor = "pointer";
+  btn.style.backgroundColor = (Providers.current === name) ? "#1db954" : "#333";
+  btn.style.color = "white";
+  btn.style.fontWeight = "600";
+  btn.onclick = async () => {
+    Providers.setCurrent(name);
+    updateTabs(tabs);
+    await updateLyricsContent(popup, getCurrentTrackInfo());
+  };
+  // Double-click (desktop/mobile) for Musixmatch settings
+  if (name === "Musixmatch") {
+    btn.ondblclick = (e) => {
+      e.preventDefault();
+      showMusixmatchTokenModal();
+    };
+  }
+  tabs.appendChild(btn);
+});
     headerWrapper.appendChild(tabs);
     popup._lyricsTabs = tabs;
 
