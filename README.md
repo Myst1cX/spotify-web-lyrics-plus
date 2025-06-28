@@ -8,14 +8,22 @@
 
 ## Retrieve your Musixmatch user token
 
-> Step 1: First of all, go to [Musixmatch](https://www.musixmatch.com/) and click on the "Login" button on the top of the screen 
-> Step 2: Select "Community" as your product and sign in using your Google account. 
-> Step 3: Go back to MusixMatch, press F12 on your keyboard (or right click and "Inspect") 
-> Step 4: Click on the Network tab, and you'll see the "www.musixmatch.com" domain 
-> Step 5: Click on "www.musixmatch.com" and go to the "Cookies" section. 
-> Step 6: Scroll down, and you'll see musixmatchUserToken. Right-click on the content of the musixmatchUserToken and select "Copy value".  
-> Step 7: Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/). Paste the content, and then click "Process". 
-> Step 8: Copy the corresponding value of web-desktop-app-v1.0 > this is your user token 
+> Step 1: First of all, go to [Musixmatch](https://www.musixmatch.com/) and click on the "Login" button on the top of the screen
+> 
+> Step 2: Select "Community" as your product and sign in using your Google account.
+> 
+> Step 3: Go back to MusixMatch, press F12 on your keyboard (or right click and "Inspect")
+> 
+> Step 4: Click on the Network tab, and you'll see the "www.musixmatch.com" domain
+> 
+> Step 5: Click on "www.musixmatch.com" and go to the "Cookies" section.
+> 
+> Step 6: Scroll down, and you'll see musixmatchUserToken. Right-click on the content of the musixmatchUserToken and select "Copy value".
+> 
+> Step 7: Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/). Paste the content, and then click "Process".
+> 
+> Step 8: Copy the corresponding value of web-desktop-app-v1.0 > this is your user token
+> 
 > Step 9: Choose the Musixmatch Provider in our Lyrics+ Popup Interface and enter the value 
 > DONE :)
 
