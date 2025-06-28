@@ -1,9 +1,8 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      3.4
-// @description  Synced - LRCLIB, KPoe (fetches from Musixmatch and Apple) and unsynced - Genius lyrics support.
-// @author       you
+// @version      4.0
+// @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web.
 // @match        https://open.spotify.com/*
 // @grant        none
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
@@ -15,7 +14,7 @@
 (function () {
   'use strict';
 
-    // ------------------------
+  // ------------------------
   // State Variables
   // ------------------------
 
@@ -24,6 +23,82 @@
   let currentTrackId = null;
   let currentSyncedLyrics = null;
   let currentLyricsContainer = null;
+
+  // ------------------------
+  // Utils.js FUNCTIONS (ported & safe for userscript)
+  // ------------------------
+
+  const Utils = {
+    normalize(str) {
+      if (!str) return "";
+      // Remove full-width/half-width, accents, etc.
+      return str.normalize("NFKC")
+        .replace(/[’‘“”–]/g, "'")
+        .replace(/[\u2018-\u201F]/g, "'")
+        .replace(/[\u3000-\u303F]/g, "")
+        .replace(/[^\w\s\-\.&!']/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+    },
+    removeExtraInfo(str) {
+      return str.replace(/\(.*?\)|\[.*?]|\{.*?}/g, '').trim();
+    },
+    removeSongFeat(str) {
+      // Remove "feat. ...", "ft. ...", etc.
+      return str.replace(/\s*(?:feat\.?|ft\.?|featuring)\s+[^\-]+/i, '').trim();
+    },
+    containsHanCharacter(str) {
+      return /[\u4e00-\u9fa5]/.test(str);
+    },
+    capitalize(str, lower = false) {
+      if (!str) return '';
+      return (lower ? str.toLowerCase() : str).replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
+    },
+    // (async) Convert Traditional to Simplified using openapi - fallback: identity
+    async toSimplifiedChinese(str) {
+      // This is a stub: since we don't have a real openapi, just return original string.
+      // You can insert API for opencc or similar here if needed.
+      return str;
+    },
+    parseLocalLyrics(plain) {
+      if (!plain) return { unsynced: null, synced: null };
+      const timeTagRegex = /\[(\d{1,2}):(\d{1,2})(?:\.(\d{1,3}))?\]/g;
+      const synced = [];
+      const unsynced = [];
+      const lines = plain.split(/\r?\n/);
+      for (const line of lines) {
+        let matched = false;
+        let lastIndex = 0;
+        let text = line;
+        const times = [];
+        let m;
+        while ((m = timeTagRegex.exec(line)) !== null) {
+          matched = true;
+          const min = parseInt(m[1], 10);
+          const sec = parseInt(m[2], 10);
+          const ms = m[3] ? parseInt(m[3].padEnd(3, '0'), 10) : 0;
+          const time = min * 60000 + sec * 1000 + ms;
+          times.push(time);
+          lastIndex = m.index + m[0].length;
+        }
+        if (matched) {
+          text = line.substring(lastIndex).trim();
+          times.forEach(time => {
+            synced.push({ time, text });
+          });
+        } else {
+          if (line.trim().length > 0) {
+            unsynced.push({ text: line.trim() });
+          }
+        }
+      }
+      synced.sort((a, b) => a.time - b.time);
+      return {
+        synced: synced.length > 0 ? synced : null,
+        unsynced: unsynced.length > 0 ? unsynced : null
+      };
+    }
+  };
 
   // ------------------------
   // Utility Functions
@@ -54,55 +129,153 @@
     return 0;
   }
 
-  const normalize = str =>
-    str?.normalize("NFKD")
-      .replace(/[’‘“”–]/g, "'")
-      .replace(/[^\w\s\-\.&!']/g, '')
-      .trim();
-
-  function parseLRCLibFormat(data) {
-    if (!data.syncedLyrics) return null;
-    const lines = data.syncedLyrics.split('\n');
-    const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2})\](.*)/;
-    const parsedLines = [];
-    const matches = [];
-    for (const line of lines) {
-      const match = timeRegex.exec(line);
-      if (match) {
-        const minutes = parseInt(match[1], 10);
-        const seconds = parseInt(match[2], 10);
-        const centiseconds = parseInt(match[3], 10);
-        const startTime = minutes * 60 + seconds + centiseconds / 100;
-        const text = match[4].trim();
-        matches.push({ startTime, text });
-      }
-    }
-    for (let i = 0; i < matches.length; i++) {
-      const { startTime, text } = matches[i];
-      const endTime = (i < matches.length - 1) ? matches[i + 1].startTime : startTime + 4;
-      if (text !== "") {
-        parsedLines.push({
-          text,
-          startTime,
-          endTime,
-          element: { singer: 'v1' }
-        });
-      }
-    }
-    return {
-      type: 'Line',
-      data: parsedLines,
-      metadata: {
-        title: data.trackName,
-        artist: data.artistName,
-        album: data.albumName,
-        duration: data.duration,
-        instrumental: data.instrumental,
-        source: "LRCLIB"
-      }
-    };
+  function timeoutPromise(ms) {
+    return new Promise((_, reject) => setTimeout(() => reject(new Error("Lyrics not found")), ms));
   }
 
+  function getAnticipationOffset() {
+    return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 300);
+  }
+  function setAnticipationOffset(val) {
+    localStorage.setItem("lyricsPlusAnticipationOffset", val);
+  }
+
+  function highlightSyncedLyrics(lyrics, container) {
+    if (!lyrics || lyrics.length === 0) return;
+    const pElements = [...container.querySelectorAll("p")];
+    if (pElements.length === 0) return;
+    if (highlightTimer) {
+      clearInterval(highlightTimer);
+      highlightTimer = null;
+    }
+    highlightTimer = setInterval(() => {
+      const posEl = document.querySelector('[data-testid="playback-position"]');
+      if (!posEl) return;
+      const curPosMs = timeStringToMs(posEl.textContent);
+      const anticipatedMs = curPosMs + getAnticipationOffset();
+      let activeIndex = -1;
+      for (let i = 0; i < lyrics.length; i++) {
+        if (anticipatedMs >= (lyrics[i].time ?? lyrics[i].startTime)) activeIndex = i;
+        else break;
+      }
+      if (activeIndex === -1) {
+        pElements.forEach(p => {
+          p.style.color = "white";
+          p.style.fontWeight = "400";
+        });
+        return;
+      }
+      pElements.forEach((p, idx) => {
+        p.style.color = (idx === activeIndex) ? "#1db954" : "white";
+        p.style.fontWeight = (idx === activeIndex) ? "700" : "400";
+      });
+      const activeP = pElements[activeIndex];
+      if (activeP) {
+        activeP.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 50);
+  }
+
+  function updateTabs(tabsContainer) {
+    [...tabsContainer.children].forEach(btn => {
+      btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
+    });
+  }
+
+  // --- Play/Pause Icon SVGs ---
+  const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  playSVG.setAttribute("viewBox", "0 0 24 24");
+  playSVG.setAttribute("width", "20");
+  playSVG.setAttribute("height", "20");
+  playSVG.setAttribute("fill", "white");
+  playSVG.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+
+  const pauseSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  pauseSVG.setAttribute("viewBox", "0 0 24 24");
+  pauseSVG.setAttribute("width", "20");
+  pauseSVG.setAttribute("height", "20");
+  pauseSVG.setAttribute("fill", "white");
+  pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+
+  // --- Play/Pause Icon Updater ---
+  function updatePlayPauseIcon(btnPlayPause) {
+    const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
+    btnPlayPause.innerHTML = "";
+    if (pauseVisible) {
+      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+    } else {
+      btnPlayPause.appendChild(playSVG.cloneNode(true));
+    }
+  }
+
+  // ------------------------
+  // Providers and Fetchers
+  // ------------------------
+
+  // --- LRCLIB ---
+  async function fetchLRCLibLyrics(songInfo, tryWithoutAlbum = false) {
+    const params = [
+      `artist_name=${encodeURIComponent(songInfo.artist)}`,
+      `track_name=${encodeURIComponent(songInfo.title)}`
+    ];
+    if (songInfo.album && !tryWithoutAlbum) {
+      params.push(`album_name=${encodeURIComponent(songInfo.album)}`);
+    }
+    if (songInfo.duration) {
+      params.push(`duration=${Math.floor(songInfo.duration / 1000)}`);
+    }
+    const url = `https://lrclib.net/api/get?${params.join('&')}`;
+    const response = await fetch(url, {
+      headers: {
+        "x-user-agent": "lyrics-plus-script"
+      }
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  }
+  const ProviderLRCLIB = {
+    async findLyrics(info) {
+      try {
+        let data = await fetchLRCLibLyrics(info, false);
+        if (!data || (!data.syncedLyrics && !data.plainLyrics)) {
+          data = await fetchLRCLibLyrics(info, true); // try without album
+        }
+        if (!data) return { error: "Lyrics not found on LRCLIB" };
+        return data;
+      } catch (e) {
+        return { error: e.message || "LRCLIB fetch failed" };
+      }
+    },
+    getUnsynced(body) {
+      if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+      if (!body?.plainLyrics) return null;
+      return Utils.parseLocalLyrics(body.plainLyrics).unsynced;
+    },
+    getSynced(body) {
+      if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+      if (!body?.syncedLyrics) return null;
+      return Utils.parseLocalLyrics(body.syncedLyrics).synced;
+    }
+  };
+
+  // --- KPoe ---
+  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false) {
+    const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
+      ? `&album=${encodeURIComponent(songInfo.album)}`
+      : '';
+    const sourceParam = sourceOrder ? `&source=${encodeURIComponent(sourceOrder)}` : '';
+    let forceReloadParam = forceReload ? `&forceReload=true` : '';
+    let fetchOptions = {};
+    if (forceReload) {
+      fetchOptions = { cache: 'no-store' };
+      forceReloadParam = `&forceReload=true`;
+    }
+    const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
+    const response = await fetch(url, fetchOptions);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data;
+  }
   function parseKPoeFormat(data) {
     if (!Array.isArray(data.lyrics)) return null;
     const metadata = {
@@ -135,197 +308,17 @@
       metadata
     };
   }
-
-  function parseGeniusLyrics(raw) {
-    const synced = [];
-    const unsynced = [];
-    const lines = raw.split(/\r?\n/);
-    const timeTagRegex = /\[(\d+):(\d+)(?:\.(\d+))?\]/g;
-    for (const line of lines) {
-      let matched = false;
-      let lastIndex = 0;
-      let text = line;
-      const times = [];
-      let m;
-      while ((m = timeTagRegex.exec(line)) !== null) {
-        matched = true;
-        const min = parseInt(m[1], 10);
-        const sec = parseInt(m[2], 10);
-        const ms = m[3] ? parseInt(m[3].padEnd(3, '0'), 10) : 0;
-        const time = min * 60000 + sec * 1000 + ms;
-        times.push(time);
-        lastIndex = m.index + m[0].length;
-      }
-      if (matched) {
-        text = line.substring(lastIndex).trim();
-        times.forEach(time => {
-          synced.push({ time, text });
-        });
-      } else {
-        if (line.trim().length > 0) {
-          unsynced.push({ text: line.trim() });
-        }
-      }
-    }
-    synced.sort((a, b) => a.time - b.time);
-    return {
-      synced: synced.length > 0 ? synced : null,
-      unsynced: unsynced.length > 0 ? unsynced : null
-    };
-  }
-
-  function timeoutPromise(ms) {
-    return new Promise((_, reject) => setTimeout(() => reject(new Error("Track not found on Genius")), ms));
-  }
-
-  function getAnticipationOffset() {
-    return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 300);
-  }
-  function setAnticipationOffset(val) {
-    localStorage.setItem("lyricsPlusAnticipationOffset", val);
-  }
-
-  function highlightSyncedLyrics(lyrics, container) {
-    if (!lyrics || lyrics.length === 0) return;
-    const pElements = [...container.querySelectorAll("p")];
-    if (pElements.length === 0) return;
-    if (highlightTimer) {
-      clearInterval(highlightTimer);
-      highlightTimer = null;
-    }
-    highlightTimer = setInterval(() => {
-      const posEl = document.querySelector('[data-testid="playback-position"]');
-      if (!posEl) return;
-      const curPosMs = timeStringToMs(posEl.textContent);
-      const anticipatedMs = curPosMs + getAnticipationOffset();
-      let activeIndex = -1;
-      for (let i = 0; i < lyrics.length; i++) {
-        if (anticipatedMs >= lyrics[i].time) activeIndex = i;
-        else break;
-      }
-      if (activeIndex === -1) {
-        pElements.forEach(p => {
-          p.style.color = "white";
-          p.style.fontWeight = "400";
-        });
-        return;
-      }
-      pElements.forEach((p, idx) => {
-        p.style.color = (idx === activeIndex) ? "#1db954" : "white";
-        p.style.fontWeight = (idx === activeIndex) ? "700" : "400";
-      });
-      const activeP = pElements[activeIndex];
-      if (activeP) {
-        activeP.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 50);
-  }
-
-  function updateTabs(tabsContainer) {
-    [...tabsContainer.children].forEach(btn => {
-      btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
-    });
-  }
-
-  // --- Play/Pause Icon SVGs ---
-const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-playSVG.setAttribute("viewBox", "0 0 24 24");
-playSVG.setAttribute("width", "20");
-playSVG.setAttribute("height", "20");
-playSVG.setAttribute("fill", "white");
-playSVG.innerHTML = `<path d="M8 5v14l11-7z"/>`;
-
-const pauseSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-pauseSVG.setAttribute("viewBox", "0 0 24 24");
-pauseSVG.setAttribute("width", "20");
-pauseSVG.setAttribute("height", "20");
-pauseSVG.setAttribute("fill", "white");
-pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
-
-// --- Play/Pause Icon Updater ---
-function updatePlayPauseIcon(btnPlayPause) {
-  const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
-  btnPlayPause.innerHTML = "";
-  if (pauseVisible) {
-    btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-  } else {
-    btnPlayPause.appendChild(playSVG.cloneNode(true));
-  }
-}
-
-  // ------------------------
-  // Providers and Fetchers
-  // ------------------------
-
-  async function fetchLRCLibLyrics(songInfo) {
-    const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
-      ? `&album_name=${encodeURIComponent(songInfo.album)}`
-      : '';
-    const url = `https://lrclib.net/api/get?artist_name=${encodeURIComponent(songInfo.artist)}&track_name=${encodeURIComponent(songInfo.title)}${albumParam}`;
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    const data = await response.json();
-    return parseLRCLibFormat(data);
-  }
-
-  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false) {
-    const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
-      ? `&album=${encodeURIComponent(songInfo.album)}`
-      : '';
-    const sourceParam = sourceOrder ? `&source=${encodeURIComponent(sourceOrder)}` : '';
-    let forceReloadParam = forceReload ? `&forceReload=true` : '';
-    let fetchOptions = {};
-    if (forceReload) {
-      fetchOptions = { cache: 'no-store' };
-      forceReloadParam = `&forceReload=true`;
-    }
-    const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
-    const response = await fetch(url, fetchOptions);
-    if (!response.ok) return null;
-    const data = await response.json();
-    return parseKPoeFormat(data);
-  }
-
-  const ProviderLRCLIB = {
-    async findLyrics(info) {
-      try {
-        const artist = normalize(info.artist);
-        const title = normalize(info.title);
-        const album = normalize(info.album);
-        const songInfo = { artist, title, album };
-        const result = await fetchLRCLibLyrics(songInfo);
-        if (!result) return { error: "Track not found on LRCLIB" };
-        return result;
-      } catch (e) {
-        return { error: e.message };
-      }
-    },
-    getUnsynced(body) {
-      if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
-      if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({ text: line.text }));
-    },
-    getSynced(body) {
-      if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
-      if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({
-        time: Math.round(line.startTime * 1000),
-        text: line.text
-      }));
-    }
-  };
-
   const ProviderKPoe = {
     async findLyrics(info) {
       try {
-        const artist = normalize(info.artist);
-        const title = normalize(info.title);
-        const album = normalize(info.album);
+        const artist = Utils.normalize(info.artist);
+        const title = Utils.normalize(info.title);
+        const album = Utils.normalize(info.album);
         const duration = Math.floor(info.duration / 1000);
         const songInfo = { artist, title, album, duration };
         const result = await fetchKPoeLyrics(songInfo);
-        if (!result) return { error: "Track not found on KPoe" };
-        return result;
+        if (!result) return { error: "Lyrics not found on KPoe" };
+        return parseKPoeFormat(result);
       } catch (e) {
         return { error: e.message };
       }
@@ -345,18 +338,371 @@ function updatePlayPauseIcon(btnPlayPause) {
     },
   };
 
+  // --- Musixmatch ---
+  // Musixmatch token prompt and storage
+  function getMusixmatchToken() {
+  let token = localStorage.getItem("lyricsPlusMusixmatchToken");
+  if (!token) {
+    token = prompt("Enter your Musixmatch user token:", "");
+    if (token) {
+      localStorage.setItem("lyricsPlusMusixmatchToken", token);
+    }
+  }
+  return token;
+}
+
+      function showMusixmatchTokenModal() {
+  // Remove any existing modal
+  const old = document.getElementById("lyrics-plus-musixmatch-modal");
+  if (old) old.remove();
+
+  // Inject style for the modal, only once
+  if (!document.getElementById("lyrics-plus-musixmatch-modal-style")) {
+    const style = document.createElement("style");
+    style.id = "lyrics-plus-musixmatch-modal-style";
+    style.textContent = `
+      #lyrics-plus-musixmatch-modal {
+        position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.7); z-index: 100001; display: flex;
+        align-items: center; justify-content: center;
+      }
+      #lyrics-plus-musixmatch-modal-box {
+        background: #181818; color: #fff; border-radius: 14px;
+        padding: 30px 28px 22px 28px; min-width: 350px; max-width: 90vw;
+        box-shadow: 0 2px 24px #000b;
+        font-family: inherit;
+        position: relative;
+        box-sizing: border-box;
+      }
+      #lyrics-plus-musixmatch-modal-title {
+        color: #1db954;
+        font-size: 1.35em;
+        font-weight: 700;
+        margin-bottom: 13px;
+        text-align: center;
+        letter-spacing: 0.3px;
+      }
+      #lyrics-plus-musixmatch-modal .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 25px;
+        margin-top: 18px;
+        padding: 0;
+      }
+      #lyrics-plus-musixmatch-modal .lyrics-btn {
+        background: #222;
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        padding: 8px 0;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 1px 4px #0003;
+        transition: background 0.13s, color 0.13s;
+        outline: none;
+        min-width: 90px;
+        width: 90px;
+        text-align: center;
+        flex: 0 0 90px;
+        margin: 0;
+      }
+      #lyrics-plus-musixmatch-modal .lyrics-btn:hover {
+        background: #1db954;
+        color: #181818;
+      }
+      #lyrics-plus-musixmatch-modal-close {
+        background: #222;
+        color: #fff;
+        border: none;
+        border-radius: 14px;
+        font-size: 1.25em;
+        font-weight: 700;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        cursor: pointer;
+        transition: background 0.13s, color 0.13s;
+        z-index: 1;
+        line-height: 1;
+        margin: 0;
+      }
+      #lyrics-plus-musixmatch-modal-close:hover {
+        background: #1db954;
+        color: #181818;
+      }
+      #lyrics-plus-musixmatch-modal a {
+        color: #1db954;
+        text-decoration: none;
+        transition: color .12s;
+        font-weight: 600;
+      }
+      #lyrics-plus-musixmatch-modal a:hover {
+        color: #fff;
+        text-decoration: underline;
+      }
+      #lyrics-plus-musixmatch-modal input[type="text"],
+      #lyrics-plus-musixmatch-modal input[type="password"] {
+        background: #222;
+        color: #fff;
+        border: 1px solid #333;
+        border-radius: 5px;
+        width: 100%;
+        padding: 8px 10px;
+        margin: 14px 0 8px 0;
+        font-size: 1em;
+        box-sizing: border-box;
+        display: block;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const modal = document.createElement("div");
+  modal.id = "lyrics-plus-musixmatch-modal";
+
+  const box = document.createElement("div");
+  box.id = "lyrics-plus-musixmatch-modal-box";
+  box.innerHTML = `
+    <button id="lyrics-plus-musixmatch-modal-close" title="Close">&times;</button>
+    <div id="lyrics-plus-musixmatch-modal-title">Set your Musixmatch User Token</div>
+    <div style="font-size:14px;line-height:1.6;margin-bottom:12px">
+      <b>How to retrieve your token:</b><br>
+      1. Go to <a href="https://www.musixmatch.com/" target="_blank">Musixmatch</a> and click on Login.<br>
+      2. Select [Community] as your product.<br>
+      3. Open DevTools (Press F12 or Right click and Inspect). <br>
+      4. Go to the Network tab &gt; www.musixmatch.com &gt; Cookies.<br>
+      3. Right-click on the content of the musixmatchUserToken and select Copy value.<br>
+      4. Go to <a href="https://jsonformatter.curiousconcept.com/" target="_blank">JSON Formatter</a> &gt; Paste the content &gt; Click Process.<br>
+      5. Copy the value of web-desktop-app-v1.0 > Paste the token below and press Save.<br>
+    </div>
+  `;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "Enter your Musixmatch user token here";
+  input.value = localStorage.getItem("lyricsPlusMusixmatchToken") || "";
+  box.appendChild(input);
+
+  // Footer with Save & Cancel
+  const footer = document.createElement("div");
+  footer.className = "modal-footer";
+
+  const btnSave = document.createElement("button");
+  btnSave.textContent = "Save";
+  btnSave.className = "lyrics-btn";
+  btnSave.onclick = () => {
+    localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
+    modal.remove();
+    // Optionally: reload lyrics if popup open and provider is Musixmatch
+  };
+
+  const btnCancel = document.createElement("button");
+  btnCancel.textContent = "Cancel";
+  btnCancel.className = "lyrics-btn";
+  btnCancel.onclick = () => modal.remove();
+
+  footer.appendChild(btnSave);
+  footer.appendChild(btnCancel);
+  box.appendChild(footer);
+
+  // Close (X) button
+  box.querySelector('#lyrics-plus-musixmatch-modal-close').onclick = () => modal.remove();
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+
+  // Focus input for fast paste
+  input.focus();
+}
+
+  async function fetchMusixmatchLyrics(songInfo) {
+    const token = getMusixmatchToken(false); // false = don't show prompt automatically
+if (!token) {
+  showMusixmatchTokenModal();
+  return { error: "No Musixmatch token set." };
+}
+    const baseURL =
+      "https://apic-desktop.musixmatch.com/ws/1.1/macro.subtitles.get?format=json&namespace=lyrics_richsynched&subtitle_format=mxm&app_id=web-desktop-app-v1.0&";
+    const durr = Math.floor(songInfo.duration / 1000);
+    const params = [
+      `q_album=${encodeURIComponent(songInfo.album)}`,
+      `q_artist=${encodeURIComponent(songInfo.artist)}`,
+      `q_artists=${encodeURIComponent(songInfo.artist)}`,
+      `q_track=${encodeURIComponent(songInfo.title)}`,
+      `q_duration=${durr}`,
+      `f_subtitle_length=${durr}`,
+      `usertoken=${encodeURIComponent(token)}`
+    ];
+    const finalURL = baseURL + params.join("&");
+    let response = await fetch(finalURL, {
+      headers: {
+        'authority': 'apic-desktop.musixmatch.com',
+        'cookie': `x-mxm-token-guid=; usertoken=${token}`,
+        'user-agent': navigator.userAgent
+      }
+    });
+    if (!response.ok) return { error: "No lyrics" };
+    let body = await response.json();
+    if (!body?.message?.body?.macro_calls) return { error: "No lyrics" };
+    return body.message.body.macro_calls;
+  }
+  function musixmatchGetSynced(body) {
+    const meta = body?.["matcher.track.get"]?.message?.body;
+    if (!meta) return null;
+    const hasSynced = meta?.track?.has_subtitles;
+    const isInstrumental = meta?.track?.instrumental;
+    if (isInstrumental) {
+      return [{ text: "♪ Instrumental ♪", startTime: "0000" }];
+    }
+    if (hasSynced) {
+      const subtitle = body["track.subtitles.get"]?.message?.body?.subtitle_list?.[0]?.subtitle;
+      if (!subtitle) return null;
+      return JSON.parse(subtitle.subtitle_body).map(line => ({
+        text: line.text || "♪",
+        time: line.time.total * 1000,
+        startTime: line.time.total * 1000,
+      }));
+    }
+    return null;
+  }
+  function musixmatchGetUnsynced(body) {
+    const meta = body?.["matcher.track.get"]?.message?.body;
+    if (!meta) return null;
+    const hasUnSynced = meta.track.has_lyrics || meta.track.has_lyrics_crowd;
+    const isInstrumental = meta?.track?.instrumental;
+    if (isInstrumental) return [{ text: "♪ Instrumental ♪" }];
+    if (hasUnSynced) {
+      const lyrics = body["track.lyrics.get"]?.message?.body?.lyrics?.lyrics_body;
+      if (!lyrics) return null;
+      return lyrics.split("\n").map(t => ({ text: t }));
+    }
+    return null;
+  }
+  const ProviderMusixmatch = {
+    async findLyrics(info) {
+      try {
+        const data = await fetchMusixmatchLyrics(info);
+        if (!data || data.error) return { error: data.error || "Lyrics not found on Musixmatch" };
+        return data;
+      } catch (e) {
+        return { error: e.message };
+      }
+    },
+    getUnsynced: musixmatchGetUnsynced,
+    getSynced: musixmatchGetSynced
+  };
+
+  // --- Netease ---
+// async function fetchNeteaseLyrics(info) {
+//   const searchURL = "https://music.xianqiao.wang/neteaseapiv2/search?limit=10&type=1&keywords=";
+//   const lyricURL = "https://music.xianqiao.wang/neteaseapiv2/lyric?id=";
+//   const cleanTitle = Utils.removeExtraInfo(Utils.removeSongFeat(Utils.normalize(info.title)));
+//   const finalURL = searchURL + encodeURIComponent(`${cleanTitle} ${info.artist}`);
+//   const searchResults = await fetch(finalURL);
+//   if (!searchResults.ok) throw new Error("Cannot find track");
+//   const searchJson = await searchResults.json();
+//   const items = searchJson.result.songs;
+//   if (!items?.length) throw new Error("Cannot find track");
+
+//   // Try to match by album (normalized)
+//   const neAlbumName = Utils.normalize(info.album);
+//   const expectedAlbumName = Utils.containsHanCharacter(neAlbumName) ? await Utils.toSimplifiedChinese(neAlbumName) : neAlbumName;
+//   let itemId = items.findIndex((val) => Utils.normalize(val.album.name) === expectedAlbumName);
+//   if (itemId === -1) itemId = items.findIndex((val) => Math.abs(info.duration - val.duration) < 3000);
+//   if (itemId === -1) itemId = items.findIndex((val) => val.name === cleanTitle);
+//   if (itemId === -1) throw new Error("Cannot find track");
+//   const lyricRes = await fetch(lyricURL + items[itemId].id);
+//   if (!lyricRes.ok) throw new Error("Lyrics fetch failed");
+//   return await lyricRes.json();
+// }
+// function parseNeteaseSynced(list) {
+//   const lyricStr = list?.lrc?.lyric;
+//   if (!lyricStr) return null;
+//   const lines = lyricStr.split(/\r?\n/).map(line => line.trim());
+//   const lyrics = lines
+//     .map(line => {
+//       const match = line.match(/^\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?]\s*(.*)$/);
+//       if (!match) return null;
+//       const min = Number(match[1]);
+//       const sec = Number(match[2]);
+//       const ms = match[3] ? Number(match[3].padEnd(3, '0')) : 0;
+//       return {
+//         text: match[4] || "",
+//         time: min * 60000 + sec * 1000 + ms,
+//         startTime: min * 60000 + sec * 1000 + ms,
+//       };
+//     })
+//     .filter(Boolean);
+//   return lyrics.length ? lyrics : null;
+// }
+// function parseNeteaseUnsynced(list) {
+//   const lyricStr = list?.lrc?.lyric;
+//   if (!lyricStr) return null;
+//   const lines = lyricStr.split(/\r?\n/).map(line => line.trim());
+//   const lyrics = lines
+//     .map(line => {
+//       const match = line.match(/^\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?]\s*(.*)$/);
+//       if (!match) {
+//         if (!line) return null;
+//         return { text: line.trim() };
+//       }
+//       return { text: match[4] };
+//     })
+//     .filter(Boolean);
+//   return lyrics.length ? lyrics : null;
+// }
+// const ProviderNetease = {
+//   async findLyrics(info) {
+//     try {
+//       const data = await fetchNeteaseLyrics(info);
+//       if (!data) return { error: "Lyrics not found on Netease" };
+//       return data;
+//     } catch (e) {
+//       return { error: e.message || "Netease fetch failed" };
+//     }
+//   },
+//   getUnsynced: parseNeteaseUnsynced,
+//   getSynced: parseNeteaseSynced
+// };
+//
+  // --- Genius ---
+  async function fetchGeniusLyrics(info) {
+    const titles = new Set([info.title]);
+    titles.add(Utils.removeExtraInfo(info.title));
+    titles.add(Utils.removeSongFeat(info.title));
+    titles.add(Utils.removeSongFeat(Utils.removeExtraInfo(info.title)));
+    for (const title of titles) {
+      const searchUrl = `https://api.lyrics.ovh/v1/${encodeURIComponent(info.artist)}/${encodeURIComponent(title)}`;
+      try {
+        const fetchPromise = fetch(searchUrl);
+        const res = await Promise.race([fetchPromise, timeoutPromise(1500)]);
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (data.lyrics) {
+          return { plainLyrics: data.lyrics };
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    return { error: "Lyrics not found on Genius" };
+  }
+  function parseGeniusLyrics(raw) {
+    return Utils.parseLocalLyrics(raw);
+  }
   const ProviderGenius = {
     async findLyrics(info) {
       try {
-        const artist = normalize(info.artist);
-        const title = normalize(info.title);
-        const searchUrl = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
-        const fetchPromise = fetch(searchUrl);
-        const res = await Promise.race([fetchPromise, timeoutPromise(1000)]);
-        if (!res.ok) return { error: "Track not found on Genius" };
-        const data = await res.json();
-        if (!data.lyrics) return { error: "No lyrics found" };
-        return { plainLyrics: data.lyrics };
+        const data = await fetchGeniusLyrics(info);
+        if (!data || data.error) return { error: data.error || "Lyrics not found on Genius" };
+        return data;
       } catch (e) {
         return { error: e.message };
       }
@@ -370,20 +716,23 @@ function updatePlayPauseIcon(btnPlayPause) {
     }
   };
 
-  const Providers = {
-    list: ["LRCLIB", "KPoe", "Genius"],
-    map: {
-      "LRCLIB": ProviderLRCLIB,
-      "KPoe": ProviderKPoe,
-      "Genius": ProviderGenius,
-    },
-    current: "LRCLIB",
-    getCurrent() { return this.map[this.current]; },
-    setCurrent(name) { if (this.map[name]) this.current = name; }
-  };
+  // --- Providers List ---
+const Providers = {
+  list: ["LRCLIB", "KPoe", "Musixmatch", /*"Netease",*/ "Genius"],
+  map: {
+    "LRCLIB": ProviderLRCLIB,
+    "KPoe": ProviderKPoe,
+    "Musixmatch": ProviderMusixmatch,
+    // "Netease": ProviderNetease,
+    "Genius": ProviderGenius,
+  },
+  current: "LRCLIB",
+  getCurrent() { return this.map[this.current]; },
+  setCurrent(name) { if (this.map[name]) this.current = name; }
+};
 
   // ------------------------
-  // UI and Popup Functions
+  // UI and Popup Functions (UNCHANGED, see previous version)
   // ------------------------
 
   function removePopup() {
@@ -569,23 +918,30 @@ function updatePlayPauseIcon(btnPlayPause) {
     tabs.style.gap = "8px";
 
     Providers.list.forEach(name => {
-      const btn = document.createElement("button");
-      btn.textContent = name;
-      btn.style.flex = "1";
-      btn.style.padding = "6px";
-      btn.style.borderRadius = "6px";
-      btn.style.border = "none";
-      btn.style.cursor = "pointer";
-      btn.style.backgroundColor = (Providers.current === name) ? "#1db954" : "#333";
-      btn.style.color = "white";
-      btn.style.fontWeight = "600";
-      btn.onclick = async () => {
-        Providers.setCurrent(name);
-        updateTabs(tabs);
-        await updateLyricsContent(popup, getCurrentTrackInfo());
-      };
-      tabs.appendChild(btn);
-    });
+  const btn = document.createElement("button");
+  btn.textContent = name;
+  btn.style.flex = "1";
+  btn.style.padding = "6px";
+  btn.style.borderRadius = "6px";
+  btn.style.border = "none";
+  btn.style.cursor = "pointer";
+  btn.style.backgroundColor = (Providers.current === name) ? "#1db954" : "#333";
+  btn.style.color = "white";
+  btn.style.fontWeight = "600";
+  btn.onclick = async () => {
+    Providers.setCurrent(name);
+    updateTabs(tabs);
+    await updateLyricsContent(popup, getCurrentTrackInfo());
+  };
+  // Double-click (desktop/mobile) for Musixmatch settings
+  if (name === "Musixmatch") {
+    btn.ondblclick = (e) => {
+      e.preventDefault();
+      showMusixmatchTokenModal();
+    };
+  }
+  tabs.appendChild(btn);
+});
     headerWrapper.appendChild(tabs);
     popup._lyricsTabs = tabs;
 
@@ -604,7 +960,7 @@ function updatePlayPauseIcon(btnPlayPause) {
     });
     lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
 
-// Offset Setting UI
+    // Offset Setting UI
     const offsetWrapper = document.createElement("div");
     offsetWrapper.style.display = "flex";
     offsetWrapper.style.alignItems = "center";
@@ -668,21 +1024,21 @@ function updatePlayPauseIcon(btnPlayPause) {
     if (controlsVisible === null) controlsVisible = true;
     else controlsVisible = JSON.parse(controlsVisible);
 
-    const OFFSET_WRAPPER_PADDING = "8px 12px"; // Store the default padding
+    const OFFSET_WRAPPER_PADDING = "8px 12px";
 
-offsetToggleBtn.onclick = () => {
-  offsetVisible = !offsetVisible;
-  localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
-  if (offsetVisible) {
-    offsetWrapper.style.maxHeight = "100px";
-    offsetWrapper.style.pointerEvents = "";
-    offsetWrapper.style.padding = "8px 12px";
-  } else {
-    offsetWrapper.style.maxHeight = "0";
-    offsetWrapper.style.pointerEvents = "none";
-    offsetWrapper.style.padding = "0 12px";
-  }
-};
+    offsetToggleBtn.onclick = () => {
+      offsetVisible = !offsetVisible;
+      localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
+      if (offsetVisible) {
+        offsetWrapper.style.maxHeight = "100px";
+        offsetWrapper.style.pointerEvents = "";
+        offsetWrapper.style.padding = "8px 12px";
+      } else {
+        offsetWrapper.style.maxHeight = "0";
+        offsetWrapper.style.pointerEvents = "none";
+        offsetWrapper.style.padding = "0 12px";
+      }
+    };
 
     playbackToggleBtn.onclick = () => {
       controlsVisible = !controlsVisible;
@@ -698,15 +1054,15 @@ offsetToggleBtn.onclick = () => {
       }
     };
 
-   if (offsetVisible) {
-  offsetWrapper.style.maxHeight = "100px";
-  offsetWrapper.style.pointerEvents = "";
-  offsetWrapper.style.padding = "8px 12px";
-} else {
-  offsetWrapper.style.maxHeight = "0";
-  offsetWrapper.style.pointerEvents = "none";
-  offsetWrapper.style.padding = "0 12px";
-}
+    if (offsetVisible) {
+      offsetWrapper.style.maxHeight = "100px";
+      offsetWrapper.style.pointerEvents = "";
+      offsetWrapper.style.padding = "8px 12px";
+    } else {
+      offsetWrapper.style.maxHeight = "0";
+      offsetWrapper.style.pointerEvents = "none";
+      offsetWrapper.style.padding = "0 12px";
+    }
 
     if (controlsVisible) {
       controlsBar.style.maxHeight = "80px";
@@ -716,7 +1072,7 @@ offsetToggleBtn.onclick = () => {
       controlsBar.style.maxHeight = "0";
       controlsBar.style.opacity = "0";
       controlsBar.style.pointerEvents = "none";
-}
+    }
 
     function createControlBtn(content, title, onClick) {
       const btn = document.createElement("button");
@@ -979,31 +1335,36 @@ offsetToggleBtn.onclick = () => {
     }
   }
 
+  // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info) {
-    const providerChecks = [
-      { name: "LRCLIB", type: "getSynced" },
-      { name: "KPoe", type: "getSynced" },
-      { name: "LRCLIB", type: "getUnsynced" },
-      { name: "KPoe", type: "getUnsynced" },
-      { name: "Genius", type: "getUnsynced" }
-    ];
-    for (const { name, type } of providerChecks) {
-      const provider = Providers.map[name];
-      const result = await provider.findLyrics(info);
-      if (result && !result.error) {
-        let lyrics = provider[type](result);
-        if (lyrics && lyrics.length > 0) {
-          Providers.setCurrent(name);
-          if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-          await updateLyricsContent(popup, info);
-          return;
-        }
+  const detectionOrder = [
+    { name: "LRCLIB", type: "getSynced" },
+    { name: "KPoe", type: "getSynced" },
+    { name: "Musixmatch", type: "getSynced" },
+    // { name: "Netease", type: "getSynced" },
+    { name: "LRCLIB", type: "getUnsynced" },
+    { name: "KPoe", type: "getUnsynced" },
+    { name: "Musixmatch", type: "getUnsynced" },
+    // { name: "Netease", type: "getUnsynced" },
+    { name: "Genius", type: "getUnsynced" }
+  ];
+  for (const { name, type } of detectionOrder) {
+    const provider = Providers.map[name];
+    const result = await provider.findLyrics(info);
+    if (result && !result.error) {
+      let lyrics = provider[type](result);
+      if (lyrics && lyrics.length > 0) {
+        Providers.setCurrent(name);
+        if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+        await updateLyricsContent(popup, info);
+        return;
       }
     }
-    Providers.setCurrent("LRCLIB");
-    if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-    await updateLyricsContent(popup, info);
   }
+  Providers.setCurrent("LRCLIB");
+  if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+  await updateLyricsContent(popup, info);
+}
 
   function startPollingForTrackChange(popup) {
     if (pollingInterval) clearInterval(pollingInterval);
@@ -1035,7 +1396,6 @@ offsetToggleBtn.onclick = () => {
       if (!controls) {
         if (attempts < maxRetries) {
           attempts++;
-          console.log(`Lyrics+ button: Waiting for controls... (${attempts})`);
           setTimeout(tryAdd, 1000);
         } else {
           console.warn("Lyrics+ button: Failed to find controls after max retries.");
@@ -1069,7 +1429,6 @@ offsetToggleBtn.onclick = () => {
         createPopup();
       };
       controls.appendChild(btn);
-      console.log("Lyrics+ button added!");
     };
     tryAdd();
   }
