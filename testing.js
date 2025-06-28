@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Stable (lyric fetch overhaul, added netease and musixmatch, lrclib fetch improved)
+// @name         testing
 // @namespace    http://tampermonkey.net/
 // @version      4.0
 // @description  Synced + unsynced lyrics: LRCLIB, KPoe, Musixmatch, Netease, Genius. All logic + UI updated from official lyrics-plus. Util functions ported; Musixmatch token prompt for userscript compatibility. Full code, nothing omitted.
@@ -342,18 +342,21 @@
   // --- Musixmatch ---
   // Musixmatch token prompt and storage
   function getMusixmatchToken() {
-    let token = localStorage.getItem("lyricsPlusMusixmatchToken");
-    if (!token) {
-      token = prompt("Enter your Musixmatch usertoken (from musixmatch.com cookies):", "");
-      if (token) {
-        localStorage.setItem("lyricsPlusMusixmatchToken", token);
-      }
+  let token = localStorage.getItem("lyricsPlusMusixmatchToken");
+  if (!token) {
+    token = prompt("Enter your Musixmatch user token:", "");
+    if (token) {
+      localStorage.setItem("lyricsPlusMusixmatchToken", token);
     }
-    return token;
   }
+  return token;
+}
   async function fetchMusixmatchLyrics(songInfo) {
-    const token = getMusixmatchToken();
-    if (!token) return { error: "No Musixmatch token set." };
+    const token = getMusixmatchToken(false); // false = don't show prompt automatically
+if (!token) {
+  showMusixmatchTokenModal();
+  return { error: "No Musixmatch token set." };
+}
     const baseURL =
       "https://apic-desktop.musixmatch.com/ws/1.1/macro.subtitles.get?format=json&namespace=lyrics_richsynched&subtitle_format=mxm&app_id=web-desktop-app-v1.0&";
     const durr = Math.floor(songInfo.duration / 1000);
@@ -424,6 +427,66 @@
     getUnsynced: musixmatchGetUnsynced,
     getSynced: musixmatchGetSynced
   };
+
+  function showMusixmatchTokenModal() {
+  // Remove any existing modal
+  const old = document.getElementById("lyrics-plus-musixmatch-modal");
+  if (old) old.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "lyrics-plus-musixmatch-modal";
+  Object.assign(modal.style, {
+    position: "fixed", left: 0, top: 0, width: "100vw", height: "100vh",
+    background: "rgba(0,0,0,0.7)", zIndex: 100001, display: "flex", alignItems: "center", justifyContent: "center"
+  });
+
+  const box = document.createElement("div");
+  Object.assign(box.style, {
+    background: "#181818", color: "#fff", borderRadius: "12px", padding: "24px", minWidth: "370px", maxWidth: "90vw",
+    boxShadow: "0 2px 24px #000"
+  });
+
+  box.innerHTML = `
+    <h3>Set Musixmatch Token</h3>
+    <div style="font-size:14px;line-height:1.6;margin-bottom:10px">
+      <b>How to get your token:</b><br>
+      1. Go to <a href="https://www.musixmatch.com/" target="_blank">Musixmatch</a> and login.<br>
+      2. Press F12 (DevTools), go to Network &gt; www.musixmatch.com &gt; Cookies.<br>
+      3. Copy <code>musixmatchUserToken</code> value.<br>
+      4. Optionally, process at <a href="https://jsonformatter.curiousconcept.com/" target="_blank">JSON Formatter</a>.<br>
+      5. Paste your token below and Save.<br>
+      <a href="https://github.com/Myst1cX/spotify-web-lyrics-plus/edit/main/README.md" target="_blank">Full Instructions</a>
+    </div>
+  `;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.style.width = "100%";
+  input.style.fontSize = "15px";
+  input.style.padding = "4px 8px";
+  input.style.marginBottom = "10px";
+  input.value = localStorage.getItem("lyricsPlusMusixmatchToken") || "";
+  box.appendChild(input);
+
+  const btnSave = document.createElement("button");
+  btnSave.textContent = "Save";
+  btnSave.style.marginRight = "12px";
+  btnSave.onclick = () => {
+    localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
+    modal.remove();
+    // optionally trigger reload of lyrics if popup is open and provider is Musixmatch
+  };
+
+  const btnCancel = document.createElement("button");
+  btnCancel.textContent = "Cancel";
+  btnCancel.onclick = () => modal.remove();
+
+  box.appendChild(btnSave);
+  box.appendChild(btnCancel);
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+}
 
   // --- Netease ---
   async function fetchNeteaseLyrics(info) {
@@ -732,6 +795,12 @@
     buttonGroup.appendChild(playbackToggleBtn);
     buttonGroup.appendChild(offsetToggleBtn);
     buttonGroup.appendChild(closeBtn);
+    const musixmatchTokenBtn = document.createElement("button");
+    musixmatchTokenBtn.textContent = "Musixmatch Token";
+    musixmatchTokenBtn.title = "View or change your Musixmatch user token";
+    // (style accordingly)
+    musixmatchTokenBtn.onclick = showMusixmatchTokenModal;
+    buttonGroup.insertBefore(musixmatchTokenBtn, closeBtn);
 
     header.appendChild(buttonGroup);
     headerWrapper.appendChild(header);
