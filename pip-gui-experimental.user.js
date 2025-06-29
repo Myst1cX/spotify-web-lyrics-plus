@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotifh Lyrics+ Experimental
+// @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      4.2
+// @version      4.4
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -26,10 +26,10 @@
 // Lyrics should be centered
 // Converting the userscript into a browser extension (maybe eventually) > to possibilitate having a floating popup ui with spotify lyrics that works outside open.spotify.com
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
-// Mobile tweaks: Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
 // Optimize drag and resize to work smoothly on mobile browser.
 // Add "expand" button to the right of next track button in playback controls container. Its icon should fit nicely with the rest of playback control buttons. Its function is that on click, the popup gets expanded to fit the screen (if im on mobile and zoomed in, its supposed to fit that screen (the Spotify website). If possible to implement I'd also suggest that Spotify's bottom container - the one that has the volume toggle, playback control buttons, seekbar etc - remains visible while the rest of the website gets overtaken by the popup gui). While expanded if click the button again, it returns to the previous position state or if that's too hard to implement, to the restore default position.
 // Playback control buttons not responsible on mobile bc desktop mode and smol interface i suppose so I can't click, also difficult to drag and resize as mentioned, on mobile. on pc fine
+
 
 (function () {
   'use strict';
@@ -944,7 +944,7 @@ translateBtn.onclick = translateLyricsInPopup;
 
 // Remove translation button
 const removeBtn = document.createElement('button');
-removeBtn.textContent = 'Remove Translation';
+removeBtn.textContent = 'Original'; // Remove Translation Button
 removeBtn.style.flex = '1';
 removeBtn.style.minWidth = '0';
 removeBtn.style.height = controlHeight;
@@ -1384,6 +1384,7 @@ translationToggleBtn.onclick = () => {
 
     popup._playPauseBtn = btnPlayPause;
 
+
     const btnReset = document.createElement("button");
     btnReset.textContent = "↻";
     btnReset.title = "Restore Default Position and Size";
@@ -1403,18 +1404,34 @@ translationToggleBtn.onclick = () => {
       userSelect: "none",
       padding: "0",
     });
+    // Default Position and Size of the Popup Gui
     btnReset.onclick = () => {
-      Object.assign(popup.style, {
-        position: "fixed",
-        bottom: "0px",
-        right: "0px",
-        left: "auto",
-        top: "auto",
-        width: "320px",
-        height: "45vh",
-      });
-      savePopupState(popup);
-    };
+    const isMobile = window.innerWidth <= 600;
+    if (isMobile) {
+    Object.assign(popup.style, {
+      position: "fixed",
+      left: "7vw",
+      right: "5vw",
+      top: "auto",
+      bottom: "190px",
+      width: "210vw",
+      height: "100vh",
+      zIndex: 100000
+    });
+  } else {
+    Object.assign(popup.style, {
+      position: "fixed",
+      bottom: "87px",
+      right: "0px",
+      left: "auto",
+      top: "auto",
+      width: "302.5px",
+      height: "79.5vh",
+      zIndex: 100000
+    });
+  }
+  savePopupState(popup);
+};
 
     controlsBar.appendChild(btnReset);
     controlsBar.appendChild(btnPrevious);
