@@ -199,7 +199,7 @@ async function translateText(text, targetLang) {
   }
 
   function getAnticipationOffset() {
-    return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 300);
+    return Number(localStorage.getItem("lyricsPlusAnticipationOffset") || 1000);
   }
   function setAnticipationOffset(val) {
     localStorage.setItem("lyricsPlusAnticipationOffset", val);
