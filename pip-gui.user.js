@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      4.5.test
+// @version      4.6.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -1326,24 +1326,7 @@ translationToggleBtn.onclick = () => {
       return btn;
     }
 
-    function simulateNativeClick(elem) {
-  if (!elem) return;
-  const rect = elem.getBoundingClientRect();
-  const x = rect.left + rect.width / 2;
-  const y = rect.top + rect.height / 2;
-  ['pointerdown', 'mousedown', 'touchstart', 'pointerup', 'mouseup', 'touchend', 'click'].forEach(type => {
-    const evt = new MouseEvent(type, {
-      bubbles: true,
-      cancelable: true,
-      view: window,
-      clientX: x,
-      clientY: y
-    });
-    elem.dispatchEvent(evt);
-  });
-}
-
-function sendSpotifyCommand(command) {
+    function sendSpotifyCommand(command) {
   let selector;
   switch (command) {
     case "playpause":
@@ -1360,13 +1343,88 @@ function sendSpotifyCommand(command) {
       return;
   }
   const btn = document.querySelector(selector);
-  if (btn) {
-    simulateNativeClick(btn);
+
+  if (!btn) {
+    alert("Spotify control button not found!\nTry closing and reopening the popup.");
+    return;
+  }
+
+  // On mobile, try harder to produce a trusted event
+  if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    // Try both .click and a TouchEvent
+    try {
+      btn.focus();
+      setTimeout(() => {
+        btn.click(); // Native click
+        // Also try dispatching a touch event
+        try {
+          const touch = new Touch({
+            identifier: Date.now(),
+            target: btn,
+            clientX: btn.getBoundingClientRect().left + btn.offsetWidth / 2,
+            clientY: btn.getBoundingClientRect().top + btn.offsetHeight / 2,
+            radiusX: 2.5,
+            radiusY: 2.5,
+            rotationAngle: 10,
+            force: 0.5,
+          });
+          const touchEvent = new TouchEvent('touchend', {
+            bubbles: true,
+            cancelable: true,
+            touches: [],
+            targetTouches: [],
+            changedTouches: [touch],
+          });
+          btn.dispatchEvent(touchEvent);
+        } catch (e) {
+          // TouchEvent may not be supported
+        }
+      }, 0);
+    } catch (e) {
+      // fallback
+      btn.click();
+    }
+
+    // If still nothing happens, inform user
+    setTimeout(() => {
+      // Check if playback state changed, otherwise notify
+      const playing = !!document.querySelector('[aria-label="Pause"]');
+      if ((command === "playpause" && !playing) ||
+          (command === "next" || command === "previous")) {
+        // Show info only if not working
+        showMobileControlWarning();
+      }
+    }, 700);
+
   } else {
-    console.warn("Spotify button not found for:", command);
+    // On desktop, normal click works
+    btn.click();
   }
 }
 
+// Helper to show a warning to users
+function showMobileControlWarning() {
+  if (document.getElementById('lyrics-plus-mobile-toast')) return;
+  const toast = document.createElement('div');
+  toast.id = 'lyrics-plus-mobile-toast';
+  toast.textContent = "Spotify's mobile site blocks remote playback controls. Use the native controls below this popup.";
+  Object.assign(toast.style, {
+    position: 'fixed',
+    bottom: '140px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    background: '#222',
+    color: '#fff',
+    padding: '12px 22px',
+    borderRadius: '16px',
+    fontSize: '16px',
+    zIndex: 100002,
+    boxShadow: '0 2px 8px #000a'
+  });
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+    
     function createPlayPauseButton() {
       const btnPlayPause = createControlBtn("", "Play/Pause", () => {
         sendSpotifyCommand("playpause");
