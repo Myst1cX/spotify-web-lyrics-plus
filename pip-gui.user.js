@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      4.4
+// @version      4.5.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -1326,26 +1326,46 @@ translationToggleBtn.onclick = () => {
       return btn;
     }
 
-    function sendSpotifyCommand(command) {
-      let selector;
-      switch (command) {
-        case "playpause":
-          selector = '[aria-label="Play"], [aria-label="Pause"]';
-          break;
-        case "next":
-          selector = '[aria-label="Next"]';
-          break;
-        case "previous":
-          selector = '[aria-label="Previous"]';
-          break;
-        default:
-          console.warn("Unknown Spotify command:", command);
-          return;
-      }
-      const btn = document.querySelector(selector);
-      if (btn) btn.click();
-      else console.warn("Spotify button not found for:", command);
-    }
+    function simulateNativeClick(elem) {
+  if (!elem) return;
+  const rect = elem.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  ['pointerdown', 'mousedown', 'touchstart', 'pointerup', 'mouseup', 'touchend', 'click'].forEach(type => {
+    const evt = new MouseEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      clientX: x,
+      clientY: y
+    });
+    elem.dispatchEvent(evt);
+  });
+}
+
+function sendSpotifyCommand(command) {
+  let selector;
+  switch (command) {
+    case "playpause":
+      selector = '[aria-label="Play"], [aria-label="Pause"]';
+      break;
+    case "next":
+      selector = '[aria-label="Next"]';
+      break;
+    case "previous":
+      selector = '[aria-label="Previous"]';
+      break;
+    default:
+      console.warn("Unknown Spotify command:", command);
+      return;
+  }
+  const btn = document.querySelector(selector);
+  if (btn) {
+    simulateNativeClick(btn);
+  } else {
+    console.warn("Spotify button not found for:", command);
+  }
+}
 
     function createPlayPauseButton() {
       const btnPlayPause = createControlBtn("", "Play/Pause", () => {
