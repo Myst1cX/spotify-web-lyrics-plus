@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotifh Lyrics+ Stable
+// @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      4.2
+// @version      4.3
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -924,7 +924,7 @@ translateBtn.onclick = translateLyricsInPopup;
 
 // Remove translation button
 const removeBtn = document.createElement('button');
-removeBtn.textContent = 'Remove Translation';
+removeBtn.textContent = 'Original'; // Remove Translation Button
 removeBtn.style.flex = '1';
 removeBtn.style.minWidth = '0';
 removeBtn.style.height = controlHeight;
@@ -1364,6 +1364,7 @@ translationToggleBtn.onclick = () => {
 
     popup._playPauseBtn = btnPlayPause;
 
+
     const btnReset = document.createElement("button");
     btnReset.textContent = "↻";
     btnReset.title = "Restore Default Position and Size";
@@ -1383,18 +1384,34 @@ translationToggleBtn.onclick = () => {
       userSelect: "none",
       padding: "0",
     });
+    // Default Position and Size of the Popup Gui
     btnReset.onclick = () => {
-      Object.assign(popup.style, {
-        position: "fixed",
-        bottom: "0px",
-        right: "0px",
-        left: "auto",
-        top: "auto",
-        width: "320px",
-        height: "45vh",
-      });
-      savePopupState(popup);
-    };
+    const isMobile = window.innerWidth <= 600;
+    if (isMobile) {
+    Object.assign(popup.style, {
+      position: "fixed",
+      left: "5vw",           // 5% from left
+      right: "auto",
+      top: "auto",
+      bottom: "10px",        // small gap from bottom
+      width: "90vw",         // 90% of viewport width
+      height: "42vh",        // about 42% viewport height (fits landscape and portrait)
+      zIndex: 100000
+    });
+  } else {
+    Object.assign(popup.style, {
+      position: "fixed",
+      bottom: "87px",
+      right: "0px",
+      left: "auto",
+      top: "auto",
+      width: "302.5px",        // a bit wider for more lyrics room
+      height: "79.5vh",
+      zIndex: 100000
+    });
+  }
+  savePopupState(popup);
+};
 
     controlsBar.appendChild(btnReset);
     controlsBar.appendChild(btnPrevious);
