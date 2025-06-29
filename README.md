@@ -86,11 +86,9 @@
 
 ## Credits
 
-> Lyrics from [LRCLIB](https://lrclib.net/), [KPoe](https://github.com/ibratabian17/KPoe), [Genius](https://genius.com/), [Musixmatch](https://musixmatch.com/)
-
-> Live Translation from [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
-
-> Powered by [Spotify](https://open.spotify.com/).
+> 1. **Lyrics** from [LRCLIB](https://lrclib.net/), [KPoe](https://github.com/ibratabian17/KPoe), [Genius](https://genius.com/), [Musixmatch](https://musixmatch.com/)
+> 2. **Live Translation** from [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
+> 3. **Powered by** [Spotify](https://open.spotify.com/).
 
 ## License
 
