@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      4.3
+// @version      4.4
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -1390,12 +1390,12 @@ translationToggleBtn.onclick = () => {
     if (isMobile) {
     Object.assign(popup.style, {
       position: "fixed",
-      left: "5vw",           // 5% from left
-      right: "auto",
+      left: "7vw",
+      right: "5vw",
       top: "auto",
-      bottom: "10px",        // small gap from bottom
-      width: "90vw",         // 90% of viewport width
-      height: "42vh",        // about 42% viewport height (fits landscape and portrait)
+      bottom: "190px",
+      width: "210vw",
+      height: "100vh",
       zIndex: 100000
     });
   } else {
@@ -1405,7 +1405,7 @@ translationToggleBtn.onclick = () => {
       right: "0px",
       left: "auto",
       top: "auto",
-      width: "302.5px",        // a bit wider for more lyrics room
+      width: "302.5px",
       height: "79.5vh",
       zIndex: 100000
     });
