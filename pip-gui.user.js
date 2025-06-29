@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      4.9.test
+// @version      5.0.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -246,20 +246,49 @@ async function translateText(text, targetLang) {
 
   // --- Play/Pause Icon Updater ---
   function updatePlayPauseIcon(btnPlayPause) {
-  // Try all likely selectors (desktop & mobile)
-  const pauseBtn = document.querySelector('[aria-label="Pause"], [data-testid="mobile-pause-button"], [data-testid="control-button-playpause"][aria-label="Pause"]');
-  const playBtn  = document.querySelector('[aria-label="Play"], [data-testid="mobile-play-button"], [data-testid="control-button-playpause"][aria-label="Play"]');
+  // Try all likely selectors for both desktop and mobile
+  // These selectors may need to be updated if Spotify changes their UI
+  const pauseBtns = [
+    '[aria-label="Pause"]',
+    '[data-testid="mobile-pause-button"]',
+    '[data-testid="control-button-playpause"][aria-label="Pause"]'
+  ];
+  const playBtns = [
+    '[aria-label="Play"]',
+    '[data-testid="mobile-play-button"]',
+    '[data-testid="control-button-playpause"][aria-label="Play"]'
+  ];
+
+  // Helper to find a visible button from a list of selectors
+  function getVisibleButton(selectors) {
+    for (const sel of selectors) {
+      const btn = document.querySelector(sel);
+      if (btn && btn.offsetParent !== null && window.getComputedStyle(btn).display !== "none" && window.getComputedStyle(btn).visibility !== "hidden") {
+        return btn;
+      }
+    }
+    return null;
+  }
+
+  // Determine state
+  const pauseBtn = getVisibleButton(pauseBtns);
+  const playBtn = getVisibleButton(playBtns);
 
   btnPlayPause.innerHTML = "";
-  if (pauseBtn && pauseBtn.offsetParent !== null) {
+  if (pauseBtn) {
     btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-  } else if (playBtn && playBtn.offsetParent !== null) {
+  } else if (playBtn) {
     btnPlayPause.appendChild(playSVG.cloneNode(true));
   } else {
     // fallback: check aria-label on any visible play/pause button
     const fallback = Array.from(document.querySelectorAll('button'))
-      .find(b => /pause|play/i.test(b.getAttribute('aria-label')||'') && b.offsetParent !== null);
-    if (fallback && /pause/i.test(fallback.getAttribute('aria-label')||'')) {
+      .find(b =>
+        /pause|play/i.test(b.getAttribute('aria-label') || '') &&
+        b.offsetParent !== null &&
+        window.getComputedStyle(b).display !== "none" &&
+        window.getComputedStyle(b).visibility !== "hidden"
+      );
+    if (fallback && /pause/i.test(fallback.getAttribute('aria-label') || '')) {
       btnPlayPause.appendChild(pauseSVG.cloneNode(true));
     } else {
       btnPlayPause.appendChild(playSVG.cloneNode(true));
