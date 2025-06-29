@@ -1350,9 +1350,9 @@ translationToggleBtn.onclick = () => {
 
     const offsetInput = document.createElement("input");
     offsetInput.type = "number";
-    offsetInput.min = "-2000";
-    offsetInput.max = "2000";
-    offsetInput.step = "10";
+    offsetInput.min = "-5000";
+    offsetInput.max = "5000";
+    offsetInput.step = "50";
     offsetInput.value = getAnticipationOffset();
     offsetInput.style.width = "70px";
     offsetInput.style.background = "#222";
@@ -1362,11 +1362,15 @@ translationToggleBtn.onclick = () => {
     offsetInput.style.padding = "2px 6px";
     offsetInput.style.marginLeft = "16px";
     offsetInput.addEventListener("change", () => {
-      setAnticipationOffset(offsetInput.value);
-      if (currentSyncedLyrics && currentLyricsContainer) {
-        highlightSyncedLyrics(currentSyncedLyrics, currentLyricsContainer);
-      }
-    });
+  let val = parseInt(offsetInput.value, 10) || 0;
+  if (val > 5000) val = 5000;
+  if (val < -5000) val = -5000;
+  offsetInput.value = val;
+  setAnticipationOffset(val);
+  if (currentSyncedLyrics && currentLyricsContainer) {
+    highlightSyncedLyrics(currentSyncedLyrics, currentLyricsContainer);
+  }
+});
     offsetWrapper.appendChild(offsetLabel);
     offsetWrapper.appendChild(offsetInput);
 
