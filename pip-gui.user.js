@@ -1569,7 +1569,7 @@ translationToggleBtn.onclick = () => {
       left: "3vw",
       right: "1vw",
       top: "auto",
-      bottom: "150px",
+      bottom: "146px",
       width: "200vw",
       height: "90vh",
       zIndex: 100000
