@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      5.3.final
+// @version      5.4.final
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -27,7 +27,7 @@
   let translationPresent = false;
 
   // ------------------------
-  // Utils.js FUNCTIONS (ported & safe for userscript)
+  // Utils.js Functions
   // ------------------------
 
   // --- Translation Language List and Utilities ---
@@ -244,7 +244,7 @@ async function translateText(text, targetLang) {
   pauseSVG.setAttribute("fill", "white");
   pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
 
-  // --- Language-universal play/pause root words for major Spotify UI languages ---
+  // --- Language-universal play/pause root words for major Spotify UI languages (Aids Play/Pause button detection to reflect playback state inside gui)---
 const PAUSE_WORDS = [
   // English
   "pause",
@@ -361,7 +361,7 @@ function labelMeansPlay(label) {
   label = label.toLowerCase();
   return PLAY_WORDS.some(word => label.includes(word));
 }
-  
+
   // --- Play/Pause Icon Updater ---
   function updatePlayPauseIcon(btnPlayPause) {
   // Use the main play/pause button, which is language universal
@@ -1333,35 +1333,95 @@ translationToggleBtn.onclick = () => {
   }
 };
 
-    // Offset Setting UI
-    const offsetWrapper = document.createElement("div");
-    offsetWrapper.style.display = "flex";
-    offsetWrapper.style.alignItems = "center";
-    offsetWrapper.style.justifyContent = "space-between";
-    offsetWrapper.style.padding = "8px 12px";
-    offsetWrapper.style.background = "#121212";
-    offsetWrapper.style.borderBottom = "1px solid #333";
-    offsetWrapper.style.fontSize = "15px";
-    offsetWrapper.style.width = "100%";
+// Offset Setting UI
+const offsetWrapper = document.createElement("div");
+offsetWrapper.style.display = "flex";
+offsetWrapper.style.alignItems = "center";
+offsetWrapper.style.justifyContent = "space-between";
+offsetWrapper.style.padding = "8px 12px";
+offsetWrapper.style.background = "#121212";
+offsetWrapper.style.borderBottom = "1px solid #333";
+offsetWrapper.style.fontSize = "15px";
+offsetWrapper.style.width = "100%";
 
-    const offsetLabel = document.createElement("div");
-    offsetLabel.innerHTML = `Adjust lyrics timing (ms):<br><span style="font-size: 11px; color: #aaa;">lower = appear later, higher = appear earlier</span>`;
-    offsetLabel.style.color = "#fff";
+const offsetLabel = document.createElement("div");
+offsetLabel.innerHTML = `Adjust lyrics timing (ms):<br><span style="font-size: 11px; color: #aaa;">lower = appear later, higher = appear earlier</span>`;
+offsetLabel.style.color = "#fff";
 
-    const offsetInput = document.createElement("input");
-    offsetInput.type = "number";
-    offsetInput.min = "-5000";
-    offsetInput.max = "5000";
-    offsetInput.step = "50";
-    offsetInput.value = getAnticipationOffset();
-    offsetInput.style.width = "70px";
-    offsetInput.style.background = "#222";
-    offsetInput.style.color = "#fff";
-    offsetInput.style.border = "1px solid #444";
-    offsetInput.style.borderRadius = "6px";
-    offsetInput.style.padding = "2px 6px";
-    offsetInput.style.marginLeft = "16px";
-    offsetInput.addEventListener("change", () => {
+// Compact input+spinner container
+const inputStack = document.createElement("div");
+inputStack.style.position = "relative";
+inputStack.style.display = "inline-block";
+inputStack.style.marginLeft = "16px";
+inputStack.style.height = "28px";
+inputStack.style.width = "68px"; // tightly wrap input
+
+// The input itself - compact!
+const offsetInput = document.createElement("input");
+offsetInput.type = "number";
+offsetInput.min = "-5000";
+offsetInput.max = "5000";
+offsetInput.step = "50";
+offsetInput.value = getAnticipationOffset();
+offsetInput.style.width = "68px";
+offsetInput.style.height = "28px";
+offsetInput.style.background = "#222";
+offsetInput.style.color = "#fff";
+offsetInput.style.border = "1px solid #444";
+offsetInput.style.borderRadius = "6px";
+offsetInput.style.padding = "2px 20px 2px 6px"; // room for spinner
+offsetInput.style.boxSizing = "border-box";
+offsetInput.style.fontSize = "14px";
+offsetInput.style.MozAppearance = "textfield";
+offsetInput.style.appearance = "textfield";
+
+// Spinner container - smaller, inside input at right
+const spinnerContainer = document.createElement("div");
+spinnerContainer.style.position = "absolute";
+spinnerContainer.style.right = "2px";
+spinnerContainer.style.top = "1px";
+spinnerContainer.style.height = "24px";
+spinnerContainer.style.display = "flex";
+spinnerContainer.style.flexDirection = "column";
+spinnerContainer.style.justifyContent = "center";
+spinnerContainer.style.zIndex = "2";
+
+// Up button
+const upBtn = document.createElement("button");
+upBtn.innerHTML = "▲";
+upBtn.style.background = "#333";
+upBtn.style.color = "#fff";
+upBtn.style.border = "none";
+upBtn.style.borderRadius = "2px 2px 0 0";
+upBtn.style.width = "16px";
+upBtn.style.height = "11px";
+upBtn.style.fontSize = "9px";
+upBtn.style.cursor = "pointer";
+upBtn.style.padding = "0";
+upBtn.style.lineHeight = "11px";
+upBtn.tabIndex = -1;
+upBtn.onmouseover = () => upBtn.style.background = "#444";
+upBtn.onmouseout = () => upBtn.style.background = "#333";
+
+// Down button
+const downBtn = document.createElement("button");
+downBtn.innerHTML = "▼";
+downBtn.style.background = "#333";
+downBtn.style.color = "#fff";
+downBtn.style.border = "none";
+downBtn.style.borderRadius = "0 0 2px 2px";
+downBtn.style.width = "16px";
+downBtn.style.height = "11px";
+downBtn.style.fontSize = "9px";
+downBtn.style.cursor = "pointer";
+downBtn.style.padding = "0";
+downBtn.style.lineHeight = "11px";
+downBtn.tabIndex = -1;
+downBtn.onmouseover = () => downBtn.style.background = "#444";
+downBtn.onmouseout = () => downBtn.style.background = "#333";
+
+// Shared value update function
+function saveAndApplyOffset() {
   let val = parseInt(offsetInput.value, 10) || 0;
   if (val > 5000) val = 5000;
   if (val < -5000) val = -5000;
@@ -1370,9 +1430,40 @@ translationToggleBtn.onclick = () => {
   if (currentSyncedLyrics && currentLyricsContainer) {
     highlightSyncedLyrics(currentSyncedLyrics, currentLyricsContainer);
   }
+}
+
+upBtn.onclick = (e) => {
+  e.preventDefault();
+  let val = parseInt(offsetInput.value, 10) || 0;
+  val += 50;
+  if (val > 5000) val = 5000;
+  offsetInput.value = val;
+  saveAndApplyOffset();
+};
+downBtn.onclick = (e) => {
+  e.preventDefault();
+  let val = parseInt(offsetInput.value, 10) || 0;
+  val -= 50;
+  if (val < -5000) val = -5000;
+  offsetInput.value = val;
+  saveAndApplyOffset();
+};
+
+offsetInput.addEventListener("change", saveAndApplyOffset);
+offsetInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    saveAndApplyOffset();
+    offsetInput.blur();
+  }
 });
-    offsetWrapper.appendChild(offsetLabel);
-    offsetWrapper.appendChild(offsetInput);
+
+spinnerContainer.appendChild(upBtn);
+spinnerContainer.appendChild(downBtn);
+inputStack.appendChild(offsetInput);
+inputStack.appendChild(spinnerContainer);
+
+offsetWrapper.appendChild(offsetLabel);
+offsetWrapper.appendChild(inputStack);
 
     // Playback Controls Bar
     const controlsBar = document.createElement("div");
