@@ -59,6 +59,8 @@
 > 8. **Show/hide controls:** Click 🎛️ for extra playback options.  
 > 9. **Reset:** Click ↻ to restore default popup position/size.
 
+* * * 
+
 > **TIP:** All your settings are remembered, so you always return to right where you left off!
 
 ## Retrieve your Musixmatch user token
