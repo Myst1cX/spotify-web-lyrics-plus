@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Experimental
+// @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      4.8.test
+// @version      4.9.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -246,15 +246,26 @@ async function translateText(text, targetLang) {
 
   // --- Play/Pause Icon Updater ---
   function updatePlayPauseIcon(btnPlayPause) {
-    const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
-    btnPlayPause.innerHTML = "";
-    if (pauseVisible) {
+  // Try all likely selectors (desktop & mobile)
+  const pauseBtn = document.querySelector('[aria-label="Pause"], [data-testid="mobile-pause-button"], [data-testid="control-button-playpause"][aria-label="Pause"]');
+  const playBtn  = document.querySelector('[aria-label="Play"], [data-testid="mobile-play-button"], [data-testid="control-button-playpause"][aria-label="Play"]');
+
+  btnPlayPause.innerHTML = "";
+  if (pauseBtn && pauseBtn.offsetParent !== null) {
+    btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+  } else if (playBtn && playBtn.offsetParent !== null) {
+    btnPlayPause.appendChild(playSVG.cloneNode(true));
+  } else {
+    // fallback: check aria-label on any visible play/pause button
+    const fallback = Array.from(document.querySelectorAll('button'))
+      .find(b => /pause|play/i.test(b.getAttribute('aria-label')||'') && b.offsetParent !== null);
+    if (fallback && /pause/i.test(fallback.getAttribute('aria-label')||'')) {
       btnPlayPause.appendChild(pauseSVG.cloneNode(true));
     } else {
       btnPlayPause.appendChild(playSVG.cloneNode(true));
     }
   }
-
+}
   // ------------------------
   // Providers and Fetchers
   // ------------------------
@@ -800,17 +811,21 @@ const Providers = {
     }
   }
 
-  function observeSpotifyPlayPause(popup) {
-    if (!popup || !popup._playPauseBtn) return;
-    if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
-    const spBtn = document.querySelector('[aria-label="Play"], [aria-label="Pause"]');
-    if (!spBtn) return;
-    const observer = new MutationObserver(() => {
-      if (popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
-    });
-    observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class'] });
-    popup._playPauseObserver = observer;
-  }
+ function observeSpotifyPlayPause(popup) {
+  if (!popup || !popup._playPauseBtn) return;
+  if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
+
+  // Try desktop first, then mobile
+  let spBtn = document.querySelector('[aria-label="Play"], [aria-label="Pause"]');
+  if (!spBtn) spBtn = document.querySelector('[data-testid="control-button-playpause"]');
+  if (!spBtn) spBtn = document.querySelector('[data-testid="mobile-play-button"], [data-testid="mobile-pause-button"]');
+  if (!spBtn) return;
+  const observer = new MutationObserver(() => {
+    if (popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+  });
+  observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class'] });
+  popup._playPauseObserver = observer;
+}
 
   function createPopup() {
     removePopup();
