@@ -6,13 +6,13 @@
 
 ## Retrieve your Musixmatch user token
 
-> 1. Go to [Musixmatch](https://www.musixmatch.com/) and click on the "Login" button at the top of the screen.  
-> 2. Select "Community" as your product and sign in using your Google account.  
+> 1. Go to [Musixmatch](https://www.musixmatch.com/) and click on the Login button at the top of the screen.  
+> 2. Select `Community` as your product and sign in using your Google account.  
 > 3. Open DevTools (press F12 or right click and "Inspect").  
-> 4. Click on the Network tab, and look for the "www.musixmatch.com" domain.  
-> 5. Click on "www.musixmatch.com" and go to the "Cookies" section.  
-> 6. Find `musixmatchUserToken`, right-click its content and select "Copy value".  
-> 7. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click "Process".  
+> 4. Click on the Network tab, and look for the `www.musixmatch.com` domain.  
+> 5. Click on `www.musixmatch.com` and go to the Cookies section.  
+> 6. Find `musixmatchUserToken`, right-click its content and select Copy value.  
+> 7. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click Process.  
 > 8. Copy the value of `web-desktop-app-v1.0` — this is your user token.  
 > 9. In the Lyrics+ popup, select the Musixmatch provider (or double-click its tab) and paste your token.
 
@@ -27,14 +27,14 @@
 > Reset button to restore default popup position/size.
 
 > **LIVE TRANSLATION**  
-> Instantly translate any lyrics (line-by-line, 70+ languages).  
+> 🌐 Instantly translate any lyrics (line-by-line, 70+ languages).  
 > Show/hide translation controls. Remove or re-translate in one click.
 
 > **LYRICS TIMING OFFSET**  
 > ⚙️ Fine-tune lyric timing in milliseconds for perfect sync.
 
 > **PLAYBACK CONTROLS**  
-> Play, pause, next, previous track directly from the popup.
+> 🎛️ Play, pause, next, previous track directly from the popup.
 
 > **PROVIDER TABS**  
 > Instantly switch between lyric sources.
