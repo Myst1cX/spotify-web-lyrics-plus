@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      5.1.test
+// @version      5.2.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -244,45 +244,151 @@ async function translateText(text, targetLang) {
   pauseSVG.setAttribute("fill", "white");
   pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
 
+  // --- Language-universal play/pause root words for major Spotify UI languages ---
+const PAUSE_WORDS = [
+  // English
+  "pause",
+  // Spanish, Italian, Portuguese, Galician, Filipino
+  "pausa",
+  // French
+  "pause",
+  // German
+  "pause", "pausieren", "anhalten",
+  // Dutch
+  "pauze",
+  // Polish, Czech, Slovak, Bosnian, Serbian, Croatian, Macedonian, Romanian
+  "pauza",
+  // Slovenian
+  "pavza",
+  // Hungarian
+  "szünet",
+  // Russian, Ukrainian, Bulgarian, Belarusian, Macedonian, Serbian
+  "пауза",
+  // Turkish
+  "durdur",
+  // Greek
+  "παύση",
+  // Japanese
+  "一時停止",
+  // Korean
+  "일시정지",
+  // Chinese (Simplified/Traditional)
+  "暂停", "暫停",
+  // Thai
+  "หยุด", "หยุดชั่วคราว",
+  // Arabic
+  "إيقاف", "إيقاف مؤقت", "توقف",
+  // Hebrew
+  "השהה",
+  // Hindi
+  "रोकें",
+  // Bengali
+  "বিরতি",
+  // Vietnamese
+  "tạm dừng",
+  // Indonesian, Malay
+  "jeda",
+  // Romanian
+  "pauză",
+  // Finnish
+  "tauko",
+  // Swedish, Norwegian, Danish
+  "paus",
+];
+
+const PLAY_WORDS = [
+  // English
+  "play",
+  // Spanish
+  "reproducir",
+  // French
+  "lecture", "jouer",
+  // Italian
+  "riproduci",
+  // Portuguese
+  "reproduzir",
+  // German
+  "abspielen",
+  // Dutch
+  "afspelen",
+  // Polish
+  "odtwórz",
+  // Czech, Slovak
+  "přehrát",
+  // Hungarian
+  "lejátszás",
+  // Russian, Ukrainian, Bulgarian, Belarusian, Macedonian, Serbian
+  "играть", "воспроизвести", "відтворити",
+  // Turkish
+  "oynat",
+  // Greek
+  "αναπαραγωγή",
+  // Japanese
+  "再生",
+  // Korean
+  "재생",
+  // Chinese (Simplified/Traditional)
+  "播放",
+  // Thai
+  "เล่น",
+  // Arabic
+  "تشغيل",
+  // Hebrew
+  "נגן",
+  // Hindi
+  "चलाएं",
+  // Bengali
+  "বাজান",
+  // Vietnamese
+  "phát",
+  // Indonesian, Malay
+  "putar",
+  // Finnish
+  "toista",
+  // Swedish, Norwegian, Danish
+  "spela",
+  // Romanian
+  "redare",
+];
+
+function labelMeansPause(label) {
+  if (!label) return false;
+  label = label.toLowerCase();
+  return PAUSE_WORDS.some(word => label.includes(word));
+}
+function labelMeansPlay(label) {
+  if (!label) return false;
+  label = label.toLowerCase();
+  return PLAY_WORDS.some(word => label.includes(word));
+}
+  
   // --- Play/Pause Icon Updater ---
   function updatePlayPauseIcon(btnPlayPause) {
-  // Primary: Find the visible Spotify play/pause button
-  let playPauseBtn =
-    document.querySelector('[data-testid="control-button-playpause"]') ||
-    document.querySelector('[aria-label="Play"]') ||
-    document.querySelector('[aria-label="Pause"]');
+  // Use the main play/pause button, which is language universal
+  let playPauseBtn = document.querySelector('[data-testid="control-button-playpause"]')
+    || document.querySelector('[aria-label]');
 
-  // Check visibility
   function isVisible(el) {
     if (!el) return false;
     const style = window.getComputedStyle(el);
     return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
   }
-  if (!isVisible(playPauseBtn)) {
-    // fallback: try to find any visible play or pause button
-    playPauseBtn = Array.from(document.querySelectorAll('button'))
-      .find(b =>
-        (/play|pause/i.test(b.getAttribute('aria-label') || '')) && isVisible(b)
-      );
-  }
 
-  // Decide icon
   btnPlayPause.innerHTML = "";
 
-  // Check aria-label to decide icon
   if (playPauseBtn && isVisible(playPauseBtn)) {
     const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
-    if (label === "pause") {
+
+    if (labelMeansPause(label)) {
       btnPlayPause.appendChild(pauseSVG.cloneNode(true));
       return;
-    }
-    if (label === "play") {
+    } else if (labelMeansPlay(label)) {
       btnPlayPause.appendChild(playSVG.cloneNode(true));
       return;
     }
   }
 
-  // Fallback: use audio element state if possible
+  // Fallback: Use audio element state if possible
   const audio = document.querySelector('audio');
   if (audio) {
     if (audio.paused) {
@@ -293,7 +399,7 @@ async function translateText(text, targetLang) {
     return;
   }
 
-  // Last fallback: default to play icon
+  // Default to play icon
   btnPlayPause.appendChild(playSVG.cloneNode(true));
 }
   // ------------------------
@@ -841,13 +947,12 @@ const Providers = {
     }
   }
 
- function observeSpotifyPlayPause(popup) {
+function observeSpotifyPlayPause(popup) {
   if (!popup || !popup._playPauseBtn) return;
   if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
 
-  // Prefer the main play/pause button
   let spBtn = document.querySelector('[data-testid="control-button-playpause"]');
-  if (!spBtn) spBtn = document.querySelector('[aria-label="Play"], [aria-label="Pause"]');
+  if (!spBtn) spBtn = document.querySelector('[aria-label]');
   if (!spBtn) return;
   const observer = new MutationObserver(() => {
     if (popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
