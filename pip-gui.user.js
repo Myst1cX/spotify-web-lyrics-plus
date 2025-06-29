@@ -1566,12 +1566,12 @@ translationToggleBtn.onclick = () => {
     if (isMobile) {
     Object.assign(popup.style, {
       position: "fixed",
-      left: "7vw",
-      right: "5vw",
+      left: "3vw",
+      right: "1vw",
       top: "auto",
-      bottom: "190px",
-      width: "210vw",
-      height: "100vh",
+      bottom: "150px",
+      width: "200vw",
+      height: "90vh",
       zIndex: 100000
     });
   } else {
