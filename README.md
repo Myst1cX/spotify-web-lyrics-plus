@@ -4,18 +4,6 @@
 > Supports synced & unsynced lyrics from multiple providers, popup customization, font controls, timing offset, **live translation**, playback controls, and more.  
 > **Works best with [Violentmonkey](https://violentmonkey.github.io/)!**
 
-## Retrieve your Musixmatch user token
-
-> 1. Go to [Musixmatch](https://www.musixmatch.com/) and click on the Login button at the top of the screen.  
-> 2. Select `Community` as your product and sign in using your Google account.  
-> 3. Open DevTools (press F12 or right click and "Inspect").  
-> 4. Click on the Network tab, and look for the `www.musixmatch.com` domain.  
-> 5. Click on `www.musixmatch.com` and go to the Cookies section.  
-> 6. Find `musixmatchUserToken`, right-click its content and select Copy value.  
-> 7. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click Process.  
-> 8. Copy the value of `web-desktop-app-v1.0` — this is your user token.  
-> 9. In the Lyrics+ popup, select the Musixmatch provider (or double-click its tab) and paste your token.
-
 ## Features
 
 > **MULTI-PROVIDER LYRICS (LRCLIB, KPoe, Musixmatch, Genius)**  
@@ -71,7 +59,19 @@
 > 8. **Show/hide controls:** Click 🎛️ for extra playback options.  
 > 9. **Reset:** Click ↻ to restore default popup position/size.
 
-> **TIP:** All your settings are remembered, so you always return to where you left off!
+> **TIP:** All your settings are remembered, so you always return to right where you left off!
+
+## Retrieve your Musixmatch user token
+
+> 1. Go to [Musixmatch](https://www.musixmatch.com/) and click on the Login button at the top of the screen.  
+> 2. Select `Community` as your product and sign in using your Google account.  
+> 3. Open DevTools (press F12 or right click and "Inspect").  
+> 4. Click on the Network tab, and look for the `www.musixmatch.com` domain.  
+> 5. Click on `www.musixmatch.com` and go to the Cookies section.  
+> 6. Find `musixmatchUserToken`, right-click its content and select Copy value.  
+> 7. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click Process.  
+> 8. Copy the value of `web-desktop-app-v1.0` — this is your user token.  
+> 9. In the Lyrics+ popup, select the Musixmatch provider (or double-click its tab) and paste your token.
 
 ## Troubleshooting
 
