@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Stable
+// @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      4.7.test
+// @version      4.8.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -1374,7 +1374,6 @@ translationToggleBtn.onclick = () => {
     console.warn("Spotify control button not found for:", command);
   }
 }
-    
     function createPlayPauseButton() {
       const btnPlayPause = createControlBtn("", "Play/Pause", () => {
         sendSpotifyCommand("playpause");
