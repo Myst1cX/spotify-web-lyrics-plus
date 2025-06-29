@@ -4,8 +4,6 @@
 > Supports synced & unsynced lyrics from multiple providers, popup customization, font controls, timing offset, **live translation**, playback controls, and more.  
 > **Works best with [Violentmonkey](https://violentmonkey.github.io/)!**
 
-* * *
-
 ## Retrieve your Musixmatch user token
 
 > 1. Go to [Musixmatch](https://www.musixmatch.com/) and click on the "Login" button at the top of the screen.  
@@ -16,8 +14,7 @@
 > 6. Find `musixmatchUserToken`, right-click its content and select "Copy value".  
 > 7. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click "Process".  
 > 8. Copy the value of `web-desktop-app-v1.0` — this is your user token.  
-> 9. In the Lyrics+ popup, select the Musixmatch provider (or double-click its tab) and paste your token.  
-> DONE :)
+> 9. In the Lyrics+ popup, select the Musixmatch provider (or double-click its tab) and paste your token.
 
 ## Features
 
@@ -74,8 +71,6 @@
 > 8. **Show/hide controls:** Click 🎛️ for extra playback options.  
 > 9. **Reset:** Click ↻ to restore default popup position/size.
 
-* * *
-
 > **TIP:** All your settings are remembered, so you always return to where you left off!
 
 ## Troubleshooting
@@ -84,7 +79,7 @@
 > **Popup not showing?** Make sure you’re using [open.spotify.com](https://open.spotify.com/) and the userscript is enabled.  
 > **Mobile?** Use desktop mode for best experience. (Mobile compatibility is experimental.)
 
-* * *
+* * * 
 
 > Enjoy! For feedback or bug reports, open an issue:  
 > [https://github.com/Myst1cX/spotify-web-lyrics-plus/issues](https://github.com/Myst1cX/spotify-web-lyrics-plus/issues)
