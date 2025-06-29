@@ -22,6 +22,9 @@
 // For a song where neither of the providers has lyrics, instead of returning "Track not found on LRCLIB/Kpoe/Genius", return something like "Track not found on any of the providers." and maybe in that case also make the current provider gray, instead of green (to show none are currently pulling lyrics)
 // Focus lyrics (maybe the main lyric line can be slightly bigger than rest of lyric lines.
 // Lyric lines that are currently not main line (previous and next) could be slightly blurred.
+// Tap on a lyric line to jump on that part of the song
+// Fix spinner controls of offset input. The up icon is well placed while the down icon isn't cause it's not fully taking all space of the right side of inside of the offset input container 
+// I feel like lately musixmatch gives just mostly unsynced on pc but on mobile web browser i get synced for the same song (example: Laylow - Dehors Dans La Night)
 // Lyrics should be centered
 // Converting the userscript into a browser extension (maybe eventually) > to possibilitate having a floating popup ui with spotify lyrics that works outside open.spotify.com
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
