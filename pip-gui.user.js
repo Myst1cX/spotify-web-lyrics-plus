@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      4.6.test
+// @version      4.7.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -1327,102 +1327,52 @@ translationToggleBtn.onclick = () => {
     }
 
     function sendSpotifyCommand(command) {
-  let selector;
-  switch (command) {
-    case "playpause":
-      selector = '[aria-label="Play"], [aria-label="Pause"]';
-      break;
-    case "next":
-      selector = '[aria-label="Next"]';
-      break;
-    case "previous":
-      selector = '[aria-label="Previous"]';
-      break;
-    default:
-      console.warn("Unknown Spotify command:", command);
-      return;
+  // List of selectors per command, covering desktop and mobile
+  const selectors = {
+    playpause: [
+      '[aria-label="Play"]',
+      '[aria-label="Pause"]',
+      '[data-testid="control-button-playpause"]',
+      '[data-testid="mobile-play-button"]',
+      '[data-testid="mobile-pause-button"]'
+    ],
+    next: [
+      '[aria-label="Next"]',
+      '[data-testid="control-button-skip-forward"]',
+      '[data-testid="mobile-next-button"]'
+    ],
+    previous: [
+      '[aria-label="Previous"]',
+      '[data-testid="control-button-skip-back"]',
+      '[data-testid="mobile-prev-button"]'
+    ]
+  };
+
+  // Try all selectors for the current command
+  let btn = null;
+  for (const sel of selectors[command] || []) {
+    btn = document.querySelector(sel);
+    if (btn && btn.offsetParent !== null) break; // Only pick visible
   }
-  const btn = document.querySelector(selector);
 
-  if (!btn) {
-    alert("Spotify control button not found!\nTry closing and reopening the popup.");
-    return;
+  // Fallback: try to find button by innerText (mobile sometimes uses text)
+  if (!btn && command === "playpause") {
+    btn = Array.from(document.querySelectorAll("button"))
+      .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
   }
 
-  // On mobile, try harder to produce a trusted event
-  if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-    // Try both .click and a TouchEvent
-    try {
-      btn.focus();
-      setTimeout(() => {
-        btn.click(); // Native click
-        // Also try dispatching a touch event
-        try {
-          const touch = new Touch({
-            identifier: Date.now(),
-            target: btn,
-            clientX: btn.getBoundingClientRect().left + btn.offsetWidth / 2,
-            clientY: btn.getBoundingClientRect().top + btn.offsetHeight / 2,
-            radiusX: 2.5,
-            radiusY: 2.5,
-            rotationAngle: 10,
-            force: 0.5,
-          });
-          const touchEvent = new TouchEvent('touchend', {
-            bubbles: true,
-            cancelable: true,
-            touches: [],
-            targetTouches: [],
-            changedTouches: [touch],
-          });
-          btn.dispatchEvent(touchEvent);
-        } catch (e) {
-          // TouchEvent may not be supported
-        }
-      }, 0);
-    } catch (e) {
-      // fallback
-      btn.click();
-    }
-
-    // If still nothing happens, inform user
-    setTimeout(() => {
-      // Check if playback state changed, otherwise notify
-      const playing = !!document.querySelector('[aria-label="Pause"]');
-      if ((command === "playpause" && !playing) ||
-          (command === "next" || command === "previous")) {
-        // Show info only if not working
-        showMobileControlWarning();
-      }
-    }, 700);
-
-  } else {
-    // On desktop, normal click works
+  if (btn) {
+    // Try click, then fallback to synthetic touch events for mobile
     btn.click();
+    // If still not playing, try touch events
+    if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      btn.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, cancelable:true}));
+      btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
+    }
+  } else {
+    alert("Could not find the Spotify playback button. If you're on mobile, try updating Spotify Web Player or refreshing the page.");
+    console.warn("Spotify control button not found for:", command);
   }
-}
-
-// Helper to show a warning to users
-function showMobileControlWarning() {
-  if (document.getElementById('lyrics-plus-mobile-toast')) return;
-  const toast = document.createElement('div');
-  toast.id = 'lyrics-plus-mobile-toast';
-  toast.textContent = "Spotify's mobile site blocks remote playback controls. Use the native controls below this popup.";
-  Object.assign(toast.style, {
-    position: 'fixed',
-    bottom: '140px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    background: '#222',
-    color: '#fff',
-    padding: '12px 22px',
-    borderRadius: '16px',
-    fontSize: '16px',
-    zIndex: 100002,
-    boxShadow: '0 2px 8px #000a'
-  });
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 4000);
 }
     
     function createPlayPauseButton() {
