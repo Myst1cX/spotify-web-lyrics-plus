@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      4.4
+// @version      5.3.experimental
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -28,8 +28,6 @@
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 // Optimize drag and resize to work smoothly on mobile browser.
 // Add "expand" button to the right of next track button in playback controls container. Its icon should fit nicely with the rest of playback control buttons. Its function is that on click, the popup gets expanded to fit the screen (if im on mobile and zoomed in, its supposed to fit that screen (the Spotify website). If possible to implement I'd also suggest that Spotify's bottom container - the one that has the volume toggle, playback control buttons, seekbar etc - remains visible while the rest of the website gets overtaken by the popup gui). While expanded if click the button again, it returns to the previous position state or if that's too hard to implement, to the restore default position.
-// Playback control buttons not responsible on mobile bc desktop mode and smol interface i suppose so I can't click, also difficult to drag and resize as mentioned, on mobile. on pc fine
-
 
 (function () {
   'use strict';
@@ -264,17 +262,164 @@ async function translateText(text, targetLang) {
   pauseSVG.setAttribute("fill", "white");
   pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
 
+  // --- Language-universal play/pause root words for major Spotify UI languages ---
+const PAUSE_WORDS = [
+  // English
+  "pause",
+  // Spanish, Italian, Portuguese, Galician, Filipino
+  "pausa",
+  // French
+  "pause",
+  // German
+  "pause", "pausieren", "anhalten",
+  // Dutch
+  "pauze",
+  // Polish, Czech, Slovak, Bosnian, Serbian, Croatian, Macedonian, Romanian
+  "pauza",
+  // Slovenian
+  "pavza",
+  // Hungarian
+  "szünet",
+  // Russian, Ukrainian, Bulgarian, Belarusian, Macedonian, Serbian
+  "пауза",
+  // Turkish
+  "durdur",
+  // Greek
+  "παύση",
+  // Japanese
+  "一時停止",
+  // Korean
+  "일시정지",
+  // Chinese (Simplified/Traditional)
+  "暂停", "暫停",
+  // Thai
+  "หยุด", "หยุดชั่วคราว",
+  // Arabic
+  "إيقاف", "إيقاف مؤقت", "توقف",
+  // Hebrew
+  "השהה",
+  // Hindi
+  "रोकें",
+  // Bengali
+  "বিরতি",
+  // Vietnamese
+  "tạm dừng",
+  // Indonesian, Malay
+  "jeda",
+  // Romanian
+  "pauză",
+  // Finnish
+  "tauko",
+  // Swedish, Norwegian, Danish
+  "paus",
+];
+
+const PLAY_WORDS = [
+  // English
+  "play",
+  // Spanish
+  "reproducir",
+  // French
+  "lecture", "jouer",
+  // Italian
+  "riproduci",
+  // Portuguese
+  "reproduzir",
+  // German
+  "abspielen",
+  // Dutch
+  "afspelen",
+  // Polish
+  "odtwórz",
+  // Czech, Slovak
+  "přehrát",
+  // Hungarian
+  "lejátszás",
+  // Russian, Ukrainian, Bulgarian, Belarusian, Macedonian, Serbian
+  "играть", "воспроизвести", "відтворити",
+  // Turkish
+  "oynat",
+  // Greek
+  "αναπαραγωγή",
+  // Japanese
+  "再生",
+  // Korean
+  "재생",
+  // Chinese (Simplified/Traditional)
+  "播放",
+  // Thai
+  "เล่น",
+  // Arabic
+  "تشغيل",
+  // Hebrew
+  "נגן",
+  // Hindi
+  "चलाएं",
+  // Bengali
+  "বাজান",
+  // Vietnamese
+  "phát",
+  // Indonesian, Malay
+  "putar",
+  // Finnish
+  "toista",
+  // Swedish, Norwegian, Danish
+  "spela",
+  // Romanian
+  "redare",
+];
+
+function labelMeansPause(label) {
+  if (!label) return false;
+  label = label.toLowerCase();
+  return PAUSE_WORDS.some(word => label.includes(word));
+}
+function labelMeansPlay(label) {
+  if (!label) return false;
+  label = label.toLowerCase();
+  return PLAY_WORDS.some(word => label.includes(word));
+}
+  
   // --- Play/Pause Icon Updater ---
   function updatePlayPauseIcon(btnPlayPause) {
-    const pauseVisible = !!document.querySelector('[aria-label="Pause"]');
-    btnPlayPause.innerHTML = "";
-    if (pauseVisible) {
+  // Use the main play/pause button, which is language universal
+  let playPauseBtn = document.querySelector('[data-testid="control-button-playpause"]')
+    || document.querySelector('[aria-label]');
+
+  function isVisible(el) {
+    if (!el) return false;
+    const style = window.getComputedStyle(el);
+    return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+  }
+
+  btnPlayPause.innerHTML = "";
+
+  if (playPauseBtn && isVisible(playPauseBtn)) {
+    const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
+
+    if (labelMeansPause(label)) {
       btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-    } else {
+      return;
+    } else if (labelMeansPlay(label)) {
       btnPlayPause.appendChild(playSVG.cloneNode(true));
+      return;
     }
   }
 
+  // Fallback: Use audio element state if possible
+  const audio = document.querySelector('audio');
+  if (audio) {
+    if (audio.paused) {
+      btnPlayPause.appendChild(playSVG.cloneNode(true));
+    } else {
+      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+    }
+    return;
+  }
+
+  // Default to play icon
+  btnPlayPause.appendChild(playSVG.cloneNode(true));
+}
   // ------------------------
   // Providers and Fetchers
   // ------------------------
@@ -820,17 +965,19 @@ const Providers = {
     }
   }
 
-  function observeSpotifyPlayPause(popup) {
-    if (!popup || !popup._playPauseBtn) return;
-    if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
-    const spBtn = document.querySelector('[aria-label="Play"], [aria-label="Pause"]');
-    if (!spBtn) return;
-    const observer = new MutationObserver(() => {
-      if (popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
-    });
-    observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class'] });
-    popup._playPauseObserver = observer;
-  }
+function observeSpotifyPlayPause(popup) {
+  if (!popup || !popup._playPauseBtn) return;
+  if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
+
+  let spBtn = document.querySelector('[data-testid="control-button-playpause"]');
+  if (!spBtn) spBtn = document.querySelector('[aria-label]');
+  if (!spBtn) return;
+  const observer = new MutationObserver(() => {
+    if (popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+  });
+  observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
+  popup._playPauseObserver = observer;
+}
 
   function createPopup() {
     removePopup();
@@ -1347,26 +1494,53 @@ translationToggleBtn.onclick = () => {
     }
 
     function sendSpotifyCommand(command) {
-      let selector;
-      switch (command) {
-        case "playpause":
-          selector = '[aria-label="Play"], [aria-label="Pause"]';
-          break;
-        case "next":
-          selector = '[aria-label="Next"]';
-          break;
-        case "previous":
-          selector = '[aria-label="Previous"]';
-          break;
-        default:
-          console.warn("Unknown Spotify command:", command);
-          return;
-      }
-      const btn = document.querySelector(selector);
-      if (btn) btn.click();
-      else console.warn("Spotify button not found for:", command);
-    }
+  // List of selectors per command, covering desktop and mobile
+  const selectors = {
+    playpause: [
+      '[aria-label="Play"]',
+      '[aria-label="Pause"]',
+      '[data-testid="control-button-playpause"]',
+      '[data-testid="mobile-play-button"]',
+      '[data-testid="mobile-pause-button"]'
+    ],
+    next: [
+      '[aria-label="Next"]',
+      '[data-testid="control-button-skip-forward"]',
+      '[data-testid="mobile-next-button"]'
+    ],
+    previous: [
+      '[aria-label="Previous"]',
+      '[data-testid="control-button-skip-back"]',
+      '[data-testid="mobile-prev-button"]'
+    ]
+  };
 
+  // Try all selectors for the current command
+  let btn = null;
+  for (const sel of selectors[command] || []) {
+    btn = document.querySelector(sel);
+    if (btn && btn.offsetParent !== null) break; // Only pick visible
+  }
+
+  // Fallback: try to find button by innerText (mobile sometimes uses text)
+  if (!btn && command === "playpause") {
+    btn = Array.from(document.querySelectorAll("button"))
+      .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
+  }
+
+  if (btn) {
+    // Try click, then fallback to synthetic touch events for mobile
+    btn.click();
+    // If still not playing, try touch events
+    if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      btn.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, cancelable:true}));
+      btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
+    }
+  } else {
+    alert("Could not find the Spotify playback button. If you're on mobile, try updating Spotify Web Player or refreshing the page.");
+    console.warn("Spotify control button not found for:", command);
+  }
+}
     function createPlayPauseButton() {
       const btnPlayPause = createControlBtn("", "Play/Pause", () => {
         sendSpotifyCommand("playpause");
@@ -1410,12 +1584,12 @@ translationToggleBtn.onclick = () => {
     if (isMobile) {
     Object.assign(popup.style, {
       position: "fixed",
-      left: "7vw",
-      right: "5vw",
+      left: "3vw",
+      right: "1vw",
       top: "auto",
-      bottom: "190px",
-      width: "210vw",
-      height: "100vh",
+      bottom: "150px",
+      width: "200vw",
+      height: "90vh",
       zIndex: 100000
     });
   } else {
