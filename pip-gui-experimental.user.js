@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Experimental
+// @name         Spotifh Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      4.0
-// @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web.
+// @version      4.2
+// @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
@@ -12,20 +12,19 @@
 // ==/UserScript==
 
 // DO NOT INSTALL - Backup Instance for debugging and troubleshooting
-// AT THE MOMENT - Equal to Stable release (Last update: 28.6.25)
+// AT THE MOMENT - Equal to Stable release (Last update: 29.6.25)
 
 // TO DO:
 // Add Spotify provider (synced and unsynced) - spotify synced should be prioritized over other synced sources. spotify unsynced is fallback before genius. api: https://github.com/akashrchandran/spotify-lyrics-api
 // spotify.js with api link > https://github.com/akashrchandran/syrics-web/blob/master/static/js/spotify.js
 //Netease api implementation example:
-https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src%2Ffetchers.ts
+//https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src%2Ffetchers.ts
 // For a song where neither of the providers has lyrics, instead of returning "Track not found on LRCLIB/Kpoe/Genius", return something like "Track not found on any of the providers." and maybe in that case also make the current provider gray, instead of green (to show none are currently pulling lyrics)
 // Remove limit from lyrics offset adjust. or hardcode it better, maybe to 2500 ms. currently max down and max up with arrow is 2000ms, but can set any value manually (bug.)
 // Focus lyrics (maybe the main lyric line can be slightly bigger than rest of lyric lines.
 // Lyric lines that are currently not main line (previous and next) could be slightly blurred.
-// Lyrics should be centered  
+// Lyrics should be centered
 // Converting the userscript into a browser extension (maybe eventually) > to possibilitate having a floating popup ui with spotify lyrics that works outside open.spotify.com
-// Make Cigi Spotify Translator userscript a part of my userscript, would need to tweak it to work inside my popup ui 
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 // Mobile tweaks: Change popup position for restore to default (default position) - bottom right is great but on mobile need to enable desktop mode to even see full popup.. somehow it has much more height on mobile
 // Optimize drag and resize to work smoothly on mobile browser.
@@ -44,10 +43,57 @@ https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src%2Ffetchers.ts
   let currentTrackId = null;
   let currentSyncedLyrics = null;
   let currentLyricsContainer = null;
+  let lastTranslatedLang = null;
+  let translationPresent = false;
 
   // ------------------------
   // Utils.js FUNCTIONS (ported & safe for userscript)
   // ------------------------
+
+  // --- Translation Language List and Utilities ---
+const TRANSLATION_LANGUAGES = {
+  en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian',
+  pt: 'Portuguese', ru: 'Russian', ja: 'Japanese', ko: 'Korean', zh: 'Chinese',
+  ar: 'Arabic', hi: 'Hindi', tr: 'Turkish', af: 'Afrikaans', sq: 'Albanian',
+  am: 'Amharic', hy: 'Armenian', az: 'Azerbaijani', eu: 'Basque', be: 'Belarusian',
+  bn: 'Bengali', bs: 'Bosnian', bg: 'Bulgarian', ca: 'Catalan', ceb: 'Cebuano',
+  co: 'Corsican', hr: 'Croatian', cs: 'Czech', da: 'Danish', nl: 'Dutch',
+  eo: 'Esperanto', et: 'Estonian', fi: 'Finnish', fy: 'Frisian', gl: 'Galician',
+  ka: 'Georgian', el: 'Greek', gu: 'Gujarati', ht: 'Haitian Creole', ha: 'Hausa',
+  haw: 'Hawaiian', he: 'Hebrew', hmn: 'Hmong', hu: 'Hungarian', is: 'Icelandic',
+  ig: 'Igbo', id: 'Indonesian', ga: 'Irish', jv: 'Javanese', kn: 'Kannada',
+  kk: 'Kazakh', km: 'Khmer', rw: 'Kinyarwanda', ku: 'Kurdish', ky: 'Kyrgyz',
+  lo: 'Lao', la: 'Latin', lv: 'Latvian', lt: 'Lithuanian', lb: 'Luxembourgish',
+  mk: 'Macedonian', mg: 'Malagasy', ms: 'Malay', ml: 'Malayalam', mt: 'Maltese',
+  mi: 'Maori', mr: 'Marathi', mn: 'Mongolian', my: 'Myanmar (Burmese)',
+  ne: 'Nepali', no: 'Norwegian', ny: 'Nyanja (Chichewa)', or: 'Odia (Oriya)',
+  ps: 'Pashto', fa: 'Persian', pl: 'Polish', pa: 'Punjabi', ro: 'Romanian',
+  sm: 'Samoan', gd: 'Scots Gaelic', sr: 'Serbian', st: 'Sesotho', sn: 'Shona',
+  sd: 'Sindhi', si: 'Sinhala', sk: 'Slovak', sl: 'Slovenian', so: 'Somali',
+  su: 'Sundanese', sw: 'Swahili', sv: 'Swedish', tl: 'Tagalog (Filipino)',
+  tg: 'Tajik', ta: 'Tamil', tt: 'Tatar', te: 'Telugu', th: 'Thai', tk: 'Turkmen',
+  uk: 'Ukrainian', ur: 'Urdu', ug: 'Uyghur', uz: 'Uzbek', vi: 'Vietnamese',
+  cy: 'Welsh', xh: 'Xhosa', yi: 'Yiddish', yo: 'Yoruba', zu: 'Zulu'
+};
+
+function getSavedTranslationLang() {
+  return localStorage.getItem('lyricsPlusTranslationLang') || 'en';
+}
+function saveTranslationLang(lang) {
+  localStorage.setItem('lyricsPlusTranslationLang', lang);
+}
+
+async function translateText(text, targetLang) {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    return data[0][0][0];
+  } catch (error) {
+    console.error('Translation failed:', error);
+    return '[Translation Error]';
+  }
+}
 
   const Utils = {
     normalize(str) {
@@ -844,6 +890,81 @@ const Providers = {
     title.style.margin = "0";
     title.style.fontWeight = "600";
 
+// --- Translation controls dropdown, translate button, and remove translation button ---
+// --- Translation controls dropdown, translate button, and remove translation button ---
+const translationControls = document.createElement('div');
+translationControls.style.display = 'flex';
+translationControls.style.alignItems = 'center';
+translationControls.style.justifyContent = 'space-between';
+translationControls.style.width = '100%';
+translationControls.style.gap = '8px';
+
+const controlHeight = '28px';
+const fontSize = '13px';
+
+// Language selector (dropdown)
+const langSelect = document.createElement('select');
+for (const [code, name] of Object.entries(TRANSLATION_LANGUAGES)) {
+  const opt = document.createElement('option');
+  opt.value = code;
+  opt.textContent = name;
+  langSelect.appendChild(opt);
+}
+langSelect.value = getSavedTranslationLang();
+langSelect.title = 'Select translation language';
+langSelect.style.flex = '1';
+langSelect.style.minWidth = '0';
+langSelect.style.height = controlHeight;
+langSelect.style.background = '#333';
+langSelect.style.color = 'white';
+langSelect.style.border = 'none';
+langSelect.style.borderRadius = '5px';
+langSelect.style.fontSize = fontSize;
+langSelect.style.boxSizing = 'border-box';
+langSelect.onchange = () => {
+  saveTranslationLang(langSelect.value);
+  removeTranslatedLyrics();
+  lastTranslatedLang = null;
+};
+
+// Translate button
+const translateBtn = document.createElement('button');
+translateBtn.textContent = 'Translate';
+translateBtn.style.flex = '1';
+translateBtn.style.minWidth = '0';
+translateBtn.style.height = controlHeight;
+translateBtn.style.background = '#1db954';
+translateBtn.style.color = 'white';
+translateBtn.style.border = 'none';
+translateBtn.style.borderRadius = '5px';
+translateBtn.style.fontSize = fontSize;
+translateBtn.style.cursor = 'pointer';
+translateBtn.style.boxSizing = 'border-box';
+translateBtn.onclick = translateLyricsInPopup;
+
+// Remove translation button
+const removeBtn = document.createElement('button');
+removeBtn.textContent = 'Remove Translation';
+removeBtn.style.flex = '1';
+removeBtn.style.minWidth = '0';
+removeBtn.style.height = controlHeight;
+removeBtn.style.background = '#333';
+removeBtn.style.color = 'white';
+removeBtn.style.border = 'none';
+removeBtn.style.borderRadius = '5px';
+removeBtn.style.fontSize = fontSize;
+removeBtn.style.cursor = 'pointer';
+removeBtn.style.boxSizing = 'border-box';
+removeBtn.onclick = () => {
+  removeTranslatedLyrics();
+  lastTranslatedLang = null;
+};
+
+// Append controls in order: left, center, right
+translationControls.appendChild(langSelect);
+translationControls.appendChild(translateBtn);
+translationControls.appendChild(removeBtn);
+
     const closeBtn = document.createElement("button");
     closeBtn.textContent = "×";
     closeBtn.title = "Close Lyrics+";
@@ -918,6 +1039,20 @@ const Providers = {
       }
     };
 
+    // Translation Toggle Button
+const translationToggleBtn = document.createElement("button");
+translationToggleBtn.textContent = "🌐";
+translationToggleBtn.title = "Show/hide translation controls";
+Object.assign(translationToggleBtn.style, {
+  marginRight: "6px",
+  cursor: "pointer",
+  background: "none",
+  border: "none",
+  color: "white",
+  fontSize: "16px",
+  lineHeight: "1",
+});
+
     header.appendChild(title);
 
     // Button group right side
@@ -931,6 +1066,7 @@ const Providers = {
     header.appendChild(buttonGroup);
     headerWrapper.appendChild(header);
     buttonGroup.insertBefore(fontSizeSelect, playbackToggleBtn);
+    buttonGroup.insertBefore(translationToggleBtn, playbackToggleBtn);
 
     // Tabs container
     const tabs = document.createElement("div");
@@ -980,6 +1116,93 @@ const Providers = {
       userSelect: "text",
     });
     lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
+
+    async function translateLinesBatch(lines, targetLang) {
+  if (!lines.length) return [];
+  // Build the URL with multiple q= parameters (the right way!)
+  const baseUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + targetLang + "&dt=t";
+  const url = baseUrl + lines.map(line => "&q=" + encodeURIComponent(line)).join('');
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    // data[0] is an array of arrays: [[translated, original, ...], ...]
+    return data[0].map(item => item[0]);
+  } catch (error) {
+    console.error('Batch translation failed:', error);
+    return lines.map(_ => '[Translation Error]');
+  }
+}
+
+    function removeTranslatedLyrics() {
+  const translatedEls = lyricsContainer.querySelectorAll('[data-translated="true"]');
+  translatedEls.forEach(el => el.remove());
+  translationPresent = false;
+}
+
+async function translateLyricsInPopup() {
+  if (!lyricsContainer) return;
+  const targetLang = getSavedTranslationLang();
+
+  // Prevent double translation on the same language
+  if (translationPresent && lastTranslatedLang === targetLang) return;
+
+  removeTranslatedLyrics();
+  const pEls = Array.from(lyricsContainer.querySelectorAll('p'));
+  const linesToTranslate = pEls.filter(el => el.textContent.trim() && el.textContent.trim() !== "♪");
+
+  await Promise.all(linesToTranslate.map(async (p) => {
+    const originalText = p.textContent.trim();
+    const translatedText = await translateText(originalText, targetLang);
+    const translationDiv = document.createElement('div');
+    translationDiv.textContent = translatedText;
+    translationDiv.style.color = 'gray';
+    translationDiv.setAttribute('data-translated', 'true');
+    p.parentNode.insertBefore(translationDiv, p.nextSibling);
+  }));
+
+  lastTranslatedLang = targetLang;
+  translationPresent = true;
+}
+    // Translator Controls Container
+const translatorWrapper = document.createElement("div");
+translatorWrapper.id = "lyrics-plus-translator-wrapper";
+translatorWrapper.style.display = "block";
+translatorWrapper.style.background = "#121212";
+translatorWrapper.style.borderBottom = "1px solid #333";
+translatorWrapper.style.padding = "8px 12px";
+translatorWrapper.style.transition = "max-height 0.3s, padding 0.3s";
+translatorWrapper.style.overflow = "hidden";
+translatorWrapper.style.maxHeight = "0";
+translatorWrapper.style.pointerEvents = "none";
+
+let translatorVisible = localStorage.getItem('lyricsPlusTranslatorVisible');
+if (translatorVisible === null) translatorVisible = false;
+else translatorVisible = JSON.parse(translatorVisible);
+
+if (translatorVisible) {
+  translatorWrapper.style.maxHeight = "100px";
+  translatorWrapper.style.pointerEvents = "";
+  translatorWrapper.style.padding = "8px 12px";
+} else {
+  translatorWrapper.style.maxHeight = "0";
+  translatorWrapper.style.pointerEvents = "none";
+  translatorWrapper.style.padding = "0 12px";
+}
+    translatorWrapper.appendChild(translationControls);
+
+translationToggleBtn.onclick = () => {
+  translatorVisible = !translatorVisible;
+  localStorage.setItem('lyricsPlusTranslatorVisible', JSON.stringify(translatorVisible));
+  if (translatorVisible) {
+    translatorWrapper.style.maxHeight = "100px";
+    translatorWrapper.style.pointerEvents = "";
+    translatorWrapper.style.padding = "8px 12px";
+  } else {
+    translatorWrapper.style.maxHeight = "0";
+    translatorWrapper.style.pointerEvents = "none";
+    translatorWrapper.style.padding = "0 12px";
+  }
+};
 
     // Offset Setting UI
     const offsetWrapper = document.createElement("div");
@@ -1200,6 +1423,7 @@ const Providers = {
 
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
+    popup.appendChild(translatorWrapper);
     popup.appendChild(lyricsContainer);
     popup.appendChild(controlsBar);
 
