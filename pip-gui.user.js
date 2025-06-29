@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      5.0.test
+// @version      5.1.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -246,54 +246,55 @@ async function translateText(text, targetLang) {
 
   // --- Play/Pause Icon Updater ---
   function updatePlayPauseIcon(btnPlayPause) {
-  // Try all likely selectors for both desktop and mobile
-  // These selectors may need to be updated if Spotify changes their UI
-  const pauseBtns = [
-    '[aria-label="Pause"]',
-    '[data-testid="mobile-pause-button"]',
-    '[data-testid="control-button-playpause"][aria-label="Pause"]'
-  ];
-  const playBtns = [
-    '[aria-label="Play"]',
-    '[data-testid="mobile-play-button"]',
-    '[data-testid="control-button-playpause"][aria-label="Play"]'
-  ];
+  // Primary: Find the visible Spotify play/pause button
+  let playPauseBtn =
+    document.querySelector('[data-testid="control-button-playpause"]') ||
+    document.querySelector('[aria-label="Play"]') ||
+    document.querySelector('[aria-label="Pause"]');
 
-  // Helper to find a visible button from a list of selectors
-  function getVisibleButton(selectors) {
-    for (const sel of selectors) {
-      const btn = document.querySelector(sel);
-      if (btn && btn.offsetParent !== null && window.getComputedStyle(btn).display !== "none" && window.getComputedStyle(btn).visibility !== "hidden") {
-        return btn;
-      }
-    }
-    return null;
+  // Check visibility
+  function isVisible(el) {
+    if (!el) return false;
+    const style = window.getComputedStyle(el);
+    return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
   }
-
-  // Determine state
-  const pauseBtn = getVisibleButton(pauseBtns);
-  const playBtn = getVisibleButton(playBtns);
-
-  btnPlayPause.innerHTML = "";
-  if (pauseBtn) {
-    btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-  } else if (playBtn) {
-    btnPlayPause.appendChild(playSVG.cloneNode(true));
-  } else {
-    // fallback: check aria-label on any visible play/pause button
-    const fallback = Array.from(document.querySelectorAll('button'))
+  if (!isVisible(playPauseBtn)) {
+    // fallback: try to find any visible play or pause button
+    playPauseBtn = Array.from(document.querySelectorAll('button'))
       .find(b =>
-        /pause|play/i.test(b.getAttribute('aria-label') || '') &&
-        b.offsetParent !== null &&
-        window.getComputedStyle(b).display !== "none" &&
-        window.getComputedStyle(b).visibility !== "hidden"
+        (/play|pause/i.test(b.getAttribute('aria-label') || '')) && isVisible(b)
       );
-    if (fallback && /pause/i.test(fallback.getAttribute('aria-label') || '')) {
+  }
+
+  // Decide icon
+  btnPlayPause.innerHTML = "";
+
+  // Check aria-label to decide icon
+  if (playPauseBtn && isVisible(playPauseBtn)) {
+    const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
+    if (label === "pause") {
       btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-    } else {
+      return;
+    }
+    if (label === "play") {
       btnPlayPause.appendChild(playSVG.cloneNode(true));
+      return;
     }
   }
+
+  // Fallback: use audio element state if possible
+  const audio = document.querySelector('audio');
+  if (audio) {
+    if (audio.paused) {
+      btnPlayPause.appendChild(playSVG.cloneNode(true));
+    } else {
+      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+    }
+    return;
+  }
+
+  // Last fallback: default to play icon
+  btnPlayPause.appendChild(playSVG.cloneNode(true));
 }
   // ------------------------
   // Providers and Fetchers
@@ -844,15 +845,14 @@ const Providers = {
   if (!popup || !popup._playPauseBtn) return;
   if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
 
-  // Try desktop first, then mobile
-  let spBtn = document.querySelector('[aria-label="Play"], [aria-label="Pause"]');
-  if (!spBtn) spBtn = document.querySelector('[data-testid="control-button-playpause"]');
-  if (!spBtn) spBtn = document.querySelector('[data-testid="mobile-play-button"], [data-testid="mobile-pause-button"]');
+  // Prefer the main play/pause button
+  let spBtn = document.querySelector('[data-testid="control-button-playpause"]');
+  if (!spBtn) spBtn = document.querySelector('[aria-label="Play"], [aria-label="Pause"]');
   if (!spBtn) return;
   const observer = new MutationObserver(() => {
     if (popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
   });
-  observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class'] });
+  observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
   popup._playPauseObserver = observer;
 }
 
