@@ -73,13 +73,26 @@
 > 6. Find `musixmatchUserToken`, right-click its content and select Copy value.  
 > 7. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click Process.  
 > 8. Copy the value of `web-desktop-app-v1.0` — this is your user token.  
-> 9. In the Lyrics+ popup, doible-click on the Musixmatch provider and paste your token.
+> 9. In the Lyrics+ popup, double-click on the Musixmatch provider and paste your token.
 
 ## Troubleshooting
 
-> **Lyrics out of sync?** Adjust the timing offset for perfect sync.  
-> **Popup not showing?** Make sure you’re using [open.spotify.com](https://open.spotify.com/) and the userscript is enabled.  
-> **Mobile?** Use desktop mode for best experience. (Mobile compatibility is experimental.)
+> **Lyrics out of sync?** Adjust the timing offset for perfect sync. 
+  
+* * * 
+
+> **Mobile?** YES!
+
+a) Download the latest version of Firefox (Original version! - Nightly or other releases might break your userscript manager).
+b) Install Ublock Origin extension
+c) Install Chameleon extension
+d) Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop).
+e) Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option.
+f) Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed".
+g) Restart Firefox
+h) Enable Desktop Mode
+i) Open Spotify Web and login to your account. 
+j) Press on the Lyrics+ button to open the  interface popup and see the song lyrics.
 
 * * * 
 
