@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      5.6
+// @version      5.7.dev
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
-// @grant        none
+// @grant        GM_xmlhttpRequest
+// @connect      genius.com
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
@@ -957,48 +958,211 @@ const ProviderMusixmatch = {
 // };
 //
   // --- Genius ---
-  async function fetchGeniusLyrics(info) {
-    const titles = new Set([info.title]);
-    titles.add(Utils.removeExtraInfo(info.title));
-    titles.add(Utils.removeSongFeat(info.title));
-    titles.add(Utils.removeSongFeat(Utils.removeExtraInfo(info.title)));
-    for (const title of titles) {
-      const searchUrl = `https://api.lyrics.ovh/v1/${encodeURIComponent(info.artist)}/${encodeURIComponent(title)}`;
-      try {
-        const fetchPromise = fetch(searchUrl);
-        const res = await Promise.race([fetchPromise, timeoutPromise(1500)]);
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (data.lyrics) {
-          return { plainLyrics: data.lyrics };
-        }
-      } catch (e) {
+async function fetchGeniusLyrics(info) {
+  const titles = new Set([
+    info.title,
+    Utils.removeExtraInfo(info.title),
+    Utils.removeSongFeat(info.title),
+    Utils.removeSongFeat(Utils.removeExtraInfo(info.title)),
+  ]);
+
+  for (const title of titles) {
+    const query = encodeURIComponent(`${info.artist} ${title}`);
+    const searchUrl = `https://genius.com/api/search/multi?per_page=5&q=${query}`;
+
+    try {
+      console.log(`[Genius] Searching for: ${info.artist} - ${title}`);
+
+      const searchRes = await new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+          method: "GET",
+          url: searchUrl,
+          headers: {
+            Accept: "application/json",
+            "User-Agent": navigator.userAgent,
+          },
+          onload: resolve,
+          onerror: reject,
+          ontimeout: reject,
+          timeout: 5000,
+        });
+      });
+
+      const searchJson = JSON.parse(searchRes.responseText);
+      const hits = searchJson?.response?.sections?.flatMap(s => s.hits) || [];
+      const song = hits.find(h => h.type === "song")?.result;
+      if (!song?.url) {
+        console.log("[Genius] No song URL found, trying next title");
         continue;
       }
-    }
-    return { error: "Lyrics not found on Genius" };
-  }
-  function parseGeniusLyrics(raw) {
-    return Utils.parseLocalLyrics(raw);
-  }
-  const ProviderGenius = {
-    async findLyrics(info) {
-      try {
-        const data = await fetchGeniusLyrics(info);
-        if (!data || data.error) return { error: data.error || "Lyrics not found on Genius" };
-        return data;
-      } catch (e) {
-        return { error: e.message };
+      console.log(`[Genius] Found song URL: ${song.url}`);
+
+      // Fetch song page HTML
+      const htmlRes = await new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+          method: "GET",
+          url: song.url,
+          headers: {
+            Accept: "text/html",
+            "User-Agent": navigator.userAgent,
+          },
+          onload: resolve,
+          onerror: reject,
+          ontimeout: reject,
+          timeout: 5000,
+        });
+      });
+
+      const doc = new DOMParser().parseFromString(htmlRes.responseText, "text/html");
+
+      // Find root with class containing 'Lyrics__Root'
+      const lyricsRoot = [...doc.querySelectorAll('div')].find(el =>
+        [...el.classList].some(cls => cls.includes('Lyrics__Root'))
+      );
+
+      if (!lyricsRoot) {
+        console.warn("[Genius] No .Lyrics__Root found");
+        continue;
       }
-    },
-    getUnsynced(body) {
-      if (!body?.plainLyrics) return null;
-      return parseGeniusLyrics(body.plainLyrics).unsynced;
-    },
-    getSynced() {
-      return null;
+      console.log("[Genius] .Lyrics__Root found");
+
+      // Find all children with class containing 'Lyrics__Container'
+      const containers = [...lyricsRoot.querySelectorAll('div')].filter(el =>
+        [...el.classList].some(cls => cls.includes('Lyrics__Container'))
+      );
+      console.log(`[Genius] Found ${containers.length} .Lyrics__Container div(s)`);
+
+      if (containers.length === 0) {
+        console.warn("[Genius] No .Lyrics__Container found inside .Lyrics__Root");
+        continue;
+      }
+
+      // Always include containers at index 0 and 4 if they exist
+      const selectedIndexes = [0, 4];
+      const relevantContainersSet = new Set();
+
+      selectedIndexes.forEach(i => {
+        if (containers[i]) relevantContainersSet.add(containers[i]);
+      });
+
+      // Also add any other containers that look relevant (skip junk)
+      containers.forEach(container => {
+        if (relevantContainersSet.has(container)) return; // already included
+
+        const classList = [...container.classList].map(c => c.toLowerCase());
+        const text = container.textContent.trim().toLowerCase();
+
+        if (classList.some(cls =>
+          cls.includes('header') ||
+          cls.includes('readmore') ||
+          cls.includes('annotation') ||
+          cls.includes('credit') ||
+          cls.includes('footer')
+        )) {
+          console.log(`[Genius] Skipping container due to class filter: ${classList.join(' ')}`);
+          return;
+        }
+
+        if (!text || text.length < 10) return;
+
+        if (text.includes('read more') || text.includes('lyrics') || text.includes('©')) {
+          console.log(`[Genius] Skipping container due to text filter: ${text.substring(0, 30)}...`);
+          return;
+        }
+
+        relevantContainersSet.add(container);
+      });
+
+      const relevantContainers = Array.from(relevantContainersSet);
+      console.log(`[Genius] Using ${relevantContainers.length} relevant container(s)`);
+
+      // Recursive text extractor preserving line breaks
+      let lyrics = '';
+      function walk(node) {
+        for (const child of node.childNodes) {
+          if (child.nodeType === Node.ELEMENT_NODE) {
+            const classList = [...child.classList].map(c => c.toLowerCase());
+            if (classList.some(cls =>
+              cls.includes('header') ||
+              cls.includes('readmore') ||
+              cls.includes('annotation') ||
+              cls.includes('credit') ||
+              cls.includes('footer')
+            )) {
+              console.log(`[Genius] Skipping unwanted node with classes: ${classList.join(' ')}`);
+              continue;
+            }
+          }
+
+          if (child.nodeType === Node.TEXT_NODE) {
+            lyrics += child.textContent;
+          } else if (child.nodeName === "BR") {
+            lyrics += "\n";
+          } else if (child.nodeType === Node.ELEMENT_NODE) {
+            walk(child);
+            if (/div|p|section/i.test(child.nodeName)) {
+              lyrics += "\n";
+            }
+          }
+        }
+      }
+
+      // Extract lyrics from all relevant containers
+      relevantContainers.forEach(container => {
+        walk(container);
+        lyrics += "\n";
+      });
+
+      lyrics = lyrics.replace(/\n{2,}/g, "\n").trim();
+
+      if (!lyrics) {
+        console.warn("[Genius] Extracted lyrics are empty");
+        continue;
+      }
+
+      console.log("[Genius] Lyrics successfully extracted");
+      return { plainLyrics: lyrics };
+
+    } catch (e) {
+      console.error("[Genius] Fetch or parse error:", e);
+      continue;
     }
+  }
+
+  return { error: "Lyrics not found on Genius" };
+}
+
+
+function parseGeniusLyrics(raw) {
+  if (!raw) return { unsynced: null };
+  const lines = raw
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line && !/^(\[.*\])$/.test(line)); // skip pure section headers
+
+  return {
+    unsynced: lines.map(text => ({ text })),
   };
+}
+
+const ProviderGenius = {
+  async findLyrics(info) {
+    try {
+      const data = await fetchGeniusLyrics(info);
+      if (!data || data.error) return { error: data.error || "Lyrics not found on Genius" };
+      return data;
+    } catch (e) {
+      return { error: e.message };
+    }
+  },
+  getUnsynced(body) {
+    if (!body?.plainLyrics) return null;
+    return parseGeniusLyrics(body.plainLyrics).unsynced;
+  },
+  getSynced() {
+    return null;
+  },
+};
 
   // --- Providers List ---
 const Providers = {
