@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      5.8.dev
+// @version      5.9.dev
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -990,14 +990,25 @@ async function fetchGeniusLyrics(info) {
     for (let i = start; i <= max; i += step) arr.push(i);
     return arr;
   }
+
+  // Helper to clean query titles (remove remastered/live/years/etc.)
+function cleanQuery(title) {
+  return title
+    .replace(/\b(remastered|explicit|deluxe|live|version|edit)\b/gi, '')
+    .replace(/\b\d{4}\b/g, '') // remove 4-digit years
+    .replace(/\s+/g, ' ')      // collapse whitespace
+    .trim();
+}
+
   const includedNthIndices = generateNthIndices();
 
   for (const title of titles) {
-    const query = encodeURIComponent(`${info.artist} ${title}`);
+    const cleanTitle = cleanQuery(title);
+    const query = encodeURIComponent(`${info.artist} ${cleanTitle}`);
     const searchUrl = `https://genius.com/api/search/multi?per_page=5&q=${query}`;
 
     try {
-      console.log(`[Genius] Searching for: ${info.artist} - ${title}`);
+     console.log(`[Genius] Final search query: ${info.artist} - ${cleanTitle}`);
 
       const searchRes = await new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
@@ -1016,12 +1027,53 @@ async function fetchGeniusLyrics(info) {
 
       const searchJson = JSON.parse(searchRes.responseText);
       const hits = searchJson?.response?.sections?.flatMap(s => s.hits) || [];
-      const song = hits.find(h => h.type === "song")?.result;
-      if (!song?.url) {
-        console.log("[Genius] No song URL found, trying next title");
-        continue;
-      }
-      console.log(`[Genius] Found song URL: ${song.url}`);
+      const songHits = hits.filter(h => h.type === "song");
+
+console.log("[Genius] Search candidates:");
+for (const hit of songHits) {
+  const result = hit.result;
+  console.log(`- Title: ${result.title}, Artist: ${result.primary_artist?.name}, URL: ${result.url}`);
+}
+
+function normalize(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
+}
+
+const targetArtist = normalize(info.artist);
+const targetTitle = normalize(Utils.removeExtraInfo(info.title));
+
+let bestScore = -Infinity;
+let song = null;
+
+for (const hit of songHits) {
+  const result = hit.result;
+  const resultArtist = normalize(result.primary_artist?.name || '');
+  const resultTitle = normalize(Utils.removeExtraInfo(result.title || ''));
+
+  let score = 0;
+
+  if (resultArtist === targetArtist) score += 5;
+  if (resultTitle === targetTitle) score += 5;
+
+  if (resultArtist.includes(targetArtist) || targetArtist.includes(resultArtist)) score += 2;
+  if (resultTitle.includes(targetTitle) || targetTitle.includes(resultTitle)) score += 2;
+
+  // Penalize poor matches
+  if (!resultTitle.includes(targetTitle)) score -= 2;
+  if (!resultArtist.includes(targetArtist)) score -= 2;
+
+  if (score > bestScore) {
+    bestScore = score;
+    song = result;
+  }
+}
+
+if (!song?.url) {
+  console.log("[Genius] No suitable match found, trying next title");
+  continue;
+}
+console.log(`[Genius] Best match song URL: ${song.url}`);
+
 
       // Fetch song page HTML
       const htmlRes = await new Promise((resolve, reject) => {
