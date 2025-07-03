@@ -16,8 +16,9 @@
 // AT THE MOMENT - Equal to Stable release (Last update: 3.7.25)
 
 // TO DO:
-// Add Spotify provider (synced and unsynced) - spotify synced should be prioritized over other synced sources. spotify unsynced is fallback before genius. api: https://github.com/akashrchandran/spotify-lyrics-api
+// Add Spotify and Deezer provider (synced and unsynced) - spotify synced should be prioritized over other synced sources. spotify unsynced is fallback before genius. api: https://github.com/akashrchandran/spotify-lyrics-api
 // spotify.js with api link > https://github.com/akashrchandran/syrics-web/blob/master/static/js/spotify.js
+// deezer.js with api link > https://github.com/bertigert/Deezer-Lyrics-Sync/blob/main/lyrics_sync.user.js
 //Netease api implementation example:
 //https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src%2Ffetchers.ts
 // For a song where neither of the providers has lyrics, instead of returning "Track not found on LRCLIB/Kpoe/Genius", return something like "Track not found on any of the providers." and maybe in that case also make the current provider gray, instead of green (to show none are currently pulling lyrics)
