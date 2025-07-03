@@ -73,7 +73,7 @@
 > 6. Find `musixmatchUserToken`, right-click its content and select Copy value.  
 > 7. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click Process.  
 > 8. Copy the value of `web-desktop-app-v1.0` — this is your user token.  
-> 9. In the Lyrics+ popup, select the Musixmatch provider (or double-click its tab) and paste your token.
+> 9. In the Lyrics+ popup, doible-click on the Musixmatch provider and paste your token.
 
 ## Troubleshooting
 
