@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      5.4.final
+// @version      5.5
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
 (function () {
@@ -408,25 +408,43 @@ function labelMeansPlay(label) {
 
   // --- LRCLIB ---
   async function fetchLRCLibLyrics(songInfo, tryWithoutAlbum = false) {
-    const params = [
-      `artist_name=${encodeURIComponent(songInfo.artist)}`,
-      `track_name=${encodeURIComponent(songInfo.title)}`
-    ];
-    if (songInfo.album && !tryWithoutAlbum) {
-      params.push(`album_name=${encodeURIComponent(songInfo.album)}`);
-    }
-    if (songInfo.duration) {
-      params.push(`duration=${Math.floor(songInfo.duration / 1000)}`);
-    }
-    const url = `https://lrclib.net/api/get?${params.join('&')}`;
+  const params = [
+    `artist_name=${encodeURIComponent(songInfo.artist)}`,
+    `track_name=${encodeURIComponent(songInfo.title)}`
+  ];
+
+  // Only add album if available and not skipped
+  if (songInfo.album && !tryWithoutAlbum) {
+    params.push(`album_name=${encodeURIComponent(songInfo.album)}`);
+  }
+
+  // Only include duration if it's a safe value
+  if (songInfo.duration && songInfo.duration >= 10000) {
+    params.push(`duration=${Math.floor(songInfo.duration / 1000)}`);
+  }
+
+  const url = `https://lrclib.net/api/get?${params.join('&')}`;
+  console.log("LRCLIB request:", url);
+
+  try {
     const response = await fetch(url, {
       headers: {
+        // This header is okay to send — doesn’t break anything
         "x-user-agent": "lyrics-plus-script"
       }
     });
-    if (!response.ok) return null;
+
+    if (!response.ok) {
+      console.warn(`LRCLIB request failed with status ${response.status}`);
+      return null;
+    }
+
     return await response.json();
+  } catch (e) {
+    console.error("LRCLIB fetch error:", e);
+    return null;
   }
+}
   const ProviderLRCLIB = {
     async findLyrics(info) {
       try {
@@ -716,82 +734,154 @@ function labelMeansPlay(label) {
   input.focus();
 }
 
-  async function fetchMusixmatchLyrics(songInfo) {
-    const token = getMusixmatchToken(false); // false = don't show prompt automatically
-if (!token) {
-  showMusixmatchTokenModal();
-  return { error: "No Musixmatch token set." };
+function parseMusixmatchSyncedLyrics(subtitleBody) {
+  // Split into lines
+  const lines = subtitleBody.split(/\r?\n/);
+  const synced = [];
+
+  // Regex for [mm:ss.xx] or [mm:ss,xx]
+  const timeRegex = /\[(\d{1,2}):(\d{2})([.,]\d{1,3})?\]/;
+
+  for (const line of lines) {
+    const match = line.match(timeRegex);
+    if (match) {
+      const min = parseInt(match[1], 10);
+      const sec = parseInt(match[2], 10);
+      const frac = match[3] ? parseFloat(match[3].replace(',', '.')) : 0;
+      const timeMs = (min * 60 + sec + frac) * 1000;
+
+      // Remove all timestamps (sometimes multiple) to get clean lyric text
+      const text = line.replace(/\[(\d{1,2}):(\d{2})([.,]\d{1,3})?\]/g, '').trim();
+
+      synced.push({ time: timeMs, text: text || '♪' });
+    }
+  }
+  return synced;
 }
-    const baseURL =
-      "https://apic-desktop.musixmatch.com/ws/1.1/macro.subtitles.get?format=json&namespace=lyrics_richsynched&subtitle_format=mxm&app_id=web-desktop-app-v1.0&";
-    const durr = Math.floor(songInfo.duration / 1000);
-    const params = [
-      `q_album=${encodeURIComponent(songInfo.album)}`,
-      `q_artist=${encodeURIComponent(songInfo.artist)}`,
-      `q_artists=${encodeURIComponent(songInfo.artist)}`,
-      `q_track=${encodeURIComponent(songInfo.title)}`,
-      `q_duration=${durr}`,
-      `f_subtitle_length=${durr}`,
-      `usertoken=${encodeURIComponent(token)}`
-    ];
-    const finalURL = baseURL + params.join("&");
-    let response = await fetch(finalURL, {
+
+
+async function fetchMusixmatchLyrics(songInfo) {
+  const token = getMusixmatchToken(false);
+  if (!token) {
+    showMusixmatchTokenModal();
+    return { error: "No Musixmatch token set." };
+  }
+
+  // Step 1: Get track info
+  const trackResponse = await fetch(
+    `https://apic-desktop.musixmatch.com/ws/1.1/matcher.track.get?` +
+      `q_track=${encodeURIComponent(songInfo.title)}&` +
+      `q_artist=${encodeURIComponent(songInfo.artist)}&` +
+      `format=json&usertoken=${encodeURIComponent(token)}&app_id=web-desktop-app-v1.0`,
+    {
       headers: {
-        'authority': 'apic-desktop.musixmatch.com',
-        'cookie': `x-mxm-token-guid=; usertoken=${token}`,
-        'user-agent': navigator.userAgent
-      }
-    });
-    if (!response.ok) return { error: "No lyrics" };
-    let body = await response.json();
-    if (!body?.message?.body?.macro_calls) return { error: "No lyrics" };
-    return body.message.body.macro_calls;
+        'user-agent': navigator.userAgent,
+        'referer': 'https://www.musixmatch.com/',
+      },
+      cache: 'no-store',
+    }
+  );
+  if (!trackResponse.ok) return { error: "Track info request failed" };
+  const trackBody = await trackResponse.json();
+  const track = trackBody?.message?.body?.track;
+  if (!track) return { error: "Track not found" };
+
+  if (track.instrumental) {
+    return { synced: [{ text: "♪ Instrumental ♪", time: 0 }] };
   }
-  function musixmatchGetSynced(body) {
-    const meta = body?.["matcher.track.get"]?.message?.body;
-    if (!meta) return null;
-    const hasSynced = meta?.track?.has_subtitles;
-    const isInstrumental = meta?.track?.instrumental;
-    if (isInstrumental) {
-      return [{ text: "♪ Instrumental ♪", startTime: "0000" }];
+
+  // Step 2: Fetch synced lyrics via subtitles.get
+  const subtitleResponse = await fetch(
+    `https://apic-desktop.musixmatch.com/ws/1.1/track.subtitles.get?` +
+      `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`,
+    {
+      headers: {
+        'user-agent': navigator.userAgent,
+        'referer': 'https://www.musixmatch.com/',
+      },
+      cache: 'no-store',
     }
-    if (hasSynced) {
-      const subtitle = body["track.subtitles.get"]?.message?.body?.subtitle_list?.[0]?.subtitle;
-      if (!subtitle) return null;
-      return JSON.parse(subtitle.subtitle_body).map(line => ({
-        text: line.text || "♪",
-        time: line.time.total * 1000,
-        startTime: line.time.total * 1000,
-      }));
+  );
+  if (subtitleResponse.ok) {
+    const subtitleBody = await subtitleResponse.json();
+    const subtitleList = subtitleBody?.message?.body?.subtitle_list;
+    if (subtitleList && subtitleList.length > 0) {
+      const subtitleObj = subtitleList[0]?.subtitle;
+      if (subtitleObj?.subtitle_body) {
+        const synced = parseMusixmatchSyncedLyrics(subtitleObj.subtitle_body);
+        if (synced.length > 0) return { synced };
+      }
     }
+  }
+
+  // Step 3: fallback to unsynced lyrics
+  const lyricsResponse = await fetch(
+    `https://apic-desktop.musixmatch.com/ws/1.1/track.lyrics.get?` +
+      `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`,
+    {
+      headers: {
+        'user-agent': navigator.userAgent,
+        'referer': 'https://www.musixmatch.com/',
+      },
+      cache: 'no-store',
+    }
+  );
+  if (!lyricsResponse.ok) return { error: "Lyrics request failed" };
+  const lyricsBody = await lyricsResponse.json();
+  const unsyncedRaw = lyricsBody?.message?.body?.lyrics?.lyrics_body;
+  if (unsyncedRaw) {
+    const unsynced = unsyncedRaw.split("\n").map(line => ({ text: line }));
+    return { unsynced };
+  }
+
+  return { error: "No lyrics found" };
+}
+
+// Extract synced lyrics from the fetchMusixmatchLyrics result
+function musixmatchGetSynced(body) {
+  if (!body || !body.synced) {
+    console.log("No synced lyrics data found");
     return null;
   }
-  function musixmatchGetUnsynced(body) {
-    const meta = body?.["matcher.track.get"]?.message?.body;
-    if (!meta) return null;
-    const hasUnSynced = meta.track.has_lyrics || meta.track.has_lyrics_crowd;
-    const isInstrumental = meta?.track?.instrumental;
-    if (isInstrumental) return [{ text: "♪ Instrumental ♪" }];
-    if (hasUnSynced) {
-      const lyrics = body["track.lyrics.get"]?.message?.body?.lyrics?.lyrics_body;
-      if (!lyrics) return null;
-      return lyrics.split("\n").map(t => ({ text: t }));
-    }
+  console.log("Extracting synced lyrics, lines:", body.synced.length);
+  return body.synced.map(line => ({
+    text: line.text,
+    time: Math.round(line.time ?? line.startTime ?? 0),
+  }));
+}
+
+// Extract unsynced lyrics from the fetchMusixmatchLyrics result
+function musixmatchGetUnsynced(body) {
+  if (!body || !body.unsynced) {
+    console.log("No unsynced lyrics data found");
     return null;
   }
-  const ProviderMusixmatch = {
-    async findLyrics(info) {
-      try {
-        const data = await fetchMusixmatchLyrics(info);
-        if (!data || data.error) return { error: data.error || "Lyrics not found on Musixmatch" };
-        return data;
-      } catch (e) {
-        return { error: e.message };
+  console.log("Extracting unsynced lyrics, lines:", body.unsynced.length);
+  return body.unsynced.map(line => ({ text: line.text }));
+}
+
+const ProviderMusixmatch = {
+  async findLyrics(info) {
+    try {
+      console.log("ProviderMusixmatch.findLyrics called with info:", info);
+      const data = await fetchMusixmatchLyrics(info);
+      if (!data || data.error) {
+        console.error("Lyrics fetch error:", data?.error);
+        return { error: data?.error || "Lyrics not found on Musixmatch" };
       }
-    },
-    getUnsynced: musixmatchGetUnsynced,
-    getSynced: musixmatchGetSynced
-  };
+      console.log("Lyrics fetch success:", data);
+      return data;
+    } catch (e) {
+      console.error("Exception in findLyrics:", e);
+      return { error: e.message };
+    }
+  },
+  getUnsynced: musixmatchGetUnsynced,
+  getSynced: musixmatchGetSynced,
+};
+
+
+
 
   // --- Netease ---
 // async function fetchNeteaseLyrics(info) {
