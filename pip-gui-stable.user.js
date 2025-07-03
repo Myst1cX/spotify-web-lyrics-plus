@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      5.5
+// @version      5.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        none
@@ -1444,7 +1444,7 @@ inputStack.style.position = "relative";
 inputStack.style.display = "inline-block";
 inputStack.style.marginLeft = "16px";
 inputStack.style.height = "28px";
-inputStack.style.width = "68px"; // tightly wrap input
+inputStack.style.width = "68px";
 
 // The input itself - compact!
 const offsetInput = document.createElement("input");
@@ -1459,56 +1459,64 @@ offsetInput.style.background = "#222";
 offsetInput.style.color = "#fff";
 offsetInput.style.border = "1px solid #444";
 offsetInput.style.borderRadius = "6px";
-offsetInput.style.padding = "2px 20px 2px 6px"; // room for spinner
+offsetInput.style.padding = "2px 24px 2px 6px";
 offsetInput.style.boxSizing = "border-box";
 offsetInput.style.fontSize = "14px";
 offsetInput.style.MozAppearance = "textfield";
 offsetInput.style.appearance = "textfield";
 
-// Spinner container - smaller, inside input at right
+// Spinner container
 const spinnerContainer = document.createElement("div");
 spinnerContainer.style.position = "absolute";
-spinnerContainer.style.right = "2px";
-spinnerContainer.style.top = "1px";
-spinnerContainer.style.height = "24px";
+spinnerContainer.style.right = "0";
+spinnerContainer.style.top = "0";
+spinnerContainer.style.height = "28px";
+spinnerContainer.style.width = "24px";
 spinnerContainer.style.display = "flex";
 spinnerContainer.style.flexDirection = "column";
 spinnerContainer.style.justifyContent = "center";
 spinnerContainer.style.zIndex = "2";
 
+const iconFill = "rgba(255, 255, 255, 0.85)";
+
 // Up button
 const upBtn = document.createElement("button");
-upBtn.innerHTML = "▲";
+upBtn.innerHTML = `
+  <svg viewBox="0 0 24 20" xmlns="http://www.w3.org/2000/svg"
+    style="display:block; margin:auto; width:20px; height:12px;" fill="${iconFill}" >
+    <path d="M12 4L2 16H22L12 4Z" />
+  </svg>
+`;
 upBtn.style.background = "#333";
-upBtn.style.color = "#fff";
 upBtn.style.border = "none";
 upBtn.style.borderRadius = "2px 2px 0 0";
-upBtn.style.width = "16px";
-upBtn.style.height = "11px";
-upBtn.style.fontSize = "9px";
+upBtn.style.width = "24px";
+upBtn.style.height = "14px";
 upBtn.style.cursor = "pointer";
 upBtn.style.padding = "0";
-upBtn.style.lineHeight = "11px";
 upBtn.tabIndex = -1;
 upBtn.onmouseover = () => upBtn.style.background = "#444";
 upBtn.onmouseout = () => upBtn.style.background = "#333";
 
 // Down button
 const downBtn = document.createElement("button");
-downBtn.innerHTML = "▼";
+downBtn.innerHTML = `
+  <svg viewBox="0 0 24 20" xmlns="http://www.w3.org/2000/svg"
+    style="display:block; margin:auto; width:20px; height:12px;" fill="${iconFill}" >
+    <path d="M12 16L2 4H22L12 16Z" />
+  </svg>
+`;
 downBtn.style.background = "#333";
-downBtn.style.color = "#fff";
 downBtn.style.border = "none";
 downBtn.style.borderRadius = "0 0 2px 2px";
-downBtn.style.width = "16px";
-downBtn.style.height = "11px";
-downBtn.style.fontSize = "9px";
+downBtn.style.width = "24px";
+downBtn.style.height = "14px";
 downBtn.style.cursor = "pointer";
 downBtn.style.padding = "0";
-downBtn.style.lineHeight = "11px";
 downBtn.tabIndex = -1;
 downBtn.onmouseover = () => downBtn.style.background = "#444";
 downBtn.onmouseout = () => downBtn.style.background = "#333";
+
 
 // Shared value update function
 function saveAndApplyOffset() {
