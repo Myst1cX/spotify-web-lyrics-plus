@@ -4,7 +4,6 @@
 // @version      5.7.dev
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
-// @match        https://genius.com/songs/new
 // @grant        GM_xmlhttpRequest
 // @connect      genius.com
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
