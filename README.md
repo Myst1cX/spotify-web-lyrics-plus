@@ -2,7 +2,7 @@
 
 > Injects a powerful lyrics popup into the Spotify Web Player.  
 > Supports synced & unsynced lyrics from multiple providers, popup customization, font controls, timing offset, **live translation**, playback controls, and more.  
-> **Works best with [Violentmonkey](https://violentmonkey.github.io/)!**
+> **Works best with [Violentmonkey](https://violentmonkey.github.io/)**
 
 ## Features
 
@@ -45,7 +45,8 @@
 > 1. Install [Violentmonkey](https://violentmonkey.github.io/)  
 > 2. [Click here to install the userscript.](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)  
 > 3. Open [Spotify Web Player](https://open.spotify.com/).  
-> 4. Click the **Lyrics+** button next to playback controls.
+> 4. Play a song.
+> 5. Click on the **Lyrics+** button next to playback controls.
 
 ## Usage
 
@@ -84,9 +85,10 @@
 > **Mobile?** YES!
 
 > 1. Download the latest version of Firefox (Original version! - Nightly or other releases might break your userscript manager).
-> 2. Install Ublock Origin extension
-> 3. Install Violentmonkey extension  
-> 4. [Click here to install the userscript](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)  
+> 2. Install [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
+> 3. Install [Violentmonkey](https://addons.mozilla.org/es-ES/firefox/addon/violentmonkey/)
+> 4. [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
+> 5. [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)  
 > 5. Install Chameleon extension
 > 6. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop).
 > 7. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option.
@@ -94,7 +96,8 @@
 > 9. Restart Firefox
 > 10. Enable Desktop Mode
 > 11. Open Spotify Web and login to your account. 
-> 12. Press on the Lyrics+ button to open the  interface popup and see the song lyrics.
+> 12. Play a song.
+> 13. Click on the Lyrics+ button to open the interface popup and see the song lyrics.
 
 * * * 
 
