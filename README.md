@@ -83,18 +83,18 @@
 
 > **Mobile?** YES!
 
-> a) Download the latest version of Firefox (Original version! - Nightly or other releases might break your userscript manager).
-> b) Install Ublock Origin extension
-> c) Install Violentmonkey extension  
-> d) [Click here to install the userscript](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)  
-> e) Install Chameleon extension
-> f) Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop).
-> g) Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option.
-> h) Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed".
-> i) Restart Firefox
-> j) Enable Desktop Mode
-> k) Open Spotify Web and login to your account. 
-> l) Press on the Lyrics+ button to open the  interface popup and see the song lyrics.
+> 1. Download the latest version of Firefox (Original version! - Nightly or other releases might break your userscript manager).
+> 2. Install Ublock Origin extension
+> 3. Install Violentmonkey extension  
+> 4. [Click here to install the userscript](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)  
+> 5. Install Chameleon extension
+> 6. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop).
+> 7. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option.
+> 8. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed".
+> 9. Restart Firefox
+> 10. Enable Desktop Mode
+> 11. Open Spotify Web and login to your account. 
+> 12. Press on the Lyrics+ button to open the  interface popup and see the song lyrics.
 
 * * * 
 
