@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      5.7.dev
+// @version      5.8.dev
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -984,6 +984,14 @@ async function fetchGeniusLyrics(info) {
     Utils.removeSongFeat(Utils.removeExtraInfo(info.title)),
   ]);
 
+  // Helper to generate nth-of-type indexes (1, 5, 9, 13, 17, ...)
+  function generateNthIndices(start = 1, step = 4, max = 25) {
+    const arr = [];
+    for (let i = start; i <= max; i += step) arr.push(i);
+    return arr;
+  }
+  const includedNthIndices = generateNthIndices();
+
   for (const title of titles) {
     const query = encodeURIComponent(`${info.artist} ${title}`);
     const searchUrl = `https://genius.com/api/search/multi?per_page=5&q=${query}`;
@@ -1055,16 +1063,22 @@ async function fetchGeniusLyrics(info) {
         continue;
       }
 
-      // Always include containers at index 0 and 4 if they exist
-      const selectedIndexes = [0, 4];
+      // Select containers based on their actual nth-of-type (e.g., 1,5,9,13,...)
       const relevantContainersSet = new Set();
 
-      selectedIndexes.forEach(i => {
-        if (containers[i]) relevantContainersSet.add(containers[i]);
+      containers.forEach(container => {
+        const parent = container.parentElement;
+        const siblings = [...parent.children];
+        const nthIndex = siblings.indexOf(container) + 1; // nth-of-type is 1-based
+
+        if (includedNthIndices.includes(nthIndex)) {
+          relevantContainersSet.add(container);
+          console.log(`[Genius] Including container with nth-of-type ${nthIndex}`);
+        }
       });
 
-      // Also add any other containers that look relevant (skip junk)
-      containers.forEach(container => {
+      // Add other relevant containers filtering junk, excluding duplicates
+      containers.forEach((container, idx) => {
         if (relevantContainersSet.has(container)) return; // already included
 
         const classList = [...container.classList].map(c => c.toLowerCase());
@@ -1077,14 +1091,14 @@ async function fetchGeniusLyrics(info) {
           cls.includes('credit') ||
           cls.includes('footer')
         )) {
-          console.log(`[Genius] Skipping container due to class filter: ${classList.join(' ')}`);
           return;
         }
 
-        if (!text || text.length < 10) return;
+        if (!text || text.length < 10) {
+          return;
+        }
 
         if (text.includes('read more') || text.includes('lyrics') || text.includes('©')) {
-          console.log(`[Genius] Skipping container due to text filter: ${text.substring(0, 30)}...`);
           return;
         }
 
@@ -1107,7 +1121,6 @@ async function fetchGeniusLyrics(info) {
               cls.includes('credit') ||
               cls.includes('footer')
             )) {
-              console.log(`[Genius] Skipping unwanted node with classes: ${classList.join(' ')}`);
               continue;
             }
           }
@@ -1149,7 +1162,6 @@ async function fetchGeniusLyrics(info) {
 
   return { error: "Lyrics not found on Genius" };
 }
-
 
 function parseGeniusLyrics(raw) {
   if (!raw) return { unsynced: null };
