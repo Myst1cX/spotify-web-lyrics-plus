@@ -7,7 +7,7 @@
 ## Features
 
 > **MULTI-PROVIDER LYRICS (LRCLIB, KPoe, Musixmatch, Genius)**  
-> Get synced lyrics from LRCLIB and KPoe (Musixmatch & Apple), or fallback to unsynced from Genius.
+> Get lyrics from LRCLIB, KPoe (Apple Music source), Musixmatch or Genius.
 
 > **POPUP WINDOW**  
 > Move and resize anywhere on your screen.  
