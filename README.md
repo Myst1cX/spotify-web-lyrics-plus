@@ -1,4 +1,4 @@
-# SPOTIFY WEB LYRICS+ USERSCRIPT
+# SPOTIFY LYRICS+ USERSCRIPT
 
 > Injects a powerful lyrics popup into the Spotify Web Player.  
 > Supports synced & unsynced lyrics from multiple providers, popup customization, font controls, timing offset, **live translation**, playback controls, and more.  
