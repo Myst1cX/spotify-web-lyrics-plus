@@ -13,7 +13,7 @@
 // ==/UserScript==
 
 // DO NOT INSTALL - Backup Instance for debugging and troubleshooting
-// AT THE MOMENT - Equal to Stable release (Last update: 3.7.25)
+// AT THE MOMENT - Equal to Stable release (Last update: 4.7.25)
 
 // TO DO:
 // Add Spotify and Deezer provider (synced and unsynced) - spotify synced should be prioritized over other synced sources. spotify unsynced is fallback before genius. api: https://github.com/akashrchandran/spotify-lyrics-api
