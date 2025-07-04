@@ -976,14 +976,14 @@ async function fetchGeniusLyrics(info) {
   }
 
   function cleanQuery(title) {
-    return title
-      .replace(/\b(remastered|explicit|deluxe|live|version|edit|remix|radio edit|radio)\b/gi, '')
-      .replace(/\b(radio|spotify|lyrics|calendar|release|singles|top|annotated|playlist)\b/gi, '')
-      .replace(/\b\d{4}\b/g, '')
-      .replace(/[-–—]+$/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
+  return title
+    .replace(/\b(remastered|explicit|deluxe|live|version|edit|remix|radio edit|radio|bonus track|bonus|special edition|expanded|edition)\b/gi, '')
+    .replace(/\b(radio|spotify|lyrics|calendar|release|singles|top|annotated|playlist)\b/gi, '')
+    .replace(/\b\d{4}\b/g, '')
+    .replace(/[-–—]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
   function normalize(str) {
     return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
@@ -1005,8 +1005,9 @@ async function fetchGeniusLyrics(info) {
   }
 
   function hasVersionKeywords(title) {
-    return /\b(remix|deluxe|version|edit|live|explicit|remastered)\b/i.test(title);
-  }
+  // Covers single words and phrases (bonus track, deluxe edition, etc.)
+  return /\b(remix|deluxe|version|edit|live|explicit|remastered|bonus track|bonus|edition|expanded|special edition)\b/i.test(title);
+}
 
   // True for translations, covers, etc (not original lyric pages!)
   const translationKeywords = [
