@@ -992,9 +992,8 @@ async function fetchGeniusLyrics(info) {
   function hasVersionKeywords(title) {
     if (!title) return false;
     const lower = title.toLowerCase();
-    if (/\b(русский перевод|deutsche übersetzung|türkçe çeviri|polskie tłumaczenie|magyar fordítás|traducción|tradução|çeviri|traduction|traduzione|перевод|übersetzung|çeviri|traducciones|fordítások|übersetzungen|translation|traduções|traductions|übersetzung|traducciones|перевод|çeviriler|traducciones-al-espanol|genius users)\b/.test(lower)) {
+    if (/\b(русский перевод|deutsche übersetzung|türkçe çeviri|polskie tłumaczenie|magyar fordítás|traducción|tradução|çeviri|traduction|traduzione|перевод|übersetzung)\b/.test(lower))
       return false;
-    }
     return /\b(remix|deluxe|version|edit|live|explicit|remastered)\b/i.test(title);
   }
 
@@ -1217,7 +1216,7 @@ async function fetchGeniusLyrics(info) {
       }
     }
   }
-}
+  // If no lyrics found after all queries, return an error object
   return { error: "Lyrics not found on Genius" };
 }
 function parseGeniusLyrics(raw) {
