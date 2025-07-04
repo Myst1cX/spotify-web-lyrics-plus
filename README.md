@@ -96,7 +96,7 @@
 > 10. Restart Firefox
 > 11. Open Spotify Web and login to your account
 > 12. Enable Desktop Mode > The interface should change to a wider window 
-NOTE: If it ever resets, repeat steps 7 and 8 
+> NOTE: If it ever resets, repeat steps 7 and 8 
 > 13. Play a song
 > 14. Click on the Lyrics+ button to open the interface popup and see the song lyrics.
 
