@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      6.1
+// @version      6.2
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -223,7 +223,7 @@ async function translateText(text, targetLang) {
         p.style.fontWeight = "700";
         p.style.filter = "none";
         p.style.opacity = "1";
-        p.style.transform = "scale(1.09)";
+        p.style.transform = "scale(1.05)";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
       } else {
         p.style.color = "white";
@@ -241,11 +241,15 @@ async function translateText(text, targetLang) {
   }, 50);
 }
 
-  function updateTabs(tabsContainer) {
-    [...tabsContainer.children].forEach(btn => {
+  function updateTabs(tabsContainer, noneSelected) {
+  [...tabsContainer.children].forEach(btn => {
+    if (noneSelected || !Providers.current) {
+      btn.style.backgroundColor = "#333";
+    } else {
       btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
-    });
-  }
+    }
+  });
+}
 
   // --- Play/Pause Icon SVGs ---
   const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -470,7 +474,7 @@ function labelMeansPlay(label) {
         if (!data || (!data.syncedLyrics && !data.plainLyrics)) {
           data = await fetchLRCLibLyrics(info, true); // try without album
         }
-        if (!data) return { error: "Lyrics not found on LRCLIB" };
+        if (!data) return { error: "No lyrics found for this track from LRCLIB" };
         return data;
       } catch (e) {
         return { error: e.message || "LRCLIB fetch failed" };
@@ -547,10 +551,10 @@ function labelMeansPlay(label) {
         const duration = Math.floor(info.duration / 1000);
         const songInfo = { artist, title, album, duration };
         const result = await fetchKPoeLyrics(songInfo);
-        if (!result) return { error: "Lyrics not found on KPoe" };
+        if (!result) return { error: "No lyrics found for this track from KPoe" };
         return parseKPoeFormat(result);
       } catch (e) {
-        return { error: e.message };
+        return { error: e.message || "KPoe fetch failed" };
       }
     },
     getUnsynced(body) {
@@ -569,19 +573,9 @@ function labelMeansPlay(label) {
   };
 
   // --- Musixmatch ---
-  // Musixmatch token prompt and storage
-  function getMusixmatchToken() {
-  let token = localStorage.getItem("lyricsPlusMusixmatchToken");
-  if (!token) {
-    token = prompt("Enter your Musixmatch user token:", "");
-    if (token) {
-      localStorage.setItem("lyricsPlusMusixmatchToken", token);
-    }
-  }
-  return token;
-}
 
-      function showMusixmatchTokenModal() {
+  // Musixmatch token prompt and storage
+  function showMusixmatchTokenModal() {
   // Remove any existing modal
   const old = document.getElementById("lyrics-plus-musixmatch-modal");
   if (old) old.remove();
@@ -725,13 +719,13 @@ function labelMeansPlay(label) {
   footer.className = "modal-footer";
 
   const btnSave = document.createElement("button");
-  btnSave.textContent = "Save";
-  btnSave.className = "lyrics-btn";
-  btnSave.onclick = () => {
-    localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
-    modal.remove();
-    // Optionally: reload lyrics if popup open and provider is Musixmatch
-  };
+btnSave.textContent = "Save";
+btnSave.className = "lyrics-btn";
+btnSave.onclick = () => {
+  localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
+  modal.remove();
+  // Optionally: reload lyrics if popup open and provider is Musixmatch
+};
 
   const btnCancel = document.createElement("button");
   btnCancel.textContent = "Cancel";
@@ -779,10 +773,9 @@ function parseMusixmatchSyncedLyrics(subtitleBody) {
 
 
 async function fetchMusixmatchLyrics(songInfo) {
-  const token = getMusixmatchToken(false);
+  const token = localStorage.getItem("lyricsPlusMusixmatchToken");
   if (!token) {
-    showMusixmatchTokenModal();
-    return { error: "No Musixmatch token set." };
+    return { error: "Double click on the Musixmatch provider to set up your token" };
   }
 
   // Step 1: Get track info
@@ -881,17 +874,20 @@ function musixmatchGetUnsynced(body) {
 const ProviderMusixmatch = {
   async findLyrics(info) {
     try {
-      console.log("ProviderMusixmatch.findLyrics called with info:", info);
       const data = await fetchMusixmatchLyrics(info);
-      if (!data || data.error) {
-        console.error("Lyrics fetch error:", data?.error);
-        return { error: data?.error || "Lyrics not found on Musixmatch" };
-      }
-      console.log("Lyrics fetch success:", data);
-      return data;
+      if (!data) {
+  return { error: "No lyrics found for this track from Musixmatch" };
+}
+if (data.error) {
+  // If the error is about missing token, show that instead
+  if (data.error.includes("Double click on the Musixmatch provider")) {
+    return { error: data.error };
+  }
+  return { error: "No lyrics found for this track from Musixmatch" };
+}
+return data;
     } catch (e) {
-      console.error("Exception in findLyrics:", e);
-      return { error: e.message };
+      return { error: e.message || "Musixmatch fetch failed" };
     }
   },
   getUnsynced: musixmatchGetUnsynced,
@@ -964,7 +960,7 @@ const ProviderMusixmatch = {
 //   async findLyrics(info) {
 //     try {
 //       const data = await fetchNeteaseLyrics(info);
-//       if (!data) return { error: "Lyrics not found on Netease" };
+//       if (!result) return { error: "No lyrics found for this track from Netease" };
 //       return data;
 //     } catch (e) {
 //       return { error: e.message || "Netease fetch failed" };
@@ -1377,10 +1373,10 @@ const ProviderGenius = {
   async findLyrics(info) {
     try {
       const data = await fetchGeniusLyrics(info);
-      if (!data || data.error) return { error: data.error || "Lyrics not found on Genius" };
+      if (!data || data.error) return { error: "No lyrics found for this track from Genius" };
       return data;
     } catch (e) {
-      return { error: e.message };
+      return { error: e.message || "Genius fetch failed" };
     }
   },
   getUnsynced(body) {
@@ -2310,7 +2306,7 @@ offsetWrapper.appendChild(inputStack);
     const provider = Providers.getCurrent();
     const result = await provider.findLyrics(info);
     if (result.error) {
-      lyricsContainer.textContent = `Error: ${result.error}`;
+      lyricsContainer.textContent = result.error;
       return;
     }
     let synced = provider.getSynced(result);
@@ -2367,9 +2363,14 @@ offsetWrapper.appendChild(inputStack);
       }
     }
   }
-  Providers.setCurrent("LRCLIB");
-  if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-  await updateLyricsContent(popup, info);
+  // Unselect any provider
+Providers.current = null;
+if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
+
+const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+if (lyricsContainer) lyricsContainer.textContent = "No lyrics were found for this track from any of the available providers";
+currentSyncedLyrics = null;
+currentLyricsContainer = lyricsContainer;
 }
 
   function startPollingForTrackChange(popup) {
