@@ -85,19 +85,20 @@
 > **Mobile?** YES!
 
 > 1. Download the latest version of Firefox (Original version! - Nightly or other releases might break your userscript manager).
-> 2. Install [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
-> 3. Install [Violentmonkey](https://addons.mozilla.org/es-ES/firefox/addon/violentmonkey/)
+> 2. Install [Violentmonkey](https://violentmonkey.github.io/)  
+> 3. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
 > 4. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
-> 5. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)  
-> 5. Install Chameleon extension
-> 6. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop).
-> 7. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option.
-> 8. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed".
-> 9. Restart Firefox
-> 10. Open Spotify Web and login to your account
-> 11. Enable Desktop Mode
-> 12. Play a song
-> 13. Click on the Lyrics+ button to open the interface popup and see the song lyrics.
+> 5. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
+> 6. Install Chameleon extension
+> 7. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop).
+> 8. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option.
+> 9. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed".
+> 10. Restart Firefox
+> 11. Open Spotify Web and login to your account
+> 12. Enable Desktop Mode > The interface should change to a wider window 
+NOTE: If it ever resets, repeat steps 7 and 8 
+> 13. Play a song
+> 14. Click on the Lyrics+ button to open the interface popup and see the song lyrics.
 
 * * * 
 
