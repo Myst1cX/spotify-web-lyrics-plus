@@ -49,7 +49,7 @@
 > 4. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
 > 5. Open [Spotify Web Player](https://open.spotify.com/) 
 > 6. Play a song
-> 7. Click on the Lyrics+ button to open the interface popup and see the song lyrics.
+> 7. Click on the Lyrics+ button to open the interface popup and see the song lyrics
 
 ## Usage
 
