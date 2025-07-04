@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Testing
+// @name         Spotify Lyrics+ testing
 // @namespace    http://tampermonkey.net/
-// @version      6.0
+// @version      6.1
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -189,40 +189,57 @@ async function translateText(text, targetLang) {
   }
 
   function highlightSyncedLyrics(lyrics, container) {
-    if (!lyrics || lyrics.length === 0) return;
-    const pElements = [...container.querySelectorAll("p")];
-    if (pElements.length === 0) return;
-    if (highlightTimer) {
-      clearInterval(highlightTimer);
-      highlightTimer = null;
-    }
-    highlightTimer = setInterval(() => {
-      const posEl = document.querySelector('[data-testid="playback-position"]');
-      if (!posEl) return;
-      const curPosMs = timeStringToMs(posEl.textContent);
-      const anticipatedMs = curPosMs + getAnticipationOffset();
-      let activeIndex = -1;
-      for (let i = 0; i < lyrics.length; i++) {
-        if (anticipatedMs >= (lyrics[i].time ?? lyrics[i].startTime)) activeIndex = i;
-        else break;
-      }
-      if (activeIndex === -1) {
-        pElements.forEach(p => {
-          p.style.color = "white";
-          p.style.fontWeight = "400";
-        });
-        return;
-      }
-      pElements.forEach((p, idx) => {
-        p.style.color = (idx === activeIndex) ? "#1db954" : "white";
-        p.style.fontWeight = (idx === activeIndex) ? "700" : "400";
-      });
-      const activeP = pElements[activeIndex];
-      if (activeP) {
-        activeP.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 50);
+  if (!lyrics || lyrics.length === 0) return;
+  const pElements = [...container.querySelectorAll("p")];
+  if (pElements.length === 0) return;
+  if (highlightTimer) {
+    clearInterval(highlightTimer);
+    highlightTimer = null;
   }
+  highlightTimer = setInterval(() => {
+    const posEl = document.querySelector('[data-testid="playback-position"]');
+    if (!posEl) return;
+    const curPosMs = timeStringToMs(posEl.textContent);
+    const anticipatedMs = curPosMs + getAnticipationOffset();
+    let activeIndex = -1;
+    for (let i = 0; i < lyrics.length; i++) {
+      if (anticipatedMs >= (lyrics[i].time ?? lyrics[i].startTime)) activeIndex = i;
+      else break;
+    }
+    if (activeIndex === -1) {
+      pElements.forEach(p => {
+        p.style.color = "white";
+        p.style.fontWeight = "400";
+        p.style.filter = "blur(0.7px)";
+        p.style.opacity = "0.8";
+        p.style.transform = "scale(1.0)";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+      });
+      return;
+    }
+    pElements.forEach((p, idx) => {
+      if (idx === activeIndex) {
+        p.style.color = "#1db954";
+        p.style.fontWeight = "700";
+        p.style.filter = "none";
+        p.style.opacity = "1";
+        p.style.transform = "scale(1.09)";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+      } else {
+        p.style.color = "white";
+        p.style.fontWeight = "400";
+        p.style.filter = "blur(0.7px)";
+        p.style.opacity = "0.8";
+        p.style.transform = "scale(1.0)";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+      }
+    });
+    const activeP = pElements[activeIndex];
+    if (activeP) {
+      activeP.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, 50);
+}
 
   function updateTabs(tabsContainer) {
     [...tabsContainer.children].forEach(btn => {
@@ -1008,6 +1025,7 @@ async function fetchGeniusLyrics(info) {
   // Covers single words and phrases (bonus track, deluxe edition, etc.)
   return /\b(remix|deluxe|version|edit|live|explicit|remastered|bonus track|bonus|edition|expanded|special edition)\b/i.test(title);
 }
+
   // True for translations, covers, etc (not original lyric pages!)
   const translationKeywords = [
     "translation", "übersetzung", "перевод", "çeviri", "traducción", "traduções", "traduction",
@@ -2303,6 +2321,7 @@ offsetWrapper.appendChild(inputStack);
         const p = document.createElement("p");
         p.textContent = text;
         p.style.margin = "0 0 6px 0";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         lyricsContainer.appendChild(p);
       });
       currentSyncedLyrics = synced;
@@ -2312,6 +2331,7 @@ offsetWrapper.appendChild(inputStack);
         const p = document.createElement("p");
         p.textContent = text;
         p.style.margin = "0 0 6px 0";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         lyricsContainer.appendChild(p);
       });
       currentSyncedLyrics = null;
