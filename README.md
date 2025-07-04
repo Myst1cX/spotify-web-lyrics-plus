@@ -48,6 +48,8 @@
 > 4. Optional - for stock lyrics button: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
 > 4. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
 > 5. Open [Spotify Web Player](https://open.spotify.com/) 
+> 6. Play a song
+> 7. Click on the Lyrics+ button to open the interface popup and see the song lyrics.
 
 ## Usage
 
@@ -89,16 +91,17 @@
 > 2. Install [Violentmonkey](https://violentmonkey.github.io/)  
 > 3. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
 > 4. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
-> 5. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
-> 6. Install Chameleon extension
-> 7. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop).
-> 8. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option.
-> 9. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed".
-> 10. Restart Firefox
-> 11. Open Spotify Web and login to your account
-> 12. The interface should change to a wider window > If it ever resets, repeat steps 7 and 8 > Keep Desktop Mode Disabled 
-> 13. Play a song
-> 14. Click on the Lyrics+ button to open the interface popup and see the song lyrics.
+> 5. Optional - for stock lyrics button: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
+> 6. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
+> 7. Install Chameleon extension
+> 8. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)
+> 9. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option
+> 10. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"
+> 11. Restart Firefox
+> 12. Open Spotify Web and login to your account
+> 13. The interface should change to a wider window > If it ever resets, repeat steps 7 and 8 > Keep Desktop Mode Disabled 
+> 14. Play a song
+> 15. Click on the Lyrics+ button to open the interface popup and see the song lyrics
 
 * * * 
 
