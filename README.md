@@ -43,10 +43,12 @@
 ## Installation
 
 > 1. Install [Violentmonkey](https://violentmonkey.github.io/)  
-> 2. [Click here to install the userscript.](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)  
-> 3. Open [Spotify Web Player](https://open.spotify.com/).  
-> 4. Play a song.
-> 5. Click on the **Lyrics+** button next to playback controls.
+> 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
+> 3. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
+> 4. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
+> 5. Open [Spotify Web Player](https://open.spotify.com/).  
+> 6. Play a song.
+> 7. Click on the **Lyrics+** button next to playback controls.
 
 ## Usage
 
@@ -94,9 +96,9 @@
 > 7. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option.
 > 8. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed".
 > 9. Restart Firefox
-> 10. Enable Desktop Mode
-> 11. Open Spotify Web and login to your account. 
-> 12. Play a song.
+> 10. Open Spotify Web and login to your account
+> 11. Enable Desktop Mode
+> 12. Play a song
 > 13. Click on the Lyrics+ button to open the interface popup and see the song lyrics.
 
 * * * 
