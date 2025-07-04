@@ -23,7 +23,6 @@
 // For a song where neither of the providers has lyrics, instead of returning "Track not found on LRCLIB/Kpoe/Genius", return something like "Track not found on any of the providers." and maybe in that case also make the current provider gray, instead of green (to show none are currently pulling lyrics)
 // Focus lyrics (maybe the main lyric line can be slightly bigger than rest of lyric lines.
 // Lyric lines that are currently not main line (previous and next) could be slightly blurred.
-// Lyrics should be centered
 // Converting the userscript into a browser extension (maybe eventually) > to possibilitate having a floating popup ui with spotify lyrics that works outside open.spotify.com
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 // Optimize drag and resize to work smoothly on mobile browser.
@@ -1725,6 +1724,7 @@ Object.assign(translationToggleBtn.style, {
       lineHeight: "1.5",
       backgroundColor: "#121212",
       userSelect: "text",
+      textAlign: "center",
     });
     lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
 
