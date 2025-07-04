@@ -87,8 +87,8 @@
 > 1. Download the latest version of Firefox (Original version! - Nightly or other releases might break your userscript manager).
 > 2. Install [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
 > 3. Install [Violentmonkey](https://addons.mozilla.org/es-ES/firefox/addon/violentmonkey/)
-> 4. [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
-> 5. [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)  
+> 4. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
+> 5. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)  
 > 5. Install Chameleon extension
 > 6. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop).
 > 7. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option.
