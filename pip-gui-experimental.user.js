@@ -1418,7 +1418,8 @@ const Providers = {
   },
   current: "LRCLIB",
   getCurrent() { return this.map[this.current]; },
-  setCurrent(name) { if (this.map[name]) this.current = name; }
+  setCurrent(name) { if (this.map[name]) this.current = name; },
+  setNone() { this.current = null; }
 };
 
   // ------------------------
@@ -2322,6 +2323,8 @@ offsetWrapper.appendChild(inputStack);
     currentSyncedLyrics = null;
     lyricsContainer.textContent = "Loading lyrics...";
     const provider = Providers.getCurrent();
+    // If no provider is set, skip API calls (handled by autodetectProviderAndLoad)
+    if (!provider) return;
     const result = await provider.findLyrics(info);
     if (result.error) {
       lyricsContainer.textContent = `Error: ${result.error}`;
@@ -2381,9 +2384,13 @@ offsetWrapper.appendChild(inputStack);
       }
     }
   }
-  Providers.setCurrent("LRCLIB");
+  // No provider found lyrics - set to none and show unified message
+  Providers.setNone();
   if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-  await updateLyricsContent(popup, info);
+  const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+  if (lyricsContainer) {
+    lyricsContainer.textContent = "Sorry, no lyrics were found for this track from any of the available providers.";
+  }
 }
 
   function startPollingForTrackChange(popup) {
