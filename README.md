@@ -8,31 +8,31 @@
 
 > **MULTI-PROVIDER LYRICS (LRCLIB, KPoe, Musixmatch, Genius)**  
 > Get lyrics from LRCLIB, KPoe (Apple Music source), Musixmatch (scroll down for user token retrieval guide) or Genius.
-
+>
 > **POPUP WINDOW**  
 > Move and resize anywhere on your screen.  
 > Remembers position, size, font, provider, and translation settings.  
 > Reset button to restore default popup position/size.
-
+>
 > **LIVE TRANSLATION**  
 > 🌐 Instantly translate any lyrics (line-by-line, 70+ languages).  
 > Show/hide translation controls. Remove or re-translate in one click.
-
+>
 > **LYRICS TIMING OFFSET**  
 > ⚙️ Fine-tune lyric timing in milliseconds for perfect sync.
-
+>
 > **PLAYBACK CONTROLS**  
 > 🎛️ Play, pause, next, previous track directly from the popup.
-
+>
 > **PROVIDER TABS**  
 > Instantly switch between lyric sources.
-
+>
 > **FONT SIZE PICKER**  
 > Choose your favorite lyrics text size.
-
+>
 > **AUTO-DETECT**  
 > Script automatically picks the best provider for each track.
-
+>
 > **STATE SAVING**  
 > Remembers all your popup settings and preferences.
 
