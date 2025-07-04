@@ -959,6 +959,8 @@ const ProviderMusixmatch = {
 //
   // --- Genius ---
 async function fetchGeniusLyrics(info) {
+  console.log("[Genius] Starting fetchGeniusLyrics (refactored - original URLs only)");
+
   const titles = new Set([
     info.title,
     Utils.removeExtraInfo(info.title),
@@ -980,6 +982,50 @@ function cleanQuery(title) {
     .replace(/\b\d{4}\b/g, '') // remove 4-digit years
     .replace(/\s+/g, ' ')      // collapse whitespace
     .trim();
+}
+
+function normalize(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
+}
+
+// Translation detection keywords
+const translationKeywords = [
+  "translation", "übersetzung", "перевод", "çeviri", "çeviriler", "çevri", "çeviriler", "traducción", "traducciónes",
+  "traducciónes", "traducción", "traduções", "traduction", "traductions", "traduzione", "traducciones", "traducciones-al-espanol",
+  "fordítás", "fordítások", "tumaczenie", "tłumaczenie", "polskie tłumaczenie", "magyar fordítás", "turkce çeviri",
+  "russian translations", "deutsche übersetzung", "genius users", "fan", "fans", "official translation",
+  "genius russian translations", "genius deutsche übersetzungen", "genius türkçe çeviriler",
+  "polskie tłumaczenia genius", "genius magyar fordítások", "genius traducciones al espanol", "genius traduzioni italiane",
+  "genius traductions françaises", "genius traduzioni italiane", "genius turkce ceviriler", "genius traduzioni italiane",
+];
+
+function containsTranslationKeyword(s) {
+  if (!s) return false;
+  const lower = s.toLowerCase();
+  return translationKeywords.some(k => lower.includes(k));
+}
+
+function isTranslationPage(result) {
+  return (
+    containsTranslationKeyword(result.primary_artist?.name) ||
+    containsTranslationKeyword(result.title) ||
+    containsTranslationKeyword(result.url)
+  );
+}
+
+function isSimpleOriginalUrl(url) {
+  try {
+    const path = new URL(url).pathname.toLowerCase();
+    if (/^\/[a-z0-9-]+-lyrics$/.test(path)) return true;
+    const parts = path.split('/').pop().split('-');
+    if (parts.length >= 3 && parts.slice(-1)[0] === "lyrics") {
+      if (parts.some(part => translationKeywords.some(k => part.includes(k)))) return false;
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
   const includedNthIndices = generateNthIndices();
@@ -1009,7 +1055,7 @@ function cleanQuery(title) {
 
       const searchJson = JSON.parse(searchRes.responseText);
       const hits = searchJson?.response?.sections?.flatMap(s => s.hits) || [];
-      const songHits = hits.filter(h => h.type === "song");
+      let songHits = hits.filter(h => h.type === "song");
 
 console.log("[Genius] Search candidates:");
 for (const hit of songHits) {
@@ -1017,9 +1063,38 @@ for (const hit of songHits) {
   console.log(`- Title: ${result.title}, Artist: ${result.primary_artist?.name}, URL: ${result.url}`);
 }
 
-function normalize(str) {
-  return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
+// === REFACTORED: Filter to only include original (non-translation) URLs ===
+const originalSongHits = songHits.filter(hit => {
+  const result = hit.result;
+  const isTranslation = isTranslationPage(result);
+  const isSimpleOriginal = isSimpleOriginalUrl(result.url);
+  
+  console.log(`[Genius] Evaluating candidate: "${result.title}" by "${result.primary_artist?.name}"`);
+  console.log(`  - URL: ${result.url}`);
+  console.log(`  - Is translation page: ${isTranslation}`);
+  console.log(`  - Is simple original URL: ${isSimpleOriginal}`);
+  
+  if (isTranslation) {
+    console.log(`  - FILTERED OUT: Translation page detected`);
+    return false;
+  }
+  
+  if (!isSimpleOriginal) {
+    console.log(`  - FILTERED OUT: Not a simple original URL`);
+    return false;
+  }
+  
+  console.log(`  - ACCEPTED: Valid original URL`);
+  return true;
+});
+
+if (originalSongHits.length === 0) {
+  console.log(`[Genius] No valid original URLs found after filtering, trying next title.`);
+  continue; // Try next title
 }
+
+console.log(`[Genius] Found ${originalSongHits.length} valid original song candidates after filtering`);
+songHits = originalSongHits; // Use only the filtered results
 
 const targetArtist = normalize(info.artist);
 const targetTitle = normalize(Utils.removeExtraInfo(info.title));
@@ -1043,6 +1118,9 @@ for (const hit of songHits) {
   // Penalize poor matches
   if (!resultTitle.includes(targetTitle)) score -= 2;
   if (!resultArtist.includes(targetArtist)) score -= 2;
+
+  // Bonus for confirmed original URL
+  score += 5;
 
   if (score > bestScore) {
     bestScore = score;
@@ -1194,7 +1272,7 @@ console.log(`[Genius] Best match song URL: ${song.url}`);
     }
   }
 
-  return { error: "Lyrics not found on Genius" };
+  return { error: "No original lyrics found on Genius - only translation/cover/fan pages available" };
 }
 
 function parseGeniusLyrics(raw) {
@@ -1213,7 +1291,7 @@ const ProviderGenius = {
   async findLyrics(info) {
     try {
       const data = await fetchGeniusLyrics(info);
-      if (!data || data.error) return { error: data.error || "Lyrics not found on Genius" };
+      if (!data || data.error) return { error: data.error || "No original lyrics found on Genius - only translation/cover/fan pages available" };
       return data;
     } catch (e) {
       return { error: e.message };
