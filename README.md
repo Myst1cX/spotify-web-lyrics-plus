@@ -1,4 +1,4 @@
-# SPOTIFY LYRICS+ 
+# SPOTIFY WEB LYRICS+ 
 
 > Injects a powerful lyrics popup into the Spotify Web Player.  
 > Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, **playback controls**, and more.  
