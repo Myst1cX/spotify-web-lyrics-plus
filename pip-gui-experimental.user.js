@@ -16,6 +16,7 @@
 // AT THE MOMENT - Equal to Stable release (Last update: 5.7.25)
 
 // TO DO:
+// Click-to-seek on lyric lines (should also work on Android browser)
 // Add Spotify and Deezer provider (synced and unsynced) - spotify synced should be prioritized over other synced sources. spotify unsynced is fallback before genius. api: https://github.com/akashrchandran/spotify-lyrics-api
 // spotify.js with api link > https://github.com/akashrchandran/syrics-web/blob/master/static/js/spotify.js
 // deezer.js with api link > https://github.com/bertigert/Deezer-Lyrics-Sync/blob/main/lyrics_sync.user.js
