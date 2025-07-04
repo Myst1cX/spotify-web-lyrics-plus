@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      5.9
+// @version      6.0
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Line by line lyric translation.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -959,241 +959,387 @@ const ProviderMusixmatch = {
 //
   // --- Genius ---
 async function fetchGeniusLyrics(info) {
+  console.log("[Genius] Starting fetchGeniusLyrics");
+
   const titles = new Set([
     info.title,
     Utils.removeExtraInfo(info.title),
     Utils.removeSongFeat(info.title),
     Utils.removeSongFeat(Utils.removeExtraInfo(info.title)),
   ]);
+  console.log("[Genius] Titles to try:", Array.from(titles));
 
-  // Helper to generate nth-of-type indexes (1, 5, 9, 13, 17, ...)
   function generateNthIndices(start = 1, step = 4, max = 25) {
     const arr = [];
     for (let i = start; i <= max; i += step) arr.push(i);
     return arr;
   }
 
-  // Helper to clean query titles (remove remastered/live/years/etc.)
-function cleanQuery(title) {
-  return title
-    .replace(/\b(remastered|explicit|deluxe|live|version|edit)\b/gi, '')
-    .replace(/\b\d{4}\b/g, '') // remove 4-digit years
-    .replace(/\s+/g, ' ')      // collapse whitespace
-    .trim();
-}
+  function cleanQuery(title) {
+    return title
+      .replace(/\b(remastered|explicit|deluxe|live|version|edit|remix|radio edit|radio)\b/gi, '')
+      .replace(/\b(radio|spotify|lyrics|calendar|release|singles|top|annotated|playlist)\b/gi, '')
+      .replace(/\b\d{4}\b/g, '')
+      .replace(/[-–—]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function normalize(str) {
+    return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
+  }
+
+  function normalizeArtists(artist) {
+    return artist
+      .toLowerCase()
+      .split(/,|&|feat|ft|and|\band\b/gi)
+      .map(s => s.trim())
+      .filter(Boolean)
+      .map(normalize);
+  }
+
+  function extractFeaturedArtistsFromTitle(title) {
+    const matches = title.match(/\((?:feat\.?|ft\.?|with)\s+([^)]+)\)/i);
+    if (!matches) return [];
+    return matches[1].split(/,|&|and/).map(s => normalize(s.trim()));
+  }
+
+  function hasVersionKeywords(title) {
+    return /\b(remix|deluxe|version|edit|live|explicit|remastered)\b/i.test(title);
+  }
+
+  // True for translations, covers, etc (not original lyric pages!)
+  const translationKeywords = [
+    "translation", "übersetzung", "перевод", "çeviri", "traducción", "traduções", "traduction",
+    "traductions", "traduzione", "traducciones-al-espanol", "fordítás", "fordítások", "tumaczenie",
+    "tłumaczenie", "polskie tłumaczenie", "magyar fordítás", "turkce çeviri", "russian translations",
+    "deutsche übersetzung", "genius users", "fan", "fans", "official translation", "genius russian translations",
+    "genius deutsche übersetzungen", "genius türkçe çeviriler", "polskie tłumaczenia genius",
+    "genius magyar fordítások", "genius traducciones al espanol", "genius traduzioni italiane",
+    "genius traductions françaises", "genius turkce ceviriler",
+  ];
+  function containsTranslationKeyword(s) {
+    if (!s) return false;
+    const lower = s.toLowerCase();
+    return translationKeywords.some(k => lower.includes(k));
+  }
+  function isTranslationPage(result) {
+    return (
+      containsTranslationKeyword(result.primary_artist?.name) ||
+      containsTranslationKeyword(result.title) ||
+      containsTranslationKeyword(result.url)
+    );
+  }
+  function isSimpleOriginalUrl(url) {
+    try {
+      const path = new URL(url).pathname.toLowerCase();
+      if (/^\/[a-z0-9-]+-lyrics$/.test(path)) return true;
+      const parts = path.split('/').pop().split('-');
+      if (parts.length >= 3 && parts.slice(-1)[0] === "lyrics") {
+        if (parts.some(part => translationKeywords.some(k => part.includes(k)))) return false;
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
 
   const includedNthIndices = generateNthIndices();
+  console.log("[Genius] Included nth-of-type indices:", includedNthIndices);
+
+  // Try up to 5 pages of results for each title variant
+  const maxPages = 5;
 
   for (const title of titles) {
     const cleanTitle = cleanQuery(title);
-    const query = encodeURIComponent(`${info.artist} ${cleanTitle}`);
-    const searchUrl = `https://genius.com/api/search/multi?per_page=5&q=${query}`;
 
-    try {
-     console.log(`[Genius] Final search query: ${info.artist} - ${cleanTitle}`);
+    for (let page = 1; page <= maxPages; page++) {
+      const query = encodeURIComponent(`${info.artist} ${cleanTitle}`);
+      const searchUrl = `https://genius.com/api/search/multi?per_page=5&page=${page}&q=${query}`;
 
-      const searchRes = await new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
-          method: "GET",
-          url: searchUrl,
-          headers: {
-            Accept: "application/json",
-            "User-Agent": navigator.userAgent,
-          },
-          onload: resolve,
-          onerror: reject,
-          ontimeout: reject,
-          timeout: 5000,
+      console.log(`[Genius] Querying: ${info.artist} - ${cleanTitle} (page ${page})`);
+      console.log(`[Genius] Search URL: ${searchUrl}`);
+
+      try {
+        const searchRes = await new Promise((resolve, reject) => {
+          GM_xmlhttpRequest({
+            method: "GET",
+            url: searchUrl,
+            headers: {
+              Accept: "application/json",
+              "User-Agent": navigator.userAgent,
+            },
+            onload: resolve,
+            onerror: reject,
+            ontimeout: reject,
+            timeout: 5000,
+          });
         });
-      });
 
-      const searchJson = JSON.parse(searchRes.responseText);
-      const hits = searchJson?.response?.sections?.flatMap(s => s.hits) || [];
-      const songHits = hits.filter(h => h.type === "song");
+        console.log("[Genius] Search response received");
+        const searchJson = JSON.parse(searchRes.responseText);
+        const hits = searchJson?.response?.sections?.flatMap(s => s.hits) || [];
+        const songHits = hits.filter(h => h.type === "song");
+        console.log(`[Genius] Found ${songHits.length} song hits`);
 
-console.log("[Genius] Search candidates:");
-for (const hit of songHits) {
-  const result = hit.result;
-  console.log(`- Title: ${result.title}, Artist: ${result.primary_artist?.name}, URL: ${result.url}`);
-}
+        for (const hit of songHits) {
+          const result = hit.result;
+          console.log(`- Candidate: Title="${result.title}", Artist="${result.primary_artist?.name}", URL=${result.url}`);
+        }
 
-function normalize(str) {
-  return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
-}
+        const targetArtists = new Set(normalizeArtists(info.artist));
+        const targetTitleNorm = normalize(Utils.removeExtraInfo(info.title));
+        const targetHasVersion = hasVersionKeywords(info.title);
+        console.log("[Genius] Normalized target artist tokens:", Array.from(targetArtists));
+        console.log("[Genius] Normalized target title:", targetTitleNorm);
+        console.log("[Genius] Target title has version keywords:", targetHasVersion);
 
-const targetArtist = normalize(info.artist);
-const targetTitle = normalize(Utils.removeExtraInfo(info.title));
+        let bestScore = -Infinity;
+        let fallbackScore = -Infinity;
+        let song = null;
+        let fallbackSong = null;
 
-let bestScore = -Infinity;
-let song = null;
+        for (const hit of songHits) {
+          const result = hit.result;
+          // Only consider original (non-translation) Genius lyrics pages
+          if (isTranslationPage(result) || !isSimpleOriginalUrl(result.url)) continue;
 
-for (const hit of songHits) {
-  const result = hit.result;
-  const resultArtist = normalize(result.primary_artist?.name || '');
-  const resultTitle = normalize(Utils.removeExtraInfo(result.title || ''));
+          const primary = normalizeArtists(result.primary_artist?.name || '');
+          const featured = extractFeaturedArtistsFromTitle(result.title || '');
+          const resultArtists = new Set([...primary, ...featured]);
+          const resultTitleNorm = normalize(Utils.removeExtraInfo(result.title || ''));
+          const resultHasVersion = hasVersionKeywords(result.title || '');
 
-  let score = 0;
+          console.log(`[Genius] → "${result.title}" primary artists:`, primary);
+          console.log(`[Genius] → "${result.title}" featured from title:`, featured);
 
-  if (resultArtist === targetArtist) score += 5;
-  if (resultTitle === targetTitle) score += 5;
+          // Artist overlap count
+          let artistOverlapCount = 0;
+          for (const a of targetArtists) {
+            if (resultArtists.has(a)) artistOverlapCount++;
+          }
+          const totalArtists = targetArtists.size;
+          const missingArtists = totalArtists - artistOverlapCount;
 
-  if (resultArtist.includes(targetArtist) || targetArtist.includes(resultArtist)) score += 2;
-  if (resultTitle.includes(targetTitle) || targetTitle.includes(resultTitle)) score += 2;
+          let artistScore = 0;
+          if (artistOverlapCount === 0) {
+            artistScore = 0; // no artist overlap, reject later
+          } else if (artistOverlapCount === totalArtists) {
+            artistScore = 8; // perfect match
+          } else if (artistOverlapCount >= totalArtists - 1) {
+            artistScore = 7; // almost perfect
+          } else if (artistOverlapCount >= 1) {
+            // Partial match, soften penalty for missing artists due to incomplete metadata
+            artistScore = 5 + artistOverlapCount; // partial boost
+            artistScore -= missingArtists * 0.5;
+          }
 
-  // Penalize poor matches
-  if (!resultTitle.includes(targetTitle)) score -= 2;
-  if (!resultArtist.includes(targetArtist)) score -= 2;
+          for (const fa of featured) {
+            if (targetArtists.has(fa) && !resultArtists.has(fa)) {
+              artistScore += 1;
+              console.log(`[Genius] Boosting artistScore: featured artist "${fa}" recovered from title`);
+            }
+          }
 
-  if (score > bestScore) {
-    bestScore = score;
-    song = result;
-  }
-}
+          if (artistScore < 3) {
+            console.log(`[Genius] Candidate rejected due to low artist score (${artistScore})`);
+            continue;
+          }
 
-if (!song?.url) {
-  console.log("[Genius] No suitable match found, trying next title");
-  continue;
-}
-console.log(`[Genius] Best match song URL: ${song.url}`);
+          // Title scoring
+          let titleScore = 0;
+          if (resultTitleNorm === targetTitleNorm) {
+            titleScore = 6;
+          } else if (resultTitleNorm.includes(targetTitleNorm) || targetTitleNorm.includes(resultTitleNorm)) {
+            titleScore = 4;
+          } else {
+            titleScore = 1;
+          }
 
+          // Version keywords adjustment
+          if (targetHasVersion) {
+            if (resultHasVersion) titleScore += 2;
+            else titleScore -= 2;
+          } else {
+            if (!resultHasVersion) titleScore += 2;
+            else titleScore -= 2;
+          }
 
-      // Fetch song page HTML
-      const htmlRes = await new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
-          method: "GET",
-          url: song.url,
-          headers: {
-            Accept: "text/html",
-            "User-Agent": navigator.userAgent,
-          },
-          onload: resolve,
-          onerror: reject,
-          ontimeout: reject,
-          timeout: 5000,
+          let score = artistScore + titleScore;
+          let penaltyLog = [];
+
+          if (!resultTitleNorm.includes(targetTitleNorm)) {
+            score -= 3;
+            penaltyLog.push("-3 title not fully overlapping");
+          }
+
+          if (artistOverlapCount === 0) {
+            score -= 5;
+            penaltyLog.push("-5 no artist overlap");
+          }
+
+          console.log(`[Genius] Candidate "${result.title}":`);
+          console.log(`  Artist Score: ${artistScore} (matched ${artistOverlapCount}/${totalArtists},${featured.map(f => targetArtists.has(f) && !resultArtists.has(f) ? ` +1 boost: ${f}` : '').filter(Boolean).join('')})`);
+          console.log(`  Title Score: ${titleScore} (normed="${resultTitleNorm}" vs "${targetTitleNorm}", hasVer=${resultHasVersion})`);
+          if (penaltyLog.length) {
+            console.log(`  Penalties: ${penaltyLog.join(', ')}`);
+          }
+          console.log(`  Final Score: ${score}`);
+
+          if (score > bestScore && (!targetHasVersion || resultHasVersion)) {
+            bestScore = score;
+            song = result;
+            console.log(`[Genius] New best match: "${result.title}" with score ${bestScore}`);
+          } else if (
+            score > fallbackScore &&
+            (!resultHasVersion || !targetHasVersion) &&
+            score >= 6
+          ) {
+            fallbackScore = score;
+            fallbackSong = result;
+            console.log(`[Genius] New fallback candidate: "${result.title}" with score ${fallbackScore}`);
+          }
+        }
+
+        if (!song && fallbackSong) {
+          song = fallbackSong;
+          bestScore = fallbackScore;
+          console.log(`[Genius] Using fallback song: "${song.title}" with score ${bestScore}`);
+        }
+
+        if (bestScore < 6 || !song?.url) {
+          console.log(`[Genius] Best match score too low (${bestScore}) or no URL found, skipping.`);
+          continue;
+        }
+
+        console.log(`[Genius] Selected song URL: ${song.url}`);
+
+        const htmlRes = await new Promise((resolve, reject) => {
+          GM_xmlhttpRequest({
+            method: "GET",
+            url: song.url,
+            headers: {
+              Accept: "text/html",
+              "User-Agent": navigator.userAgent,
+            },
+            onload: resolve,
+            onerror: reject,
+            ontimeout: reject,
+            timeout: 5000,
+          });
         });
-      });
 
-      const doc = new DOMParser().parseFromString(htmlRes.responseText, "text/html");
+        console.log("[Genius] Song page HTML received");
+        const doc = new DOMParser().parseFromString(htmlRes.responseText, "text/html");
 
-      // Find root with class containing 'Lyrics__Root'
-      const lyricsRoot = [...doc.querySelectorAll('div')].find(el =>
-        [...el.classList].some(cls => cls.includes('Lyrics__Root'))
-      );
+        const lyricsRoot = [...doc.querySelectorAll('div')].find(el =>
+          [...el.classList].some(cls => cls.includes('Lyrics__Root'))
+        );
 
-      if (!lyricsRoot) {
-        console.warn("[Genius] No .Lyrics__Root found");
-        continue;
-      }
-      console.log("[Genius] .Lyrics__Root found");
-
-      // Find all children with class containing 'Lyrics__Container'
-      const containers = [...lyricsRoot.querySelectorAll('div')].filter(el =>
-        [...el.classList].some(cls => cls.includes('Lyrics__Container'))
-      );
-      console.log(`[Genius] Found ${containers.length} .Lyrics__Container div(s)`);
-
-      if (containers.length === 0) {
-        console.warn("[Genius] No .Lyrics__Container found inside .Lyrics__Root");
-        continue;
-      }
-
-      // Select containers based on their actual nth-of-type (e.g., 1,5,9,13,...)
-      const relevantContainersSet = new Set();
-
-      containers.forEach(container => {
-        const parent = container.parentElement;
-        const siblings = [...parent.children];
-        const nthIndex = siblings.indexOf(container) + 1; // nth-of-type is 1-based
-
-        if (includedNthIndices.includes(nthIndex)) {
-          relevantContainersSet.add(container);
-          console.log(`[Genius] Including container with nth-of-type ${nthIndex}`);
+        if (!lyricsRoot) {
+          console.warn("[Genius] No .Lyrics__Root found");
+          continue;
         }
-      });
+        console.log("[Genius] .Lyrics__Root found");
 
-      // Add other relevant containers filtering junk, excluding duplicates
-      containers.forEach((container, idx) => {
-        if (relevantContainersSet.has(container)) return; // already included
+        const containers = [...lyricsRoot.querySelectorAll('div')].filter(el =>
+          [...el.classList].some(cls => cls.includes('Lyrics__Container'))
+        );
+        console.log(`[Genius] Found ${containers.length} .Lyrics__Container div(s)`);
 
-        const classList = [...container.classList].map(c => c.toLowerCase());
-        const text = container.textContent.trim().toLowerCase();
-
-        if (classList.some(cls =>
-          cls.includes('header') ||
-          cls.includes('readmore') ||
-          cls.includes('annotation') ||
-          cls.includes('credit') ||
-          cls.includes('footer')
-        )) {
-          return;
+        if (containers.length === 0) {
+          console.warn("[Genius] No .Lyrics__Container found inside .Lyrics__Root");
+          continue;
         }
 
-        if (!text || text.length < 10) {
-          return;
-        }
+        const relevantContainersSet = new Set();
 
-        if (text.includes('read more') || text.includes('lyrics') || text.includes('©')) {
-          return;
-        }
+        containers.forEach(container => {
+          const parent = container.parentElement;
+          const siblings = [...parent.children];
+          const nthIndex = siblings.indexOf(container) + 1;
 
-        relevantContainersSet.add(container);
-      });
+          if (includedNthIndices.includes(nthIndex)) {
+            relevantContainersSet.add(container);
+            console.log(`[Genius] Including container with nth-of-type ${nthIndex}`);
+          }
+        });
 
-      const relevantContainers = Array.from(relevantContainersSet);
-      console.log(`[Genius] Using ${relevantContainers.length} relevant container(s)`);
+        containers.forEach(container => {
+          if (relevantContainersSet.has(container)) return;
 
-      // Recursive text extractor preserving line breaks
-      let lyrics = '';
-      function walk(node) {
-        for (const child of node.childNodes) {
-          if (child.nodeType === Node.ELEMENT_NODE) {
-            const classList = [...child.classList].map(c => c.toLowerCase());
-            if (classList.some(cls =>
+          const classList = [...container.classList].map(c => c.toLowerCase());
+          const text = container.textContent.trim().toLowerCase();
+
+          if (
+            classList.some(cls =>
               cls.includes('header') ||
               cls.includes('readmore') ||
               cls.includes('annotation') ||
               cls.includes('credit') ||
               cls.includes('footer')
-            )) {
-              continue;
-            }
+            ) ||
+            !text || text.length < 10 ||
+            text.includes('read more') || text.includes('lyrics') || text.includes('©')
+          ) {
+            return;
           }
 
-          if (child.nodeType === Node.TEXT_NODE) {
-            lyrics += child.textContent;
-          } else if (child.nodeName === "BR") {
-            lyrics += "\n";
-          } else if (child.nodeType === Node.ELEMENT_NODE) {
-            walk(child);
-            if (/div|p|section/i.test(child.nodeName)) {
+          relevantContainersSet.add(container);
+        });
+
+        const relevantContainers = Array.from(relevantContainersSet);
+        console.log(`[Genius] Using ${relevantContainers.length} relevant container(s)`);
+
+        let lyrics = '';
+        function walk(node) {
+          for (const child of node.childNodes) {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+              const classList = [...child.classList].map(c => c.toLowerCase());
+              if (classList.some(cls =>
+                cls.includes('header') ||
+                cls.includes('readmore') ||
+                cls.includes('annotation') ||
+                cls.includes('credit') ||
+                cls.includes('footer')
+              )) continue;
+            }
+
+            if (child.nodeType === Node.TEXT_NODE) {
+              lyrics += child.textContent;
+            } else if (child.nodeName === "BR") {
               lyrics += "\n";
+            } else if (child.nodeType === Node.ELEMENT_NODE) {
+              walk(child);
+              if (/div|p|section/i.test(child.nodeName)) lyrics += "\n";
             }
           }
         }
-      }
 
-      // Extract lyrics from all relevant containers
-      relevantContainers.forEach(container => {
-        walk(container);
-        lyrics += "\n";
-      });
+        relevantContainers.forEach(container => {
+          walk(container);
+          lyrics += "\n";
+        });
 
-      lyrics = lyrics.replace(/\n{2,}/g, "\n").trim();
+        lyrics = lyrics.replace(/\n{2,}/g, "\n").trim();
 
-      if (!lyrics) {
-        console.warn("[Genius] Extracted lyrics are empty");
+        if (!lyrics) {
+          console.warn("[Genius] Extracted lyrics are empty");
+          continue;
+        }
+
+        console.log("[Genius] Lyrics successfully extracted");
+        return { plainLyrics: lyrics };
+
+      } catch (e) {
+        console.error("[Genius] Fetch or parse error:", e);
         continue;
       }
-
-      console.log("[Genius] Lyrics successfully extracted");
-      return { plainLyrics: lyrics };
-
-    } catch (e) {
-      console.error("[Genius] Fetch or parse error:", e);
-      continue;
     }
   }
 
+  console.log("[Genius] Lyrics not found after trying all titles and pages");
   return { error: "Lyrics not found on Genius" };
 }
 
