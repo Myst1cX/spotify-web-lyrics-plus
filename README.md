@@ -1,7 +1,7 @@
 # SPOTIFY LYRICS+ 
 
 > Injects a powerful lyrics popup into the Spotify Web Player.  
-> Supports synced & unsynced lyrics from multiple providers, popup customization, font controls, timing offset, **live translation**, playback controls, and more.  
+> Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, playback controls, and more.  
 > **Recommended userscript manager:** [Violentmonkey](https://violentmonkey.github.io/)
 
 ## Features
