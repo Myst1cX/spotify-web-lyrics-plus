@@ -106,7 +106,7 @@
 * * * 
 
 > 16. Recommended: While on the Spotify web instance in Firefox, click on the hamburger menu in the top right corner of the browser and press "Add to home screen" - this transforms the website into a PWA (Priority Web Application) and gives you an easy access shortcut to the Spotify player. 
-> 17. FINAL TIP: you can begin playing a song in the web interface and then open the Spotify app - it will let you play music there and control playback without any limitations.
+> 17. FINAL TIP: You can begin playing a song in the web interface and then open the Spotify app - it will let you play music there and control playback without any limitations.
 
 * * *
 
