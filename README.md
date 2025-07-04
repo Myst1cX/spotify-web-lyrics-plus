@@ -111,7 +111,7 @@
 * * *
 
 > 18. SIDE NOTE: PWA's essentially allow running an entire app in your web browser.
-> A good way of finding progressive web apps is through `store.app`.
+> A good way of finding progressive web apps is through `store.app`
 > The degree to which you can block ads varies depending on the app, but it is often times better than using the actual app - a PWA also uses less storage than installing a native app.
 
 * * *
