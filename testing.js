@@ -1218,7 +1218,8 @@ async function fetchGeniusLyrics(info) {
     }
   }
 }
-
+  return { error: "Lyrics not found on Genius" };
+}
 function parseGeniusLyrics(raw) {
   console.log("[Genius] Parsing lyrics");
   if (!raw) {
@@ -1242,7 +1243,7 @@ const ProviderGenius = {
       const data = await fetchGeniusLyrics(info);
       if (!data || data.error) {
         console.log("[Genius] findLyrics error:", data?.error);
-        return { error: data.error || "Lyrics not found on Genius" };
+        return { error: (data && data.error) || "Lyrics not found on Genius" };
       }
       return data;
     } catch (e) {
