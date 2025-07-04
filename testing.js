@@ -1119,7 +1119,7 @@ async function fetchGeniusLyrics(info) {
     cleanTitle
   ];
 
-  for (const fallbackQuery of fallbackQueries) {
+    for (const fallbackQuery of fallbackQueries) {
     const query = encodeURIComponent(fallbackQuery);
     const searchUrl = `https://genius.com/api/search/multi?per_page=5&q=${query}`;
 
@@ -1154,105 +1154,68 @@ async function fetchGeniusLyrics(info) {
     console.log(`[Genius] Found ${songHits.length} song hits`);
 
     for (let i = 0; i < songHits.length; i++) {
-  const hit = songHits[i];
-  const result = hit.result;
+      const hit = songHits[i];
+      const result = hit.result;
 
-  // 1. If it's a non-translation direct lyrics page, fetch it!
-  if (
-    !isTranslationPage(result) &&
-    result.url &&
-    isSimpleOriginalUrl(result.url)
-  ) {
-    // Fetch lyrics HTML
-    try {
-      const htmlRes = await new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
-          method: "GET",
-          url: result.url,
-          headers: {
-            Accept: "text/html",
-            "User-Agent": navigator.userAgent,
-          },
-          onload: resolve,
-          onerror: reject,
-          ontimeout: reject,
-          timeout: 5000,
-        });
-      });
-      // Parse out the lyrics from the HTML (use Genius's .Lyrics__Container)
-      const doc = new DOMParser().parseFromString(htmlRes.responseText, "text/html");
-      // Genius uses .Lyrics__Container, get all and join
-      const containers = doc.querySelectorAll('.Lyrics__Container, [data-lyrics-container="true"]');
-      let lyricsText = '';
-      containers.forEach((el) => {
-        // preserve line breaks, remove script, style, etc.
-        Array.from(el.querySelectorAll('script, style, .referent, .SongFooter, .lyrics-actions')).forEach(node => node.remove());
-        const html = el.innerHTML
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<(?:.|\n)*?>/gm, '')
-          .trim();
-        if (html) lyricsText += html + '\n';
-      });
-      lyricsText = lyricsText.trim();
-      if (lyricsText.length > 0) {
-        return { plainLyrics: lyricsText };
-      }
-    } catch (err) {
-      console.warn(`[Genius] Failed to fetch or parse lyrics from: ${result.url}`, err);
-      // continue to next hit
-    }
-  }
+      if (isTranslationPage(result)) {
+        const originalUrl = deriveOriginalUrlFromTranslation(result.url);
+        if (originalUrl) {
+          const exists = await checkUrlExists(originalUrl);
+          if (exists) {
+            console.log(`[Genius] Derived original URL from translation: ${originalUrl}`);
+            try {
+              const htmlRes = await new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                  method: "GET",
+                  url: originalUrl,
+                  headers: {
+                    Accept: "text/html",
+                    "User-Agent": navigator.userAgent,
+                  },
+                  onload: resolve,
+                  onerror: reject,
+                  ontimeout: reject,
+                  timeout: 5000,
+                });
+              });
 
-  // 2. If it's a translation page, try to derive the original
-  if (isTranslationPage(result)) {
-    const originalUrl = deriveOriginalUrlFromTranslation(result.url);
-    if (originalUrl) {
-      const exists = await checkUrlExists(originalUrl);
-      if (exists) {
-        // Fetch and parse as above
-        try {
-          const htmlRes = await new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-              method: "GET",
-              url: originalUrl,
-              headers: {
-                Accept: "text/html",
-                "User-Agent": navigator.userAgent,
-              },
-              onload: resolve,
-              onerror: reject,
-              ontimeout: reject,
-              timeout: 5000,
-            });
-          });
+              const doc = new DOMParser().parseFromString(htmlRes.responseText, "text/html");
+              const schemaScript = [...doc.querySelectorAll('script[type="application/ld+json"]')]
+                .map(s => {
+                  try {
+                    return JSON.parse(s.textContent);
+                  } catch {
+                    return null;
+                  }
+                })
+                .find(s => s && s['@type'] === 'MusicRecording');
 
-          const doc = new DOMParser().parseFromString(htmlRes.responseText, "text/html");
-          const containers = doc.querySelectorAll('.Lyrics__Container, [data-lyrics-container="true"]');
-          let lyricsText = '';
-          containers.forEach((el) => {
-            Array.from(el.querySelectorAll('script, style, .referent, .SongFooter, .lyrics-actions')).forEach(node => node.remove());
-            const html = el.innerHTML
-              .replace(/<br\s*\/?>/gi, '\n')
-              .replace(/<(?:.|\n)*?>/gm, '')
-              .trim();
-            if (html) lyricsText += html + '\n';
-          });
-          lyricsText = lyricsText.trim();
-          if (lyricsText.length > 0) {
-            return { plainLyrics: lyricsText };
+              if (schemaScript) {
+                const updated = {
+                  ...hit.result,
+                  title: schemaScript.name || result.title,
+                  url: originalUrl,
+                  primary_artist: { name: schemaScript.byArtist?.name || result.primary_artist?.name },
+                };
+                console.log(`[Genius] Overwrote hit result with schema metadata from original URL`);
+                hit.result = updated;
+              } else {
+                console.log(`[Genius] No ld+json schema found at original URL, keeping translation result`);
+                hit.result.url = originalUrl;
+              }
+            } catch (err) {
+              console.warn(`[Genius] Failed to fetch metadata from derived URL: ${originalUrl}`, err);
+              hit.result.url = originalUrl;
+            }
+          } else {
+            console.log(`[Genius] Derived original URL does not exist: ${originalUrl}`);
           }
-        } catch (err) {
-          console.warn(`[Genius] Failed to fetch metadata from derived URL: ${originalUrl}`, err);
+        } else {
+          console.log(`[Genius] Could not derive original URL from translation URL: ${result.url}`);
         }
-      } else {
-        console.log(`[Genius] Derived original URL does not exist: ${originalUrl}`);
       }
-    } else {
-      console.log(`[Genius] Could not derive original URL from translation URL: ${result.url}`);
     }
   }
-}
-  // If no lyrics found after all queries, return an error object
   return { error: "Lyrics not found on Genius" };
 }
 function parseGeniusLyrics(raw) {
