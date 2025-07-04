@@ -958,7 +958,7 @@ const ProviderMusixmatch = {
 // };
 //
   // --- Genius ---
-i just fucking did. only the snippet is what u need. async function fetchGeniusLyrics(info) {
+  async function fetchGeniusLyrics(info) {
   console.log("[Genius] Starting fetchGeniusLyrics");
 
   const titles = new Set([
