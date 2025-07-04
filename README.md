@@ -46,9 +46,7 @@
 > 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
 > 3. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
 > 4. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
-> 5. Open [Spotify Web Player](https://open.spotify.com/).  
-> 6. Play a song.
-> 7. Click on the **Lyrics+** button next to playback controls to open the popup window 
+> 5. Open [Spotify Web Player](https://open.spotify.com/) 
 
 ## Usage
 
