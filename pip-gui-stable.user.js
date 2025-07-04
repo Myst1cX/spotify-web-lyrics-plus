@@ -1708,6 +1708,7 @@ Object.assign(translationToggleBtn.style, {
       lineHeight: "1.5",
       backgroundColor: "#121212",
       userSelect: "text",
+      textAlign: "center",
     });
     lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
 
