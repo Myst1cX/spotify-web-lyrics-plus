@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      7.5
+// @version      7.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -1872,12 +1872,26 @@ if (savedState) {
 
     function getSpotifyLyricsContainerRect() {
   const el = document.querySelector('.main-view-container');
-  if (el && el.getBoundingClientRect) {
-    console.log('[Lyrics+] Detected .main-view-container:', el);
-    return el.getBoundingClientRect();
+  if (!el || !el.getBoundingClientRect) {
+    console.log('[Lyrics+] .main-view-container NOT found');
+    return null;
   }
-  console.log('[Lyrics+] .main-view-container NOT found');
-  return null;
+  const rect = el.getBoundingClientRect();
+  const isMobile = window.innerWidth <= 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    // Clamp width/height to 90% of container, 5% margin
+    const width = rect.width * 0.90;
+    const height = rect.height * 0.90;
+    const left = rect.left + rect.width * 0.05;
+    const top = rect.top + rect.height * 0.05;
+    console.log('[Lyrics+] MOBILE .main-view-container:', {left, top, width, height});
+    return { left, top, width, height };
+  } else {
+    // Use full container on desktop
+    console.log('[Lyrics+] DESKTOP .main-view-container:', rect);
+    return rect;
+  }
 }
 
 let rect = getSpotifyLyricsContainerRect();
@@ -1957,7 +1971,6 @@ if (rect) {
     title.style.margin = "0";
     title.style.fontWeight = "600";
 
-// --- Translation controls dropdown, translate button, and remove translation button ---
 // --- Translation controls dropdown, translate button, and remove translation button ---
 const translationControls = document.createElement('div');
 translationControls.style.display = 'flex';
@@ -2833,7 +2846,12 @@ offsetWrapper.appendChild(inputStack);
     popup.appendChild(lyricsContainer);
     popup.appendChild(controlsBar);
 
-    document.body.appendChild(popup);
+    const container = document.querySelector('.main-view-container');
+if (container) {
+  container.appendChild(popup);
+} else {
+  document.body.appendChild(popup);
+}
 
     function savePopupState(el) {
   const rect = el.getBoundingClientRect();
@@ -3243,3 +3261,4 @@ popupObserver.observe(document.body, { childList: true, subtree: true });
     }
   });
 })();
+
