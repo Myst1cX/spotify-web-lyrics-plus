@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      7.6
+// @version      7.7
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -1880,18 +1880,15 @@ if (savedState) {
   const isMobile = window.innerWidth <= 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   if (isMobile) {
-    // Clamp width/height to 90% of container, 5% margin
-    const width = rect.width * 0.90;
-    const height = rect.height * 0.90;
-    const left = rect.left + rect.width * 0.05;
-    const top = rect.top + rect.height * 0.05;
-    console.log('[Lyrics+] MOBILE .main-view-container:', {left, top, width, height});
-    return { left, top, width, height };
-  } else {
-    // Use full container on desktop
-    console.log('[Lyrics+] DESKTOP .main-view-container:', rect);
-    return rect;
-  }
+  // Take width from the right only, leave left/top unchanged
+  const rightMarginPx = rect.width * 0.07; // 7% of container width, adjust as needed
+  const width = rect.width - rightMarginPx;
+  const left = rect.left;
+  const top = rect.top;
+  const height = rect.height;
+  console.log('[Lyrics+] MOBILE .main-view-container:', {left, top, width, height});
+  return { left, top, width, height };
+}
 }
 
 let rect = getSpotifyLyricsContainerRect();
