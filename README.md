@@ -109,16 +109,17 @@
 > 3. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
 > 4. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
 > 5. Optional - for stock lyrics button: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
-> 6. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
-> 7. Install Chameleon extension
-> 8. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)
-> 9. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option
-> 10. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"
-> 11. Restart Firefox
-> 12. Open Spotify Web and login to your account
-> 13. The interface should change to a wider window > If it ever resets, repeat steps 7 and 8 > Keep Desktop Mode Disabled 
-> 14. Play a song
-> 15. Click on the Lyrics+ button to open the interface popup and see the song lyrics
+> 6. Install [Spotifuck](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v2.user.js)
+> 7. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
+> 8. Install Chameleon extension
+> 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)
+> 10. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option
+> 11. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"
+> 12. Restart Firefox
+> 13. Open Spotify Web and login to your account
+> 14. The interface should change to a wider window > If it ever resets, repeat steps 7 and 8 > Keep Desktop Mode Disabled 
+> 15. Play a song
+> 16. Click on the Lyrics+ button to open the interface popup and see the song lyrics
 
 * * * 
 
