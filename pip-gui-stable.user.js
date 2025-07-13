@@ -3015,48 +3015,53 @@ currentLyricsContainer = lyricsContainer;
   }
 
   function addButton(maxRetries = 10) {
-    let attempts = 0;
-    const tryAdd = () => {
-      const controls = document.querySelector('[data-testid="control-button-skip-forward"]')?.parentElement;
-      if (!controls) {
-        if (attempts < maxRetries) {
-          attempts++;
-          setTimeout(tryAdd, 1000);
-        } else {
-          console.warn("Lyrics+ button: Failed to find controls after max retries.");
-        }
+  let attempts = 0;
+  const tryAdd = () => {
+    const micBtn = document.querySelector('[data-testid="lyrics-button"]');
+    const controls = micBtn?.parentElement;
+    if (!controls) {
+      if (attempts < maxRetries) {
+        attempts++;
+        setTimeout(tryAdd, 1000);
+      } else {
+        console.warn("Lyrics+ button: Failed to find controls after max retries.");
+      }
+      return;
+    }
+    if (document.getElementById("lyrics-plus-btn")) return;
+    const btn = document.createElement("button");
+    btn.id = "lyrics-plus-btn";
+    btn.title = "Show Lyrics+";
+    btn.textContent = "Lyrics+";
+    Object.assign(btn.style, {
+      backgroundColor: "#1db954",
+      border: "none",
+      borderRadius: "20px",
+      color: "white",
+      cursor: "pointer",
+      fontWeight: "600",
+      fontSize: "14px",
+      padding: "6px 12px",
+      marginLeft: "8px",
+      userSelect: "none",
+    });
+    btn.onclick = () => {
+      let popup = document.getElementById("lyrics-plus-popup");
+      if (popup) {
+        removePopup();
+        stopPollingForTrackChange();
         return;
       }
-      if (document.getElementById("lyrics-plus-btn")) return;
-      const btn = document.createElement("button");
-      btn.id = "lyrics-plus-btn";
-      btn.title = "Show Lyrics+";
-      btn.textContent = "Lyrics+";
-      Object.assign(btn.style, {
-        backgroundColor: "#1db954",
-        border: "none",
-        borderRadius: "20px",
-        color: "white",
-        cursor: "pointer",
-        fontWeight: "600",
-        fontSize: "14px",
-        padding: "6px 12px",
-        marginLeft: "8px",
-        userSelect: "none",
-      });
-      btn.onclick = () => {
-        let popup = document.getElementById("lyrics-plus-popup");
-        if (popup) {
-          removePopup();
-          stopPollingForTrackChange();
-          return;
-        }
-        createPopup();
-      };
-      controls.appendChild(btn);
+      createPopup();
     };
-    tryAdd();
-  }
+    if (micBtn && controls) {
+      controls.insertBefore(btn, micBtn);
+    } else if (controls) {
+      controls.appendChild(btn);
+    }
+  };
+  tryAdd();
+}
 
   const observer = new MutationObserver(() => {
     addButton();
