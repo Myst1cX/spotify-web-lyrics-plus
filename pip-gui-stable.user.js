@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      7.9
+// @version      8.0
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -1881,11 +1881,10 @@ if (savedState) {
   const isMobile = window.innerWidth <= 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   if (isMobile) {
-    // On mobile, use nearly full width but leave a little margin if you want
-    // Example: margin 5% on right (or left/right)
-    const sideMarginPx = rect.width * 0.05;
-    const width = rect.width - sideMarginPx * 2;
-    const left = rect.left + sideMarginPx;
+    // For mobile: subtract 25% from right side only
+    const rightMarginPx = rect.width * 0.25;
+    const width = rect.width - rightMarginPx;
+    const left = rect.left;
     const top = rect.top;
     const height = rect.height;
     console.log('[Lyrics+] MOBILE .main-view-container:', {left, top, width, height});
