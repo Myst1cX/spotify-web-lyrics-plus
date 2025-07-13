@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      7.4
+// @version      7.5
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -31,7 +31,12 @@
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
 
+
   // Global flag (window.lyricsPlusPopupIsResizing) is used to prevent lyric highlighting updates from interfering with popup resizing
+
+  // Global flags below are used to prevent a bug with Revert to default position button
+  window.lyricsPlusPopupIgnoreProportion = false;
+  window.lastProportion = { w: null, h: null };
 
   // ------------------------
   // Utils.js Functions
@@ -1849,39 +1854,87 @@ function observeSpotifyPlayPause(popup) {
 
     // Load saved state from localStorage
     const savedState = localStorage.getItem('lyricsPlusPopupState');
-    let pos = null;
-    if (savedState) {
-      try {
-        pos = JSON.parse(savedState);
-      } catch {
-        pos = null;
-      }
-    }
+let pos = null;
+if (savedState) {
+  try {
+    pos = JSON.parse(savedState);
+    console.log("[Lyrics+] createPopup: Loaded lyricsPlusPopupState:", pos);
+  } catch {
+    pos = null;
+    console.log("[Lyrics+] createPopup: lyricsPlusPopupState failed to parse");
+  }
+} else {
+  console.log("[Lyrics+] createPopup: No lyricsPlusPopupState found");
+}
 
     const popup = document.createElement("div");
     popup.id = "lyrics-plus-popup";
-    Object.assign(popup.style, {
-      position: "fixed",
-      bottom: pos ? "auto" : "87px",
-      right: pos ? "auto" : "0px",
-      left: pos ? `${pos.left}px` : "",
-      top: pos ? `${pos.top}px` : "",
-      width: pos ? `${pos.width}px` : "370px",
-      height: pos ? `${pos.height}px` : "79.5vh",
-      minWidth: "370px",
-      minHeight: "240px",
-      backgroundColor: "#121212",
-      color: "white",
-      borderRadius: "12px",
-      boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      zIndex: 100000,
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-      padding: "0",
-      userSelect: "none",
-    });
+
+    function getSpotifyLyricsContainerRect() {
+  const el = document.querySelector('.main-view-container');
+  if (el && el.getBoundingClientRect) {
+    console.log('[Lyrics+] Detected .main-view-container:', el);
+    return el.getBoundingClientRect();
+  }
+  console.log('[Lyrics+] .main-view-container NOT found');
+  return null;
+}
+
+let rect = getSpotifyLyricsContainerRect();
+if (rect) {
+  Object.assign(popup.style, {
+    position: "fixed",
+    left: rect.left + "px",
+    top: rect.top + "px",
+    width: rect.width + "px",
+    height: rect.height + "px",
+    minWidth: "370px",
+    minHeight: "240px",
+    backgroundColor: "#121212",
+    color: "white",
+    borderRadius: "12px",
+    boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    zIndex: 100000,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    padding: "0",
+    userSelect: "none",
+    right: "auto",
+    bottom: "auto"
+  });
+  localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+    left: rect.left,
+    top: rect.top,
+    width: rect.width,
+    height: rect.height
+  }));
+} else {
+  // fallback
+  Object.assign(popup.style, {
+    position: "fixed",
+    bottom: "87px",
+    right: "0px",
+    left: "auto",
+    top: "auto",
+    width: "370px",
+    height: "79.5vh",
+    minWidth: "370px",
+    minHeight: "240px",
+    backgroundColor: "#121212",
+    color: "white",
+    borderRadius: "12px",
+    boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    zIndex: 100000,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    padding: "0",
+    userSelect: "none",
+  });
+}
 
     // Header with title and close button - drag handle
     const headerWrapper = document.createElement("div");
@@ -2718,19 +2771,25 @@ offsetWrapper.appendChild(inputStack);
       padding: "0",
     });
     // Default Position and Size of the Popup Gui
-    btnReset.onclick = () => {
-    const isMobile = window.innerWidth <= 600;
-    if (isMobile) {
+   btnReset.onclick = () => {
+  const rect = getSpotifyLyricsContainerRect();
+  if (rect) {
     Object.assign(popup.style, {
       position: "fixed",
-      left: "3vw",
-      right: "1vw",
-      top: "auto",
-      bottom: "146px",
-      width: "200vw",
-      height: "90vh",
+      left: rect.left + "px",
+      top: rect.top + "px",
+      width: rect.width + "px",
+      height: rect.height + "px",
+      right: "auto",
+      bottom: "auto",
       zIndex: 100000
     });
+    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height
+    }));
   } else {
     Object.assign(popup.style, {
       position: "fixed",
@@ -2742,8 +2801,25 @@ offsetWrapper.appendChild(inputStack);
       height: "79.5vh",
       zIndex: 100000
     });
+    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+      left: null,
+      top: null,
+      width: 370,
+      height: window.innerHeight * 0.795
+    }));
   }
-  savePopupState(popup);
+  localStorage.removeItem("lyricsPlusPopupProportion");
+  window.lastProportion = { w: null, h: null };
+  window.lyricsPlusPopupIgnoreProportion = true;
+  setTimeout(() => {
+    window.lyricsPlusPopupIgnoreProportion = false;
+    if (
+      popup.style.width === "370px" &&
+      popup.style.height === "79.5vh"
+    ) {
+      window.lastProportion = { w: null, h: null };
+    }
+  }, 3000);
 };
 
     controlsBar.appendChild(btnReset);
@@ -2760,14 +2836,15 @@ offsetWrapper.appendChild(inputStack);
     document.body.appendChild(popup);
 
     function savePopupState(el) {
-      const rect = el.getBoundingClientRect();
-      localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height
-      }));
-    }
+  const rect = el.getBoundingClientRect();
+  localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+    left: rect.left,
+    top: rect.top,
+    width: rect.width,
+    height: rect.height
+  }));
+  console.log("[Lyrics+] savePopupState called. Saved:", localStorage.getItem('lyricsPlusPopupState'));
+}
 
     (function makeDraggable(el, handle) {
       let isDragging = false;
@@ -3014,7 +3091,7 @@ currentLyricsContainer = lyricsContainer;
     }
   }
 
-  function addButton(maxRetries = 10) {
+   function addButton(maxRetries = 10) {
   let attempts = 0;
   const tryAdd = () => {
     const micBtn = document.querySelector('[data-testid="lyrics-button"]');
@@ -3083,75 +3160,80 @@ currentLyricsContainer = lyricsContainer;
   init();
 })();
 (function setupPopupAutoResize() {
+  window.lyricsPlusPopupIgnoreProportion = false;
   // The popup will always keep the same proportion of the window as last set by the user.
-  let lastProportion = { w: null, h: null };
+  window.lastProportion = window.lastProportion || { w: null, h: null };
 
   // Try to load last saved proportion from localStorage
   function loadProportion() {
     try {
       const stored = JSON.parse(localStorage.getItem("lyricsPlusPopupProportion") || "{}");
       if (stored.w && stored.h) {
-        lastProportion = stored;
+        window.lastProportion = stored;
       }
     } catch {}
   }
   loadProportion();
 
   function saveProportionFromPopup(popup) {
-    if (!popup) return;
-    lastProportion = {
-      w: popup.offsetWidth / window.innerWidth,
-      h: popup.offsetHeight / window.innerHeight
-    };
-    // Clamp to [0.2,1] for sanity (optional)
-    lastProportion.w = Math.max(0.2, Math.min(lastProportion.w, 1));
-    lastProportion.h = Math.max(0.2, Math.min(lastProportion.h, 1));
-    localStorage.setItem("lyricsPlusPopupProportion", JSON.stringify(lastProportion));
-  }
+  if (!popup) return;
+  window.lastProportion = {
+    w: popup.offsetWidth / window.innerWidth,
+    h: popup.offsetHeight / window.innerHeight
+  };
+  // Clamp to [0.2,1] for sanity (optional)
+  window.lastProportion.w = Math.max(0.2, Math.min(window.lastProportion.w, 1));
+  window.lastProportion.h = Math.max(0.2, Math.min(window.lastProportion.h, 1));
+  localStorage.setItem("lyricsPlusPopupProportion", JSON.stringify(window.lastProportion));
+}
 
   function applyProportionToPopup(popup) {
-  // Don't auto-resize if user is currently resizing!
-  if (window.lyricsPlusPopupIsResizing) return;
-  if (!popup || !lastProportion.w || !lastProportion.h) return;
-  popup.style.width = (window.innerWidth * lastProportion.w) + "px";
-  popup.style.height = (window.innerHeight * lastProportion.h) + "px";
-  // Optionally, keep it centered or clamp position:
-  popup.style.left = Math.max(0, Math.min(parseInt(popup.style.left)||0, window.innerWidth - popup.offsetWidth)) + "px";
-  popup.style.top  = Math.max(0, Math.min(parseInt(popup.style.top)||0, window.innerHeight - popup.offsetHeight)) + "px";
+  if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion) {
+    console.log("[Lyrics+] applyProportionToPopup: Skipped due to resizing/ignore");
+    return;
+  }
+  if (!popup || !window.lastProportion.w || !window.lastProportion.h) {
+    console.log("[Lyrics+] applyProportionToPopup: No proportion to apply");
+    return;
+  }
+  popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
+  popup.style.height = (window.innerHeight * window.lastProportion.h) + "px";
   popup.style.right = "auto";
   popup.style.bottom = "auto";
   popup.style.position = "fixed";
+  console.log("[Lyrics+] applyProportionToPopup: Applied w/h", popup.style.width, popup.style.height);
 }
 
   // Call this after user resizes the popup:
   function observePopupResize() {
-    const popup = document.getElementById("lyrics-plus-popup");
-    if (!popup) return;
-    let isResizing = false;
-    // Find the resizer handle (by style or other means)
-    const resizer = Array.from(popup.children).find(el =>
-      el.style && el.style.cursor === "nwse-resize"
-    );
-    if (!resizer) return;
-    resizer.addEventListener("mousedown", () => { isResizing = true; });
-    window.addEventListener("mouseup", () => {
-      if (isResizing) {
-        saveProportionFromPopup(popup);
-      }
-      isResizing = false;
-    });
-  }
+  const popup = document.getElementById("lyrics-plus-popup");
+  if (!popup) return;
+  let isResizing = false;
+  const resizer = Array.from(popup.children).find(el =>
+    el.style && el.style.cursor === "nwse-resize"
+  );
+  if (!resizer) return;
+  resizer.addEventListener("mousedown", () => { isResizing = true; });
+  window.addEventListener("mouseup", () => {
+    if (isResizing) {
+      saveProportionFromPopup(popup);
+      console.log("[Lyrics+] observePopupResize: Resize finished, saved proportion",
+        localStorage.getItem("lyricsPlusPopupProportion"));
+    }
+    isResizing = false;
+  });
+}
 
   // Listen for popup creation to hook the resizer
   const popupObserver = new MutationObserver(() => {
-    const popup = document.getElementById("lyrics-plus-popup");
-    if (popup) {
-      // On first creation, apply saved size
-      applyProportionToPopup(popup);
-      observePopupResize();
-    }
-  });
-  popupObserver.observe(document.body, { childList: true, subtree: true });
+  const popup = document.getElementById("lyrics-plus-popup");
+  if (popup) {
+    console.log("[Lyrics+] MutationObserver: Popup created/found");
+    applyProportionToPopup(popup);
+    observePopupResize();
+  }
+});
+popupObserver.observe(document.body, { childList: true, subtree: true });
 
   // On window resize, apply saved proportion
   window.addEventListener("resize", () => {
