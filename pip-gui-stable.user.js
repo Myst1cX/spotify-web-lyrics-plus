@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      7.8
+// @version      7.9
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -1871,42 +1871,28 @@ if (savedState) {
     popup.id = "lyrics-plus-popup";
 
     function getSpotifyLyricsContainerRect() {
-  const isMobile =
-    window.innerWidth <= 600 ||
-    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  let el;
-  if (isMobile) {
-    // Try mobile container first
-    el = document.querySelector('.centered-layout.global-nav.Root');
-    if (!el) {
-      // Fallback to desktop container
-      el = document.querySelector('.main-view-container');
-    }
-  } else {
-    // Desktop
-    el = document.querySelector('.main-view-container');
-  }
-
+  // Always use .main-view-container
+  const el = document.querySelector('.main-view-container');
   if (!el || !el.getBoundingClientRect) {
-    console.log('[Lyrics+] Lyrics container NOT found');
+    console.log('[Lyrics+] .main-view-container NOT found');
     return null;
   }
-
   const rect = el.getBoundingClientRect();
+  const isMobile = window.innerWidth <= 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   if (isMobile) {
-    // Optionally take some width from right edge on mobile
-    const rightMarginPx = rect.width * 0.07; // adjust margin as needed
-    const width = rect.width - rightMarginPx;
-    const left = rect.left;
+    // On mobile, use nearly full width but leave a little margin if you want
+    // Example: margin 5% on right (or left/right)
+    const sideMarginPx = rect.width * 0.05;
+    const width = rect.width - sideMarginPx * 2;
+    const left = rect.left + sideMarginPx;
     const top = rect.top;
     const height = rect.height;
-    console.log('[Lyrics+] MOBILE lyrics container:', {left, top, width, height});
+    console.log('[Lyrics+] MOBILE .main-view-container:', {left, top, width, height});
     return { left, top, width, height };
   } else {
-    // Desktop, full rect
-    console.log('[Lyrics+] DESKTOP lyrics container:', rect);
+    // Desktop, use full rect
+    console.log('[Lyrics+] DESKTOP .main-view-container:', rect);
     return rect;
   }
 }
@@ -2864,9 +2850,7 @@ offsetWrapper.appendChild(inputStack);
     popup.appendChild(lyricsContainer);
     popup.appendChild(controlsBar);
 
-    const container = isMobile
-  ? document.querySelector('.centered-layout.global-nav.Root') || document.querySelector('.main-view-container')
-  : document.querySelector('.main-view-container');
+    const container = document.querySelector('.main-view-container');
 if (container) {
   container.appendChild(popup);
 } else {
