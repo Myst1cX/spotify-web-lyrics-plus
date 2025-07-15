@@ -383,20 +383,49 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   });
 }
 
-  // --- Play/Pause Icon SVGs ---
+  // --- Spotify-styled SVG Icons ---
   const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  playSVG.setAttribute("viewBox", "0 0 24 24");
-  playSVG.setAttribute("width", "20");
-  playSVG.setAttribute("height", "20");
-  playSVG.setAttribute("fill", "white");
-  playSVG.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+  playSVG.setAttribute("viewBox", "0 0 16 16");
+  playSVG.setAttribute("width", "16");
+  playSVG.setAttribute("height", "16");
+  playSVG.setAttribute("fill", "currentColor");
+  playSVG.innerHTML = `<path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>`;
 
   const pauseSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  pauseSVG.setAttribute("viewBox", "0 0 24 24");
-  pauseSVG.setAttribute("width", "20");
-  pauseSVG.setAttribute("height", "20");
-  pauseSVG.setAttribute("fill", "white");
-  pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+  pauseSVG.setAttribute("viewBox", "0 0 16 16");
+  pauseSVG.setAttribute("width", "16");
+  pauseSVG.setAttribute("height", "16");
+  pauseSVG.setAttribute("fill", "currentColor");
+  pauseSVG.innerHTML = `<path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/>`;
+
+  const previousSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  previousSVG.setAttribute("viewBox", "0 0 16 16");
+  previousSVG.setAttribute("width", "16");
+  previousSVG.setAttribute("height", "16");
+  previousSVG.setAttribute("fill", "currentColor");
+  previousSVG.innerHTML = `<path d="M4 4a.5.5 0 0 1 1 0v3.248l6.267-3.636c.54-.313 1.232.066 1.232.696v7.384c0 .63-.692 1.01-1.232.697L5 8.753V12a.5.5 0 0 1-1 0V4z"/>`;
+
+  const nextSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  nextSVG.setAttribute("viewBox", "0 0 16 16");
+  nextSVG.setAttribute("width", "16");
+  nextSVG.setAttribute("height", "16");
+  nextSVG.setAttribute("fill", "currentColor");
+  nextSVG.innerHTML = `<path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z"/>`;
+
+  const shuffleSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  shuffleSVG.setAttribute("viewBox", "0 0 16 16");
+  shuffleSVG.setAttribute("width", "16");
+  shuffleSVG.setAttribute("height", "16");
+  shuffleSVG.setAttribute("fill", "currentColor");
+  shuffleSVG.innerHTML = `<path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.624 9.624 0 0 0 7.556 8a9.624 9.624 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.595 10.595 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.624 9.624 0 0 0 6.444 8a9.624 9.624 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5z"/>
+  <path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192zm0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192z"/>`;
+
+  const repeatSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  repeatSVG.setAttribute("viewBox", "0 0 16 16");
+  repeatSVG.setAttribute("width", "16");
+  repeatSVG.setAttribute("height", "16");
+  repeatSVG.setAttribute("fill", "currentColor");
+  repeatSVG.innerHTML = `<path d="M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966A.25.25 0 0 1 11 5.466zm-1 4.068V12H4a4 4 0 0 0 3.584-5.777.5.5 0 1 1 .896-.446A5 5 0 0 1 4 13h6v1.466a.25.25 0 0 0 .41.192l2.36-1.966c.12-.1.12-.284 0-.384l-2.36-1.966A.25.25 0 0 0 10 9.534z"/>`;
 
   // --- Language-universal play/pause root words for major Spotify UI languages (Aids Play/Pause button detection to reflect playback state inside gui)---
 const PAUSE_WORDS = [
@@ -2696,7 +2725,7 @@ offsetWrapper.appendChild(inputStack);
       controlsBar.style.pointerEvents = "none";
     }
 
-    function createControlBtn(content, title, onClick) {
+    function createControlBtn(content, title, onClick, isToggle = false) {
       const btn = document.createElement("button");
       btn.title = title;
       Object.assign(btn.style, {
@@ -2714,7 +2743,13 @@ offsetWrapper.appendChild(inputStack);
         alignItems: "center",
         userSelect: "none",
         padding: "0",
+        transition: "background-color 0.2s, color 0.2s",
       });
+      
+      if (isToggle) {
+        btn.style.background = "#555"; // Inactive state
+      }
+      
       if (typeof content === "string") {
         btn.textContent = content;
       } else {
@@ -2722,6 +2757,18 @@ offsetWrapper.appendChild(inputStack);
       }
       btn.onclick = onClick;
       return btn;
+    }
+
+    function updateShuffleButton(btn) {
+      const isActive = getSpotifyShuffleState();
+      btn.style.background = isActive ? "#1db954" : "#555";
+      btn.style.color = isActive ? "white" : "#b3b3b3";
+    }
+
+    function updateRepeatButton(btn) {
+      const isActive = getSpotifyRepeatState();
+      btn.style.background = isActive ? "#1db954" : "#555";
+      btn.style.color = isActive ? "white" : "#b3b3b3";
     }
 
     function sendSpotifyCommand(command) {
@@ -2743,6 +2790,16 @@ offsetWrapper.appendChild(inputStack);
       '[aria-label="Previous"]',
       '[data-testid="control-button-skip-back"]',
       '[data-testid="mobile-prev-button"]'
+    ],
+    shuffle: [
+      '[data-testid="control-button-shuffle"]',
+      '[aria-label*="shuffle"]',
+      '[aria-label*="Shuffle"]'
+    ],
+    repeat: [
+      '[data-testid="control-button-repeat"]',
+      '[aria-label*="repeat"]',
+      '[aria-label*="Repeat"]'
     ]
   };
 
@@ -2768,10 +2825,26 @@ offsetWrapper.appendChild(inputStack);
       btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
     }
   } else {
-    alert("Could not find the Spotify playback button. If you're on mobile, try updating Spotify Web Player or refreshing the page.");
+    alert(`Could not find the Spotify ${command} button. If you're on mobile, try updating Spotify Web Player or refreshing the page.`);
     console.warn("Spotify control button not found for:", command);
   }
 }
+
+    function getSpotifyShuffleState() {
+      const shuffleBtn = document.querySelector('[data-testid="control-button-shuffle"]');
+      if (shuffleBtn) {
+        return shuffleBtn.getAttribute('aria-pressed') === 'true';
+      }
+      return false;
+    }
+
+    function getSpotifyRepeatState() {
+      const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+      if (repeatBtn) {
+        return repeatBtn.getAttribute('aria-pressed') === 'true';
+      }
+      return false;
+    }
     function createPlayPauseButton() {
       const btnPlayPause = createControlBtn("", "Play/Pause", () => {
         sendSpotifyCommand("playpause");
@@ -2783,11 +2856,29 @@ offsetWrapper.appendChild(inputStack);
       return btnPlayPause;
     }
 
-    const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
+    const btnShuffle = createControlBtn(shuffleSVG.cloneNode(true), "Toggle Shuffle", () => {
+      sendSpotifyCommand("shuffle");
+      setTimeout(() => updateShuffleButton(btnShuffle), 100);
+    }, true);
+    
+    const btnPrevious = createControlBtn(previousSVG.cloneNode(true), "Previous Track", () => sendSpotifyCommand("previous"));
     const btnPlayPause = createPlayPauseButton();
-    const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
+    const btnNext = createControlBtn(nextSVG.cloneNode(true), "Next Track", () => sendSpotifyCommand("next"));
+    
+    const btnRepeat = createControlBtn(repeatSVG.cloneNode(true), "Toggle Repeat", () => {
+      sendSpotifyCommand("repeat");
+      setTimeout(() => updateRepeatButton(btnRepeat), 100);
+    }, true);
 
     popup._playPauseBtn = btnPlayPause;
+    popup._shuffleBtn = btnShuffle;
+    popup._repeatBtn = btnRepeat;
+
+    // Update toggle button states periodically
+    setInterval(() => {
+      if (popup._shuffleBtn) updateShuffleButton(popup._shuffleBtn);
+      if (popup._repeatBtn) updateRepeatButton(popup._repeatBtn);
+    }, 1000);
 
 
     const btnReset = document.createElement("button");
@@ -2862,9 +2953,15 @@ offsetWrapper.appendChild(inputStack);
 };
 
     controlsBar.appendChild(btnReset);
+    controlsBar.appendChild(btnShuffle);
     controlsBar.appendChild(btnPrevious);
     controlsBar.appendChild(btnPlayPause);
     controlsBar.appendChild(btnNext);
+    controlsBar.appendChild(btnRepeat);
+
+    // Initialize button states
+    updateShuffleButton(btnShuffle);
+    updateRepeatButton(btnRepeat);
 
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
@@ -3125,6 +3222,8 @@ currentLyricsContainer = lyricsContainer;
         observeSpotifyPlayPause(popup);
       }
       if (popup && popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+      if (popup && popup._shuffleBtn) updateShuffleButton(popup._shuffleBtn);
+      if (popup && popup._repeatBtn) updateRepeatButton(popup._repeatBtn);
     }, 400);
   }
 
