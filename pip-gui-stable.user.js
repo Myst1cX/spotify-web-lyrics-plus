@@ -383,20 +383,20 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   });
 }
 
-  // --- Spotify-styled SVG Icons ---
+  // --- Spotifuck v2 SVG Icons ---
   const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   playSVG.setAttribute("viewBox", "0 0 16 16");
   playSVG.setAttribute("width", "16");
   playSVG.setAttribute("height", "16");
   playSVG.setAttribute("fill", "currentColor");
-  playSVG.innerHTML = `<path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>`;
+  playSVG.innerHTML = `<path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M6.271 5.055a.5.5 0 0 1 .52.038L11 7.055a.5.5 0 0 1 0 .89L6.791 9.907a.5.5 0 0 1-.791-.389V5.5a.5.5 0 0 1 .271-.445z"/>`;
 
   const pauseSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   pauseSVG.setAttribute("viewBox", "0 0 16 16");
   pauseSVG.setAttribute("width", "16");
   pauseSVG.setAttribute("height", "16");
   pauseSVG.setAttribute("fill", "currentColor");
-  pauseSVG.innerHTML = `<path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/>`;
+  pauseSVG.innerHTML = `<path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M5 6.25a1.25 1.25 0 1 1 2.5 0v3.5a1.25 1.25 0 1 1-2.5 0v-3.5zm3.5 0a1.25 1.25 0 1 1 2.5 0v3.5a1.25 1.25 0 1 1-2.5 0v-3.5z"/>`;
 
   const previousSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   previousSVG.setAttribute("viewBox", "0 0 16 16");
@@ -410,7 +410,7 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   nextSVG.setAttribute("width", "16");
   nextSVG.setAttribute("height", "16");
   nextSVG.setAttribute("fill", "currentColor");
-  nextSVG.innerHTML = `<path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z"/>`;
+  nextSVG.innerHTML = `<path d="M12.5 4a.5.5 0 0 0-1 0v3.248L5.233 3.612C4.693 3.3 4 3.678 4 4.308v7.384c0 .63.692 1.01 1.233.697L11.5 8.753V12a.5.5 0 0 0 1 0V4z"/>`;
 
   const shuffleSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   shuffleSVG.setAttribute("viewBox", "0 0 16 16");
@@ -426,6 +426,30 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   repeatSVG.setAttribute("height", "16");
   repeatSVG.setAttribute("fill", "currentColor");
   repeatSVG.innerHTML = `<path d="M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966A.25.25 0 0 1 11 5.466zm-1 4.068V12H4a4 4 0 0 0 3.584-5.777.5.5 0 1 1 .896-.446A5 5 0 0 1 4 13h6v1.466a.25.25 0 0 0 .41.192l2.36-1.966c.12-.1.12-.284 0-.384l-2.36-1.966A.25.25 0 0 0 10 9.534z"/>`;
+
+  const repeatOneSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  repeatOneSVG.setAttribute("viewBox", "0 0 16 16");
+  repeatOneSVG.setAttribute("width", "16");
+  repeatOneSVG.setAttribute("height", "16");
+  repeatOneSVG.setAttribute("fill", "currentColor");
+  repeatOneSVG.innerHTML = `<path d="M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966A.25.25 0 0 1 11 5.466zm-1 4.068V12H4a4 4 0 0 0 3.584-5.777.5.5 0 1 1 .896-.446A5 5 0 0 1 4 13h6v1.466a.25.25 0 0 0 .41.192l2.36-1.966c.12-.1.12-.284 0-.384l-2.36-1.966A.25.25 0 0 0 10 9.534z"/><path d="M9 9.5v-3h-1v1h-.5v1h.5v1H9zM8 7.5V8h.5V7.5H8z"/>`;
+
+  const shuffleOnSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  shuffleOnSVG.setAttribute("viewBox", "0 0 16 16");
+  shuffleOnSVG.setAttribute("width", "16");
+  shuffleOnSVG.setAttribute("height", "16");
+  shuffleOnSVG.setAttribute("fill", "currentColor");
+  shuffleOnSVG.innerHTML = `<path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.624 9.624 0 0 0 7.556 8a9.624 9.624 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.595 10.595 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.624 9.624 0 0 0 6.444 8a9.624 9.624 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5z"/>
+  <path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192zm0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192z"/>
+  <circle cx="8" cy="8" r="1.5" fill="currentColor"/>`;
+
+  const repeatAllSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  repeatAllSVG.setAttribute("viewBox", "0 0 16 16");
+  repeatAllSVG.setAttribute("width", "16");
+  repeatAllSVG.setAttribute("height", "16");
+  repeatAllSVG.setAttribute("fill", "currentColor");
+  repeatAllSVG.innerHTML = `<path d="M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966A.25.25 0 0 1 11 5.466zm-1 4.068V12H4a4 4 0 0 0 3.584-5.777.5.5 0 1 1 .896-.446A5 5 0 0 1 4 13h6v1.466a.25.25 0 0 0 .41.192l2.36-1.966c.12-.1.12-.284 0-.384l-2.36-1.966A.25.25 0 0 0 10 9.534z"/>
+  <circle cx="8" cy="8" r="1.5" fill="currentColor"/>`;
 
   // --- Language-universal play/pause root words for major Spotify UI languages (Aids Play/Pause button detection to reflect playback state inside gui)---
 const PAUSE_WORDS = [
@@ -2648,17 +2672,18 @@ inputStack.appendChild(spinnerContainer);
 offsetWrapper.appendChild(offsetLabel);
 offsetWrapper.appendChild(inputStack);
 
-    // Playback Controls Bar
+    // Spotifuck v2 Playback Controls Bar
     const controlsBar = document.createElement("div");
     Object.assign(controlsBar.style, {
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      gap: "12px",
-      padding: "8px 12px",
+      gap: "16px",
+      padding: "12px 16px",
       borderTop: "1px solid #333",
-      backgroundColor: "#121212",
+      backgroundColor: "#181818",
       userSelect: "none",
+      boxShadow: "0 -2px 8px rgba(0, 0, 0, 0.3)",
     });
 
     offsetWrapper.id = "lyrics-plus-offset-wrapper";
@@ -2695,7 +2720,7 @@ offsetWrapper.appendChild(inputStack);
       controlsVisible = !controlsVisible;
       localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
       if (controlsVisible) {
-        controlsBar.style.maxHeight = "80px";
+        controlsBar.style.maxHeight = "90px";
         controlsBar.style.opacity = "1";
         controlsBar.style.pointerEvents = "";
       } else {
@@ -2725,30 +2750,45 @@ offsetWrapper.appendChild(inputStack);
       controlsBar.style.pointerEvents = "none";
     }
 
-    function createControlBtn(content, title, onClick, isToggle = false) {
+    function createSpotifuckBtn(content, title, onClick, isToggle = false) {
       const btn = document.createElement("button");
       btn.title = title;
       Object.assign(btn.style, {
         cursor: "pointer",
-        background: "#1db954",
+        background: "rgba(255, 255, 255, 0.1)",
         border: "none",
         borderRadius: "50%",
         width: "32px",
         height: "32px",
-        color: "white",
-        fontWeight: "bold",
-        fontSize: "18px",
+        color: "#b3b3b3",
+        fontWeight: "normal",
+        fontSize: "16px",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
         userSelect: "none",
         padding: "0",
-        transition: "background-color 0.2s, color 0.2s",
+        transition: "all 0.2s ease-in-out",
+        position: "relative",
+        outline: "none",
       });
       
-      if (isToggle) {
-        btn.style.background = "#555"; // Inactive state
-      }
+      // Add hover effect
+      btn.addEventListener("mouseenter", () => {
+        if (!btn.classList.contains("active")) {
+          btn.style.background = "rgba(255, 255, 255, 0.2)";
+          btn.style.color = "white";
+          btn.style.transform = "scale(1.05)";
+        }
+      });
+      
+      btn.addEventListener("mouseleave", () => {
+        if (!btn.classList.contains("active")) {
+          btn.style.background = "rgba(255, 255, 255, 0.1)";
+          btn.style.color = "#b3b3b3";
+          btn.style.transform = "scale(1)";
+        }
+      });
       
       if (typeof content === "string") {
         btn.textContent = content;
@@ -2759,16 +2799,55 @@ offsetWrapper.appendChild(inputStack);
       return btn;
     }
 
-    function updateShuffleButton(btn) {
+    function updateSpotifuckShuffleButton(btn) {
       const isActive = getSpotifyShuffleState();
-      btn.style.background = isActive ? "#1db954" : "#555";
-      btn.style.color = isActive ? "white" : "#b3b3b3";
+      btn.classList.toggle("active", isActive);
+      
+      if (isActive) {
+        btn.style.background = "#1db954";
+        btn.style.color = "white";
+        btn.style.transform = "scale(1)";
+        btn.innerHTML = "";
+        btn.appendChild(shuffleOnSVG.cloneNode(true));
+      } else {
+        btn.style.background = "rgba(255, 255, 255, 0.1)";
+        btn.style.color = "#b3b3b3";
+        btn.style.transform = "scale(1)";
+        btn.innerHTML = "";
+        btn.appendChild(shuffleSVG.cloneNode(true));
+      }
     }
 
-    function updateRepeatButton(btn) {
-      const isActive = getSpotifyRepeatState();
-      btn.style.background = isActive ? "#1db954" : "#555";
-      btn.style.color = isActive ? "white" : "#b3b3b3";
+    function updateSpotifuckRepeatButton(btn) {
+      const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+      if (!repeatBtn) return;
+      
+      const ariaLabel = repeatBtn.getAttribute('aria-label') || '';
+      const isRepeatOne = ariaLabel.toLowerCase().includes('one') || ariaLabel.toLowerCase().includes('1');
+      const isRepeatAll = repeatBtn.getAttribute('aria-pressed') === 'true' && !isRepeatOne;
+      const isActive = isRepeatOne || isRepeatAll;
+      
+      btn.classList.toggle("active", isActive);
+      
+      if (isRepeatOne) {
+        btn.style.background = "#1db954";
+        btn.style.color = "white";
+        btn.style.transform = "scale(1)";
+        btn.innerHTML = "";
+        btn.appendChild(repeatOneSVG.cloneNode(true));
+      } else if (isRepeatAll) {
+        btn.style.background = "#1db954";
+        btn.style.color = "white";
+        btn.style.transform = "scale(1)";
+        btn.innerHTML = "";
+        btn.appendChild(repeatAllSVG.cloneNode(true));
+      } else {
+        btn.style.background = "rgba(255, 255, 255, 0.1)";
+        btn.style.color = "#b3b3b3";
+        btn.style.transform = "scale(1)";
+        btn.innerHTML = "";
+        btn.appendChild(repeatSVG.cloneNode(true));
+      }
     }
 
     function sendSpotifyCommand(command) {
@@ -2845,8 +2924,8 @@ offsetWrapper.appendChild(inputStack);
       }
       return false;
     }
-    function createPlayPauseButton() {
-      const btnPlayPause = createControlBtn("", "Play/Pause", () => {
+    function createSpotifuckPlayPauseButton() {
+      const btnPlayPause = createSpotifuckBtn("", "Play/Pause", () => {
         sendSpotifyCommand("playpause");
         updatePlayPauseIcon(btnPlayPause);
       });
@@ -2856,18 +2935,18 @@ offsetWrapper.appendChild(inputStack);
       return btnPlayPause;
     }
 
-    const btnShuffle = createControlBtn(shuffleSVG.cloneNode(true), "Toggle Shuffle", () => {
+    const btnShuffle = createSpotifuckBtn(shuffleSVG.cloneNode(true), "Toggle Shuffle", () => {
       sendSpotifyCommand("shuffle");
-      setTimeout(() => updateShuffleButton(btnShuffle), 100);
+      setTimeout(() => updateSpotifuckShuffleButton(btnShuffle), 100);
     }, true);
     
-    const btnPrevious = createControlBtn(previousSVG.cloneNode(true), "Previous Track", () => sendSpotifyCommand("previous"));
-    const btnPlayPause = createPlayPauseButton();
-    const btnNext = createControlBtn(nextSVG.cloneNode(true), "Next Track", () => sendSpotifyCommand("next"));
+    const btnPrevious = createSpotifuckBtn(previousSVG.cloneNode(true), "Previous Track", () => sendSpotifyCommand("previous"));
+    const btnPlayPause = createSpotifuckPlayPauseButton();
+    const btnNext = createSpotifuckBtn(nextSVG.cloneNode(true), "Next Track", () => sendSpotifyCommand("next"));
     
-    const btnRepeat = createControlBtn(repeatSVG.cloneNode(true), "Toggle Repeat", () => {
+    const btnRepeat = createSpotifuckBtn(repeatSVG.cloneNode(true), "Toggle Repeat", () => {
       sendSpotifyCommand("repeat");
-      setTimeout(() => updateRepeatButton(btnRepeat), 100);
+      setTimeout(() => updateSpotifuckRepeatButton(btnRepeat), 100);
     }, true);
 
     popup._playPauseBtn = btnPlayPause;
@@ -2876,8 +2955,8 @@ offsetWrapper.appendChild(inputStack);
 
     // Update toggle button states periodically
     setInterval(() => {
-      if (popup._shuffleBtn) updateShuffleButton(popup._shuffleBtn);
-      if (popup._repeatBtn) updateRepeatButton(popup._repeatBtn);
+      if (popup._shuffleBtn) updateSpotifuckShuffleButton(popup._shuffleBtn);
+      if (popup._repeatBtn) updateSpotifuckRepeatButton(popup._repeatBtn);
     }, 1000);
 
 
@@ -2886,12 +2965,12 @@ offsetWrapper.appendChild(inputStack);
     btnReset.title = "Restore Default Position and Size";
     Object.assign(btnReset.style, {
       cursor: "pointer",
-      background: "#555",
+      background: "rgba(255, 255, 255, 0.1)",
       border: "none",
       borderRadius: "50%",
       width: "32px",
       height: "32px",
-      color: "white",
+      color: "#b3b3b3",
       fontWeight: "bold",
       fontSize: "18px",
       display: "flex",
@@ -2899,6 +2978,21 @@ offsetWrapper.appendChild(inputStack);
       alignItems: "center",
       userSelect: "none",
       padding: "0",
+      transition: "all 0.2s ease-in-out",
+      outline: "none",
+    });
+    
+    // Add hover effect for reset button
+    btnReset.addEventListener("mouseenter", () => {
+      btnReset.style.background = "rgba(255, 255, 255, 0.2)";
+      btnReset.style.color = "white";
+      btnReset.style.transform = "scale(1.05)";
+    });
+    
+    btnReset.addEventListener("mouseleave", () => {
+      btnReset.style.background = "rgba(255, 255, 255, 0.1)";
+      btnReset.style.color = "#b3b3b3";
+      btnReset.style.transform = "scale(1)";
     });
     // Default Position and Size of the Popup Gui
    btnReset.onclick = () => {
@@ -2960,8 +3054,8 @@ offsetWrapper.appendChild(inputStack);
     controlsBar.appendChild(btnRepeat);
 
     // Initialize button states
-    updateShuffleButton(btnShuffle);
-    updateRepeatButton(btnRepeat);
+    updateSpotifuckShuffleButton(btnShuffle);
+    updateSpotifuckRepeatButton(btnRepeat);
 
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
@@ -3222,8 +3316,8 @@ currentLyricsContainer = lyricsContainer;
         observeSpotifyPlayPause(popup);
       }
       if (popup && popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
-      if (popup && popup._shuffleBtn) updateShuffleButton(popup._shuffleBtn);
-      if (popup && popup._repeatBtn) updateRepeatButton(popup._repeatBtn);
+      if (popup && popup._shuffleBtn) updateSpotifuckShuffleButton(popup._shuffleBtn);
+      if (popup && popup._repeatBtn) updateSpotifuckRepeatButton(popup._repeatBtn);
     }, 400);
   }
 
