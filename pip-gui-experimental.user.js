@@ -1921,8 +1921,14 @@ const Providers = {
     const existing = document.getElementById("lyrics-plus-popup");
     if (existing) {
       if (existing._playPauseObserver) existing._playPauseObserver.disconnect();
+      if (existing._shuffleObserver) existing._shuffleObserver.disconnect();
+      if (existing._repeatObserver) existing._repeatObserver.disconnect();
       existing._playPauseObserver = null;
+      existing._shuffleObserver = null;
+      existing._repeatObserver = null;
       existing._playPauseBtn = null;
+      existing._shuffleBtn = null;
+      existing._repeatBtn = null;
       existing.remove();
     }
   }
@@ -1939,6 +1945,32 @@ function observeSpotifyPlayPause(popup) {
   });
   observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
   popup._playPauseObserver = observer;
+}
+
+function observeSpotifyShuffle(popup) {
+  if (!popup || !popup._shuffleBtn) return;
+  if (popup._shuffleObserver) popup._shuffleObserver.disconnect();
+
+  const shuffleBtn = document.querySelector('[data-testid="control-button-shuffle"]');
+  if (!shuffleBtn) return;
+  const observer = new MutationObserver(() => {
+    if (popup._shuffleBtn) updateShuffleIcon(popup._shuffleBtn);
+  });
+  observer.observe(shuffleBtn, { attributes: true, attributeFilter: ['aria-checked', 'class', 'style'] });
+  popup._shuffleObserver = observer;
+}
+
+function observeSpotifyRepeat(popup) {
+  if (!popup || !popup._repeatBtn) return;
+  if (popup._repeatObserver) popup._repeatObserver.disconnect();
+
+  const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+  if (!repeatBtn) return;
+  const observer = new MutationObserver(() => {
+    if (popup._repeatBtn) updateRepeatIcon(popup._repeatBtn);
+  });
+  observer.observe(repeatBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
+  popup._repeatObserver = observer;
 }
 
   function createPopup() {
@@ -2835,6 +2867,12 @@ offsetWrapper.appendChild(inputStack);
       '[aria-label="Previous"]',
       '[data-testid="control-button-skip-back"]',
       '[data-testid="mobile-prev-button"]'
+    ],
+    shuffle: [
+      '[data-testid="control-button-shuffle"]'
+    ],
+    repeat: [
+      '[data-testid="control-button-repeat"]'
     ]
   };
 
@@ -2875,11 +2913,37 @@ offsetWrapper.appendChild(inputStack);
       return btnPlayPause;
     }
 
+    function createShuffleButton() {
+      const btnShuffle = createControlBtn("", "Toggle Shuffle", () => {
+        sendSpotifyCommand("shuffle");
+        setTimeout(() => updateShuffleIcon(btnShuffle), 150);
+      });
+      btnShuffle.innerHTML = "";
+      btnShuffle.appendChild(shuffleSVG.cloneNode(true));
+      updateShuffleIcon(btnShuffle);
+      return btnShuffle;
+    }
+
+    function createRepeatButton() {
+      const btnRepeat = createControlBtn("", "Toggle Repeat", () => {
+        sendSpotifyCommand("repeat");
+        setTimeout(() => updateRepeatIcon(btnRepeat), 150);
+      });
+      btnRepeat.innerHTML = "";
+      btnRepeat.appendChild(repeatSVG.cloneNode(true));
+      updateRepeatIcon(btnRepeat);
+      return btnRepeat;
+    }
+
     const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
+    const btnShuffle = createShuffleButton();
     const btnPlayPause = createPlayPauseButton();
+    const btnRepeat = createRepeatButton();
     const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
 
     popup._playPauseBtn = btnPlayPause;
+    popup._shuffleBtn = btnShuffle;
+    popup._repeatBtn = btnRepeat;
 
 
     const btnReset = document.createElement("button");
@@ -2955,7 +3019,9 @@ offsetWrapper.appendChild(inputStack);
 
     controlsBar.appendChild(btnReset);
     controlsBar.appendChild(btnPrevious);
+    controlsBar.appendChild(btnShuffle);
     controlsBar.appendChild(btnPlayPause);
+    controlsBar.appendChild(btnRepeat);
     controlsBar.appendChild(btnNext);
 
     popup.appendChild(headerWrapper);
@@ -3075,6 +3141,8 @@ if (container) {
     })(popup, resizer);
 
     observeSpotifyPlayPause(popup);
+    observeSpotifyShuffle(popup);
+    observeSpotifyRepeat(popup);
 
     const info = getCurrentTrackInfo();
     if (info) {
@@ -3215,8 +3283,12 @@ currentLyricsContainer = lyricsContainer;
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
         autodetectProviderAndLoad(popup, info);
         observeSpotifyPlayPause(popup);
+        observeSpotifyShuffle(popup);
+        observeSpotifyRepeat(popup);
       }
       if (popup && popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+      if (popup && popup._shuffleBtn) updateShuffleIcon(popup._shuffleBtn);
+      if (popup && popup._repeatBtn) updateRepeatIcon(popup._repeatBtn);
     }, 400);
   }
 
