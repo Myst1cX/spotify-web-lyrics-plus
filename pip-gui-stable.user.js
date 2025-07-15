@@ -383,20 +383,33 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   });
 }
 
-  // --- Play/Pause Icon SVGs ---
-  const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  playSVG.setAttribute("viewBox", "0 0 24 24");
-  playSVG.setAttribute("width", "20");
-  playSVG.setAttribute("height", "20");
-  playSVG.setAttribute("fill", "white");
-  playSVG.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+  // --- Playback Control SVG Icons ---
+  function createSVGIcon(viewBox, width, height, fill, pathData) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", viewBox);
+    svg.setAttribute("width", width);
+    svg.setAttribute("height", height);
+    svg.setAttribute("fill", fill);
+    svg.innerHTML = pathData;
+    return svg;
+  }
 
-  const pauseSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  pauseSVG.setAttribute("viewBox", "0 0 24 24");
-  pauseSVG.setAttribute("width", "20");
-  pauseSVG.setAttribute("height", "20");
-  pauseSVG.setAttribute("fill", "white");
-  pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+  // Play/Pause Icons
+  const playSVG = createSVGIcon("0 0 24 24", "16", "16", "white", `<path d="M8 5v14l11-7z"/>`);
+  const pauseSVG = createSVGIcon("0 0 24 24", "16", "16", "white", `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`);
+
+  // Previous/Next Icons
+  const previousSVG = createSVGIcon("0 0 24 24", "16", "16", "white", `<path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>`);
+  const nextSVG = createSVGIcon("0 0 24 24", "16", "16", "white", `<path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>`);
+
+  // Shuffle Icons
+  const shuffleSVG = createSVGIcon("0 0 24 24", "16", "16", "white", `<path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>`);
+  const shuffleActiveSVG = createSVGIcon("0 0 24 24", "16", "16", "#1db954", `<path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>`);
+
+  // Repeat Icons
+  const repeatSVG = createSVGIcon("0 0 24 24", "16", "16", "white", `<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>`);
+  const repeatActiveSVG = createSVGIcon("0 0 24 24", "16", "16", "#1db954", `<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>`);
+  const repeatOneSVG = createSVGIcon("0 0 24 24", "16", "16", "#1db954", `<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/><text x="12" y="15" text-anchor="middle" font-size="8" fill="#1db954">1</text>`);
 
   // --- Language-universal play/pause root words for major Spotify UI languages (Aids Play/Pause button detection to reflect playback state inside gui)---
 const PAUSE_WORDS = [
@@ -516,46 +529,102 @@ function labelMeansPlay(label) {
   return PLAY_WORDS.some(word => label.includes(word));
 }
 
+  // --- Playback State Management ---
+  let shuffleState = false;
+  let repeatState = 0; // 0: off, 1: all, 2: one
+
   // --- Play/Pause Icon Updater ---
   function updatePlayPauseIcon(btnPlayPause) {
-  // Use the main play/pause button, which is language universal
-  let playPauseBtn = document.querySelector('[data-testid="control-button-playpause"]')
-    || document.querySelector('[aria-label]');
+    // Use the main play/pause button, which is language universal
+    let playPauseBtn = document.querySelector('[data-testid="control-button-playpause"]')
+      || document.querySelector('[aria-label]');
 
-  function isVisible(el) {
-    if (!el) return false;
-    const style = window.getComputedStyle(el);
-    return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+    function isVisible(el) {
+      if (!el) return false;
+      const style = window.getComputedStyle(el);
+      return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+    }
+
+    btnPlayPause.innerHTML = "";
+
+    if (playPauseBtn && isVisible(playPauseBtn)) {
+      const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
+
+      if (labelMeansPause(label)) {
+        btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+        return;
+      } else if (labelMeansPlay(label)) {
+        btnPlayPause.appendChild(playSVG.cloneNode(true));
+        return;
+      }
+    }
+
+    // Fallback: Use audio element state if possible
+    const audio = document.querySelector('audio');
+    if (audio) {
+      if (audio.paused) {
+        btnPlayPause.appendChild(playSVG.cloneNode(true));
+      } else {
+        btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+      }
+      return;
+    }
+
+    // Default to play icon
+    btnPlayPause.appendChild(playSVG.cloneNode(true));
   }
 
-  btnPlayPause.innerHTML = "";
-
-  if (playPauseBtn && isVisible(playPauseBtn)) {
-    const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
-
-    if (labelMeansPause(label)) {
-      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-      return;
-    } else if (labelMeansPlay(label)) {
-      btnPlayPause.appendChild(playSVG.cloneNode(true));
-      return;
+  // --- Shuffle State Management ---
+  function updateShuffleState() {
+    const shuffleBtn = document.querySelector('[data-testid="control-button-shuffle"]');
+    if (shuffleBtn) {
+      const ariaLabel = shuffleBtn.getAttribute('aria-label') || '';
+      shuffleState = ariaLabel.toLowerCase().includes('disable') || shuffleBtn.classList.contains('Svg-sc-ytk21e-0');
     }
   }
 
-  // Fallback: Use audio element state if possible
-  const audio = document.querySelector('audio');
-  if (audio) {
-    if (audio.paused) {
-      btnPlayPause.appendChild(playSVG.cloneNode(true));
-    } else {
-      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-    }
-    return;
+  function updateShuffleIcon(btnShuffle) {
+    btnShuffle.innerHTML = "";
+    btnShuffle.appendChild(shuffleState ? shuffleActiveSVG.cloneNode(true) : shuffleSVG.cloneNode(true));
+    btnShuffle.style.background = shuffleState ? "#1a1a1a" : "#333";
+    btnShuffle.style.border = shuffleState ? "2px solid #1db954" : "2px solid transparent";
   }
 
-  // Default to play icon
-  btnPlayPause.appendChild(playSVG.cloneNode(true));
-}
+  // --- Repeat State Management ---
+  function updateRepeatState() {
+    const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+    if (repeatBtn) {
+      const ariaLabel = repeatBtn.getAttribute('aria-label') || '';
+      if (ariaLabel.toLowerCase().includes('disable')) {
+        repeatState = 1; // repeat all
+      } else if (ariaLabel.toLowerCase().includes('track')) {
+        repeatState = 2; // repeat one
+      } else {
+        repeatState = 0; // off
+      }
+    }
+  }
+
+  function updateRepeatIcon(btnRepeat) {
+    btnRepeat.innerHTML = "";
+    let iconToUse = repeatSVG;
+    let bgColor = "#333";
+    let border = "2px solid transparent";
+    
+    if (repeatState === 1) {
+      iconToUse = repeatActiveSVG;
+      bgColor = "#1a1a1a";
+      border = "2px solid #1db954";
+    } else if (repeatState === 2) {
+      iconToUse = repeatOneSVG;
+      bgColor = "#1a1a1a";
+      border = "2px solid #1db954";
+    }
+    
+    btnRepeat.appendChild(iconToUse.cloneNode(true));
+    btnRepeat.style.background = bgColor;
+    btnRepeat.style.border = border;
+  }
   // ------------------------
   // Providers and Fetchers
   // ------------------------
@@ -1842,11 +1911,40 @@ function observeSpotifyPlayPause(popup) {
   let spBtn = document.querySelector('[data-testid="control-button-playpause"]');
   if (!spBtn) spBtn = document.querySelector('[aria-label]');
   if (!spBtn) return;
+  
   const observer = new MutationObserver(() => {
     if (popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
   });
   observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
   popup._playPauseObserver = observer;
+}
+
+function observeSpotifyControls(popup) {
+  if (!popup) return;
+  
+  // Observe shuffle button
+  const shuffleBtn = document.querySelector('[data-testid="control-button-shuffle"]');
+  if (shuffleBtn && popup._shuffleBtn) {
+    if (popup._shuffleObserver) popup._shuffleObserver.disconnect();
+    const shuffleObserver = new MutationObserver(() => {
+      updateShuffleState();
+      updateShuffleIcon(popup._shuffleBtn);
+    });
+    shuffleObserver.observe(shuffleBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
+    popup._shuffleObserver = shuffleObserver;
+  }
+  
+  // Observe repeat button
+  const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+  if (repeatBtn && popup._repeatBtn) {
+    if (popup._repeatObserver) popup._repeatObserver.disconnect();
+    const repeatObserver = new MutationObserver(() => {
+      updateRepeatState();
+      updateRepeatIcon(popup._repeatBtn);
+    });
+    repeatObserver.observe(repeatBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
+    popup._repeatObserver = repeatObserver;
+  }
 }
 
   function createPopup() {
@@ -2696,30 +2794,54 @@ offsetWrapper.appendChild(inputStack);
       controlsBar.style.pointerEvents = "none";
     }
 
-    function createControlBtn(content, title, onClick) {
+    function createControlBtn(content, title, onClick, isActive = false) {
       const btn = document.createElement("button");
       btn.title = title;
-      Object.assign(btn.style, {
+      
+      const baseStyle = {
         cursor: "pointer",
-        background: "#1db954",
-        border: "none",
+        background: isActive ? "#1a1a1a" : "#333",
+        border: isActive ? "2px solid #1db954" : "2px solid transparent",
         borderRadius: "50%",
-        width: "32px",
-        height: "32px",
+        width: "36px",
+        height: "36px",
         color: "white",
-        fontWeight: "bold",
-        fontSize: "18px",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
         userSelect: "none",
         padding: "0",
+        transition: "all 0.2s ease",
+        outline: "none",
+      };
+      
+      Object.assign(btn.style, baseStyle);
+      
+      // Add hover effects
+      btn.addEventListener("mouseenter", () => {
+        btn.style.background = isActive ? "#1a1a1a" : "#1db954";
+        btn.style.transform = "scale(1.1)";
       });
+      
+      btn.addEventListener("mouseleave", () => {
+        btn.style.background = isActive ? "#1a1a1a" : "#333";
+        btn.style.transform = "scale(1)";
+      });
+      
+      btn.addEventListener("mousedown", () => {
+        btn.style.transform = "scale(0.95)";
+      });
+      
+      btn.addEventListener("mouseup", () => {
+        btn.style.transform = "scale(1.1)";
+      });
+      
       if (typeof content === "string") {
         btn.textContent = content;
       } else {
         btn.appendChild(content);
       }
+      
       btn.onclick = onClick;
       return btn;
     }
@@ -2743,6 +2865,16 @@ offsetWrapper.appendChild(inputStack);
       '[aria-label="Previous"]',
       '[data-testid="control-button-skip-back"]',
       '[data-testid="mobile-prev-button"]'
+    ],
+    shuffle: [
+      '[data-testid="control-button-shuffle"]',
+      '[aria-label*="shuffle"]',
+      '[aria-label*="Shuffle"]'
+    ],
+    repeat: [
+      '[data-testid="control-button-repeat"]',
+      '[aria-label*="repeat"]',
+      '[aria-label*="Repeat"]'
     ]
   };
 
@@ -2783,11 +2915,57 @@ offsetWrapper.appendChild(inputStack);
       return btnPlayPause;
     }
 
-    const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
+    function createShuffleButton() {
+      const btnShuffle = createControlBtn("", "Toggle Shuffle", () => {
+        sendSpotifyCommand("shuffle");
+        setTimeout(() => {
+          updateShuffleState();
+          updateShuffleIcon(btnShuffle);
+        }, 100);
+      });
+      btnShuffle.innerHTML = "";
+      updateShuffleState();
+      updateShuffleIcon(btnShuffle);
+      return btnShuffle;
+    }
+
+    function createRepeatButton() {
+      const btnRepeat = createControlBtn("", "Toggle Repeat", () => {
+        sendSpotifyCommand("repeat");
+        setTimeout(() => {
+          updateRepeatState();
+          updateRepeatIcon(btnRepeat);
+        }, 100);
+      });
+      btnRepeat.innerHTML = "";
+      updateRepeatState();
+      updateRepeatIcon(btnRepeat);
+      return btnRepeat;
+    }
+
+    function createPreviousButton() {
+      const btnPrevious = createControlBtn("", "Previous Track", () => sendSpotifyCommand("previous"));
+      btnPrevious.innerHTML = "";
+      btnPrevious.appendChild(previousSVG.cloneNode(true));
+      return btnPrevious;
+    }
+
+    function createNextButton() {
+      const btnNext = createControlBtn("", "Next Track", () => sendSpotifyCommand("next"));
+      btnNext.innerHTML = "";
+      btnNext.appendChild(nextSVG.cloneNode(true));
+      return btnNext;
+    }
+
+    const btnShuffle = createShuffleButton();
+    const btnPrevious = createPreviousButton();
     const btnPlayPause = createPlayPauseButton();
-    const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
+    const btnNext = createNextButton();
+    const btnRepeat = createRepeatButton();
 
     popup._playPauseBtn = btnPlayPause;
+    popup._shuffleBtn = btnShuffle;
+    popup._repeatBtn = btnRepeat;
 
 
     const btnReset = document.createElement("button");
@@ -2862,9 +3040,11 @@ offsetWrapper.appendChild(inputStack);
 };
 
     controlsBar.appendChild(btnReset);
+    controlsBar.appendChild(btnShuffle);
     controlsBar.appendChild(btnPrevious);
     controlsBar.appendChild(btnPlayPause);
     controlsBar.appendChild(btnNext);
+    controlsBar.appendChild(btnRepeat);
 
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
@@ -2983,6 +3163,7 @@ if (container) {
     })(popup, resizer);
 
     observeSpotifyPlayPause(popup);
+    observeSpotifyControls(popup);
 
     const info = getCurrentTrackInfo();
     if (info) {
@@ -3123,8 +3304,11 @@ currentLyricsContainer = lyricsContainer;
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
         autodetectProviderAndLoad(popup, info);
         observeSpotifyPlayPause(popup);
+        observeSpotifyControls(popup);
       }
       if (popup && popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+      if (popup && popup._shuffleBtn) updateShuffleIcon(popup._shuffleBtn);
+      if (popup && popup._repeatBtn) updateRepeatIcon(popup._repeatBtn);
     }, 400);
   }
 
