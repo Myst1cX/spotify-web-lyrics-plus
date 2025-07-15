@@ -398,6 +398,30 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   pauseSVG.setAttribute("fill", "white");
   pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
 
+  // --- Shuffle Icon SVG ---
+  const shuffleSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  shuffleSVG.setAttribute("viewBox", "0 0 24 24");
+  shuffleSVG.setAttribute("width", "20");
+  shuffleSVG.setAttribute("height", "20");
+  shuffleSVG.setAttribute("fill", "white");
+  shuffleSVG.innerHTML = `<path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>`;
+
+  // --- Repeat Icon SVG ---
+  const repeatSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  repeatSVG.setAttribute("viewBox", "0 0 24 24");
+  repeatSVG.setAttribute("width", "20");
+  repeatSVG.setAttribute("height", "20");
+  repeatSVG.setAttribute("fill", "white");
+  repeatSVG.innerHTML = `<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>`;
+
+  // --- Repeat One Icon SVG ---
+  const repeatOneSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  repeatOneSVG.setAttribute("viewBox", "0 0 24 24");
+  repeatOneSVG.setAttribute("width", "20");
+  repeatOneSVG.setAttribute("height", "20");
+  repeatOneSVG.setAttribute("fill", "#1db954");
+  repeatOneSVG.innerHTML = `<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/><text x="12" y="15" text-anchor="middle" font-size="10" fill="#1db954">1</text>`;
+
   // --- Language-universal play/pause root words for major Spotify UI languages (Aids Play/Pause button detection to reflect playback state inside gui)---
 const PAUSE_WORDS = [
   // English
@@ -556,6 +580,60 @@ function labelMeansPlay(label) {
   // Default to play icon
   btnPlayPause.appendChild(playSVG.cloneNode(true));
 }
+
+  // --- Shuffle State Detection ---
+  function getShuffleState() {
+    const shuffleBtn = document.querySelector('[data-testid="control-button-shuffle"]');
+    if (!shuffleBtn) return false;
+    const ariaChecked = shuffleBtn.getAttribute('aria-checked');
+    return ariaChecked === 'true';
+  }
+
+  // --- Repeat State Detection ---
+  function getRepeatState() {
+    const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+    if (!repeatBtn) return 0;
+    const ariaLabel = (repeatBtn.getAttribute('aria-label') || '').toLowerCase();
+    
+    if (ariaLabel.includes('repeat one') || ariaLabel.includes('repeat track')) {
+      return 2; // repeat one
+    } else if (ariaLabel.includes('repeat')) {
+      return 1; // repeat all
+    }
+    return 0; // repeat off
+  }
+
+  // --- Shuffle Icon Updater ---
+  function updateShuffleIcon(btnShuffle) {
+    const isShuffled = getShuffleState();
+    btnShuffle.innerHTML = "";
+    
+    const shuffleIcon = shuffleSVG.cloneNode(true);
+    shuffleIcon.setAttribute("fill", isShuffled ? "#1db954" : "white");
+    btnShuffle.appendChild(shuffleIcon);
+  }
+
+  // --- Repeat Icon Updater ---
+  function updateRepeatIcon(btnRepeat) {
+    const repeatState = getRepeatState();
+    btnRepeat.innerHTML = "";
+    
+    let repeatIcon;
+    if (repeatState === 2) {
+      // Repeat one
+      repeatIcon = repeatOneSVG.cloneNode(true);
+    } else if (repeatState === 1) {
+      // Repeat all
+      repeatIcon = repeatSVG.cloneNode(true);
+      repeatIcon.setAttribute("fill", "#1db954");
+    } else {
+      // Repeat off
+      repeatIcon = repeatSVG.cloneNode(true);
+      repeatIcon.setAttribute("fill", "white");
+    }
+    
+    btnRepeat.appendChild(repeatIcon);
+  }
   // ------------------------
   // Providers and Fetchers
   // ------------------------
@@ -1829,8 +1907,14 @@ const Providers = {
     const existing = document.getElementById("lyrics-plus-popup");
     if (existing) {
       if (existing._playPauseObserver) existing._playPauseObserver.disconnect();
+      if (existing._shuffleObserver) existing._shuffleObserver.disconnect();
+      if (existing._repeatObserver) existing._repeatObserver.disconnect();
       existing._playPauseObserver = null;
+      existing._shuffleObserver = null;
+      existing._repeatObserver = null;
       existing._playPauseBtn = null;
+      existing._shuffleBtn = null;
+      existing._repeatBtn = null;
       existing.remove();
     }
   }
@@ -1847,6 +1931,32 @@ function observeSpotifyPlayPause(popup) {
   });
   observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
   popup._playPauseObserver = observer;
+}
+
+function observeSpotifyShuffle(popup) {
+  if (!popup || !popup._shuffleBtn) return;
+  if (popup._shuffleObserver) popup._shuffleObserver.disconnect();
+
+  const shuffleBtn = document.querySelector('[data-testid="control-button-shuffle"]');
+  if (!shuffleBtn) return;
+  const observer = new MutationObserver(() => {
+    if (popup._shuffleBtn) updateShuffleIcon(popup._shuffleBtn);
+  });
+  observer.observe(shuffleBtn, { attributes: true, attributeFilter: ['aria-checked', 'class', 'style'] });
+  popup._shuffleObserver = observer;
+}
+
+function observeSpotifyRepeat(popup) {
+  if (!popup || !popup._repeatBtn) return;
+  if (popup._repeatObserver) popup._repeatObserver.disconnect();
+
+  const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+  if (!repeatBtn) return;
+  const observer = new MutationObserver(() => {
+    if (popup._repeatBtn) updateRepeatIcon(popup._repeatBtn);
+  });
+  observer.observe(repeatBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
+  popup._repeatObserver = observer;
 }
 
   function createPopup() {
@@ -2743,6 +2853,12 @@ offsetWrapper.appendChild(inputStack);
       '[aria-label="Previous"]',
       '[data-testid="control-button-skip-back"]',
       '[data-testid="mobile-prev-button"]'
+    ],
+    shuffle: [
+      '[data-testid="control-button-shuffle"]'
+    ],
+    repeat: [
+      '[data-testid="control-button-repeat"]'
     ]
   };
 
@@ -2783,11 +2899,37 @@ offsetWrapper.appendChild(inputStack);
       return btnPlayPause;
     }
 
+    function createShuffleButton() {
+      const btnShuffle = createControlBtn("", "Toggle Shuffle", () => {
+        sendSpotifyCommand("shuffle");
+        setTimeout(() => updateShuffleIcon(btnShuffle), 150);
+      });
+      btnShuffle.innerHTML = "";
+      btnShuffle.appendChild(shuffleSVG.cloneNode(true));
+      updateShuffleIcon(btnShuffle);
+      return btnShuffle;
+    }
+
+    function createRepeatButton() {
+      const btnRepeat = createControlBtn("", "Toggle Repeat", () => {
+        sendSpotifyCommand("repeat");
+        setTimeout(() => updateRepeatIcon(btnRepeat), 150);
+      });
+      btnRepeat.innerHTML = "";
+      btnRepeat.appendChild(repeatSVG.cloneNode(true));
+      updateRepeatIcon(btnRepeat);
+      return btnRepeat;
+    }
+
     const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
+    const btnShuffle = createShuffleButton();
     const btnPlayPause = createPlayPauseButton();
+    const btnRepeat = createRepeatButton();
     const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
 
     popup._playPauseBtn = btnPlayPause;
+    popup._shuffleBtn = btnShuffle;
+    popup._repeatBtn = btnRepeat;
 
 
     const btnReset = document.createElement("button");
@@ -2863,7 +3005,9 @@ offsetWrapper.appendChild(inputStack);
 
     controlsBar.appendChild(btnReset);
     controlsBar.appendChild(btnPrevious);
+    controlsBar.appendChild(btnShuffle);
     controlsBar.appendChild(btnPlayPause);
+    controlsBar.appendChild(btnRepeat);
     controlsBar.appendChild(btnNext);
 
     popup.appendChild(headerWrapper);
@@ -2983,6 +3127,8 @@ if (container) {
     })(popup, resizer);
 
     observeSpotifyPlayPause(popup);
+    observeSpotifyShuffle(popup);
+    observeSpotifyRepeat(popup);
 
     const info = getCurrentTrackInfo();
     if (info) {
@@ -3123,8 +3269,12 @@ currentLyricsContainer = lyricsContainer;
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
         autodetectProviderAndLoad(popup, info);
         observeSpotifyPlayPause(popup);
+        observeSpotifyShuffle(popup);
+        observeSpotifyRepeat(popup);
       }
       if (popup && popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+      if (popup && popup._shuffleBtn) updateShuffleIcon(popup._shuffleBtn);
+      if (popup && popup._repeatBtn) updateRepeatIcon(popup._repeatBtn);
     }, 400);
   }
 
