@@ -409,7 +409,7 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   // Repeat Icons
   const repeatSVG = createSVGIcon("0 0 24 24", "16", "16", "white", `<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>`);
   const repeatActiveSVG = createSVGIcon("0 0 24 24", "16", "16", "#1db954", `<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>`);
-  const repeatOneSVG = createSVGIcon("0 0 24 24", "16", "16", "#1db954", `<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/><text x="12" y="15" text-anchor="middle" font-size="8" fill="#1db954">1</text>`);
+  const repeatOneSVG = createSVGIcon("0 0 24 24", "16", "16", "#1db954", `<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/><text x="12" y="15" text-anchor="middle" font-size="10" fill="#1db954" font-family="Arial, sans-serif">1</text>`);
 
   // --- Language-universal play/pause root words for major Spotify UI languages (Aids Play/Pause button detection to reflect playback state inside gui)---
 const PAUSE_WORDS = [
