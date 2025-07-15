@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      8.3.dev
+// @version      8.4.dev
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -14,22 +14,18 @@
 // ==/UserScript==
 
 // DO NOT INSTALL - Backup Instance for debugging and troubleshooting
-// AT THE MOMENT - Equal to Stable release (Last update: 13.7.25)
-// If rollback is needed - check version 7.4.dev
+// AT THE MOMENT - Equal to Stable release (Last update: 15.7.25)
 
 // TO DO:
 // Converting the userscript into a browser extension would unlock two things:
 // 1. Possibilitate having a floating popup ui with spotify lyrics (always on top) that works on other sites too, outside open.spotify.com
 // 2. Auto fetch spotify token for user when it expires and apply it (maybe for Musixmatch too if user logged in inside browser)
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
-// See if you can make drag/resize work on mobile browser.
-// Add "expand" button to the right of next track button in playback controls container. Its icon should fit nicely with the rest of playback control buttons. Its function is that on click, the popup gets expanded to fit the screen (if im on mobile and zoomed in, its supposed to fit that screen (the Spotify website). If possible to implement I'd also suggest that Spotify's bottom container - the one that has the volume toggle, playback control buttons, seekbar etc - remains visible while the rest of the website gets overtaken by the popup gui). While expanded if click the button again, it returns to the previous position state or if that's too hard to implement, to the restore default position.
 
 // PROBABLY NOT:
 // Add Deezer provider (synced and unsynced)
 // deezer.js with api link > https://github.com/bertigert/Deezer-Lyrics-Sync/blob/main/lyrics_sync.user.js
-// // Fix and uncomment Netease provider; api implementation example: https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src%2Ffetchers.ts
-
+// Fix and uncomment Netease provider; api implementation example: https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src%2Ffetchers.ts
 
 (function () {
   'use strict';
@@ -1913,14 +1909,13 @@ function getSpotifyLyricsContainerRect() {
 }
 
 // Usage:
-let rect = getSpotifyLyricsContainerRect();
-if (rect) {
+if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
   Object.assign(popup.style, {
     position: "fixed",
-    left: rect.left + "px",
-    top: rect.top + "px",
-    width: rect.width + "px",
-    height: rect.height + "px",
+    left: pos.left + "px",
+    top: pos.top + "px",
+    width: pos.width + "px",
+    height: pos.height + "px",
     minWidth: "370px",
     minHeight: "240px",
     backgroundColor: "#121212",
@@ -1937,38 +1932,64 @@ if (rect) {
     right: "auto",
     bottom: "auto"
   });
-  localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-    left: rect.left,
-    top: rect.top,
-    width: rect.width,
-    height: rect.height
-  }));
 } else {
-  // fallback
-  Object.assign(popup.style, {
-    position: "fixed",
-    bottom: "87px",
-    right: "0px",
-    left: "auto",
-    top: "auto",
-    width: "370px",
-    height: "79.5vh",
-    minWidth: "370px",
-    minHeight: "240px",
-    backgroundColor: "#121212",
-    color: "white",
-    borderRadius: "12px",
-    boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    zIndex: 100000,
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    padding: "0",
-    userSelect: "none",
-  });
+  // fallback to container or default
+  let rect = getSpotifyLyricsContainerRect();
+  if (rect) {
+    Object.assign(popup.style, {
+      position: "fixed",
+      left: rect.left + "px",
+      top: rect.top + "px",
+      width: rect.width + "px",
+      height: rect.height + "px",
+      minWidth: "370px",
+      minHeight: "240px",
+      backgroundColor: "#121212",
+      color: "white",
+      borderRadius: "12px",
+      boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
+      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      zIndex: 100000,
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+      padding: "0",
+      userSelect: "none",
+      right: "auto",
+      bottom: "auto"
+    });
+    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height
+    }));
+  } else {
+    // fallback
+    Object.assign(popup.style, {
+      position: "fixed",
+      bottom: "87px",
+      right: "0px",
+      left: "auto",
+      top: "auto",
+      width: "370px",
+      height: "79.5vh",
+      minWidth: "370px",
+      minHeight: "240px",
+      backgroundColor: "#121212",
+      color: "white",
+      borderRadius: "12px",
+      boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
+      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      zIndex: 100000,
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+      padding: "0",
+      userSelect: "none",
+    });
+  }
 }
-
     // Header with title and close button - drag handle
     const headerWrapper = document.createElement("div");
     Object.assign(headerWrapper.style, {
