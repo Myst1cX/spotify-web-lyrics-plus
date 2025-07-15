@@ -1,16 +1,12 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Testing
 // @namespace    http://tampermonkey.net/
-// @version      8.3.testing
+// @version      8.4.testing
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      genius.com
-// @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/testing.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/testing.js
 // ==/UserScript==
 
 // ONLY FOR BACKUP PURPOSES
@@ -1897,14 +1893,13 @@ function getSpotifyLyricsContainerRect() {
 }
 
 // Usage:
-let rect = getSpotifyLyricsContainerRect();
-if (rect) {
+if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
   Object.assign(popup.style, {
     position: "fixed",
-    left: rect.left + "px",
-    top: rect.top + "px",
-    width: rect.width + "px",
-    height: rect.height + "px",
+    left: pos.left + "px",
+    top: pos.top + "px",
+    width: pos.width + "px",
+    height: pos.height + "px",
     minWidth: "370px",
     minHeight: "240px",
     backgroundColor: "#121212",
@@ -1921,38 +1916,64 @@ if (rect) {
     right: "auto",
     bottom: "auto"
   });
-  localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-    left: rect.left,
-    top: rect.top,
-    width: rect.width,
-    height: rect.height
-  }));
 } else {
-  // fallback
-  Object.assign(popup.style, {
-    position: "fixed",
-    bottom: "87px",
-    right: "0px",
-    left: "auto",
-    top: "auto",
-    width: "370px",
-    height: "79.5vh",
-    minWidth: "370px",
-    minHeight: "240px",
-    backgroundColor: "#121212",
-    color: "white",
-    borderRadius: "12px",
-    boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    zIndex: 100000,
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    padding: "0",
-    userSelect: "none",
-  });
+  // fallback to container or default
+  let rect = getSpotifyLyricsContainerRect();
+  if (rect) {
+    Object.assign(popup.style, {
+      position: "fixed",
+      left: rect.left + "px",
+      top: rect.top + "px",
+      width: rect.width + "px",
+      height: rect.height + "px",
+      minWidth: "370px",
+      minHeight: "240px",
+      backgroundColor: "#121212",
+      color: "white",
+      borderRadius: "12px",
+      boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
+      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      zIndex: 100000,
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+      padding: "0",
+      userSelect: "none",
+      right: "auto",
+      bottom: "auto"
+    });
+    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height
+    }));
+  } else {
+    // fallback
+    Object.assign(popup.style, {
+      position: "fixed",
+      bottom: "87px",
+      right: "0px",
+      left: "auto",
+      top: "auto",
+      width: "370px",
+      height: "79.5vh",
+      minWidth: "370px",
+      minHeight: "240px",
+      backgroundColor: "#121212",
+      color: "white",
+      borderRadius: "12px",
+      boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
+      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      zIndex: 100000,
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+      padding: "0",
+      userSelect: "none",
+    });
+  }
 }
-
     // Header with title and close button - drag handle
     const headerWrapper = document.createElement("div");
     Object.assign(headerWrapper.style, {
