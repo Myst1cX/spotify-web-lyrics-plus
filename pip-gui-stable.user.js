@@ -383,20 +383,48 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   });
 }
 
-  // --- Play/Pause Icon SVGs ---
+  // --- Spotify-style Control Icon SVGs ---
   const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  playSVG.setAttribute("viewBox", "0 0 24 24");
-  playSVG.setAttribute("width", "20");
-  playSVG.setAttribute("height", "20");
-  playSVG.setAttribute("fill", "white");
-  playSVG.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+  playSVG.setAttribute("viewBox", "0 0 16 16");
+  playSVG.setAttribute("width", "16");
+  playSVG.setAttribute("height", "16");
+  playSVG.setAttribute("fill", "currentColor");
+  playSVG.innerHTML = `<path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>`;
 
   const pauseSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  pauseSVG.setAttribute("viewBox", "0 0 24 24");
-  pauseSVG.setAttribute("width", "20");
-  pauseSVG.setAttribute("height", "20");
-  pauseSVG.setAttribute("fill", "white");
-  pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+  pauseSVG.setAttribute("viewBox", "0 0 16 16");
+  pauseSVG.setAttribute("width", "16");
+  pauseSVG.setAttribute("height", "16");
+  pauseSVG.setAttribute("fill", "currentColor");
+  pauseSVG.innerHTML = `<path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/>`;
+
+  const previousSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  previousSVG.setAttribute("viewBox", "0 0 16 16");
+  previousSVG.setAttribute("width", "16");
+  previousSVG.setAttribute("height", "16");
+  previousSVG.setAttribute("fill", "currentColor");
+  previousSVG.innerHTML = `<path d="M4 4a.5.5 0 0 1 1 0v3.248l6.267-3.636c.52-.302 1.233.043 1.233.696v7.384c0 .653-.713.998-1.233.696L5 8.752V12a.5.5 0 0 1-1 0V4z"/>`;
+
+  const nextSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  nextSVG.setAttribute("viewBox", "0 0 16 16");
+  nextSVG.setAttribute("width", "16");
+  nextSVG.setAttribute("height", "16");
+  nextSVG.setAttribute("fill", "currentColor");
+  nextSVG.innerHTML = `<path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z"/><path d="M1.5 1.5A.5.5 0 0 1 2 1h1.5a.5.5 0 0 1 0 1H2v12h1.5a.5.5 0 0 1 0 1H2a.5.5 0 0 1-.5-.5v-13z"/>`;
+
+  const shuffleSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  shuffleSVG.setAttribute("viewBox", "0 0 16 16");
+  shuffleSVG.setAttribute("width", "16");
+  shuffleSVG.setAttribute("height", "16");
+  shuffleSVG.setAttribute("fill", "currentColor");
+  shuffleSVG.innerHTML = `<path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.624 9.624 0 0 0 7.556 8a9.624 9.624 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.595 10.595 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.624 9.624 0 0 0 6.444 8a9.624 9.624 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5z"/><path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192zm0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192z"/>`;
+
+  const repeatSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  repeatSVG.setAttribute("viewBox", "0 0 16 16");
+  repeatSVG.setAttribute("width", "16");
+  repeatSVG.setAttribute("height", "16");
+  repeatSVG.setAttribute("fill", "currentColor");
+  repeatSVG.innerHTML = `<path d="M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192zm3.81.086a.5.5 0 0 1 .67.225A5 5 0 0 1 11 13H5v1.466a.25.25 0 0 1-.41.192l-2.36-1.966a.25.25 0 0 1 0-.384l2.36-1.966a.25.25 0 0 1 .41.192V12h6a4 4 0 0 0 3.585-5.777.5.5 0 0 1 .225-.67z"/>`;
 
   // --- Language-universal play/pause root words for major Spotify UI languages (Aids Play/Pause button detection to reflect playback state inside gui)---
 const PAUSE_WORDS = [
@@ -556,6 +584,40 @@ function labelMeansPlay(label) {
   // Default to play icon
   btnPlayPause.appendChild(playSVG.cloneNode(true));
 }
+
+  // --- Shuffle/Repeat State Checkers ---
+  function isShuffleActive() {
+    const shuffleButtons = [
+      '[aria-label="Disable shuffle"]',
+      '[data-testid="control-button-shuffle"][aria-pressed="true"]',
+      '[data-testid="control-button-shuffle"][aria-checked="true"]'
+    ];
+    
+    for (const selector of shuffleButtons) {
+      const btn = document.querySelector(selector);
+      if (btn && btn.offsetParent !== null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function isRepeatActive() {
+    const repeatButtons = [
+      '[aria-label="Disable repeat"]',
+      '[aria-label="Disable repeat one"]',
+      '[data-testid="control-button-repeat"][aria-pressed="true"]',
+      '[data-testid="control-button-repeat"][aria-checked="true"]'
+    ];
+    
+    for (const selector of repeatButtons) {
+      const btn = document.querySelector(selector);
+      if (btn && btn.offsetParent !== null) {
+        return true;
+      }
+    }
+    return false;
+  }
   // ------------------------
   // Providers and Fetchers
   // ------------------------
@@ -2696,98 +2758,155 @@ offsetWrapper.appendChild(inputStack);
       controlsBar.style.pointerEvents = "none";
     }
 
-    function createControlBtn(content, title, onClick) {
+    function sendSpotifyCommand(command) {
+      // List of selectors per command, covering desktop and mobile
+      const selectors = {
+        playpause: [
+          '[aria-label="Play"]',
+          '[aria-label="Pause"]',
+          '[data-testid="control-button-playpause"]',
+          '[data-testid="mobile-play-button"]',
+          '[data-testid="mobile-pause-button"]'
+        ],
+        next: [
+          '[aria-label="Next"]',
+          '[data-testid="control-button-skip-forward"]',
+          '[data-testid="mobile-next-button"]'
+        ],
+        previous: [
+          '[aria-label="Previous"]',
+          '[data-testid="control-button-skip-back"]',
+          '[data-testid="mobile-prev-button"]'
+        ],
+        shuffle: [
+          '[aria-label="Enable shuffle"]',
+          '[aria-label="Disable shuffle"]',
+          '[data-testid="control-button-shuffle"]',
+          '[data-testid="mobile-shuffle-button"]'
+        ],
+        repeat: [
+          '[aria-label="Enable repeat"]',
+          '[aria-label="Disable repeat"]',
+          '[aria-label="Enable repeat one"]',
+          '[aria-label="Disable repeat one"]',
+          '[data-testid="control-button-repeat"]',
+          '[data-testid="mobile-repeat-button"]'
+        ]
+      };
+
+      // Try all selectors for the current command
+      let btn = null;
+      for (const sel of selectors[command] || []) {
+        btn = document.querySelector(sel);
+        if (btn && btn.offsetParent !== null) break; // Only pick visible
+      }
+
+      // Fallback: try to find button by innerText (mobile sometimes uses text)
+      if (!btn && command === "playpause") {
+        btn = Array.from(document.querySelectorAll("button"))
+          .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
+      }
+
+      if (btn) {
+        // Try click, then fallback to synthetic touch events for mobile
+        btn.click();
+        // If still not playing, try touch events
+        if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+          btn.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, cancelable:true}));
+          btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
+        }
+      } else {
+        alert("Could not find the Spotify playback button. If you're on mobile, try updating Spotify Web Player or refreshing the page.");
+        console.warn("Spotify control button not found for:", command);
+      }
+    }
       const btn = document.createElement("button");
       btn.title = title;
       Object.assign(btn.style, {
         cursor: "pointer",
-        background: "#1db954",
+        background: "none",
         border: "none",
         borderRadius: "50%",
         width: "32px",
         height: "32px",
-        color: "white",
-        fontWeight: "bold",
-        fontSize: "18px",
+        color: "#b3b3b3",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
         userSelect: "none",
         padding: "0",
+        transition: "color 0.2s ease",
       });
-      if (typeof content === "string") {
-        btn.textContent = content;
-      } else {
-        btn.appendChild(content);
-      }
+      
+      const svg = svgElement.cloneNode(true);
+      btn.appendChild(svg);
       btn.onclick = onClick;
+      
+      // Add hover effect
+      btn.onmouseenter = () => {
+        if (!isStateAware || !btn._isActive) {
+          btn.style.color = "#ffffff";
+        }
+      };
+      
+      btn.onmouseleave = () => {
+        if (!isStateAware || !btn._isActive) {
+          btn.style.color = "#b3b3b3";
+        }
+      };
+      
       return btn;
     }
 
-    function sendSpotifyCommand(command) {
-  // List of selectors per command, covering desktop and mobile
-  const selectors = {
-    playpause: [
-      '[aria-label="Play"]',
-      '[aria-label="Pause"]',
-      '[data-testid="control-button-playpause"]',
-      '[data-testid="mobile-play-button"]',
-      '[data-testid="mobile-pause-button"]'
-    ],
-    next: [
-      '[aria-label="Next"]',
-      '[data-testid="control-button-skip-forward"]',
-      '[data-testid="mobile-next-button"]'
-    ],
-    previous: [
-      '[aria-label="Previous"]',
-      '[data-testid="control-button-skip-back"]',
-      '[data-testid="mobile-prev-button"]'
-    ]
-  };
-
-  // Try all selectors for the current command
-  let btn = null;
-  for (const sel of selectors[command] || []) {
-    btn = document.querySelector(sel);
-    if (btn && btn.offsetParent !== null) break; // Only pick visible
-  }
-
-  // Fallback: try to find button by innerText (mobile sometimes uses text)
-  if (!btn && command === "playpause") {
-    btn = Array.from(document.querySelectorAll("button"))
-      .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
-  }
-
-  if (btn) {
-    // Try click, then fallback to synthetic touch events for mobile
-    btn.click();
-    // If still not playing, try touch events
-    if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-      btn.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, cancelable:true}));
-      btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
-    }
-  } else {
-    alert("Could not find the Spotify playback button. If you're on mobile, try updating Spotify Web Player or refreshing the page.");
-    console.warn("Spotify control button not found for:", command);
-  }
-}
     function createPlayPauseButton() {
-      const btnPlayPause = createControlBtn("", "Play/Pause", () => {
+      const btnPlayPause = createControlBtn(playSVG, "Play/Pause", () => {
         sendSpotifyCommand("playpause");
-        updatePlayPauseIcon(btnPlayPause);
+        setTimeout(() => updatePlayPauseIcon(btnPlayPause), 100);
       });
-      btnPlayPause.innerHTML = "";
-      btnPlayPause.appendChild(playSVG.cloneNode(true));
       updatePlayPauseIcon(btnPlayPause);
       return btnPlayPause;
     }
 
-    const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
+    function createShuffleButton() {
+      const btnShuffle = createControlBtn(shuffleSVG, "Toggle Shuffle", () => {
+        sendSpotifyCommand("shuffle");
+        setTimeout(() => updateShuffleButton(btnShuffle), 100);
+      }, true);
+      updateShuffleButton(btnShuffle);
+      return btnShuffle;
+    }
+
+    function createRepeatButton() {
+      const btnRepeat = createControlBtn(repeatSVG, "Toggle Repeat", () => {
+        sendSpotifyCommand("repeat");
+        setTimeout(() => updateRepeatButton(btnRepeat), 100);
+      }, true);
+      updateRepeatButton(btnRepeat);
+      return btnRepeat;
+    }
+
+    function updateShuffleButton(btn) {
+      const isActive = isShuffleActive();
+      btn._isActive = isActive;
+      btn.style.color = isActive ? "#1db954" : "#b3b3b3";
+    }
+
+    function updateRepeatButton(btn) {
+      const isActive = isRepeatActive();
+      btn._isActive = isActive;
+      btn.style.color = isActive ? "#1db954" : "#b3b3b3";
+    }
+
+    // Create all control buttons
+    const btnPrevious = createControlBtn(previousSVG, "Previous Track", () => sendSpotifyCommand("previous"));
     const btnPlayPause = createPlayPauseButton();
-    const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
+    const btnNext = createControlBtn(nextSVG, "Next Track", () => sendSpotifyCommand("next"));
+    const btnShuffle = createShuffleButton();
+    const btnRepeat = createRepeatButton();
 
     popup._playPauseBtn = btnPlayPause;
+    popup._shuffleBtn = btnShuffle;
+    popup._repeatBtn = btnRepeat;
 
 
     const btnReset = document.createElement("button");
@@ -2795,12 +2914,12 @@ offsetWrapper.appendChild(inputStack);
     btnReset.title = "Restore Default Position and Size";
     Object.assign(btnReset.style, {
       cursor: "pointer",
-      background: "#555",
+      background: "none",
       border: "none",
       borderRadius: "50%",
       width: "32px",
       height: "32px",
-      color: "white",
+      color: "#b3b3b3",
       fontWeight: "bold",
       fontSize: "18px",
       display: "flex",
@@ -2808,7 +2927,16 @@ offsetWrapper.appendChild(inputStack);
       alignItems: "center",
       userSelect: "none",
       padding: "0",
+      transition: "color 0.2s ease",
     });
+    
+    btnReset.onmouseenter = () => {
+      btnReset.style.color = "#ffffff";
+    };
+    
+    btnReset.onmouseleave = () => {
+      btnReset.style.color = "#b3b3b3";
+    };
     // Default Position and Size of the Popup Gui
    btnReset.onclick = () => {
   const rect = getSpotifyLyricsContainerRect();
@@ -2861,10 +2989,20 @@ offsetWrapper.appendChild(inputStack);
   }, 3000);
 };
 
-    controlsBar.appendChild(btnReset);
     controlsBar.appendChild(btnPrevious);
     controlsBar.appendChild(btnPlayPause);
     controlsBar.appendChild(btnNext);
+    controlsBar.appendChild(btnShuffle);
+    controlsBar.appendChild(btnRepeat);
+    
+    // Add separator and reset button
+    const separator = document.createElement("div");
+    separator.style.width = "1px";
+    separator.style.height = "20px";
+    separator.style.backgroundColor = "#333";
+    separator.style.margin = "0 8px";
+    controlsBar.appendChild(separator);
+    controlsBar.appendChild(btnReset);
 
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
@@ -2994,145 +3132,123 @@ if (container) {
     startPollingForTrackChange(popup);
   }
 
- async function updateLyricsContent(popup, info) {
-  if (!info) return;
-  const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-  if (!lyricsContainer) return;
-  currentLyricsContainer = lyricsContainer;
-  currentSyncedLyrics = null;
-  currentUnsyncedLyrics = null;
-  lyricsContainer.textContent = "Loading lyrics...";
-
-  const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
-  const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
-
-  const provider = Providers.getCurrent();
-  const result = await provider.findLyrics(info);
-
-  if (result.error) {
-    lyricsContainer.textContent = result.error;
-    if (downloadBtn) downloadBtn.style.display = "none";
-    if (downloadDropdown) downloadDropdown.style.display = "none";
-    return;
-  }
-
-  let synced = provider.getSynced(result);
-  let unsynced = provider.getUnsynced(result);
-
-  lyricsContainer.innerHTML = "";
-  // Set globals for download
-  currentSyncedLyrics = (synced && synced.length > 0) ? synced : null;
-  currentUnsyncedLyrics = (unsynced && unsynced.length > 0) ? unsynced : null;
-
-  if (currentSyncedLyrics) {
-    isShowingSyncedLyrics = true;
-    currentSyncedLyrics.forEach(({ text }) => {
-      const p = document.createElement("p");
-      p.textContent = text;
-      p.style.margin = "0 0 6px 0";
-      p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-      lyricsContainer.appendChild(p);
-    });
-    highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
-  } else if (currentUnsyncedLyrics) {
-    isShowingSyncedLyrics = false;
-    currentUnsyncedLyrics.forEach(({ text }) => {
-      const p = document.createElement("p");
-      p.textContent = text;
-      p.style.margin = "0 0 6px 0";
-      p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-      lyricsContainer.appendChild(p);
-    });
-    // For unsynced, always allow user scroll
-    lyricsContainer.style.overflowY = "auto";
-    lyricsContainer.style.pointerEvents = "";
-    lyricsContainer.classList.remove('hide-scrollbar');
-    lyricsContainer.style.scrollbarWidth = "";
-    lyricsContainer.style.msOverflowStyle = "";
-  } else {
-    isShowingSyncedLyrics = false;
-    // Always allow user scroll for unsynced or empty
-    lyricsContainer.style.overflowY = "auto";
-    lyricsContainer.style.pointerEvents = "";
-    lyricsContainer.classList.remove('hide-scrollbar');
-    lyricsContainer.style.scrollbarWidth = "";
-    lyricsContainer.style.msOverflowStyle = "";
-    if (!lyricsContainer.textContent.trim()) {
-      lyricsContainer.textContent = `No lyrics found for this track from ${Providers.current}`;
-    }
+  async function updateLyricsContent(popup, info) {
+    if (!info) return;
+    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+    if (!lyricsContainer) return;
+    currentLyricsContainer = lyricsContainer;
     currentSyncedLyrics = null;
     currentUnsyncedLyrics = null;
-  }
+    lyricsContainer.textContent = "Loading lyrics...";
 
-  // Show/hide download button appropriately - only use the variables already declared above!
-  if (downloadBtn) {
-    if (lyricsContainer.querySelectorAll('p').length > 0) {
-      downloadBtn.style.display = "inline-flex";
-    } else {
-      downloadBtn.style.display = "none";
+    const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
+    const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
+
+    const provider = Providers.getCurrent();
+    const result = await provider.findLyrics(info);
+
+    if (result.error) {
+      lyricsContainer.textContent = result.error;
+      if (downloadBtn) downloadBtn.style.display = "none";
       if (downloadDropdown) downloadDropdown.style.display = "none";
+      return;
+    }
+
+    let synced = provider.getSynced(result);
+    let unsynced = provider.getUnsynced(result);
+
+    lyricsContainer.innerHTML = "";
+    // Set globals for download
+    currentSyncedLyrics = (synced && synced.length > 0) ? synced : null;
+    currentUnsyncedLyrics = (unsynced && unsynced.length > 0) ? unsynced : null;
+
+    if (currentSyncedLyrics) {
+      isShowingSyncedLyrics = true;
+      currentSyncedLyrics.forEach(({ text }) => {
+        const p = document.createElement("p");
+        p.textContent = text;
+        p.style.margin = "0 0 6px 0";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        lyricsContainer.appendChild(p);
+      });
+      highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
+    } else if (currentUnsyncedLyrics) {
+      isShowingSyncedLyrics = false;
+      currentUnsyncedLyrics.forEach(({ text }) => {
+        const p = document.createElement("p");
+        p.textContent = text;
+        p.style.margin = "0 0 6px 0";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        lyricsContainer.appendChild(p);
+      });
+      // For unsynced, always allow user scroll
+      lyricsContainer.style.overflowY = "auto";
+      lyricsContainer.style.pointerEvents = "";
+      lyricsContainer.classList.remove('hide-scrollbar');
+      lyricsContainer.style.scrollbarWidth = "";
+      lyricsContainer.style.msOverflowStyle = "";
+    } else {
+      isShowingSyncedLyrics = false;
+      // Always allow user scroll for unsynced or empty
+      lyricsContainer.style.overflowY = "auto";
+      lyricsContainer.style.pointerEvents = "";
+      lyricsContainer.classList.remove('hide-scrollbar');
+      lyricsContainer.style.scrollbarWidth = "";
+      lyricsContainer.style.msOverflowStyle = "";
+      if (!lyricsContainer.textContent.trim()) {
+        lyricsContainer.textContent = `No lyrics found for this track from ${Providers.current}`;
+      }
+      currentSyncedLyrics = null;
+      currentUnsyncedLyrics = null;
+    }
+
+    // Show/hide download button appropriately - only use the variables already declared above!
+    if (downloadBtn) {
+      if (lyricsContainer.querySelectorAll('p').length > 0) {
+        downloadBtn.style.display = "inline-flex";
+      } else {
+        downloadBtn.style.display = "none";
+        if (downloadDropdown) downloadDropdown.style.display = "none";
+      }
     }
   }
-}
+
   // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info) {
-  const detectionOrder = [
-  { name: "LRCLIB", type: "getSynced" },
-  { name: "Spotify", type: "getSynced" },
-  { name: "KPoe", type: "getSynced" },
-  { name: "Musixmatch", type: "getSynced" },
-  // { name: "Netease", type: "getSynced" },
-  { name: "LRCLIB", type: "getUnsynced" },
-  { name: "Spotify", type: "getUnsynced" },
-  { name: "KPoe", type: "getUnsynced" },
-  { name: "Musixmatch", type: "getUnsynced" },
-  // { name: "Netease", type: "getUnsynced" },
-  { name: "Genius", type: "getUnsynced" }
-];
-  for (const { name, type } of detectionOrder) {
-    const provider = Providers.map[name];
-    const result = await provider.findLyrics(info);
-    if (result && !result.error) {
-      let lyrics = provider[type](result);
-      if (lyrics && lyrics.length > 0) {
-        Providers.setCurrent(name);
-        if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-        await updateLyricsContent(popup, info);
-        return;
+    const detectionOrder = [
+      { name: "LRCLIB", type: "getSynced" },
+      { name: "Spotify", type: "getSynced" },
+      { name: "KPoe", type: "getSynced" },
+      { name: "Musixmatch", type: "getSynced" },
+      // { name: "Netease", type: "getSynced" },
+      { name: "LRCLIB", type: "getUnsynced" },
+      { name: "Spotify", type: "getUnsynced" },
+      { name: "KPoe", type: "getUnsynced" },
+      { name: "Musixmatch", type: "getUnsynced" },
+      // { name: "Netease", type: "getUnsynced" },
+      { name: "Genius", type: "getUnsynced" }
+    ];
+    for (const { name, type } of detectionOrder) {
+      const provider = Providers.map[name];
+      const result = await provider.findLyrics(info);
+      if (result && !result.error) {
+        let lyrics = provider[type](result);
+        if (lyrics && lyrics.length > 0) {
+          Providers.setCurrent(name);
+          if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+          await updateLyricsContent(popup, info);
+          return;
+        }
       }
     }
-  }
-  // Unselect any provider
-Providers.current = null;
-if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
+    // Unselect any provider
+    Providers.current = null;
+    if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
 
-const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-if (lyricsContainer) lyricsContainer.textContent = "No lyrics were found for this track from any of the available providers";
-currentSyncedLyrics = null;
-currentLyricsContainer = lyricsContainer;
-}
-
-  function startPollingForTrackChange(popup) {
-    if (pollingInterval) clearInterval(pollingInterval);
-    pollingInterval = setInterval(() => {
-      const info = getCurrentTrackInfo();
-      if (!info) return;
-      if (info.id !== currentTrackId) {
-        currentTrackId = info.id;
-        const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-        if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-        autodetectProviderAndLoad(popup, info);
-        observeSpotifyPlayPause(popup);
-      }
-      if (popup && popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
-    }, 400);
-  }
-
-  function stopPollingForTrackChange() {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      pollingInterval = null;
-    }
+    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+    if (lyricsContainer) lyricsContainer.textContent = "No lyrics were found for this track from any of the available providers";
+    currentSyncedLyrics = null;
+    currentLyricsContainer = lyricsContainer;
   }
 
    function addButton(maxRetries = 10) {
