@@ -1870,7 +1870,9 @@ function observeSpotifyPlayPause(popup) {
   if (!spBtn) spBtn = document.querySelector('[aria-label]');
   if (!spBtn) return;
   const observer = new MutationObserver(() => {
-    if (popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+    if (popup._playPauseBtn) {
+      updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
+    }
   });
   observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
   popup._playPauseObserver = observer;
@@ -2652,7 +2654,7 @@ offsetWrapper.appendChild(inputStack);
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      gap: "12px",
+      gap: "8px",
       padding: "8px 12px",
       borderTop: "1px solid #333",
       backgroundColor: "#121212",
