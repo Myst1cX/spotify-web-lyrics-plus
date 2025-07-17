@@ -2864,6 +2864,7 @@ offsetWrapper.appendChild(inputStack);
     // Update button state based on current state
     function updateShuffleButton(button, iconWrapper) {
       const state = getShuffleState();
+      console.log('[Shuffle Debug] Updating shuffle button with state:', state);
 
       // Clear existing icon
       iconWrapper.innerHTML = "";
@@ -2885,6 +2886,7 @@ offsetWrapper.appendChild(inputStack);
         button.style.color = "#1db954";
         iconWrapper.appendChild(shuffleSmartSVG.cloneNode(true));
       }
+      console.log('[Shuffle Debug] Button updated with color:', button.style.color, 'and active class:', button.classList.contains('active'));
     }
 
     function updateRepeatButton(button, iconWrapper) {
@@ -3002,6 +3004,18 @@ offsetWrapper.appendChild(inputStack);
     function getShuffleState() {
       // Find shuffle buttons using partial aria-label matching
       const shuffleButtons = Array.from(document.querySelectorAll('button[aria-label]'));
+      
+      // Debug: log all buttons that might be shuffle buttons
+      const potentialShuffleButtons = shuffleButtons.filter(btn => {
+        const ariaLabel = btn.getAttribute('aria-label');
+        return ariaLabel && ariaLabel.toLowerCase().includes('shuffle');
+      });
+      
+      console.log('[Shuffle Debug] All shuffle-related buttons found:', potentialShuffleButtons.map(btn => ({
+        label: btn.getAttribute('aria-label'),
+        visible: btn.offsetParent !== null,
+        classes: btn.className
+      })));
 
       const enableShuffleBtn = shuffleButtons.find(btn => {
         if (btn.offsetParent === null) return false;
@@ -3022,13 +3036,24 @@ offsetWrapper.appendChild(inputStack);
         return ariaLabel && ariaLabel.toLowerCase().includes('disable shuffle');
       });
 
+      // Debug logging to understand state detection
+      console.log('[Shuffle Debug] Found buttons:', {
+        enableShuffle: enableShuffleBtn ? enableShuffleBtn.getAttribute('aria-label') : 'not found',
+        enableSmartShuffle: enableSmartShuffleBtn ? enableSmartShuffleBtn.getAttribute('aria-label') : 'not found',
+        disableShuffle: disableShuffleBtn ? disableShuffleBtn.getAttribute('aria-label') : 'not found'
+      });
+
       if (enableShuffleBtn) {
+        console.log('[Shuffle Debug] State: OFF');
         return 'off'; // Show "Enable Shuffle" = shuffle is off
       } else if (enableSmartShuffleBtn) {
+        console.log('[Shuffle Debug] State: ON');
         return 'on'; // Show "Enable Smart Shuffle" = normal shuffle is on
       } else if (disableShuffleBtn) {
+        console.log('[Shuffle Debug] State: SMART');
         return 'smart'; // Show "Disable Shuffle" = smart shuffle is on
       }
+      console.log('[Shuffle Debug] State: DEFAULT OFF');
       return 'off'; // Default to off
     }
 
