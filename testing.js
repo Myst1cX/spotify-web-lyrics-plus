@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stc
 // @namespace    http://tampermonkey.net/
-// @version      8.6
+// @version      8.7
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -2947,11 +2947,6 @@ offsetWrapper.appendChild(inputStack);
       '[data-testid="control-button-skip-back"]',
       '[data-testid="mobile-prev-button"]'
     ],
-    shuffle: [
-      '[aria-label="Enable Shuffle"]',
-      '[aria-label="Enable Smart Shuffle"]',
-      '[aria-label="Disable Shuffle"]'
-    ],
     repeat: [
       '[aria-label="Enable repeat"]',
       '[aria-label="Enable repeat one"]',
@@ -2965,6 +2960,23 @@ offsetWrapper.appendChild(inputStack);
   for (const sel of selectors[command] || []) {
     btn = document.querySelector(sel);
     if (btn && btn.offsetParent !== null) break; // Only pick visible
+  }
+
+  // Special handling for shuffle command with dynamic aria-labels
+  if (!btn && command === "shuffle") {
+    // Find shuffle buttons using partial aria-label matching
+    const shuffleButtons = Array.from(document.querySelectorAll('button[aria-label]'));
+    btn = shuffleButtons.find(button => {
+      if (button.offsetParent === null) return false; // Skip hidden buttons
+      const ariaLabel = button.getAttribute('aria-label');
+      if (!ariaLabel) return false;
+
+      // Check for shuffle-related aria-labels (case-insensitive partial match)
+      const lowerLabel = ariaLabel.toLowerCase();
+      return lowerLabel.includes('enable shuffle') ||
+             lowerLabel.includes('enable smart shuffle') ||
+             lowerLabel.includes('disable shuffle');
+    });
   }
 
   // Fallback: try to find button by innerText (mobile sometimes uses text)
@@ -2988,17 +3000,33 @@ offsetWrapper.appendChild(inputStack);
 
     // State detection functions
     function getShuffleState() {
-      const shuffleButtons = [
-        document.querySelector('[aria-label="Enable Shuffle"]'),
-        document.querySelector('[aria-label="Enable Smart Shuffle"]'),
-        document.querySelector('[aria-label="Disable Shuffle"]')
-      ];
+      // Find shuffle buttons using partial aria-label matching
+      const shuffleButtons = Array.from(document.querySelectorAll('button[aria-label]'));
 
-      if (shuffleButtons[0] && shuffleButtons[0].offsetParent !== null) {
+      const enableShuffleBtn = shuffleButtons.find(btn => {
+        if (btn.offsetParent === null) return false;
+        const ariaLabel = btn.getAttribute('aria-label');
+        return ariaLabel && ariaLabel.toLowerCase().includes('enable shuffle') &&
+               !ariaLabel.toLowerCase().includes('smart shuffle');
+      });
+
+      const enableSmartShuffleBtn = shuffleButtons.find(btn => {
+        if (btn.offsetParent === null) return false;
+        const ariaLabel = btn.getAttribute('aria-label');
+        return ariaLabel && ariaLabel.toLowerCase().includes('enable smart shuffle');
+      });
+
+      const disableShuffleBtn = shuffleButtons.find(btn => {
+        if (btn.offsetParent === null) return false;
+        const ariaLabel = btn.getAttribute('aria-label');
+        return ariaLabel && ariaLabel.toLowerCase().includes('disable shuffle');
+      });
+
+      if (enableShuffleBtn) {
         return 'off'; // Show "Enable Shuffle" = shuffle is off
-      } else if (shuffleButtons[1] && shuffleButtons[1].offsetParent !== null) {
+      } else if (enableSmartShuffleBtn) {
         return 'on'; // Show "Enable Smart Shuffle" = normal shuffle is on
-      } else if (shuffleButtons[2] && shuffleButtons[2].offsetParent !== null) {
+      } else if (disableShuffleBtn) {
         return 'smart'; // Show "Disable Shuffle" = smart shuffle is on
       }
       return 'off'; // Default to off
@@ -3580,4 +3608,3 @@ popupObserver.observe(document.body, { childList: true, subtree: true });
     }
   });
 })();
-
