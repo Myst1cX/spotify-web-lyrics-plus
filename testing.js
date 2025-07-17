@@ -1858,6 +1858,9 @@ const Providers = {
       if (existing._playPauseObserver) existing._playPauseObserver.disconnect();
       existing._playPauseObserver = null;
       existing._playPauseBtn = null;
+      if (existing._shuffleObserver) existing._shuffleObserver.disconnect();
+      existing._shuffleObserver = null;
+      existing._shuffleBtn = null;
       existing.remove();
     }
   }
@@ -2886,7 +2889,6 @@ offsetWrapper.appendChild(inputStack);
         button.style.color = "#1db954";
         iconWrapper.appendChild(shuffleSmartSVG.cloneNode(true));
       }
-      console.log('[Shuffle Debug] Button updated with color:', button.style.color, 'and active class:', button.classList.contains('active'));
     }
 
     function updateRepeatButton(button, iconWrapper) {
@@ -3002,7 +3004,7 @@ offsetWrapper.appendChild(inputStack);
 
     // State detection functions
     function getShuffleState() {
-      // Find shuffle buttons using partial aria-label matching
+      // Method 1: Try to find shuffle buttons using aria-label matching
       const shuffleButtons = Array.from(document.querySelectorAll('button[aria-label]'));
       
       // Debug: log all buttons that might be shuffle buttons
@@ -3017,6 +3019,7 @@ offsetWrapper.appendChild(inputStack);
         classes: btn.className
       })));
 
+      // Look for buttons with specific aria-label patterns
       const enableShuffleBtn = shuffleButtons.find(btn => {
         if (btn.offsetParent === null) return false;
         const ariaLabel = btn.getAttribute('aria-label');
@@ -3035,6 +3038,54 @@ offsetWrapper.appendChild(inputStack);
         const ariaLabel = btn.getAttribute('aria-label');
         return ariaLabel && ariaLabel.toLowerCase().includes('disable shuffle');
       });
+
+      // Method 2: Try to find shuffle button using a more specific selector
+      // Look for buttons that have shuffle-related SVG content
+      if (!enableShuffleBtn && !enableSmartShuffleBtn && !disableShuffleBtn) {
+        console.log('[Shuffle Debug] Aria-label method failed, trying SVG content method');
+        
+        // Try to find buttons with shuffle-related SVG paths
+        const buttonsWithSVG = Array.from(document.querySelectorAll('button svg path'));
+        const shufflePaths = buttonsWithSVG.filter(path => {
+          const dAttr = path.getAttribute('d');
+          // Look for paths that match shuffle icon patterns
+          return dAttr && (
+            dAttr.includes('13.151.922') || // shuffle off path
+            dAttr.includes('4.502 0') // smart shuffle path
+          );
+        });
+        
+        console.log('[Shuffle Debug] Found shuffle SVG paths:', shufflePaths.length);
+        
+        if (shufflePaths.length > 0) {
+          const shuffleBtn = shufflePaths[0].closest('button');
+          if (shuffleBtn && shuffleBtn.offsetParent !== null) {
+            const ariaLabel = shuffleBtn.getAttribute('aria-label');
+            console.log('[Shuffle Debug] Found shuffle button via SVG:', ariaLabel);
+            
+            // Try to determine state based on SVG content
+            const svgPaths = Array.from(shuffleBtn.querySelectorAll('svg path'));
+            const hasSmartShufflePath = svgPaths.some(path => {
+              const dAttr = path.getAttribute('d');
+              return dAttr && dAttr.includes('4.502 0');
+            });
+            
+            if (hasSmartShufflePath) {
+              console.log('[Shuffle Debug] State: SMART (via SVG)');
+              return 'smart';
+            } else if (ariaLabel && ariaLabel.toLowerCase().includes('disable')) {
+              console.log('[Shuffle Debug] State: SMART (via aria-label)');
+              return 'smart';
+            } else if (ariaLabel && ariaLabel.toLowerCase().includes('enable smart')) {
+              console.log('[Shuffle Debug] State: ON (via aria-label)');
+              return 'on';
+            } else {
+              console.log('[Shuffle Debug] State: OFF (via fallback)');
+              return 'off';
+            }
+          }
+        }
+      }
 
       // Debug logging to understand state detection
       console.log('[Shuffle Debug] Found buttons:', {
@@ -3078,8 +3129,31 @@ offsetWrapper.appendChild(inputStack);
       "shuffle",
       "Enable shuffle",
       () => {
+        console.log('[Shuffle Debug] Shuffle button clicked, sending command');
         sendSpotifyCommand("shuffle");
-        setTimeout(() => updateShuffleButton(btnShuffle, shuffleIconWrapper), 100);
+        
+        // Try multiple times to update the button state to account for DOM update timing
+        const tryUpdateShuffleButton = (attempts = 0) => {
+          if (attempts >= 5) {
+            console.log('[Shuffle Debug] Max attempts reached, giving up');
+            return;
+          }
+          
+          setTimeout(() => {
+            const oldState = getShuffleState();
+            updateShuffleButton(btnShuffle, shuffleIconWrapper);
+            const newState = getShuffleState();
+            
+            console.log('[Shuffle Debug] Update attempt', attempts + 1, 'old state:', oldState, 'new state:', newState);
+            
+            // If state hasn't changed, try again
+            if (attempts < 3) {
+              tryUpdateShuffleButton(attempts + 1);
+            }
+          }, 100 + (attempts * 100)); // Increase delay for each attempt
+        };
+        
+        tryUpdateShuffleButton();
       }
     );
 
@@ -3122,6 +3196,50 @@ offsetWrapper.appendChild(inputStack);
     popup._shuffleBtn = { button: btnShuffle, iconWrapper: shuffleIconWrapper };
     popup._playPauseBtn = { button: btnPlayPause, iconWrapper: playIconWrapper };
     popup._repeatBtn = { button: btnRepeat, iconWrapper: repeatIconWrapper };
+
+    // Set up mutation observer to watch for changes in Spotify's shuffle button
+    const setupShuffleObserver = () => {
+      // Find all shuffle-related buttons and observe them
+      const shuffleButtons = Array.from(document.querySelectorAll('button[aria-label]')).filter(btn => {
+        const ariaLabel = btn.getAttribute('aria-label');
+        return ariaLabel && ariaLabel.toLowerCase().includes('shuffle');
+      });
+      
+      if (shuffleButtons.length > 0) {
+        console.log('[Shuffle Debug] Setting up mutation observer for', shuffleButtons.length, 'shuffle buttons');
+        
+        const observer = new MutationObserver((mutations) => {
+          let shouldUpdate = false;
+          
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && 
+                (mutation.attributeName === 'aria-label' || mutation.attributeName === 'class')) {
+              console.log('[Shuffle Debug] Detected change in shuffle button:', mutation.attributeName);
+              shouldUpdate = true;
+            }
+          });
+          
+          if (shouldUpdate) {
+            console.log('[Shuffle Debug] Updating shuffle button due to mutation');
+            updateShuffleButton(btnShuffle, shuffleIconWrapper);
+          }
+        });
+        
+        // Observe each shuffle button for attribute changes
+        shuffleButtons.forEach(btn => {
+          observer.observe(btn, {
+            attributes: true,
+            attributeFilter: ['aria-label', 'class']
+          });
+        });
+        
+        // Store observer reference for cleanup
+        popup._shuffleObserver = observer;
+      }
+    };
+    
+    // Set up the observer
+    setupShuffleObserver();
 
 
     const btnReset = document.createElement("button");
