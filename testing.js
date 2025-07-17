@@ -2947,11 +2947,6 @@ offsetWrapper.appendChild(inputStack);
       '[data-testid="control-button-skip-back"]',
       '[data-testid="mobile-prev-button"]'
     ],
-    shuffle: [
-      '[aria-label="Enable Shuffle"]',
-      '[aria-label="Enable Smart Shuffle"]',
-      '[aria-label="Disable Shuffle"]'
-    ],
     repeat: [
       '[aria-label="Enable repeat"]',
       '[aria-label="Enable repeat one"]',
@@ -2959,6 +2954,37 @@ offsetWrapper.appendChild(inputStack);
       '[data-testid="control-button-repeat"]'
     ]
   };
+
+  // Special handling for shuffle - find the currently visible shuffle button
+  if (command === "shuffle") {
+    const shuffleButtons = [
+      document.querySelector('[aria-label="Enable Shuffle"]'),
+      document.querySelector('[aria-label="Enable Smart Shuffle"]'),
+      document.querySelector('[aria-label="Disable Shuffle"]')
+    ];
+
+    // Find the currently visible shuffle button
+    let btn = null;
+    for (const button of shuffleButtons) {
+      if (button && button.offsetParent !== null) {
+        btn = button;
+        break;
+      }
+    }
+
+    if (btn) {
+      // Try click, then fallback to synthetic touch events for mobile
+      btn.click();
+      // If still not working, try touch events
+      if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        btn.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, cancelable:true}));
+        btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
+      }
+    } else {
+      console.warn("Spotify shuffle button not found");
+    }
+    return;
+  }
 
   // Try all selectors for the current command
   let btn = null;
