@@ -2812,7 +2812,7 @@ offsetWrapper.appendChild(inputStack);
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      gap: "12px",
+      gap: "8px",
       padding: "8px 12px",
       borderTop: "1px solid #333",
       backgroundColor: "#121212",
@@ -3060,9 +3060,9 @@ offsetWrapper.appendChild(inputStack);
 };
 
     controlsBar.appendChild(btnReset);
-    controlsBar.appendChild(btnPrevious);
-    controlsBar.appendChild(btnPlayPause);
-    controlsBar.appendChild(btnNext);
+    controlsBar.appendChild(btnPrevious.button);
+    controlsBar.appendChild(btnPlayPause.button);
+    controlsBar.appendChild(btnNext.button);
 
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
