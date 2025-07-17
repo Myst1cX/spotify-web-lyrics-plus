@@ -1855,67 +1855,300 @@ const Providers = {
     }
     const existing = document.getElementById("lyrics-plus-popup");
     if (existing) {
+      // Clean up all observers
       if (existing._playPauseObserver) existing._playPauseObserver.disconnect();
+      if (existing._playPauseNodeObserver) existing._playPauseNodeObserver.disconnect();
+      if (existing._shuffleObserver) existing._shuffleObserver.disconnect();
+      if (existing._shuffleNodeObserver) existing._shuffleNodeObserver.disconnect();
+      if (existing._repeatObserver) existing._repeatObserver.disconnect();
+      if (existing._repeatNodeObserver) existing._repeatNodeObserver.disconnect();
+      
+      // Remove references
       existing._playPauseObserver = null;
+      existing._playPauseNodeObserver = null;
+      existing._shuffleObserver = null;
+      existing._shuffleNodeObserver = null;
+      existing._repeatObserver = null;
+      existing._repeatNodeObserver = null;
       existing._playPauseBtn = null;
+      existing._shuffleBtn = null;
+      existing._repeatBtn = null;
+      existing._currentPlayPauseNode = null;
+      existing._currentShuffleNode = null;
+      existing._currentRepeatNode = null;
+      
       existing.remove();
     }
+    
+    // Reset state variables
+    currentTrackId = null;
+    currentSyncedLyrics = null;
+    currentUnsyncedLyrics = null;
+    currentLyricsContainer = null;
+    translationPresent = false;
+    isTranslating = false;
+    isShowingSyncedLyrics = false;
   }
 
 function observeSpotifyShuffle(popup) {
   if (!popup || !popup._shuffleBtn) return;
+  
+  // Disconnect existing observers
   if (popup._shuffleObserver) popup._shuffleObserver.disconnect();
+  if (popup._shuffleNodeObserver) popup._shuffleNodeObserver.disconnect();
 
-  // Find the controls bar container (the element that contains all playback controls)
-  // Find by sibling of repeat button (which is stable!)
-  const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
-  if (!repeatBtn) return;
-  const controlsBar = repeatBtn.parentElement?.parentElement;
-  if (!controlsBar) return;
+  // Find the actual shuffle button DOM node
+  const shuffleBtn = findSpotifyShuffleButton();
+  if (!shuffleBtn) {
+    // Re-try in a short delay if button not found
+    setTimeout(() => observeSpotifyShuffle(popup), 100);
+    return;
+  }
 
-  const observer = new MutationObserver(() => {
-    // Always update the button state after any change
+  // Store reference to the current shuffle button node
+  popup._currentShuffleNode = shuffleBtn;
+
+  // Observer for shuffle button attribute changes
+  const attributeObserver = new MutationObserver(() => {
     updateShuffleButton(popup._shuffleBtn.button, popup._shuffleBtn.iconWrapper);
-    // Re-attach observer in case the DOM changed
-    setTimeout(() => observeSpotifyShuffle(popup), 0);
   });
-  observer.observe(controlsBar, {
-    childList: true,
-    subtree: true,
+  
+  attributeObserver.observe(shuffleBtn, {
     attributes: true,
     attributeFilter: ['aria-label', 'class', 'style']
   });
-  popup._shuffleObserver = observer;
+  popup._shuffleObserver = attributeObserver;
+
+  // Observer for DOM node replacement - watch the parent container
+  const parentContainer = shuffleBtn.parentElement;
+  if (parentContainer) {
+    const nodeObserver = new MutationObserver((mutations) => {
+      let needsReattach = false;
+      
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList') {
+          // Check if our shuffle button was removed
+          mutation.removedNodes.forEach(node => {
+            if (node === popup._currentShuffleNode || (node.contains && node.contains(popup._currentShuffleNode))) {
+              needsReattach = true;
+            }
+          });
+          
+          // Check if new shuffle buttons were added
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const hasShuffleButton = node.querySelector && (
+                node.querySelector('button[aria-label*="shuffle" i]') ||
+                (node.tagName === 'BUTTON' && node.getAttribute('aria-label')?.toLowerCase().includes('shuffle'))
+              );
+              if (hasShuffleButton) {
+                needsReattach = true;
+              }
+            }
+          });
+        }
+      });
+
+      if (needsReattach) {
+        // Small delay to ensure DOM is stable before re-attaching
+        setTimeout(() => observeSpotifyShuffle(popup), 50);
+      }
+    });
+
+    nodeObserver.observe(parentContainer, {
+      childList: true,
+      subtree: true
+    });
+    popup._shuffleNodeObserver = nodeObserver;
+  }
+
+  // Initial state update
+  updateShuffleButton(popup._shuffleBtn.button, popup._shuffleBtn.iconWrapper);
+}
+
+function findSpotifyShuffleButton() {
+  // Find shuffle buttons using comprehensive aria-label matching
+  const buttons = Array.from(document.querySelectorAll('button[aria-label]'));
+  
+  return buttons.find(btn => {
+    if (btn.offsetParent === null) return false; // Not visible
+    const ariaLabel = btn.getAttribute('aria-label');
+    if (!ariaLabel) return false;
+    
+    const lower = ariaLabel.toLowerCase();
+    return lower.includes('enable shuffle') || 
+           lower.includes('enable smart shuffle') || 
+           lower.includes('disable shuffle');
+  });
 }
 
 function observeSpotifyRepeat(popup) {
   if (!popup || !popup._repeatBtn) return;
+  
+  // Disconnect existing observers
   if (popup._repeatObserver) popup._repeatObserver.disconnect();
-  const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
-  if (!repeatBtn) return;
-  const observer = new MutationObserver(() => {
-    if (popup._repeatBtn) {
-      updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
-    }
+  if (popup._repeatNodeObserver) popup._repeatNodeObserver.disconnect();
+
+  // Find the actual repeat button DOM node
+  const repeatBtn = findSpotifyRepeatButton();
+  if (!repeatBtn) {
+    // Re-try in a short delay if button not found
+    setTimeout(() => observeSpotifyRepeat(popup), 100);
+    return;
+  }
+
+  // Store reference to the current repeat button node
+  popup._currentRepeatNode = repeatBtn;
+
+  // Observer for repeat button attribute changes
+  const attributeObserver = new MutationObserver(() => {
+    updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
   });
-  observer.observe(repeatBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style', 'aria-checked'] });
-  popup._repeatObserver = observer;
+  
+  attributeObserver.observe(repeatBtn, {
+    attributes: true,
+    attributeFilter: ['aria-label', 'class', 'style', 'aria-checked']
+  });
+  popup._repeatObserver = attributeObserver;
+
+  // Observer for DOM node replacement - watch the parent container
+  const parentContainer = repeatBtn.parentElement;
+  if (parentContainer) {
+    const nodeObserver = new MutationObserver((mutations) => {
+      let needsReattach = false;
+      
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList') {
+          // Check if our repeat button was removed
+          mutation.removedNodes.forEach(node => {
+            if (node === popup._currentRepeatNode || (node.contains && node.contains(popup._currentRepeatNode))) {
+              needsReattach = true;
+            }
+          });
+          
+          // Check if new repeat buttons were added
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const hasRepeatButton = node.querySelector && (
+                node.querySelector('[data-testid="control-button-repeat"]') ||
+                (node.tagName === 'BUTTON' && node.getAttribute('data-testid') === 'control-button-repeat')
+              );
+              if (hasRepeatButton) {
+                needsReattach = true;
+              }
+            }
+          });
+        }
+      });
+
+      if (needsReattach) {
+        // Small delay to ensure DOM is stable before re-attaching
+        setTimeout(() => observeSpotifyRepeat(popup), 50);
+      }
+    });
+
+    nodeObserver.observe(parentContainer, {
+      childList: true,
+      subtree: true
+    });
+    popup._repeatNodeObserver = nodeObserver;
+  }
+
+  // Initial state update
+  updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
+}
+
+function findSpotifyRepeatButton() {
+  return document.querySelector('[data-testid="control-button-repeat"]');
 }
 
 function observeSpotifyPlayPause(popup) {
   if (!popup || !popup._playPauseBtn) return;
+  
+  // Disconnect existing observers
   if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
+  if (popup._playPauseNodeObserver) popup._playPauseNodeObserver.disconnect();
 
-  let spBtn = document.querySelector('[data-testid="control-button-playpause"]');
-  if (!spBtn) spBtn = document.querySelector('[aria-label]');
-  if (!spBtn) return;
-  const observer = new MutationObserver(() => {
-    if (popup._playPauseBtn) {
-      updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
-    }
+  // Find the actual play/pause button DOM node
+  const playPauseBtn = findSpotifyPlayPauseButton();
+  if (!playPauseBtn) {
+    // Re-try in a short delay if button not found
+    setTimeout(() => observeSpotifyPlayPause(popup), 100);
+    return;
+  }
+
+  // Store reference to the current play/pause button node
+  popup._currentPlayPauseNode = playPauseBtn;
+
+  // Observer for play/pause button attribute changes
+  const attributeObserver = new MutationObserver(() => {
+    updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
   });
-  observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
-  popup._playPauseObserver = observer;
+  
+  attributeObserver.observe(playPauseBtn, {
+    attributes: true,
+    attributeFilter: ['aria-label', 'class', 'style']
+  });
+  popup._playPauseObserver = attributeObserver;
+
+  // Observer for DOM node replacement - watch the parent container
+  const parentContainer = playPauseBtn.parentElement;
+  if (parentContainer) {
+    const nodeObserver = new MutationObserver((mutations) => {
+      let needsReattach = false;
+      
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList') {
+          // Check if our play/pause button was removed
+          mutation.removedNodes.forEach(node => {
+            if (node === popup._currentPlayPauseNode || (node.contains && node.contains(popup._currentPlayPauseNode))) {
+              needsReattach = true;
+            }
+          });
+          
+          // Check if new play/pause buttons were added
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const hasPlayPauseButton = node.querySelector && (
+                node.querySelector('[data-testid="control-button-playpause"]') ||
+                (node.tagName === 'BUTTON' && node.getAttribute('data-testid') === 'control-button-playpause')
+              );
+              if (hasPlayPauseButton) {
+                needsReattach = true;
+              }
+            }
+          });
+        }
+      });
+
+      if (needsReattach) {
+        // Small delay to ensure DOM is stable before re-attaching
+        setTimeout(() => observeSpotifyPlayPause(popup), 50);
+      }
+    });
+
+    nodeObserver.observe(parentContainer, {
+      childList: true,
+      subtree: true
+    });
+    popup._playPauseNodeObserver = nodeObserver;
+  }
+
+  // Initial state update
+  updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
+}
+
+function findSpotifyPlayPauseButton() {
+  let btn = document.querySelector('[data-testid="control-button-playpause"]');
+  if (btn && btn.offsetParent !== null) return btn;
+  
+  // Fallback: find by aria-label
+  const buttons = Array.from(document.querySelectorAll('button[aria-label]'));
+  return buttons.find(b => {
+    if (b.offsetParent === null) return false;
+    const label = b.getAttribute('aria-label')?.toLowerCase() || '';
+    return labelMeansPause(label) || labelMeansPlay(label);
+  });
 }
 
   function createPopup() {
@@ -3089,7 +3322,12 @@ offsetWrapper.appendChild(inputStack);
       "Enable shuffle",
       () => {
         sendSpotifyCommand("shuffle");
-        setTimeout(() => updateShuffleButton(btnShuffle, shuffleIconWrapper), 100);
+        // Update icon from real Spotify DOM after a short delay
+        setTimeout(() => {
+          updateShuffleButton(btnShuffle, shuffleIconWrapper);
+          // Re-attach observers to ensure we're tracking the latest DOM state
+          observeSpotifyShuffle(popup);
+        }, 150);
       }
     );
 
@@ -3103,7 +3341,12 @@ offsetWrapper.appendChild(inputStack);
     const { button: btnPlayPause, iconWrapper: playIconWrapper } = createPlayPauseButton(
       () => {
         sendSpotifyCommand("playpause");
-        setTimeout(() => updatePlayPauseButton(btnPlayPause, playIconWrapper), 100);
+        // Update icon from real Spotify DOM after a short delay
+        setTimeout(() => {
+          updatePlayPauseButton(btnPlayPause, playIconWrapper);
+          // Re-attach observers to ensure we're tracking the latest DOM state
+          observeSpotifyPlayPause(popup);
+        }, 150);
       }
     );
 
@@ -3119,7 +3362,12 @@ offsetWrapper.appendChild(inputStack);
       "Enable repeat",
       () => {
         sendSpotifyCommand("repeat");
-        setTimeout(() => updateRepeatButton(btnRepeat, repeatIconWrapper), 100);
+        // Update icon from real Spotify DOM after a short delay
+        setTimeout(() => {
+          updateRepeatButton(btnRepeat, repeatIconWrapper);
+          // Re-attach observers to ensure we're tracking the latest DOM state
+          observeSpotifyRepeat(popup);
+        }, 150);
       }
     );
 
@@ -3465,6 +3713,8 @@ currentLyricsContainer = lyricsContainer;
     pollingInterval = setInterval(() => {
       const info = getCurrentTrackInfo();
       if (!info) return;
+      
+      // Check for track changes
       if (info.id !== currentTrackId) {
         currentTrackId = info.id;
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
@@ -3481,11 +3731,20 @@ currentLyricsContainer = lyricsContainer;
       }
       if (popup && popup._repeatBtn) {
         updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
+      }
+      
+      // Re-attach observers only if the popup exists and DOM nodes may have changed
+      // Check if current tracked nodes are still in the DOM
+      if (popup && (!popup._currentPlayPauseNode || !document.contains(popup._currentPlayPauseNode))) {
         observeSpotifyPlayPause(popup);
+      }
+      if (popup && (!popup._currentShuffleNode || !document.contains(popup._currentShuffleNode))) {
         observeSpotifyShuffle(popup);
+      }
+      if (popup && (!popup._currentRepeatNode || !document.contains(popup._currentRepeatNode))) {
         observeSpotifyRepeat(popup);
       }
-    }, 400);
+    }, 800); // Reduced frequency since observers should handle most updates
   }
 
 

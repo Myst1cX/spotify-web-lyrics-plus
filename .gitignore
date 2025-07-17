@@ -1,0 +1,6 @@
+test_observer_fixes.html
+*.log
+node_modules/
+dist/
+.vscode/
+.DS_Store
