@@ -398,6 +398,36 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   pauseSVG.setAttribute("fill", "white");
   pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
 
+  // --- Previous/Next Icon SVGs ---
+  const previousSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  previousSVG.setAttribute("viewBox", "0 0 16 16");
+  previousSVG.setAttribute("width", "16");
+  previousSVG.setAttribute("height", "16");
+  previousSVG.setAttribute("fill", "currentColor");
+  previousSVG.innerHTML = `<path d="M3.3 1a.7.7 0 0 1 .7.7v5.15l9.95-5.744a.7.7 0 0 1 1.05.606v12.575a.7.7 0 0 1-1.05.607L4 9.149V14.3a.7.7 0 0 1-.7.7H1.7a.7.7 0 0 1-.7-.7V1.7a.7.7 0 0 1 .7-.7z"/>`;
+
+  const nextSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  nextSVG.setAttribute("viewBox", "0 0 16 16");
+  nextSVG.setAttribute("width", "16");
+  nextSVG.setAttribute("height", "16");
+  nextSVG.setAttribute("fill", "currentColor");
+  nextSVG.innerHTML = `<path d="M12.7 1a.7.7 0 0 0-.7.7v5.15L2.05 1.107A.7.7 0 0 0 1 1.712v12.575a.7.7 0 0 0 1.05.607L12 9.149V14.3a.7.7 0 0 0 .7.7h1.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"/>`;
+
+  // --- Play/Pause SVG for controls (smaller 16x16 version) ---
+  const playSmallSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  playSmallSVG.setAttribute("viewBox", "0 0 16 16");
+  playSmallSVG.setAttribute("width", "16");
+  playSmallSVG.setAttribute("height", "16");
+  playSmallSVG.setAttribute("fill", "currentColor");
+  playSmallSVG.innerHTML = `<path d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288z"/>`;
+
+  const pauseSmallSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  pauseSmallSVG.setAttribute("viewBox", "0 0 16 16");
+  pauseSmallSVG.setAttribute("width", "16");
+  pauseSmallSVG.setAttribute("height", "16");
+  pauseSmallSVG.setAttribute("fill", "currentColor");
+  pauseSmallSVG.innerHTML = `<path d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"/>`;
+
   // --- Language-universal play/pause root words for major Spotify UI languages (Aids Play/Pause button detection to reflect playback state inside gui)---
 const PAUSE_WORDS = [
   // English
@@ -518,44 +548,199 @@ function labelMeansPlay(label) {
 
   // --- Play/Pause Icon Updater ---
   function updatePlayPauseIcon(btnPlayPause) {
-  // Use the main play/pause button, which is language universal
-  let playPauseBtn = document.querySelector('[data-testid="control-button-playpause"]')
-    || document.querySelector('[aria-label]');
+  // Legacy function - now updated to work with new button structure
+  if (btnPlayPause && btnPlayPause.iconWrapper) {
+    updatePlayPauseButton(btnPlayPause, btnPlayPause.iconWrapper);
+  } else {
+    // Fallback for old button structure
+    let playPauseBtn = document.querySelector('[data-testid="control-button-playpause"]')
+      || document.querySelector('[aria-label]');
 
-  function isVisible(el) {
-    if (!el) return false;
-    const style = window.getComputedStyle(el);
-    return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
-  }
+    function isVisible(el) {
+      if (!el) return false;
+      const style = window.getComputedStyle(el);
+      return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+    }
 
-  btnPlayPause.innerHTML = "";
+    btnPlayPause.innerHTML = "";
 
-  if (playPauseBtn && isVisible(playPauseBtn)) {
-    const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
+    if (playPauseBtn && isVisible(playPauseBtn)) {
+      const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
 
-    if (labelMeansPause(label)) {
-      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-      return;
-    } else if (labelMeansPlay(label)) {
-      btnPlayPause.appendChild(playSVG.cloneNode(true));
+      if (labelMeansPause(label)) {
+        btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+        return;
+      } else if (labelMeansPlay(label)) {
+        btnPlayPause.appendChild(playSVG.cloneNode(true));
+        return;
+      }
+    }
+
+    // Fallback: Use audio element state if possible
+    const audio = document.querySelector('audio');
+    if (audio) {
+      if (audio.paused) {
+        btnPlayPause.appendChild(playSVG.cloneNode(true));
+      } else {
+        btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+      }
       return;
     }
-  }
 
-  // Fallback: Use audio element state if possible
-  const audio = document.querySelector('audio');
-  if (audio) {
-    if (audio.paused) {
-      btnPlayPause.appendChild(playSVG.cloneNode(true));
-    } else {
-      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-    }
-    return;
+    // Default to play icon
+    btnPlayPause.appendChild(playSVG.cloneNode(true));
   }
-
-  // Default to play icon
-  btnPlayPause.appendChild(playSVG.cloneNode(true));
 }
+
+  // --- New Spotify-style button creation functions ---
+  function createSpotifyControlButton(type, ariaLabel, onClick) {
+    const button = document.createElement("button");
+    button.setAttribute("aria-label", ariaLabel);
+    button.setAttribute("data-encore-id", "buttonTertiary");
+    button.setAttribute("tabindex", "0");
+
+    // Base button styling to match Spotify
+    Object.assign(button.style, {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+      border: "none",
+      borderRadius: "50%",
+      cursor: "pointer",
+      textDecoration: "none",
+      color: "rgba(255, 255, 255, 0.7)",
+      backgroundColor: "transparent",
+      minWidth: "32px",
+      height: "32px",
+      padding: "8px",
+      fontSize: "16px",
+      fontWeight: "400",
+      transition: "all 0.2s ease",
+      userSelect: "none",
+      outline: "none"
+    });
+
+    // Icon wrapper
+    const iconWrapper = document.createElement("span");
+    iconWrapper.setAttribute("aria-hidden", "true");
+    Object.assign(iconWrapper.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "16px",
+      height: "16px"
+    });
+
+    button.appendChild(iconWrapper);
+
+    // Hover/focus effects
+    button.addEventListener("mouseenter", () => {
+      button.style.color = "rgba(255, 255, 255, 1)";
+      button.style.transform = "scale(1.04)";
+    });
+
+    button.addEventListener("mouseleave", () => {
+      button.style.color = "rgba(255, 255, 255, 0.7)";
+      button.style.transform = "scale(1)";
+    });
+
+    button.addEventListener("focus", () => {
+      button.style.outline = "2px solid rgba(255, 255, 255, 0.3)";
+      button.style.outlineOffset = "2px";
+    });
+
+    button.addEventListener("blur", () => {
+      button.style.outline = "none";
+    });
+
+    // Click handler
+    button.addEventListener("click", onClick);
+
+    return { button, iconWrapper };
+  }
+
+  // Create main play/pause button (larger, primary style)
+  function createPlayPauseButton(onClick) {
+    const button = document.createElement("button");
+    button.setAttribute("aria-label", "Play");
+    button.setAttribute("data-testid", "lyrics-plus-playpause");
+    button.setAttribute("data-encore-id", "buttonPrimary");
+    button.setAttribute("tabindex", "0");
+
+    // Primary button styling (larger, prominent)
+    Object.assign(button.style, {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+      border: "none",
+      borderRadius: "50%",
+      cursor: "pointer",
+      textDecoration: "none",
+      color: "#000",
+      backgroundColor: "#fff",
+      minWidth: "32px",
+      height: "32px",
+      padding: "8px",
+      fontSize: "16px",
+      fontWeight: "400",
+      transition: "all 0.2s ease",
+      userSelect: "none",
+      outline: "none"
+    });
+
+    // Icon wrapper
+    const iconWrapper = document.createElement("span");
+    iconWrapper.setAttribute("aria-hidden", "true");
+    Object.assign(iconWrapper.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "16px",
+      height: "16px"
+    });
+
+    button.appendChild(iconWrapper);
+
+    // Hover/focus effects
+    button.addEventListener("mouseenter", () => {
+      button.style.transform = "scale(1.04)";
+    });
+
+    button.addEventListener("mouseleave", () => {
+      button.style.transform = "scale(1)";
+    });
+
+    button.addEventListener("focus", () => {
+      button.style.outline = "2px solid rgba(255, 255, 255, 0.3)";
+      button.style.outlineOffset = "2px";
+    });
+
+    button.addEventListener("blur", () => {
+      button.style.outline = "none";
+    });
+
+    // Click handler
+    button.addEventListener("click", onClick);
+
+    return { button, iconWrapper };
+  }
+
+  function updatePlayPauseButton(button, iconWrapper) {
+    const isPlaying = isSpotifyPlaying();
+
+    // Clear existing icon
+    iconWrapper.innerHTML = "";
+
+    if (isPlaying) {
+      button.setAttribute("aria-label", "Pause");
+      iconWrapper.appendChild(pauseSmallSVG.cloneNode(true));
+    } else {
+      button.setAttribute("aria-label", "Play");
+      iconWrapper.appendChild(playSmallSVG.cloneNode(true));
+    }
+  }
   // ------------------------
   // Providers and Fetchers
   // ------------------------
@@ -1843,7 +2028,9 @@ function observeSpotifyPlayPause(popup) {
   if (!spBtn) spBtn = document.querySelector('[aria-label]');
   if (!spBtn) return;
   const observer = new MutationObserver(() => {
-    if (popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+    if (popup._playPauseBtn && popup._playPauseBtn.button && popup._playPauseBtn.iconWrapper) {
+      updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
+    }
   });
   observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
   popup._playPauseObserver = observer;
@@ -2772,22 +2959,33 @@ offsetWrapper.appendChild(inputStack);
     console.warn("Spotify control button not found for:", command);
   }
 }
-    function createPlayPauseButton() {
-      const btnPlayPause = createControlBtn("", "Play/Pause", () => {
+    // Create all control buttons using new Spotify-style functions
+    const { button: btnPrevious, iconWrapper: prevIconWrapper } = createSpotifyControlButton(
+      "previous",
+      "Previous",
+      () => sendSpotifyCommand("previous")
+    );
+    prevIconWrapper.appendChild(previousSVG.cloneNode(true));
+
+    const { button: btnPlayPause, iconWrapper: playIconWrapper } = createPlayPauseButton(
+      () => {
         sendSpotifyCommand("playpause");
-        updatePlayPauseIcon(btnPlayPause);
-      });
-      btnPlayPause.innerHTML = "";
-      btnPlayPause.appendChild(playSVG.cloneNode(true));
-      updatePlayPauseIcon(btnPlayPause);
-      return btnPlayPause;
-    }
+        setTimeout(() => updatePlayPauseButton(btnPlayPause, playIconWrapper), 100);
+      }
+    );
 
-    const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
-    const btnPlayPause = createPlayPauseButton();
-    const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
+    const { button: btnNext, iconWrapper: nextIconWrapper } = createSpotifyControlButton(
+      "next",
+      "Next",
+      () => sendSpotifyCommand("next")
+    );
+    nextIconWrapper.appendChild(nextSVG.cloneNode(true));
 
-    popup._playPauseBtn = btnPlayPause;
+    // Initialize button state
+    updatePlayPauseButton(btnPlayPause, playIconWrapper);
+
+    // Store references for later updates (update the structure to match new format)
+    popup._playPauseBtn = { button: btnPlayPause, iconWrapper: playIconWrapper };
 
 
     const btnReset = document.createElement("button");
@@ -3124,7 +3322,10 @@ currentLyricsContainer = lyricsContainer;
         autodetectProviderAndLoad(popup, info);
         observeSpotifyPlayPause(popup);
       }
-      if (popup && popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+      // Update button state
+      if (popup && popup._playPauseBtn) {
+        updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
+      }
     }, 400);
   }
 
