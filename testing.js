@@ -2867,7 +2867,6 @@ offsetWrapper.appendChild(inputStack);
     // Update button state based on current state
     function updateShuffleButton(button, iconWrapper) {
       const state = getShuffleState();
-      console.log('[Shuffle Debug] Updating shuffle button with state:', state);
 
       // Clear existing icon
       iconWrapper.innerHTML = "";
@@ -3006,18 +3005,6 @@ offsetWrapper.appendChild(inputStack);
     function getShuffleState() {
       // Method 1: Try to find shuffle buttons using aria-label matching
       const shuffleButtons = Array.from(document.querySelectorAll('button[aria-label]'));
-      
-      // Debug: log all buttons that might be shuffle buttons
-      const potentialShuffleButtons = shuffleButtons.filter(btn => {
-        const ariaLabel = btn.getAttribute('aria-label');
-        return ariaLabel && ariaLabel.toLowerCase().includes('shuffle');
-      });
-      
-      console.log('[Shuffle Debug] All shuffle-related buttons found:', potentialShuffleButtons.map(btn => ({
-        label: btn.getAttribute('aria-label'),
-        visible: btn.offsetParent !== null,
-        classes: btn.className
-      })));
 
       // Look for buttons with specific aria-label patterns
       const enableShuffleBtn = shuffleButtons.find(btn => {
@@ -3042,8 +3029,6 @@ offsetWrapper.appendChild(inputStack);
       // Method 2: Try to find shuffle button using a more specific selector
       // Look for buttons that have shuffle-related SVG content
       if (!enableShuffleBtn && !enableSmartShuffleBtn && !disableShuffleBtn) {
-        console.log('[Shuffle Debug] Aria-label method failed, trying SVG content method');
-        
         // Try to find buttons with shuffle-related SVG paths
         const buttonsWithSVG = Array.from(document.querySelectorAll('button svg path'));
         const shufflePaths = buttonsWithSVG.filter(path => {
@@ -3055,13 +3040,10 @@ offsetWrapper.appendChild(inputStack);
           );
         });
         
-        console.log('[Shuffle Debug] Found shuffle SVG paths:', shufflePaths.length);
-        
         if (shufflePaths.length > 0) {
           const shuffleBtn = shufflePaths[0].closest('button');
           if (shuffleBtn && shuffleBtn.offsetParent !== null) {
             const ariaLabel = shuffleBtn.getAttribute('aria-label');
-            console.log('[Shuffle Debug] Found shuffle button via SVG:', ariaLabel);
             
             // Try to determine state based on SVG content
             const svgPaths = Array.from(shuffleBtn.querySelectorAll('svg path'));
@@ -3071,40 +3053,25 @@ offsetWrapper.appendChild(inputStack);
             });
             
             if (hasSmartShufflePath) {
-              console.log('[Shuffle Debug] State: SMART (via SVG)');
               return 'smart';
             } else if (ariaLabel && ariaLabel.toLowerCase().includes('disable')) {
-              console.log('[Shuffle Debug] State: SMART (via aria-label)');
               return 'smart';
             } else if (ariaLabel && ariaLabel.toLowerCase().includes('enable smart')) {
-              console.log('[Shuffle Debug] State: ON (via aria-label)');
               return 'on';
             } else {
-              console.log('[Shuffle Debug] State: OFF (via fallback)');
               return 'off';
             }
           }
         }
       }
 
-      // Debug logging to understand state detection
-      console.log('[Shuffle Debug] Found buttons:', {
-        enableShuffle: enableShuffleBtn ? enableShuffleBtn.getAttribute('aria-label') : 'not found',
-        enableSmartShuffle: enableSmartShuffleBtn ? enableSmartShuffleBtn.getAttribute('aria-label') : 'not found',
-        disableShuffle: disableShuffleBtn ? disableShuffleBtn.getAttribute('aria-label') : 'not found'
-      });
-
       if (enableShuffleBtn) {
-        console.log('[Shuffle Debug] State: OFF');
         return 'off'; // Show "Enable Shuffle" = shuffle is off
       } else if (enableSmartShuffleBtn) {
-        console.log('[Shuffle Debug] State: ON');
         return 'on'; // Show "Enable Smart Shuffle" = normal shuffle is on
       } else if (disableShuffleBtn) {
-        console.log('[Shuffle Debug] State: SMART');
         return 'smart'; // Show "Disable Shuffle" = smart shuffle is on
       }
-      console.log('[Shuffle Debug] State: DEFAULT OFF');
       return 'off'; // Default to off
     }
 
@@ -3129,25 +3096,19 @@ offsetWrapper.appendChild(inputStack);
       "shuffle",
       "Enable shuffle",
       () => {
-        console.log('[Shuffle Debug] Shuffle button clicked, sending command');
         sendSpotifyCommand("shuffle");
         
         // Try multiple times to update the button state to account for DOM update timing
         const tryUpdateShuffleButton = (attempts = 0) => {
-          if (attempts >= 5) {
-            console.log('[Shuffle Debug] Max attempts reached, giving up');
+          if (attempts >= 3) {
             return;
           }
           
           setTimeout(() => {
-            const oldState = getShuffleState();
             updateShuffleButton(btnShuffle, shuffleIconWrapper);
-            const newState = getShuffleState();
             
-            console.log('[Shuffle Debug] Update attempt', attempts + 1, 'old state:', oldState, 'new state:', newState);
-            
-            // If state hasn't changed, try again
-            if (attempts < 3) {
+            // Try again with increasing delay
+            if (attempts < 2) {
               tryUpdateShuffleButton(attempts + 1);
             }
           }, 100 + (attempts * 100)); // Increase delay for each attempt
@@ -3206,21 +3167,17 @@ offsetWrapper.appendChild(inputStack);
       });
       
       if (shuffleButtons.length > 0) {
-        console.log('[Shuffle Debug] Setting up mutation observer for', shuffleButtons.length, 'shuffle buttons');
-        
         const observer = new MutationObserver((mutations) => {
           let shouldUpdate = false;
           
           mutations.forEach((mutation) => {
             if (mutation.type === 'attributes' && 
                 (mutation.attributeName === 'aria-label' || mutation.attributeName === 'class')) {
-              console.log('[Shuffle Debug] Detected change in shuffle button:', mutation.attributeName);
               shouldUpdate = true;
             }
           });
           
           if (shouldUpdate) {
-            console.log('[Shuffle Debug] Updating shuffle button due to mutation');
             updateShuffleButton(btnShuffle, shuffleIconWrapper);
           }
         });
