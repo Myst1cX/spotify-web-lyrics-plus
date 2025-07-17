@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stc
 // @namespace    http://tampermonkey.net/
-// @version      8.7
+// @version      8.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -1862,6 +1862,46 @@ const Providers = {
     }
   }
 
+function observeSpotifyShuffle(popup) {
+  if (!popup || !popup._shuffleBtn) return;
+  if (popup._shuffleObserver) popup._shuffleObserver.disconnect();
+
+  // Find the controls bar container (the element that contains all playback controls)
+  // Find by sibling of repeat button (which is stable!)
+  const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+  if (!repeatBtn) return;
+  const controlsBar = repeatBtn.parentElement?.parentElement;
+  if (!controlsBar) return;
+
+  const observer = new MutationObserver(() => {
+    // Always update the button state after any change
+    updateShuffleButton(popup._shuffleBtn.button, popup._shuffleBtn.iconWrapper);
+    // Re-attach observer in case the DOM changed
+    setTimeout(() => observeSpotifyShuffle(popup), 0);
+  });
+  observer.observe(controlsBar, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['aria-label', 'class', 'style']
+  });
+  popup._shuffleObserver = observer;
+}
+
+function observeSpotifyRepeat(popup) {
+  if (!popup || !popup._repeatBtn) return;
+  if (popup._repeatObserver) popup._repeatObserver.disconnect();
+  const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+  if (!repeatBtn) return;
+  const observer = new MutationObserver(() => {
+    if (popup._repeatBtn) {
+      updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
+    }
+  });
+  observer.observe(repeatBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style', 'aria-checked'] });
+  popup._repeatObserver = observer;
+}
+
 function observeSpotifyPlayPause(popup) {
   if (!popup || !popup._playPauseBtn) return;
   if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
@@ -2955,40 +2995,36 @@ offsetWrapper.appendChild(inputStack);
     ]
   };
 
-  // Try all selectors for the current command
   let btn = null;
-  for (const sel of selectors[command] || []) {
-    btn = document.querySelector(sel);
-    if (btn && btn.offsetParent !== null) break; // Only pick visible
-  }
 
-  // Special handling for shuffle command with dynamic aria-labels
-  if (!btn && command === "shuffle") {
-    // Find shuffle buttons using partial aria-label matching
-    const shuffleButtons = Array.from(document.querySelectorAll('button[aria-label]'));
-    btn = shuffleButtons.find(button => {
-      if (button.offsetParent === null) return false; // Skip hidden buttons
+  if (command === "shuffle") {
+    // Always re-query the DOM for the currently visible shuffle button
+    btn = Array.from(document.querySelectorAll('button[aria-label]')).find(button => {
+      if (button.offsetParent === null) return false;
       const ariaLabel = button.getAttribute('aria-label');
       if (!ariaLabel) return false;
-
-      // Check for shuffle-related aria-labels (case-insensitive partial match)
-      const lowerLabel = ariaLabel.toLowerCase();
-      return lowerLabel.includes('enable shuffle') ||
-             lowerLabel.includes('enable smart shuffle') ||
-             lowerLabel.includes('disable shuffle');
+      const lower = ariaLabel.toLowerCase();
+      return lower.includes('enable shuffle') ||
+             lower.includes('enable smart shuffle') ||
+             lower.includes('disable shuffle');
     });
+  } else {
+    for (const sel of selectors[command] || []) {
+      btn = document.querySelector(sel);
+      if (btn && btn.offsetParent !== null) break;
+    }
   }
 
-  // Fallback: try to find button by innerText (mobile sometimes uses text)
+  // Fallback for playpause
   if (!btn && command === "playpause") {
     btn = Array.from(document.querySelectorAll("button"))
       .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
   }
 
   if (btn) {
-    // Try click, then fallback to synthetic touch events for mobile
     btn.click();
-    // If still not playing, try touch events
+
+    // If on mobile, try touch events as a fallback
     if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
       btn.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, cancelable:true}));
       btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
@@ -2997,7 +3033,6 @@ offsetWrapper.appendChild(inputStack);
     console.warn("Spotify control button not found for:", command);
   }
 }
-
     // State detection functions
     function getShuffleState() {
       // Find shuffle buttons using partial aria-label matching
@@ -3294,6 +3329,8 @@ if (container) {
     })(popup, resizer);
 
     observeSpotifyPlayPause(popup);
+    observeSpotifyShuffle(popup);
+    observeSpotifyRepeat(popup);
 
     const info = getCurrentTrackInfo();
     if (info) {
@@ -3433,7 +3470,6 @@ currentLyricsContainer = lyricsContainer;
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
         autodetectProviderAndLoad(popup, info);
-        observeSpotifyPlayPause(popup);
       }
 
       // Update all button states
@@ -3445,9 +3481,13 @@ currentLyricsContainer = lyricsContainer;
       }
       if (popup && popup._repeatBtn) {
         updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
+        observeSpotifyPlayPause(popup);
+        observeSpotifyShuffle(popup);
+        observeSpotifyRepeat(popup);
       }
     }, 400);
   }
+
 
   function stopPollingForTrackChange() {
     if (pollingInterval) {
