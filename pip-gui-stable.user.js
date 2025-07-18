@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      8.7
+// @version      8.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -709,7 +709,6 @@ function labelMeansPlay(label) {
   }
 
   const url = `https://lrclib.net/api/get?${params.join('&')}`;
-  console.log("LRCLIB request:", url);
 
   try {
     const response = await fetch(url, {
@@ -1115,10 +1114,8 @@ async function fetchMusixmatchLyrics(songInfo) {
 // Extract synced lyrics from the fetchMusixmatchLyrics result
 function musixmatchGetSynced(body) {
   if (!body || !body.synced) {
-    console.log("No synced lyrics data found");
     return null;
   }
-  console.log("Extracting synced lyrics, lines:", body.synced.length);
   return body.synced.map(line => ({
     text: line.text,
     time: Math.round(line.time ?? line.startTime ?? 0),
@@ -1128,10 +1125,8 @@ function musixmatchGetSynced(body) {
 // Extract unsynced lyrics from the fetchMusixmatchLyrics result
 function musixmatchGetUnsynced(body) {
   if (!body || !body.unsynced) {
-    console.log("No unsynced lyrics data found");
     return null;
   }
-  console.log("Extracting unsynced lyrics, lines:", body.unsynced.length);
   return body.unsynced.map(line => ({ text: line.text }));
 }
 
@@ -1161,82 +1156,10 @@ return data;
 
 
 
-  // --- Netease ---
-// async function fetchNeteaseLyrics(info) {
-//   const searchURL = "https://music.xianqiao.wang/neteaseapiv2/search?limit=10&type=1&keywords=";
-//   const lyricURL = "https://music.xianqiao.wang/neteaseapiv2/lyric?id=";
-//   const cleanTitle = Utils.removeExtraInfo(Utils.removeSongFeat(Utils.normalize(info.title)));
-//   const finalURL = searchURL + encodeURIComponent(`${cleanTitle} ${info.artist}`);
-//   const searchResults = await fetch(finalURL);
-//   if (!searchResults.ok) throw new Error("Cannot find track");
-//   const searchJson = await searchResults.json();
-//   const items = searchJson.result.songs;
-//   if (!items?.length) throw new Error("Cannot find track");
 
-//   // Try to match by album (normalized)
-//   const neAlbumName = Utils.normalize(info.album);
-//   const expectedAlbumName = Utils.containsHanCharacter(neAlbumName) ? await Utils.toSimplifiedChinese(neAlbumName) : neAlbumName;
-//   let itemId = items.findIndex((val) => Utils.normalize(val.album.name) === expectedAlbumName);
-//   if (itemId === -1) itemId = items.findIndex((val) => Math.abs(info.duration - val.duration) < 3000);
-//   if (itemId === -1) itemId = items.findIndex((val) => val.name === cleanTitle);
-//   if (itemId === -1) throw new Error("Cannot find track");
-//   const lyricRes = await fetch(lyricURL + items[itemId].id);
-//   if (!lyricRes.ok) throw new Error("Lyrics fetch failed");
-//   return await lyricRes.json();
-// }
-// function parseNeteaseSynced(list) {
-//   const lyricStr = list?.lrc?.lyric;
-//   if (!lyricStr) return null;
-//   const lines = lyricStr.split(/\r?\n/).map(line => line.trim());
-//   const lyrics = lines
-//     .map(line => {
-//       const match = line.match(/^\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?]\s*(.*)$/);
-//       if (!match) return null;
-//       const min = Number(match[1]);
-//       const sec = Number(match[2]);
-//       const ms = match[3] ? Number(match[3].padEnd(3, '0')) : 0;
-//       return {
-//         text: match[4] || "",
-//         time: min * 60000 + sec * 1000 + ms,
-//         startTime: min * 60000 + sec * 1000 + ms,
-//       };
-//     })
-//     .filter(Boolean);
-//   return lyrics.length ? lyrics : null;
-// }
-// function parseNeteaseUnsynced(list) {
-//   const lyricStr = list?.lrc?.lyric;
-//   if (!lyricStr) return null;
-//   const lines = lyricStr.split(/\r?\n/).map(line => line.trim());
-//   const lyrics = lines
-//     .map(line => {
-//       const match = line.match(/^\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?]\s*(.*)$/);
-//       if (!match) {
-//         if (!line) return null;
-//         return { text: line.trim() };
-//       }
-//       return { text: match[4] };
-//     })
-//     .filter(Boolean);
-//   return lyrics.length ? lyrics : null;
-// }
-// const ProviderNetease = {
-//   async findLyrics(info) {
-//     try {
-//       const data = await fetchNeteaseLyrics(info);
-//       if (!result) return { error: "No lyrics found for this track from Netease" };
-//       return data;
-//     } catch (e) {
-//       return { error: e.message || "Netease fetch failed" };
-//     }
-//   },
-//   getUnsynced: parseNeteaseUnsynced,
-//   getSynced: parseNeteaseSynced
-// };
-//
+
   // --- Genius ---
 async function fetchGeniusLyrics(info) {
-  console.log("[Genius] Starting fetchGeniusLyrics");
 
   const titles = new Set([
     info.title,
@@ -1244,7 +1167,6 @@ async function fetchGeniusLyrics(info) {
     Utils.removeSongFeat(info.title),
     Utils.removeSongFeat(Utils.removeExtraInfo(info.title)),
   ]);
-  console.log("[Genius] Titles to try:", Array.from(titles));
 
   function generateNthIndices(start = 1, step = 4, max = 25) {
     const arr = [];
@@ -1324,7 +1246,6 @@ async function fetchGeniusLyrics(info) {
   }
 
   const includedNthIndices = generateNthIndices();
-  console.log("[Genius] Included nth-of-type indices:", includedNthIndices);
 
   // Try up to 5 pages of results for each title variant
   const maxPages = 5;
@@ -1335,9 +1256,6 @@ async function fetchGeniusLyrics(info) {
     for (let page = 1; page <= maxPages; page++) {
       const query = encodeURIComponent(`${info.artist} ${cleanTitle}`);
       const searchUrl = `https://genius.com/api/search/multi?per_page=5&page=${page}&q=${query}`;
-
-      console.log(`[Genius] Querying: ${info.artist} - ${cleanTitle} (page ${page})`);
-      console.log(`[Genius] Search URL: ${searchUrl}`);
 
       try {
         const searchRes = await new Promise((resolve, reject) => {
@@ -1355,23 +1273,17 @@ async function fetchGeniusLyrics(info) {
           });
         });
 
-        console.log("[Genius] Search response received");
         const searchJson = JSON.parse(searchRes.responseText);
         const hits = searchJson?.response?.sections?.flatMap(s => s.hits) || [];
         const songHits = hits.filter(h => h.type === "song");
-        console.log(`[Genius] Found ${songHits.length} song hits`);
 
         for (const hit of songHits) {
           const result = hit.result;
-          console.log(`- Candidate: Title="${result.title}", Artist="${result.primary_artist?.name}", URL=${result.url}`);
         }
 
         const targetArtists = new Set(normalizeArtists(info.artist));
         const targetTitleNorm = normalize(Utils.removeExtraInfo(info.title));
         const targetHasVersion = hasVersionKeywords(info.title);
-        console.log("[Genius] Normalized target artist tokens:", Array.from(targetArtists));
-        console.log("[Genius] Normalized target title:", targetTitleNorm);
-        console.log("[Genius] Target title has version keywords:", targetHasVersion);
 
         let bestScore = -Infinity;
         let fallbackScore = -Infinity;
@@ -1388,9 +1300,6 @@ async function fetchGeniusLyrics(info) {
           const resultArtists = new Set([...primary, ...featured]);
           const resultTitleNorm = normalize(Utils.removeExtraInfo(result.title || ''));
           const resultHasVersion = hasVersionKeywords(result.title || '');
-
-          console.log(`[Genius] → "${result.title}" primary artists:`, primary);
-          console.log(`[Genius] → "${result.title}" featured from title:`, featured);
 
           // Artist overlap count
           let artistOverlapCount = 0;
@@ -1416,12 +1325,10 @@ async function fetchGeniusLyrics(info) {
           for (const fa of featured) {
             if (targetArtists.has(fa) && !resultArtists.has(fa)) {
               artistScore += 1;
-              console.log(`[Genius] Boosting artistScore: featured artist "${fa}" recovered from title`);
             }
           }
 
           if (artistScore < 3) {
-            console.log(`[Genius] Candidate rejected due to low artist score (${artistScore})`);
             continue;
           }
 
@@ -1457,18 +1364,12 @@ async function fetchGeniusLyrics(info) {
             penaltyLog.push("-5 no artist overlap");
           }
 
-          console.log(`[Genius] Candidate "${result.title}":`);
-          console.log(`  Artist Score: ${artistScore} (matched ${artistOverlapCount}/${totalArtists},${featured.map(f => targetArtists.has(f) && !resultArtists.has(f) ? ` +1 boost: ${f}` : '').filter(Boolean).join('')})`);
-          console.log(`  Title Score: ${titleScore} (normed="${resultTitleNorm}" vs "${targetTitleNorm}", hasVer=${resultHasVersion})`);
           if (penaltyLog.length) {
-            console.log(`  Penalties: ${penaltyLog.join(', ')}`);
           }
-          console.log(`  Final Score: ${score}`);
 
           if (score > bestScore && (!targetHasVersion || resultHasVersion)) {
             bestScore = score;
             song = result;
-            console.log(`[Genius] New best match: "${result.title}" with score ${bestScore}`);
           } else if (
             score > fallbackScore &&
             (!resultHasVersion || !targetHasVersion) &&
@@ -1476,22 +1377,18 @@ async function fetchGeniusLyrics(info) {
           ) {
             fallbackScore = score;
             fallbackSong = result;
-            console.log(`[Genius] New fallback candidate: "${result.title}" with score ${fallbackScore}`);
           }
         }
 
         if (!song && fallbackSong) {
           song = fallbackSong;
           bestScore = fallbackScore;
-          console.log(`[Genius] Using fallback song: "${song.title}" with score ${bestScore}`);
         }
 
         if (bestScore < 6 || !song?.url) {
-          console.log(`[Genius] Best match score too low (${bestScore}) or no URL found, skipping.`);
           continue;
         }
 
-        console.log(`[Genius] Selected song URL: ${song.url}`);
 
         const htmlRes = await new Promise((resolve, reject) => {
           GM_xmlhttpRequest({
@@ -1508,7 +1405,6 @@ async function fetchGeniusLyrics(info) {
           });
         });
 
-        console.log("[Genius] Song page HTML received");
         const doc = new DOMParser().parseFromString(htmlRes.responseText, "text/html");
 
         const lyricsRoot = [...doc.querySelectorAll('div')].find(el =>
@@ -1519,12 +1415,10 @@ async function fetchGeniusLyrics(info) {
           console.warn("[Genius] No .Lyrics__Root found");
           continue;
         }
-        console.log("[Genius] .Lyrics__Root found");
 
         const containers = [...lyricsRoot.querySelectorAll('div')].filter(el =>
           [...el.classList].some(cls => cls.includes('Lyrics__Container'))
         );
-        console.log(`[Genius] Found ${containers.length} .Lyrics__Container div(s)`);
 
         if (containers.length === 0) {
           console.warn("[Genius] No .Lyrics__Container found inside .Lyrics__Root");
@@ -1540,7 +1434,6 @@ async function fetchGeniusLyrics(info) {
 
           if (includedNthIndices.includes(nthIndex)) {
             relevantContainersSet.add(container);
-            console.log(`[Genius] Including container with nth-of-type ${nthIndex}`);
           }
         });
 
@@ -1568,7 +1461,6 @@ async function fetchGeniusLyrics(info) {
         });
 
         const relevantContainers = Array.from(relevantContainersSet);
-        console.log(`[Genius] Using ${relevantContainers.length} relevant container(s)`);
 
         let lyrics = '';
         function walk(node) {
@@ -1607,7 +1499,6 @@ async function fetchGeniusLyrics(info) {
           continue;
         }
 
-        console.log("[Genius] Lyrics successfully extracted");
         return { plainLyrics: lyrics };
 
       } catch (e) {
@@ -1617,7 +1508,6 @@ async function fetchGeniusLyrics(info) {
     }
   }
 
-  console.log("[Genius] Lyrics not found after trying all titles and pages");
   return { error: "Lyrics not found on Genius" };
 }
 
@@ -1843,8 +1733,6 @@ function showSpotifyTokenModal() {
 const ProviderSpotify = {
   async findLyrics(info) {
     const token = localStorage.getItem("lyricsPlusSpotifyToken");
-    console.log("[SpotifyLyrics+] Starting fetch:");
-    console.log("[SpotifyLyrics+] TrackInfo:", info);
 
     if (!token) {
       console.warn("[SpotifyLyrics+] No Spotify user token found in localStorage.");
@@ -1858,10 +1746,8 @@ const ProviderSpotify = {
 
     const endpoint = `https://spclient.wg.spotify.com/color-lyrics/v2/track/${info.trackId}?format=json&vocalRemoval=false&market=from_token`;
 
-    console.log("[SpotifyLyrics+] Using endpoint:", endpoint);
 
     try {
-      console.log("[SpotifyLyrics+] Sending GET with token (first 12 chars):", token.slice(0,12)+"...");
       const res = await fetch(endpoint, {
         method: "GET",
         headers: {
@@ -1871,7 +1757,6 @@ const ProviderSpotify = {
         },
       });
 
-      console.log("[SpotifyLyrics+] API Response status:", res.status);
 
       if (!res.ok) {
     const text = await res.text();
@@ -1889,7 +1774,6 @@ const ProviderSpotify = {
       let data;
       try {
         data = await res.json();
-        console.log("[SpotifyLyrics+] API Response JSON:", data);
       } catch (jsonErr) {
         const text = await res.text();
         console.error("[SpotifyLyrics+] Failed to parse JSON. Raw response:", text);
@@ -1909,7 +1793,6 @@ const ProviderSpotify = {
   },
 
   getSynced(data) {
-  console.log("[SpotifyLyrics+] getSynced called with:", data);
   if (Array.isArray(data.lines) && data.syncType === "LINE_SYNCED") {
     return data.lines.map(line => ({
       time: line.startTimeMs,
@@ -1920,7 +1803,6 @@ const ProviderSpotify = {
 },
 
 getUnsynced(data) {
-  console.log("[SpotifyLyrics+] getUnsynced called with:", data);
   // Accept both unsynced and fallback if lines exist
   if (Array.isArray(data.lines) && (data.syncType === "UNSYNCED" || data.syncType !== "LINE_SYNCED")) {
     return data.lines.map(line => ({ text: line.words }));
@@ -1931,13 +1813,12 @@ getUnsynced(data) {
 
   // --- Providers List ---
 const Providers = {
-  list: ["LRCLIB", "Spotify", "KPoe", "Musixmatch", /*"Netease",*/ "Genius"],
+  list: ["LRCLIB", "Spotify", "KPoe", "Musixmatch", "Genius"],
   map: {
     "LRCLIB": ProviderLRCLIB,
     "Spotify": ProviderSpotify,
     "KPoe": ProviderKPoe,
     "Musixmatch": ProviderMusixmatch,
-    // "Netease": ProviderNetease,
     "Genius": ProviderGenius,
   },
   current: "LRCLIB",
@@ -2027,13 +1908,10 @@ let pos = null;
 if (savedState) {
   try {
     pos = JSON.parse(savedState);
-    console.log("[Lyrics+] createPopup: Loaded lyricsPlusPopupState:", pos);
   } catch {
     pos = null;
-    console.log("[Lyrics+] createPopup: lyricsPlusPopupState failed to parse");
   }
 } else {
-  console.log("[Lyrics+] createPopup: No lyricsPlusPopupState found");
 }
 
     const popup = document.createElement("div");
@@ -2042,7 +1920,6 @@ if (savedState) {
 function getSpotifyLyricsContainerRect() {
   const el = document.querySelector('.main-view-container');
   if (!el || !el.getBoundingClientRect) {
-    console.log('[Lyrics+] .main-view-container NOT found');
     return null;
   }
   const rect = el.getBoundingClientRect();
@@ -2055,10 +1932,8 @@ function getSpotifyLyricsContainerRect() {
     const width = rect.width - rightMarginPx + 75; // Compensate to keep right edge same
     const top = rect.top;
     const height = rect.height;
-    console.log('[Lyrics+] MOBILE .main-view-container:', {left, top, width, height});
     return { left, top, width, height };
   } else {
-    console.log('[Lyrics+] DESKTOP .main-view-container:', rect);
     return rect;
   }
 }
@@ -3015,6 +2890,11 @@ offsetWrapper.appendChild(inputStack);
     button.style.transform = "scale(1)";
   });
 
+  button.addEventListener("focus", () => {
+    button.style.outline = "2px solid rgba(255, 255, 255, 0.3)";
+    button.style.outlineOffset = "2px";
+  });
+
   button.addEventListener("blur", () => {
     button.style.outline = "none";
   });
@@ -3075,6 +2955,11 @@ offsetWrapper.appendChild(inputStack);
 
       button.addEventListener("mouseleave", () => {
         button.style.transform = "scale(1)";
+      });
+
+      button.addEventListener("focus", () => {
+        button.style.outline = "2px solid rgba(255, 255, 255, 0.3)";
+        button.style.outlineOffset = "2px";
       });
 
       button.addEventListener("blur", () => {
@@ -3235,7 +3120,6 @@ if (container) {
     width: rect.width,
     height: rect.height
   }));
-  console.log("[Lyrics+] savePopupState called. Saved:", localStorage.getItem('lyricsPlusPopupState'));
 }
 
     (function makeDraggable(el, handle) {
@@ -3431,12 +3315,10 @@ if (container) {
   { name: "Spotify", type: "getSynced" },
   { name: "KPoe", type: "getSynced" },
   { name: "Musixmatch", type: "getSynced" },
-  // { name: "Netease", type: "getSynced" },
   { name: "LRCLIB", type: "getUnsynced" },
   { name: "Spotify", type: "getUnsynced" },
   { name: "KPoe", type: "getUnsynced" },
   { name: "Musixmatch", type: "getUnsynced" },
-  // { name: "Netease", type: "getUnsynced" },
   { name: "Genius", type: "getUnsynced" }
 ];
   for (const { name, type } of detectionOrder) {
@@ -3596,11 +3478,9 @@ currentLyricsContainer = lyricsContainer;
 
   function applyProportionToPopup(popup) {
   if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion) {
-    console.log("[Lyrics+] applyProportionToPopup: Skipped due to resizing/ignore");
     return;
   }
   if (!popup || !window.lastProportion.w || !window.lastProportion.h) {
-    console.log("[Lyrics+] applyProportionToPopup: No proportion to apply");
     return;
   }
   popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
@@ -3608,7 +3488,6 @@ currentLyricsContainer = lyricsContainer;
   popup.style.right = "auto";
   popup.style.bottom = "auto";
   popup.style.position = "fixed";
-  console.log("[Lyrics+] applyProportionToPopup: Applied w/h", popup.style.width, popup.style.height);
 }
 
   // Call this after user resizes the popup:
@@ -3624,8 +3503,6 @@ currentLyricsContainer = lyricsContainer;
   window.addEventListener("mouseup", () => {
     if (isResizing) {
       saveProportionFromPopup(popup);
-      console.log("[Lyrics+] observePopupResize: Resize finished, saved proportion",
-        localStorage.getItem("lyricsPlusPopupProportion"));
     }
     isResizing = false;
   });
@@ -3635,7 +3512,6 @@ currentLyricsContainer = lyricsContainer;
   const popupObserver = new MutationObserver(() => {
   const popup = document.getElementById("lyrics-plus-popup");
   if (popup) {
-    console.log("[Lyrics+] MutationObserver: Popup created/found");
     applyProportionToPopup(popup);
     observePopupResize();
   }
