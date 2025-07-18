@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ original restore
+// @name         Spotify Lyrics+ Testing
 // @namespace    http://tampermonkey.net/
-// @version      9.10.trust
+// @version      8.5.testing
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -2166,6 +2166,94 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
     title.style.margin = "0";
     title.style.fontWeight = "600";
 
+        // Restore Default Position and Size button for the header
+    const btnReset = document.createElement("button");
+btnReset.title = "Restore Default Position and Size";
+Object.assign(btnReset.style, {
+  cursor: "pointer",
+  background: "none",
+  border: "none",
+  borderRadius: "5px",
+  width: "28px",
+  height: "28px",
+  color: "#fff", // Make sure color is white (like download)
+  fontWeight: "bold",
+  fontSize: "18px",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  userSelect: "none",
+  padding: "0 2px",
+  margin: "0 4px"
+});
+btnReset.innerHTML = `
+  <svg width="22" height="22" viewBox="0 0 22 22" style="display:block;">
+    <text
+      x="50%" y="60%"
+      text-anchor="middle"
+      dominant-baseline="middle"
+      font-size="19"
+      font-family="Segoe UI, Arial, sans-serif"
+      font-weight="bold"
+      fill="currentColor"
+    >↻</text>
+  </svg>
+`;
+btnReset.onmouseenter = () => { btnReset.style.background = "#222"; };
+btnReset.onmouseleave = () => { btnReset.style.background = "none"; };
+
+    // Default Position and Size of the Popup Gui
+    btnReset.onclick = () => {
+      const rect = getSpotifyLyricsContainerRect();
+      if (rect) {
+        Object.assign(popup.style, {
+          position: "fixed",
+          left: rect.left + "px",
+          top: rect.top + "px",
+          width: rect.width + "px",
+          height: rect.height + "px",
+          right: "auto",
+          bottom: "auto",
+          zIndex: 100000
+        });
+        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height
+        }));
+      } else {
+        Object.assign(popup.style, {
+          position: "fixed",
+          bottom: "87px",
+          right: "0px",
+          left: "auto",
+          top: "auto",
+          width: "370px",
+          height: "79.5vh",
+          zIndex: 100000
+        });
+        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+          left: null,
+          top: null,
+          width: 370,
+          height: window.innerHeight * 0.795
+        }));
+      }
+      localStorage.removeItem("lyricsPlusPopupProportion");
+      window.lastProportion = { w: null, h: null };
+      window.lyricsPlusPopupIgnoreProportion = true;
+      setTimeout(() => {
+        window.lyricsPlusPopupIgnoreProportion = false;
+        if (
+          popup.style.width === "370px" &&
+          popup.style.height === "79.5vh"
+        ) {
+          window.lastProportion = { w: null, h: null };
+        }
+      }, 3000);
+    };
+
 // --- Translation controls dropdown, translate button, and remove translation button ---
 const translationControls = document.createElement('div');
 translationControls.style.display = 'flex';
@@ -2469,7 +2557,12 @@ fontSizeSelect.onchange = () => {
     playbackToggleBtn.style.fontSize = "14px";
     playbackToggleBtn.style.lineHeight = "1";
 
-    header.appendChild(title);
+    const titleBar = document.createElement("div");
+    titleBar.style.display = "flex";
+    titleBar.style.alignItems = "center";
+    titleBar.appendChild(title);
+    titleBar.appendChild(btnReset);
+    header.appendChild(titleBar);
 
     // Button group right side
 const buttonGroup = document.createElement("div");
@@ -3128,84 +3221,11 @@ offsetWrapper.appendChild(inputStack);
     popup._playPauseBtn = { button: btnPlayPause, iconWrapper: playIconWrapper };
     popup._repeatBtn = { button: btnRepeat, iconWrapper: repeatIconWrapper };
 
-
-    const btnReset = document.createElement("button");
-    btnReset.textContent = "↻";
-    btnReset.title = "Restore Default Position and Size";
-    Object.assign(btnReset.style, {
-      cursor: "pointer",
-      background: "#555",
-      border: "none",
-      borderRadius: "50%",
-      width: "32px",
-      height: "32px",
-      color: "white",
-      fontWeight: "bold",
-      fontSize: "18px",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      userSelect: "none",
-      padding: "0",
-    });
-    // Default Position and Size of the Popup Gui
-   btnReset.onclick = () => {
-  const rect = getSpotifyLyricsContainerRect();
-  if (rect) {
-    Object.assign(popup.style, {
-      position: "fixed",
-      left: rect.left + "px",
-      top: rect.top + "px",
-      width: rect.width + "px",
-      height: rect.height + "px",
-      right: "auto",
-      bottom: "auto",
-      zIndex: 100000
-    });
-    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height
-    }));
-  } else {
-    Object.assign(popup.style, {
-      position: "fixed",
-      bottom: "87px",
-      right: "0px",
-      left: "auto",
-      top: "auto",
-      width: "370px",
-      height: "79.5vh",
-      zIndex: 100000
-    });
-    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-      left: null,
-      top: null,
-      width: 370,
-      height: window.innerHeight * 0.795
-    }));
-  }
-  localStorage.removeItem("lyricsPlusPopupProportion");
-  window.lastProportion = { w: null, h: null };
-  window.lyricsPlusPopupIgnoreProportion = true;
-  setTimeout(() => {
-    window.lyricsPlusPopupIgnoreProportion = false;
-    if (
-      popup.style.width === "370px" &&
-      popup.style.height === "79.5vh"
-    ) {
-      window.lastProportion = { w: null, h: null };
-    }
-  }, 3000);
-};
-
     controlsBar.appendChild(btnShuffle);
     controlsBar.appendChild(btnPrevious);
     controlsBar.appendChild(btnPlayPause);
     controlsBar.appendChild(btnNext);
     controlsBar.appendChild(btnRepeat);
-    controlsBar.appendChild(btnReset);
 
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
