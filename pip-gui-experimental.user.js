@@ -13,7 +13,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-experimental.user.js
 // ==/UserScript==
 
-// DO NOT INSTALL - Backup Instance for debugging and troubleshooting
+// DO NOT INSTALL - Backup Instance for debugging and troubleshooting; contains console logs
 // AT THE MOMENT - Equal to Stable release (Last update: 19.7.25)
 
 // FIX IN THE FUTURE: 
