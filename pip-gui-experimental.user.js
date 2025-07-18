@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      8.5.dev
+// @version      8.6.dev
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -29,7 +29,6 @@
 // Add Deezer provider (synced and unsynced)
 // deezer.js with api link > https://github.com/bertigert/Deezer-Lyrics-Sync/blob/main/lyrics_sync.user.js
 // Fix and uncomment Netease provider; api implementation example: https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src%2Ffetchers.ts
-
 
 (function () {
   'use strict';
@@ -2194,7 +2193,7 @@ Object.assign(btnReset.style, {
   borderRadius: "5px",
   width: "28px",
   height: "28px",
-  color: "#fff", // Make sure color is white (like download)
+  color: "#fff",
   fontWeight: "bold",
   fontSize: "18px",
   display: "flex",
@@ -2202,19 +2201,14 @@ Object.assign(btnReset.style, {
   alignItems: "center",
   userSelect: "none",
   padding: "0 2px",
-  margin: "0 4px"
+  marginLeft: "2px",
+  marginRight: "2px"
 });
 btnReset.innerHTML = `
-  <svg width="22" height="22" viewBox="0 0 22 22" style="display:block;">
-    <text
-      x="50%" y="60%"
-      text-anchor="middle"
-      dominant-baseline="middle"
-      font-size="19"
-      font-family="Segoe UI, Arial, sans-serif"
-      font-weight="bold"
-      fill="currentColor"
-    >↻</text>
+  <svg width="21" height="21" viewBox="0 0 24 24" style="display:block;">
+    <g transform="rotate(-90 12 12)">
+      <path fill="currentColor" d="M17.65,6.35 C16.2,4.9 14.21,4 12,4 C7.58,4 4,7.58 4,12 C4,16.42 7.58,20 12,20 C15.31,20 18.23,17.69 19.42,14.61 L17.65,13.97 C16.68,16.36 14.54,18 12,18 C8.69,18 6,15.31 6,12 C6,8.69 8.69,6 12,6 C13.66,6 15.14,6.69 16.22,7.78 L13,11 L20,11 L20,4 L17.65,6.35 Z"/>
+    </g>
   </svg>
 `;
 btnReset.onmouseenter = () => { btnReset.style.background = "#222"; };
@@ -2346,7 +2340,7 @@ translationControls.appendChild(langSelect);
 translationControls.appendChild(translateBtn);
 translationControls.appendChild(removeBtn);
 
-    const closeBtn = document.createElement("button");
+   const closeBtn = document.createElement("button");
     closeBtn.textContent = "×";
     closeBtn.title = "Close Lyrics+";
     Object.assign(closeBtn.style, {
@@ -2393,12 +2387,12 @@ const downloadBtn = document.createElement("button");
 downloadBtn.title = "Download lyrics";
 Object.assign(downloadBtn.style, {
   marginLeft: "0px",
-  marginRight: "3px",
+  marginRight: "2px",
   background: "none",
   color: "#fff",
   border: "none",
-  borderRadius: "0",
-  padding: "0",
+  borderRadius: "5px",
+  padding: "0 2px",
   cursor: "pointer",
   width: "28px",
   height: "28px",
@@ -2408,9 +2402,11 @@ Object.assign(downloadBtn.style, {
   transition: "none",
   position: "relative"
 });
+downloadBtn.onmouseenter = () => { downloadBtn.style.background = "#222"; };
+downloadBtn.onmouseleave = () => { downloadBtn.style.background = "none"; };
 
 downloadBtn.innerHTML = `
-  <svg id="lyrics-download-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" style="display:block;transition:stroke 0.18s;">
+  <svg id="lyrics-download-svg" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#fff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" style="display:block;transition:stroke 0.18s;">
     <path d="M12 5v9"></path>
     <polyline points="8 13 12 17 16 13"></polyline>
     <rect x="4" y="19" width="16" height="2" rx="1"></rect>
@@ -2529,7 +2525,7 @@ unsyncOption.onclick = (e) => {
 // --- Font Size Selector ---
 const fontSizeSelect = document.createElement("select");
 fontSizeSelect.title = "Change lyrics font size";
-fontSizeSelect.style.marginRight = "6px";
+fontSizeSelect.style.marginRight = "2px";
 fontSizeSelect.style.cursor = "pointer";
 fontSizeSelect.style.background = "#121212";
 fontSizeSelect.style.border = "none";
@@ -2579,7 +2575,6 @@ fontSizeSelect.onchange = () => {
     titleBar.style.display = "flex";
     titleBar.style.alignItems = "center";
     titleBar.appendChild(title);
-    titleBar.appendChild(btnReset);
     header.appendChild(titleBar);
 
     // Button group right side
@@ -2588,6 +2583,7 @@ buttonGroup.style.display = "flex";
 buttonGroup.style.alignItems = "center";
 buttonGroup.appendChild(downloadBtnWrapper);
 buttonGroup.appendChild(fontSizeSelect);
+buttonGroup.appendChild(btnReset);
 buttonGroup.appendChild(translationToggleBtn);
 buttonGroup.appendChild(playbackToggleBtn);
 buttonGroup.appendChild(offsetToggleBtn);
