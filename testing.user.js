@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ trust fund
+// @name         Spotify Lyrics+ original restore
 // @namespace    http://tampermonkey.net/
-// @version      8.8.trust
+// @version      9.10.trust
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -575,6 +575,110 @@ function labelMeansPlay(label) {
   label = label.toLowerCase();
   return PLAY_WORDS.some(word => label.includes(word));
 }
+
+  // --- Global Button Update Functions ---
+  function getShuffleState() {
+    // Robustly detect shuffle state using aria-label and button classes
+    const shuffleButtons = Array.from(document.querySelectorAll('button[aria-label]'));
+    for (const btn of shuffleButtons) {
+      const ariaLabel = btn.getAttribute('aria-label') || "";
+      if (btn.offsetParent === null) continue;
+      // Use regex to match regardless of playlist/queue name
+      if (/^Enable Shuffle/i.test(ariaLabel) && !/Smart/i.test(ariaLabel)) {
+        return 'off';
+      }
+      if (/^Enable Smart Shuffle/i.test(ariaLabel)) {
+        return 'on';
+      }
+      if (/^Disable Shuffle/i.test(ariaLabel)) {
+        // Smart Shuffle ON (Spotify uses special icon/class for this)
+        return 'smart';
+      }
+    }
+    return 'off';
+  }
+
+  function getRepeatState() {
+    // Robustly detect repeat state using aria-label and aria-checked
+    const repeatButton = document.querySelector('[data-testid="control-button-repeat"]');
+    if (!repeatButton) return 'off';
+
+    const ariaLabel = repeatButton.getAttribute('aria-label') || '';
+    const ariaChecked = repeatButton.getAttribute('aria-checked');
+    // Use regex to ignore possible playlist/queue name suffixes
+    if (/^Enable repeat/i.test(ariaLabel) && ariaChecked === 'false') {
+      return 'off';
+    }
+    if (/^Enable repeat one/i.test(ariaLabel) && ariaChecked === 'true') {
+      return 'all';
+    }
+    if (/^Disable repeat/i.test(ariaLabel) && ariaChecked === 'mixed') {
+      return 'one';
+    }
+    return 'off';
+  }
+
+  function updateShuffleButton(button, iconWrapper) {
+    const state = getShuffleState();
+
+    // Clear existing icon
+    iconWrapper.innerHTML = "";
+
+    if (state === 'off') {
+      button.setAttribute("aria-label", "Enable shuffle");
+      button.classList.remove("active");
+      button.style.color = "rgba(255, 255, 255, 0.7)";
+      iconWrapper.appendChild(shuffleOffSVG.cloneNode(true));
+    } else if (state === 'on') {
+      button.setAttribute("aria-label", "Enable smart shuffle");
+      button.classList.add("active");
+      button.style.color = "#1db954";
+      iconWrapper.appendChild(shuffleOffSVG.cloneNode(true));
+    } else if (state === 'smart') {
+      button.setAttribute("aria-label", "Disable shuffle");
+      button.classList.add("active");
+      button.style.color = "#1db954";
+      iconWrapper.appendChild(shuffleSmartSVG.cloneNode(true));
+    }
+  }
+
+  function updateRepeatButton(button, iconWrapper) {
+    const state = getRepeatState();
+
+    iconWrapper.innerHTML = "";
+
+    if (state === 'off') {
+      button.setAttribute("aria-label", "Enable repeat");
+      button.classList.remove("active");
+      button.style.color = "rgba(255, 255, 255, 0.7)";
+      iconWrapper.appendChild(repeatOffSVG.cloneNode(true));
+    } else if (state === 'all') {
+      button.setAttribute("aria-label", "Enable repeat one");
+      button.classList.add("active");
+      button.style.color = "#1db954";
+      iconWrapper.appendChild(repeatOffSVG.cloneNode(true));
+    } else if (state === 'one') {
+      button.setAttribute("aria-label", "Disable repeat");
+      button.classList.add("active");
+      button.style.color = "#1db954";
+      iconWrapper.appendChild(repeatOneSVG.cloneNode(true));
+    }
+  }
+
+  function updatePlayPauseButton(button, iconWrapper) {
+    const isPlaying = isSpotifyPlaying();
+
+    // Clear existing icon
+    iconWrapper.innerHTML = "";
+
+    if (isPlaying) {
+      button.setAttribute("aria-label", "Pause");
+      iconWrapper.appendChild(pauseSmallSVG.cloneNode(true));
+    } else {
+      button.setAttribute("aria-label", "Play");
+      iconWrapper.appendChild(playSmallSVG.cloneNode(true));
+    }
+  }
 
   // --- Update play/pause button state ---
   function updatePlayPauseIcon(btnPlayPause) {
@@ -2903,68 +3007,6 @@ offsetWrapper.appendChild(inputStack);
       return { button, iconWrapper };
     }
 
-    function updateShuffleButton(button, iconWrapper) {
-  const state = getShuffleState();
-
-  // Clear existing icon
-  iconWrapper.innerHTML = "";
-
-  if (state === 'off') {
-    button.setAttribute("aria-label", "Enable shuffle");
-    button.classList.remove("active");
-    button.style.color = "rgba(255, 255, 255, 0.7)";
-    iconWrapper.appendChild(shuffleOffSVG.cloneNode(true));
-  } else if (state === 'on') {
-    button.setAttribute("aria-label", "Enable smart shuffle");
-    button.classList.add("active");
-    button.style.color = "#1db954";
-    iconWrapper.appendChild(shuffleOffSVG.cloneNode(true));
-  } else if (state === 'smart') {
-    button.setAttribute("aria-label", "Disable shuffle");
-    button.classList.add("active");
-    button.style.color = "#1db954";
-    iconWrapper.appendChild(shuffleSmartSVG.cloneNode(true));
-  }
-}
-
-function updateRepeatButton(button, iconWrapper) {
-  const state = getRepeatState();
-
-  iconWrapper.innerHTML = "";
-
-  if (state === 'off') {
-    button.setAttribute("aria-label", "Enable repeat");
-    button.classList.remove("active");
-    button.style.color = "rgba(255, 255, 255, 0.7)";
-    iconWrapper.appendChild(repeatOffSVG.cloneNode(true));
-  } else if (state === 'all') {
-    button.setAttribute("aria-label", "Enable repeat one");
-    button.classList.add("active");
-    button.style.color = "#1db954";
-    iconWrapper.appendChild(repeatOffSVG.cloneNode(true));
-  } else if (state === 'one') {
-    button.setAttribute("aria-label", "Disable repeat");
-    button.classList.add("active");
-    button.style.color = "#1db954";
-    iconWrapper.appendChild(repeatOneSVG.cloneNode(true));
-  }
-}
-
-    function updatePlayPauseButton(button, iconWrapper) {
-      const isPlaying = isSpotifyPlaying();
-
-      // Clear existing icon
-      iconWrapper.innerHTML = "";
-
-      if (isPlaying) {
-        button.setAttribute("aria-label", "Pause");
-        iconWrapper.appendChild(pauseSmallSVG.cloneNode(true));
-      } else {
-        button.setAttribute("aria-label", "Play");
-        iconWrapper.appendChild(playSmallSVG.cloneNode(true));
-      }
-    }
-
     function sendSpotifyCommand(command) {
   // List of selectors per command, covering desktop and mobile
   const selectors = {
@@ -3035,46 +3077,6 @@ function updateRepeatButton(button, iconWrapper) {
   } else {
     console.warn("Spotify control button not found for:", command);
   }
-}
-    function getShuffleState() {
-  // Robustly detect shuffle state using aria-label and button classes
-  const shuffleButtons = Array.from(document.querySelectorAll('button[aria-label]'));
-  for (const btn of shuffleButtons) {
-    const ariaLabel = btn.getAttribute('aria-label') || "";
-    if (btn.offsetParent === null) continue;
-    // Use regex to match regardless of playlist/queue name
-    if (/^Enable Shuffle/i.test(ariaLabel) && !/Smart/i.test(ariaLabel)) {
-      return 'off';
-    }
-    if (/^Enable Smart Shuffle/i.test(ariaLabel)) {
-      return 'on';
-    }
-    if (/^Disable Shuffle/i.test(ariaLabel)) {
-      // Smart Shuffle ON (Spotify uses special icon/class for this)
-      return 'smart';
-    }
-  }
-  return 'off';
-}
-
-function getRepeatState() {
-  // Robustly detect repeat state using aria-label and aria-checked
-  const repeatButton = document.querySelector('[data-testid="control-button-repeat"]');
-  if (!repeatButton) return 'off';
-
-  const ariaLabel = repeatButton.getAttribute('aria-label') || '';
-  const ariaChecked = repeatButton.getAttribute('aria-checked');
-  // Use regex to ignore possible playlist/queue name suffixes
-  if (/^Enable repeat/i.test(ariaLabel) && ariaChecked === 'false') {
-    return 'off';
-  }
-  if (/^Enable repeat one/i.test(ariaLabel) && ariaChecked === 'true') {
-    return 'all';
-  }
-  if (/^Disable repeat/i.test(ariaLabel) && ariaChecked === 'mixed') {
-    return 'one';
-  }
-  return 'off';
 }
     // Create all control buttons
     const { button: btnShuffle, iconWrapper: shuffleIconWrapper } = createSpotifyControlButton(
