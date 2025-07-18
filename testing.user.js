@@ -13,6 +13,9 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/testing.user.js
 // ==/UserScript==
 
+// DO NOT INSTALL - Testing Instance for new implementations
+// AT THE MOMENT - Equal to Stable release; contains console logs (Last update: 19.7.25)
+
 (function () {
   'use strict';
 
