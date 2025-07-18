@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      8.6.dev
+// @version      8.7.dev
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -14,7 +14,7 @@
 // ==/UserScript==
 
 // DO NOT INSTALL - Backup Instance for debugging and troubleshooting
-// AT THE MOMENT - Equal to Stable release (Last update: 18.7.25)
+// AT THE MOMENT - Equal to Stable release (Last update: 19.7.25)
 
 // FIX IN THE FUTURE: 
 // Currently shuffle button and repeat button (and its icon state changes) will only be reflected correctly if Spotify locale is set to English language..
@@ -3032,11 +3032,6 @@ offsetWrapper.appendChild(inputStack);
     button.style.transform = "scale(1)";
   });
 
-  button.addEventListener("focus", () => {
-    button.style.outline = "2px solid rgba(255, 255, 255, 0.3)";
-    button.style.outlineOffset = "2px";
-  });
-
   button.addEventListener("blur", () => {
     button.style.outline = "none";
   });
@@ -3097,11 +3092,6 @@ offsetWrapper.appendChild(inputStack);
 
       button.addEventListener("mouseleave", () => {
         button.style.transform = "scale(1)";
-      });
-
-      button.addEventListener("focus", () => {
-        button.style.outline = "2px solid rgba(255, 255, 255, 0.3)";
-        button.style.outlineOffset = "2px";
       });
 
       button.addEventListener("blur", () => {
