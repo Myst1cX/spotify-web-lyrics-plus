@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      8.4.dev
+// @version      8.5.dev
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -16,6 +16,9 @@
 // DO NOT INSTALL - Backup Instance for debugging and troubleshooting
 // AT THE MOMENT - Equal to Stable release (Last update: 15.7.25)
 
+// FIX IN THE FUTURE: 
+// Currently shuffle button and repeat button (and its icon state changes) will only be reflected correctly if Spotify locale is set to English language..
+// I would have to manually add the buttons' aria label names in other languages.. Soon.
 // TO DO:
 // Converting the userscript into a browser extension would unlock two things:
 // 1. Possibilitate having a floating popup ui with spotify lyrics (always on top) that works on other sites too, outside open.spotify.com
@@ -26,6 +29,7 @@
 // Add Deezer provider (synced and unsynced)
 // deezer.js with api link > https://github.com/bertigert/Deezer-Lyrics-Sync/blob/main/lyrics_sync.user.js
 // Fix and uncomment Netease provider; api implementation example: https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src%2Ffetchers.ts
+
 
 (function () {
   'use strict';
@@ -412,6 +416,66 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   pauseSVG.setAttribute("fill", "white");
   pauseSVG.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
 
+  // --- Shuffle Icon SVGs ---
+  const shuffleOffSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  shuffleOffSVG.setAttribute("viewBox", "0 0 16 16");
+  shuffleOffSVG.setAttribute("width", "16");
+  shuffleOffSVG.setAttribute("height", "16");
+  shuffleOffSVG.setAttribute("fill", "currentColor");
+  shuffleOffSVG.innerHTML = `<path d="M13.151.922a.75.75 0 1 0-1.06 1.06L13.109 3H11.16a3.75 3.75 0 0 0-2.873 1.34l-6.173 7.356A2.25 2.25 0 0 1 .39 12.5H0V14h.391a3.75 3.75 0 0 0 2.873-1.34l6.173-7.356a2.25 2.25 0 0 1 1.724-.804h1.947l-1.017 1.018a.75.75 0 0 0 1.06 1.06L15.98 3.75zM.391 3.5H0V2h.391c1.109 0 2.16.49 2.873 1.34L4.89 5.277l-.979 1.167-1.796-2.14A2.25 2.25 0 0 0 .39 3.5z"/><path d="m7.5 10.723.98-1.167.957 1.14a2.25 2.25 0 0 0 1.724.804h1.947l-1.017-1.018a.75.75 0 1 1 1.06-1.06l2.829 2.828-2.829 2.828a.75.75 0 1 1-1.06-1.06L13.109 13H11.16a3.75 3.75 0 0 1-2.873-1.34l-.787-.938z"/>`;
+
+  const shuffleSmartSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  shuffleSmartSVG.setAttribute("viewBox", "0 0 16 16");
+  shuffleSmartSVG.setAttribute("width", "16");
+  shuffleSmartSVG.setAttribute("height", "16");
+  shuffleSmartSVG.setAttribute("fill", "currentColor");
+  shuffleSmartSVG.innerHTML = `<path d="M4.502 0a.637.637 0 0 1 .634.58 4.84 4.84 0 0 0 .81 2.184c.515.739 1.297 1.356 2.487 1.486a.637.637 0 0 1 0 1.267c-1.19.13-1.972.747-2.487 1.487a4.8 4.8 0 0 0-.81 2.185.637.637 0 0 1-1.268 0 4.8 4.8 0 0 0-.81-2.185C2.543 6.265 1.76 5.648.57 5.518a.637.637 0 0 1 0-1.268c1.19-.13 1.972-.747 2.487-1.486a4.84 4.84 0 0 0 .81-2.185A.637.637 0 0 1 4.502 0m4.765 11.878c.056.065.126.15.198.236l.33.397.013.015A3 3 0 0 0 12.1 13.59h1.009l-.444.443a.75.75 0 0 0 1.061 1.06l2.254-2.253-2.254-2.254a.75.75 0 0 0-1.06 1.06l.443.444H12.1a1.5 1.5 0 0 1-1.146-.533l-.004-.005-.333-.4-.288-.343-.031-.035-.02-.021-.037-.037-.974 1.16Z"/><path d="M12.69 4.196a.75.75 0 0 1 1.06 0l2.254 2.254-2.254 2.254a.75.75 0 0 1-1.06-1.06l.443-.444h-1.008a1.5 1.5 0 0 0-1.15.536l-4.63 5.517c-.344.411-.982 1.021-1.822 1.021v-1.5c.122 0 .371-.124.674-.485l4.63-5.517A3 3 0 0 1 12.125 5.7h1.008l-.443-.443a.75.75 0 0 1 0-1.061"/>`;
+
+  // --- Repeat Icon SVGs ---
+  const repeatOffSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  repeatOffSVG.setAttribute("viewBox", "0 0 16 16");
+  repeatOffSVG.setAttribute("width", "16");
+  repeatOffSVG.setAttribute("height", "16");
+  repeatOffSVG.setAttribute("fill", "currentColor");
+  repeatOffSVG.innerHTML = `<path d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5A2.25 2.25 0 0 0 1.5 4.75v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75z"/>`;
+
+  const repeatOneSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  repeatOneSVG.setAttribute("viewBox", "0 0 16 16");
+  repeatOneSVG.setAttribute("width", "16");
+  repeatOneSVG.setAttribute("height", "16");
+  repeatOneSVG.setAttribute("fill", "currentColor");
+  repeatOneSVG.innerHTML = `<path d="M0 4.75A3.75 3.75 0 0 1 3.75 1h.75v1.5h-.75A2.25 2.25 0 0 0 1.5 4.75v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75zM12.25 2.5a2.25 2.25 0 0 1 2.25 2.25v5A2.25 2.25 0 0 1 12.25 12H9.81l1.018-1.018a.75.75 0 0 0-1.06-1.06L6.939 12.75l2.829 2.828a.75.75 0 1 0 1.06-1.06L9.811 13.5h2.439A3.75 3.75 0 0 0 16 9.75v-5A3.75 3.75 0 0 0 12.25 1h-.75v1.5z"/><path d="m8 1.85.77.694H6.095V1.488q1.046-.077 1.507-.385.474-.308.583-.913h1.32V8H8z"/><path d="M8.77 2.544 8 1.85v.693z"/>`;
+
+  // --- Previous/Next Icon SVGs ---
+  const previousSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  previousSVG.setAttribute("viewBox", "0 0 16 16");
+  previousSVG.setAttribute("width", "16");
+  previousSVG.setAttribute("height", "16");
+  previousSVG.setAttribute("fill", "currentColor");
+  previousSVG.innerHTML = `<path d="M3.3 1a.7.7 0 0 1 .7.7v5.15l9.95-5.744a.7.7 0 0 1 1.05.606v12.575a.7.7 0 0 1-1.05.607L4 9.149V14.3a.7.7 0 0 1-.7.7H1.7a.7.7 0 0 1-.7-.7V1.7a.7.7 0 0 1 .7-.7z"/>`;
+
+  const nextSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  nextSVG.setAttribute("viewBox", "0 0 16 16");
+  nextSVG.setAttribute("width", "16");
+  nextSVG.setAttribute("height", "16");
+  nextSVG.setAttribute("fill", "currentColor");
+  nextSVG.innerHTML = `<path d="M12.7 1a.7.7 0 0 0-.7.7v5.15L2.05 1.107A.7.7 0 0 0 1 1.712v12.575a.7.7 0 0 0 1.05.607L12 9.149V14.3a.7.7 0 0 0 .7.7h1.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"/>`;
+
+  // --- Play/Pause SVG for later use (smaller 16x16 version) ---
+  const playSmallSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  playSmallSVG.setAttribute("viewBox", "0 0 16 16");
+  playSmallSVG.setAttribute("width", "16");
+  playSmallSVG.setAttribute("height", "16");
+  playSmallSVG.setAttribute("fill", "currentColor");
+  playSmallSVG.innerHTML = `<path d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288z"/>`;
+
+  const pauseSmallSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  pauseSmallSVG.setAttribute("viewBox", "0 0 16 16");
+  pauseSmallSVG.setAttribute("width", "16");
+  pauseSmallSVG.setAttribute("height", "16");
+  pauseSmallSVG.setAttribute("fill", "currentColor");
+  pauseSmallSVG.innerHTML = `<path d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"/>`;
+
   // --- Language-universal play/pause root words for major Spotify UI languages (Aids Play/Pause button detection to reflect playback state inside gui)---
 const PAUSE_WORDS = [
   // English
@@ -530,46 +594,117 @@ function labelMeansPlay(label) {
   return PLAY_WORDS.some(word => label.includes(word));
 }
 
-  // --- Play/Pause Icon Updater ---
-  function updatePlayPauseIcon(btnPlayPause) {
-  // Use the main play/pause button, which is language universal
-  let playPauseBtn = document.querySelector('[data-testid="control-button-playpause"]')
-    || document.querySelector('[aria-label]');
-
-  function isVisible(el) {
-    if (!el) return false;
-    const style = window.getComputedStyle(el);
-    return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+  // --- Global Button Update Functions ---
+  function getShuffleState() {
+    // Robustly detect shuffle state using aria-label and button classes
+    const shuffleButtons = Array.from(document.querySelectorAll('button[aria-label]'));
+    for (const btn of shuffleButtons) {
+      const ariaLabel = btn.getAttribute('aria-label') || "";
+      if (btn.offsetParent === null) continue;
+      // Use regex to match regardless of playlist/queue name
+      if (/^Enable Shuffle/i.test(ariaLabel) && !/Smart/i.test(ariaLabel)) {
+        return 'off';
+      }
+      if (/^Enable Smart Shuffle/i.test(ariaLabel)) {
+        return 'on';
+      }
+      if (/^Disable Shuffle/i.test(ariaLabel)) {
+        // Smart Shuffle ON (Spotify uses special icon/class for this)
+        return 'smart';
+      }
+    }
+    return 'off';
   }
 
-  btnPlayPause.innerHTML = "";
+  function getRepeatState() {
+    // Robustly detect repeat state using aria-label and aria-checked
+    const repeatButton = document.querySelector('[data-testid="control-button-repeat"]');
+    if (!repeatButton) return 'off';
 
-  if (playPauseBtn && isVisible(playPauseBtn)) {
-    const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
+    const ariaLabel = repeatButton.getAttribute('aria-label') || '';
+    const ariaChecked = repeatButton.getAttribute('aria-checked');
+    // Use regex to ignore possible playlist/queue name suffixes
+    if (/^Enable repeat/i.test(ariaLabel) && ariaChecked === 'false') {
+      return 'off';
+    }
+    if (/^Enable repeat one/i.test(ariaLabel) && ariaChecked === 'true') {
+      return 'all';
+    }
+    if (/^Disable repeat/i.test(ariaLabel) && ariaChecked === 'mixed') {
+      return 'one';
+    }
+    return 'off';
+  }
 
-    if (labelMeansPause(label)) {
-      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
-      return;
-    } else if (labelMeansPlay(label)) {
-      btnPlayPause.appendChild(playSVG.cloneNode(true));
-      return;
+  function updateShuffleButton(button, iconWrapper) {
+    const state = getShuffleState();
+
+    // Clear existing icon
+    iconWrapper.innerHTML = "";
+
+    if (state === 'off') {
+      button.setAttribute("aria-label", "Enable shuffle");
+      button.classList.remove("active");
+      button.style.color = "rgba(255, 255, 255, 0.7)";
+      iconWrapper.appendChild(shuffleOffSVG.cloneNode(true));
+    } else if (state === 'on') {
+      button.setAttribute("aria-label", "Enable smart shuffle");
+      button.classList.add("active");
+      button.style.color = "#1db954";
+      iconWrapper.appendChild(shuffleOffSVG.cloneNode(true));
+    } else if (state === 'smart') {
+      button.setAttribute("aria-label", "Disable shuffle");
+      button.classList.add("active");
+      button.style.color = "#1db954";
+      iconWrapper.appendChild(shuffleSmartSVG.cloneNode(true));
     }
   }
 
-  // Fallback: Use audio element state if possible
-  const audio = document.querySelector('audio');
-  if (audio) {
-    if (audio.paused) {
-      btnPlayPause.appendChild(playSVG.cloneNode(true));
+  function updateRepeatButton(button, iconWrapper) {
+    const state = getRepeatState();
+
+    iconWrapper.innerHTML = "";
+
+    if (state === 'off') {
+      button.setAttribute("aria-label", "Enable repeat");
+      button.classList.remove("active");
+      button.style.color = "rgba(255, 255, 255, 0.7)";
+      iconWrapper.appendChild(repeatOffSVG.cloneNode(true));
+    } else if (state === 'all') {
+      button.setAttribute("aria-label", "Enable repeat one");
+      button.classList.add("active");
+      button.style.color = "#1db954";
+      iconWrapper.appendChild(repeatOffSVG.cloneNode(true));
+    } else if (state === 'one') {
+      button.setAttribute("aria-label", "Disable repeat");
+      button.classList.add("active");
+      button.style.color = "#1db954";
+      iconWrapper.appendChild(repeatOneSVG.cloneNode(true));
+    }
+  }
+
+  function updatePlayPauseButton(button, iconWrapper) {
+    const isPlaying = isSpotifyPlaying();
+
+    // Clear existing icon
+    iconWrapper.innerHTML = "";
+
+    if (isPlaying) {
+      button.setAttribute("aria-label", "Pause");
+      iconWrapper.appendChild(pauseSmallSVG.cloneNode(true));
     } else {
-      btnPlayPause.appendChild(pauseSVG.cloneNode(true));
+      button.setAttribute("aria-label", "Play");
+      iconWrapper.appendChild(playSmallSVG.cloneNode(true));
     }
-    return;
   }
 
-  // Default to play icon
-  btnPlayPause.appendChild(playSVG.cloneNode(true));
-}
+  // --- Update play/pause button state ---
+  function updatePlayPauseIcon(btnPlayPause) {
+    // Legacy function - now handled by updatePlayPauseButton
+    if (btnPlayPause && btnPlayPause.button && btnPlayPause.iconWrapper) {
+      updatePlayPauseButton(btnPlayPause.button, btnPlayPause.iconWrapper);
+    }
+  }
   // ------------------------
   // Providers and Fetchers
   // ------------------------
@@ -1849,6 +1984,42 @@ const Providers = {
     }
   }
 
+function observeSpotifyShuffle(popup) {
+  if (!popup || !popup._shuffleBtn) return;
+  if (popup._shuffleObserver) popup._shuffleObserver.disconnect();
+
+  // Always observe the actual shuffle button itself
+  const shuffleBtn = Array.from(document.querySelectorAll('button[aria-label]')).find(btn => {
+    const label = btn.getAttribute('aria-label') || '';
+    return /^Enable Shuffle|^Enable Smart Shuffle|^Disable Shuffle/i.test(label);
+  });
+  if (!shuffleBtn) return;
+
+  const observer = new MutationObserver(() => {
+    updateShuffleButton(popup._shuffleBtn.button, popup._shuffleBtn.iconWrapper);
+    // Re-attach observer if the node is replaced
+    setTimeout(() => observeSpotifyShuffle(popup), 0);
+  });
+  observer.observe(shuffleBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
+  popup._shuffleObserver = observer;
+}
+
+function observeSpotifyRepeat(popup) {
+  if (!popup || !popup._repeatBtn) return;
+  if (popup._repeatObserver) popup._repeatObserver.disconnect();
+
+  let repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+  if (!repeatBtn) return;
+
+  const observer = new MutationObserver(() => {
+    updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
+    // Re-attach observer if the node is replaced
+    setTimeout(() => observeSpotifyRepeat(popup), 0);
+  });
+  observer.observe(repeatBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style', 'aria-checked'] });
+  popup._repeatObserver = observer;
+}
+
 function observeSpotifyPlayPause(popup) {
   if (!popup || !popup._playPauseBtn) return;
   if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
@@ -1857,7 +2028,9 @@ function observeSpotifyPlayPause(popup) {
   if (!spBtn) spBtn = document.querySelector('[aria-label]');
   if (!spBtn) return;
   const observer = new MutationObserver(() => {
-    if (popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+    if (popup._playPauseBtn) {
+      updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
+    }
   });
   observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
   popup._playPauseObserver = observer;
@@ -2010,6 +2183,94 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
     title.textContent = "Lyrics+";
     title.style.margin = "0";
     title.style.fontWeight = "600";
+
+        // Restore Default Position and Size button for the header
+    const btnReset = document.createElement("button");
+btnReset.title = "Restore Default Position and Size";
+Object.assign(btnReset.style, {
+  cursor: "pointer",
+  background: "none",
+  border: "none",
+  borderRadius: "5px",
+  width: "28px",
+  height: "28px",
+  color: "#fff", // Make sure color is white (like download)
+  fontWeight: "bold",
+  fontSize: "18px",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  userSelect: "none",
+  padding: "0 2px",
+  margin: "0 4px"
+});
+btnReset.innerHTML = `
+  <svg width="22" height="22" viewBox="0 0 22 22" style="display:block;">
+    <text
+      x="50%" y="60%"
+      text-anchor="middle"
+      dominant-baseline="middle"
+      font-size="19"
+      font-family="Segoe UI, Arial, sans-serif"
+      font-weight="bold"
+      fill="currentColor"
+    >↻</text>
+  </svg>
+`;
+btnReset.onmouseenter = () => { btnReset.style.background = "#222"; };
+btnReset.onmouseleave = () => { btnReset.style.background = "none"; };
+
+    // Default Position and Size of the Popup Gui
+    btnReset.onclick = () => {
+      const rect = getSpotifyLyricsContainerRect();
+      if (rect) {
+        Object.assign(popup.style, {
+          position: "fixed",
+          left: rect.left + "px",
+          top: rect.top + "px",
+          width: rect.width + "px",
+          height: rect.height + "px",
+          right: "auto",
+          bottom: "auto",
+          zIndex: 100000
+        });
+        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height
+        }));
+      } else {
+        Object.assign(popup.style, {
+          position: "fixed",
+          bottom: "87px",
+          right: "0px",
+          left: "auto",
+          top: "auto",
+          width: "370px",
+          height: "79.5vh",
+          zIndex: 100000
+        });
+        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+          left: null,
+          top: null,
+          width: 370,
+          height: window.innerHeight * 0.795
+        }));
+      }
+      localStorage.removeItem("lyricsPlusPopupProportion");
+      window.lastProportion = { w: null, h: null };
+      window.lyricsPlusPopupIgnoreProportion = true;
+      setTimeout(() => {
+        window.lyricsPlusPopupIgnoreProportion = false;
+        if (
+          popup.style.width === "370px" &&
+          popup.style.height === "79.5vh"
+        ) {
+          window.lastProportion = { w: null, h: null };
+        }
+      }, 3000);
+    };
 
 // --- Translation controls dropdown, translate button, and remove translation button ---
 const translationControls = document.createElement('div');
@@ -2314,7 +2575,12 @@ fontSizeSelect.onchange = () => {
     playbackToggleBtn.style.fontSize = "14px";
     playbackToggleBtn.style.lineHeight = "1";
 
-    header.appendChild(title);
+    const titleBar = document.createElement("div");
+    titleBar.style.display = "flex";
+    titleBar.style.alignItems = "center";
+    titleBar.appendChild(title);
+    titleBar.appendChild(btnReset);
+    header.appendChild(titleBar);
 
     // Button group right side
 const buttonGroup = document.createElement("div");
@@ -2639,7 +2905,7 @@ offsetWrapper.appendChild(inputStack);
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      gap: "12px",
+      gap: "8px",
       padding: "8px 12px",
       borderTop: "1px solid #333",
       backgroundColor: "#121212",
@@ -2710,32 +2976,146 @@ offsetWrapper.appendChild(inputStack);
       controlsBar.style.pointerEvents = "none";
     }
 
-    function createControlBtn(content, title, onClick) {
-      const btn = document.createElement("button");
-      btn.title = title;
-      Object.assign(btn.style, {
-        cursor: "pointer",
-        background: "#1db954",
+    // Create Spotify-style control buttons
+    function createSpotifyControlButton(type, ariaLabel, onClick) {
+  const button = document.createElement("button");
+  button.setAttribute("aria-label", ariaLabel);
+  button.setAttribute("data-encore-id", "buttonTertiary");
+  button.setAttribute("tabindex", "0");
+
+  // Base button styling to match Spotify
+  Object.assign(button.style, {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    border: "none",
+    borderRadius: "50%",
+    cursor: "pointer",
+    textDecoration: "none",
+    color: "rgba(255, 255, 255, 0.7)",
+    backgroundColor: "transparent",
+    minWidth: "32px",
+    height: "32px",
+    padding: "8px",
+    fontSize: "16px",
+    fontWeight: "400",
+    transition: "all 0.2s ease",
+    userSelect: "none",
+    outline: "none"
+  });
+
+  // Icon wrapper
+  const iconWrapper = document.createElement("span");
+  iconWrapper.setAttribute("aria-hidden", "true");
+  Object.assign(iconWrapper.style, {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "16px",
+    height: "16px"
+  });
+
+  button.appendChild(iconWrapper);
+
+  // Hover/focus effects
+  button.addEventListener("mouseenter", () => {
+    // Only brighten if not green/active
+    const isActive = button.classList.contains("active");
+    if (isActive) {
+      button.style.color = "#1db954"; // keep green
+    } else {
+      button.style.color = "rgba(255, 255, 255, 1)";
+    }
+    button.style.transform = "scale(1.04)";
+  });
+
+  button.addEventListener("mouseleave", () => {
+    const isActive = button.classList.contains("active");
+    button.style.color = isActive ? "#1db954" : "rgba(255, 255, 255, 0.7)";
+    button.style.transform = "scale(1)";
+  });
+
+  button.addEventListener("focus", () => {
+    button.style.outline = "2px solid rgba(255, 255, 255, 0.3)";
+    button.style.outlineOffset = "2px";
+  });
+
+  button.addEventListener("blur", () => {
+    button.style.outline = "none";
+  });
+
+  // Click handler
+  button.addEventListener("click", onClick);
+
+  return { button, iconWrapper };
+}
+
+    // Create main play/pause button (larger, primary style)
+    function createPlayPauseButton(onClick) {
+      const button = document.createElement("button");
+      button.setAttribute("aria-label", "Play");
+      button.setAttribute("data-testid", "lyrics-plus-playpause");
+      button.setAttribute("data-encore-id", "buttonPrimary");
+      button.setAttribute("tabindex", "0");
+
+      // Primary button styling (larger, prominent)
+      Object.assign(button.style, {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
         border: "none",
         borderRadius: "50%",
-        width: "32px",
+        cursor: "pointer",
+        textDecoration: "none",
+        color: "#000",
+        backgroundColor: "#fff",
+        minWidth: "32px",
         height: "32px",
-        color: "white",
-        fontWeight: "bold",
-        fontSize: "18px",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
+        padding: "8px",
+        fontSize: "16px",
+        fontWeight: "400",
+        transition: "all 0.2s ease",
         userSelect: "none",
-        padding: "0",
+        outline: "none"
       });
-      if (typeof content === "string") {
-        btn.textContent = content;
-      } else {
-        btn.appendChild(content);
-      }
-      btn.onclick = onClick;
-      return btn;
+
+      // Icon wrapper
+      const iconWrapper = document.createElement("span");
+      iconWrapper.setAttribute("aria-hidden", "true");
+      Object.assign(iconWrapper.style, {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "16px",
+        height: "16px"
+      });
+
+      button.appendChild(iconWrapper);
+
+      // Hover/focus effects
+      button.addEventListener("mouseenter", () => {
+        button.style.transform = "scale(1.04)";
+      });
+
+      button.addEventListener("mouseleave", () => {
+        button.style.transform = "scale(1)";
+      });
+
+      button.addEventListener("focus", () => {
+        button.style.outline = "2px solid rgba(255, 255, 255, 0.3)";
+        button.style.outlineOffset = "2px";
+      });
+
+      button.addEventListener("blur", () => {
+        button.style.outline = "none";
+      });
+
+      // Click handler
+      button.addEventListener("click", onClick);
+
+      return { button, iconWrapper };
     }
 
     function sendSpotifyCommand(command) {
@@ -2757,128 +3137,113 @@ offsetWrapper.appendChild(inputStack);
       '[aria-label="Previous"]',
       '[data-testid="control-button-skip-back"]',
       '[data-testid="mobile-prev-button"]'
+    ],
+    repeat: [
+      '[aria-label="Enable repeat"]',
+      '[aria-label="Enable repeat one"]',
+      '[aria-label="Disable repeat"]',
+      '[data-testid="control-button-repeat"]'
     ]
   };
 
-  // Try all selectors for the current command
   let btn = null;
-  for (const sel of selectors[command] || []) {
-    btn = document.querySelector(sel);
-    if (btn && btn.offsetParent !== null) break; // Only pick visible
-  }
 
-  // Fallback: try to find button by innerText (mobile sometimes uses text)
-  if (!btn && command === "playpause") {
-    btn = Array.from(document.querySelectorAll("button"))
-      .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
+  if (command === "shuffle") {
+    // Always re-query the DOM for the currently visible shuffle button
+    btn = Array.from(document.querySelectorAll('button[aria-label]')).find(button => {
+      if (button.offsetParent === null) return false;
+      const ariaLabel = button.getAttribute('aria-label');
+      if (!ariaLabel) return false;
+      const lower = ariaLabel.toLowerCase();
+      return lower.includes('enable shuffle') ||
+             lower.includes('enable smart shuffle') ||
+             lower.includes('disable shuffle');
+    });
+  } else if (command === "playpause") {
+    // Prefer specific selectors for playpause
+    btn = document.querySelector('[data-testid="control-button-playpause"]')
+       || document.querySelector('[aria-label="Play"]')
+       || document.querySelector('[aria-label="Pause"]');
+    // Only fallback if ALL of the above fail:
+    if (!btn) {
+      btn = Array.from(document.querySelectorAll("button"))
+        .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
+    }
+  } else {
+    // For other commands, use selectors
+    for (const sel of selectors[command] || []) {
+      btn = document.querySelector(sel);
+      if (btn && btn.offsetParent !== null) break;
+    }
   }
 
   if (btn) {
-    // Try click, then fallback to synthetic touch events for mobile
     btn.click();
-    // If still not playing, try touch events
+
+    // If on mobile, try touch events as a fallback
     if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
       btn.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, cancelable:true}));
       btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
     }
   } else {
-    alert("Could not find the Spotify playback button. If you're on mobile, try updating Spotify Web Player or refreshing the page.");
     console.warn("Spotify control button not found for:", command);
   }
 }
-    function createPlayPauseButton() {
-      const btnPlayPause = createControlBtn("", "Play/Pause", () => {
+    // Create all control buttons
+    const { button: btnShuffle, iconWrapper: shuffleIconWrapper } = createSpotifyControlButton(
+      "shuffle",
+      "Enable shuffle",
+      () => {
+        sendSpotifyCommand("shuffle");
+        setTimeout(() => updateShuffleButton(btnShuffle, shuffleIconWrapper), 100);
+      }
+    );
+
+    const { button: btnPrevious, iconWrapper: prevIconWrapper } = createSpotifyControlButton(
+      "previous",
+      "Previous",
+      () => sendSpotifyCommand("previous")
+    );
+    prevIconWrapper.appendChild(previousSVG.cloneNode(true));
+
+    const { button: btnPlayPause, iconWrapper: playIconWrapper } = createPlayPauseButton(
+      () => {
         sendSpotifyCommand("playpause");
-        updatePlayPauseIcon(btnPlayPause);
-      });
-      btnPlayPause.innerHTML = "";
-      btnPlayPause.appendChild(playSVG.cloneNode(true));
-      updatePlayPauseIcon(btnPlayPause);
-      return btnPlayPause;
-    }
+        setTimeout(() => updatePlayPauseButton(btnPlayPause, playIconWrapper), 100);
+      }
+    );
 
-    const btnPrevious = createControlBtn("⏮", "Previous Track", () => sendSpotifyCommand("previous"));
-    const btnPlayPause = createPlayPauseButton();
-    const btnNext = createControlBtn("⏭", "Next Track", () => sendSpotifyCommand("next"));
+    const { button: btnNext, iconWrapper: nextIconWrapper } = createSpotifyControlButton(
+      "next",
+      "Next",
+      () => sendSpotifyCommand("next")
+    );
+    nextIconWrapper.appendChild(nextSVG.cloneNode(true));
 
-    popup._playPauseBtn = btnPlayPause;
+    const { button: btnRepeat, iconWrapper: repeatIconWrapper } = createSpotifyControlButton(
+      "repeat",
+      "Enable repeat",
+      () => {
+        sendSpotifyCommand("repeat");
+        setTimeout(() => updateRepeatButton(btnRepeat, repeatIconWrapper), 100);
+      }
+    );
 
+    // Initialize button states
+    updateShuffleButton(btnShuffle, shuffleIconWrapper);
+    updatePlayPauseButton(btnPlayPause, playIconWrapper);
+    updateRepeatButton(btnRepeat, repeatIconWrapper);
 
-    const btnReset = document.createElement("button");
-    btnReset.textContent = "↻";
-    btnReset.title = "Restore Default Position and Size";
-    Object.assign(btnReset.style, {
-      cursor: "pointer",
-      background: "#555",
-      border: "none",
-      borderRadius: "50%",
-      width: "32px",
-      height: "32px",
-      color: "white",
-      fontWeight: "bold",
-      fontSize: "18px",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      userSelect: "none",
-      padding: "0",
-    });
-    // Default Position and Size of the Popup Gui
-   btnReset.onclick = () => {
-  const rect = getSpotifyLyricsContainerRect();
-  if (rect) {
-    Object.assign(popup.style, {
-      position: "fixed",
-      left: rect.left + "px",
-      top: rect.top + "px",
-      width: rect.width + "px",
-      height: rect.height + "px",
-      right: "auto",
-      bottom: "auto",
-      zIndex: 100000
-    });
-    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height
-    }));
-  } else {
-    Object.assign(popup.style, {
-      position: "fixed",
-      bottom: "87px",
-      right: "0px",
-      left: "auto",
-      top: "auto",
-      width: "370px",
-      height: "79.5vh",
-      zIndex: 100000
-    });
-    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-      left: null,
-      top: null,
-      width: 370,
-      height: window.innerHeight * 0.795
-    }));
-  }
-  localStorage.removeItem("lyricsPlusPopupProportion");
-  window.lastProportion = { w: null, h: null };
-  window.lyricsPlusPopupIgnoreProportion = true;
-  setTimeout(() => {
-    window.lyricsPlusPopupIgnoreProportion = false;
-    if (
-      popup.style.width === "370px" &&
-      popup.style.height === "79.5vh"
-    ) {
-      window.lastProportion = { w: null, h: null };
-    }
-  }, 3000);
-};
+    // Store references for later updates
+    popup._shuffleBtn = { button: btnShuffle, iconWrapper: shuffleIconWrapper };
+    popup._playPauseBtn = { button: btnPlayPause, iconWrapper: playIconWrapper };
+    popup._repeatBtn = { button: btnRepeat, iconWrapper: repeatIconWrapper };
 
-    controlsBar.appendChild(btnReset);
+    controlsBar.appendChild(btnShuffle);
     controlsBar.appendChild(btnPrevious);
     controlsBar.appendChild(btnPlayPause);
     controlsBar.appendChild(btnNext);
+    controlsBar.appendChild(btnRepeat);
 
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
@@ -2997,6 +3362,8 @@ if (container) {
     })(popup, resizer);
 
     observeSpotifyPlayPause(popup);
+    observeSpotifyShuffle(popup);
+    observeSpotifyRepeat(popup);
 
     const info = getCurrentTrackInfo();
     if (info) {
@@ -3136,11 +3503,24 @@ currentLyricsContainer = lyricsContainer;
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
         autodetectProviderAndLoad(popup, info);
-        observeSpotifyPlayPause(popup);
       }
-      if (popup && popup._playPauseBtn) updatePlayPauseIcon(popup._playPauseBtn);
+
+      // Update all button states
+      if (popup && popup._playPauseBtn) {
+        updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
+      }
+      if (popup && popup._shuffleBtn) {
+        updateShuffleButton(popup._shuffleBtn.button, popup._shuffleBtn.iconWrapper);
+      }
+      if (popup && popup._repeatBtn) {
+        updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
+        observeSpotifyPlayPause(popup);
+        observeSpotifyShuffle(popup);
+        observeSpotifyRepeat(popup);
+      }
     }, 400);
   }
+
 
   function stopPollingForTrackChange() {
     if (pollingInterval) {
