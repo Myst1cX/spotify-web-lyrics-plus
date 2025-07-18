@@ -13,8 +13,8 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-experimental.user.js
 // ==/UserScript==
 
-// DO NOT INSTALL - Backup Instance for debugging and troubleshooting; contains console logs
-// AT THE MOMENT - Equal to Stable release (Last update: 19.7.25)
+// DO NOT INSTALL - Backup Instance for debugging and troubleshooting
+// AT THE MOMENT - Equal to Stable release; contains console logs (Last update: 19.7.25)
 
 // FIX IN THE FUTURE: 
 // Currently shuffle button and repeat button (and its icon state changes) will only be reflected correctly if Spotify locale is set to English language..
