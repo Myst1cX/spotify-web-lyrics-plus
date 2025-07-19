@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Experimental
 // @namespace    http://tampermonkey.net/
-// @version      8.8.dev
+// @version      8.9.dev
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -3515,7 +3515,7 @@ currentLyricsContainer = lyricsContainer;
     }
   }
 
-   function addButton(maxRetries = 10) {
+      function addButton(maxRetries = 10) {
   let attempts = 0;
   const tryAdd = () => {
     const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
