@@ -478,7 +478,7 @@
                 <div class="button-group">
                     <button id="translation-toggle" class="dropdown-button" title="Show/hide translation controls">🌐</button>
                     <button id="font-size-btn" class="dropdown-button" title="Font size">A</button>
-                    <button id="download-btn" class="dropdown-button" title="Download lyrics">⬇</button>
+                    <button id="download-btn" class="dropdown-button" title="Download lyrics" style="display: none;">⬇</button>
                     <button id="playback-toggle" class="dropdown-button" title="Show/hide playback controls">🎛️</button>
                     <button id="offset-toggle" class="dropdown-button" title="Show/hide timing offset controls">⚙️</button>
                     <button id="reset-btn" class="dropdown-button" title="Restore Default Position and Size">↻</button>
@@ -514,11 +514,34 @@
         </div>
         
         <div id="controls-bar" style="display: none;">
-            <button id="shuffle-btn" class="control-button" title="Shuffle"></button>
-            <button id="previous-btn" class="control-button" title="Previous"></button>
-            <button id="play-pause-btn" class="control-button" title="Play/Pause"></button>
-            <button id="next-btn" class="control-button" title="Next"></button>
-            <button id="repeat-btn" class="control-button" title="Repeat"></button>
+            <button id="shuffle-btn" class="control-button" title="Shuffle">
+                <svg width="20" height="20" viewBox="0 0 16 16">
+                    <path fill="currentColor" d="M13.151.922a.75.75 0 1 0-1.06 1.06L13.109 3H11.16a3.75 3.75 0 0 0-2.873 1.34l-6.173 7.356A2.25 2.25 0 0 1 .39 12.5H0V14h.391a3.75 3.75 0 0 0 2.873-1.34l6.173-7.356a2.25 2.25 0 0 1 1.724-.804h1.947l-1.017 1.018a.75.75 0 0 0 1.06 1.06L15.98 3.75zM.391 3.5H0V2h.391c1.109 0 2.16.49 2.873 1.34L4.89 5.277l-.979 1.167-1.796-2.14A2.25 2.25 0 0 0 .39 3.5z"></path><path d="m7.5 10.723.98-1.167.957 1.14a2.25 2.25 0 0 0 1.724.804h1.947l-1.017-1.018a.75.75 0 1 1 1.06-1.06l2.829 2.828-2.829 2.828a.75.75 0 1 1-1.06-1.06L13.109 13H11.16a3.75 3.75 0 0 1-2.873-1.34l-.787-.938z"></path>
+                </svg>
+            </button>
+            <button id="previous-btn" class="control-button" title="Previous">
+                <svg width="20" height="20" viewBox="0 0 16 16">
+                    <path fill="currentColor" d="M3.3 1a.7.7 0 0 1 .7.7v5.15l9.95-5.744a.7.7 0 0 1 1.05.606v12.575a.7.7 0 0 1-1.05.607L4 9.149V14.3a.7.7 0 0 1-.7.7H1.7a.7.7 0 0 1-.7-.7V1.7a.7.7 0 0 1 .7-.7z"></path>
+                </svg>
+            </button>
+            <button id="play-pause-btn" class="control-button" title="Play/Pause">
+                <svg id="play-icon" width="20" height="20" viewBox="0 0 16 16">
+                    <path fill="currentColor" d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288z"></path>
+                </svg>
+                <svg id="pause-icon" width="20" height="20" viewBox="0 0 16 16" style="display: none;">
+                    <path fill="currentColor" d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"></path>
+                </svg>
+            </button>
+            <button id="next-btn" class="control-button" title="Next">
+                <svg width="20" height="20" viewBox="0 0 16 16">
+                    <path fill="currentColor" d="M12.7 1a.7.7 0 0 0-.7.7v5.15L2.05 1.107A.7.7 0 0 0 1 1.712v12.575a.7.7 0 0 0 1.05.607L12 9.149V14.3a.7.7 0 0 0 .7.7h1.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"></path>
+                </svg>
+            </button>
+            <button id="repeat-btn" class="control-button" title="Repeat">
+                <svg width="20" height="20" viewBox="0 0 16 16">
+                    <path fill="currentColor" d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5A2.25 2.25 0 0 0 1.5 4.75v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75z"></path>
+                </svg>
+            </button>
         </div>
         
         <div id="resizer"></div>
@@ -709,6 +732,18 @@
             wrapper.style.display = isVisible ? 'none' : 'flex';
             localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(!isVisible));
         };
+        
+        document.getElementById('reset-btn').onclick = () => {
+            // Reset to default size and center position
+            const defaultWidth = 370;
+            const defaultHeight = 600;
+            const left = Math.max(0, (screen.width - defaultWidth) / 2);
+            const top = Math.max(0, (screen.height - defaultHeight) / 2);
+            
+            window.resizeTo(defaultWidth, defaultHeight);
+            window.moveTo(left, top);
+            saveWindowState();
+        };
     }
     
     function updateLyricsForTrack(trackInfo) {
@@ -721,6 +756,8 @@
     
     function updateLyricsContent(lyrics, type) {
         const lyricsContainer = document.getElementById('lyrics-container');
+        const downloadBtn = document.getElementById('download-btn');
+        
         lyricsContainer.innerHTML = '';
         
         if (lyrics && lyrics.length > 0) {
@@ -730,9 +767,327 @@
                 if (time !== undefined) p.dataset.time = time;
                 lyricsContainer.appendChild(p);
             });
+            
+            // Show download button
+            downloadBtn.style.display = 'inline-flex';
+            
+            // Start highlighting for synced lyrics
+            if (type === 'synced' && lyrics.some(l => l.time !== undefined)) {
+                currentSyncedLyrics = lyrics;
+                startHighlighting(lyrics);
+            } else {
+                currentUnsyncedLyrics = lyrics;
+                if (highlightTimer) {
+                    clearInterval(highlightTimer);
+                    highlightTimer = null;
+                }
+            }
         } else {
             lyricsContainer.textContent = 'No lyrics found';
+            downloadBtn.style.display = 'none';
         }
+    }
+    
+    function startHighlighting(syncedLyrics) {
+        if (highlightTimer) clearInterval(highlightTimer);
+        
+        highlightTimer = setInterval(() => {
+            // This would need access to current playback position
+            // For now, we'll implement a basic version
+            highlightCurrentLyric(syncedLyrics);
+        }, 100);
+    }
+    
+    function highlightCurrentLyric(syncedLyrics) {
+        // Basic highlighting implementation
+        // In a full implementation, this would get current playback time from the main window
+        const lyricsContainer = document.getElementById('lyrics-container');
+        const lines = lyricsContainer.querySelectorAll('p');
+        
+        lines.forEach((line, index) => {
+            line.style.opacity = '0.6';
+            line.style.transform = 'scale(1)';
+        });
+        
+        // Highlight current line (simplified)
+        // In real implementation, we'd calculate based on current time
+    }
+    
+    // Provider tabs functionality
+    function setupProviderTabs() {
+        const tabsContainer = document.getElementById('tabs');
+        const providers = ['LRCLIB', 'Spotify', 'KPoe', 'Musixmatch', 'Genius'];
+        
+        providers.forEach(provider => {
+            const tab = document.createElement('button');
+            tab.textContent = provider;
+            tab.className = 'tab-button';
+            tab.onclick = () => {
+                sendMessage('PROVIDER_CHANGE', provider);
+                updateActiveTab(provider);
+            };
+            tabsContainer.appendChild(tab);
+        });
+    }
+    
+    function updateActiveTab(activeProvider) {
+        const tabs = document.querySelectorAll('.tab-button');
+        tabs.forEach(tab => {
+            tab.classList.toggle('active', tab.textContent === activeProvider);
+        });
+    }
+    
+    // Translation functionality
+    function setupTranslation() {
+        const langSelect = document.getElementById('language-select');
+        const languages = {
+            en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian',
+            pt: 'Portuguese', ru: 'Russian', ja: 'Japanese', ko: 'Korean', zh: 'Chinese',
+            ar: 'Arabic', hi: 'Hindi', tr: 'Turkish'
+        };
+        
+        Object.entries(languages).forEach(([code, name]) => {
+            const option = document.createElement('option');
+            option.value = code;
+            option.textContent = name;
+            langSelect.appendChild(option);
+        });
+        
+        document.getElementById('translate-btn').onclick = translateLyrics;
+        document.getElementById('original-btn').onclick = removeTranslation;
+    }
+    
+    function translateLyrics() {
+        const targetLang = document.getElementById('language-select').value;
+        const lyricsContainer = document.getElementById('lyrics-container');
+        const lines = Array.from(lyricsContainer.querySelectorAll('p:not([data-translated])'));
+        
+        lines.forEach(async (line) => {
+            const originalText = line.textContent;
+            try {
+                const translatedText = await translateText(originalText, targetLang);
+                
+                const translatedP = document.createElement('p');
+                translatedP.textContent = translatedText;
+                translatedP.style.color = '#aaa';
+                translatedP.style.fontSize = '0.9em';
+                translatedP.style.fontStyle = 'italic';
+                translatedP.dataset.translated = 'true';
+                
+                line.insertAdjacentElement('afterend', translatedP);
+            } catch (error) {
+                console.error('Translation failed:', error);
+            }
+        });
+    }
+    
+    function removeTranslation() {
+        const translatedLines = document.querySelectorAll('[data-translated="true"]');
+        translatedLines.forEach(line => line.remove());
+    }
+    
+    async function translateText(text, targetLang) {
+        const url = \`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=\${targetLang}&dt=t&q=\${encodeURIComponent(text)}\`;
+        const response = await fetch(url);
+        const data = await response.json();
+        return data[0][0][0];
+    }
+    
+    // Font size functionality
+    function setupFontSize() {
+        const fontBtn = document.getElementById('font-size-btn');
+        const sizes = [16, 18, 20, 22, 24, 26, 28, 30, 32];
+        
+        let dropdown = null;
+        
+        fontBtn.onclick = () => {
+            if (dropdown) {
+                dropdown.remove();
+                dropdown = null;
+                return;
+            }
+            
+            dropdown = document.createElement('div');
+            dropdown.style.cssText = \`
+                position: absolute;
+                top: 100%;
+                right: 0;
+                background: #333;
+                border-radius: 5px;
+                padding: 4px;
+                min-width: 60px;
+                z-index: 1000;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            \`;
+            
+            sizes.forEach(size => {
+                const btn = document.createElement('button');
+                btn.textContent = size + 'px';
+                btn.style.cssText = \`
+                    background: none;
+                    border: none;
+                    color: white;
+                    padding: 6px 8px;
+                    cursor: pointer;
+                    width: 100%;
+                    text-align: left;
+                    border-radius: 3px;
+                \`;
+                btn.onclick = () => {
+                    document.getElementById('lyrics-container').style.fontSize = size + 'px';
+                    localStorage.setItem('lyricsPlusFontSize', size);
+                    dropdown.remove();
+                    dropdown = null;
+                };
+                dropdown.appendChild(btn);
+            });
+            
+            fontBtn.style.position = 'relative';
+            fontBtn.appendChild(dropdown);
+        };
+    }
+    
+    // Timing offset functionality
+    function setupTimingOffset() {
+        const offsetInput = document.getElementById('offset-input');
+        const applyBtn = document.getElementById('offset-apply');
+        const resetBtn = document.getElementById('offset-reset');
+        
+        // Load saved offset
+        const savedOffset = localStorage.getItem('lyricsPlusTimingOffset');
+        if (savedOffset) {
+            offsetInput.value = savedOffset;
+        }
+        
+        applyBtn.onclick = () => {
+            const offset = parseInt(offsetInput.value) || 0;
+            localStorage.setItem('lyricsPlusTimingOffset', offset.toString());
+            // Restart highlighting if active
+            if (highlightTimer && currentSyncedLyrics) {
+                startHighlighting(currentSyncedLyrics);
+            }
+        };
+        
+        resetBtn.onclick = () => {
+            offsetInput.value = '0';
+            localStorage.removeItem('lyricsPlusTimingOffset');
+            // Restart highlighting if active
+            if (highlightTimer && currentSyncedLyrics) {
+                startHighlighting(currentSyncedLyrics);
+            }
+        };
+    }
+    
+    // Download functionality
+    function setupDownload() {
+        const downloadBtn = document.getElementById('download-btn');
+        let dropdown = null;
+        
+        downloadBtn.onclick = () => {
+            if (dropdown) {
+                dropdown.remove();
+                dropdown = null;
+                return;
+            }
+            
+            dropdown = document.createElement('div');
+            dropdown.style.cssText = \`
+                position: absolute;
+                top: 100%;
+                right: 0;
+                background: #333;
+                border-radius: 5px;
+                padding: 4px;
+                min-width: 120px;
+                z-index: 1000;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            \`;
+            
+            // LRC download
+            const lrcBtn = document.createElement('button');
+            lrcBtn.textContent = 'Download .lrc';
+            lrcBtn.style.cssText = \`
+                background: none;
+                border: none;
+                color: white;
+                padding: 6px 8px;
+                cursor: pointer;
+                width: 100%;
+                text-align: left;
+                border-radius: 3px;
+            \`;
+            lrcBtn.onclick = () => {
+                downloadLyrics('lrc');
+                dropdown.remove();
+                dropdown = null;
+            };
+            dropdown.appendChild(lrcBtn);
+            
+            // TXT download
+            const txtBtn = document.createElement('button');
+            txtBtn.textContent = 'Download .txt';
+            txtBtn.style.cssText = \`
+                background: none;
+                border: none;
+                color: white;
+                padding: 6px 8px;
+                cursor: pointer;
+                width: 100%;
+                text-align: left;
+                border-radius: 3px;
+            \`;
+            txtBtn.onclick = () => {
+                downloadLyrics('txt');
+                dropdown.remove();
+                dropdown = null;
+            };
+            dropdown.appendChild(txtBtn);
+            
+            downloadBtn.style.position = 'relative';
+            downloadBtn.appendChild(dropdown);
+        };
+    }
+    
+    function downloadLyrics(format) {
+        const lyricsContainer = document.getElementById('lyrics-container');
+        const lines = Array.from(lyricsContainer.querySelectorAll('p:not([data-translated])'));
+        
+        if (lines.length === 0) return;
+        
+        const trackInfo = currentTrackInfo || { title: 'lyrics', artist: 'unknown' };
+        const filename = \`\${makeFileSafe(trackInfo.artist)} - \${makeFileSafe(trackInfo.title)}.\${format}\`;
+        
+        let content;
+        if (format === 'lrc') {
+            content = lines.map((line, index) => {
+                const time = line.dataset.time || (index * 3000); // Default 3s per line
+                return \`[\${formatTime(time)}]\${line.textContent}\`;
+            }).join('\\n');
+        } else {
+            content = lines.map(line => line.textContent).join('\\n');
+        }
+        
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    function makeFileSafe(str) {
+        return str.replace(/[^a-zA-Z0-9\\-_ ]/g, '');
+    }
+    
+    function formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        const hundredths = Math.floor((ms % 1000) / 10);
+        return \`\${minutes.toString().padStart(2, '0')}:\${seconds.toString().padStart(2, '0')}.\${hundredths.toString().padStart(2, '0')}\`;
     }
     
     // Initialize everything when the window loads
@@ -741,6 +1096,11 @@
         makeDraggable();
         makeResizable();
         setupControlButtons();
+        setupProviderTabs();
+        setupTranslation();
+        setupFontSize();
+        setupTimingOffset();
+        setupDownload();
         
         // Load saved visibility states
         const offsetVisible = JSON.parse(localStorage.getItem('lyricsPlusOffsetVisible') || 'false');
@@ -750,12 +1110,19 @@
         document.getElementById('offset-wrapper').style.display = offsetVisible ? 'block' : 'none';
         document.getElementById('translator-wrapper').style.display = translationVisible ? 'block' : 'none';
         document.getElementById('controls-bar').style.display = controlsVisible ? 'flex' : 'none';
+        
+        // Load saved font size
+        const savedFontSize = localStorage.getItem('lyricsPlusFontSize');
+        if (savedFontSize) {
+            document.getElementById('lyrics-container').style.fontSize = savedFontSize + 'px';
+        }
     });
     
     // Handle window close
     window.addEventListener('beforeunload', () => {
         saveWindowState();
         sendMessage('POPUP_CLOSED');
+        if (highlightTimer) clearInterval(highlightTimer);
     });
 })();`;
 
