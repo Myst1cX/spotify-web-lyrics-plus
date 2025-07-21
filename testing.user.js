@@ -3541,7 +3541,13 @@ currentLyricsContainer = lyricsContainer;
         stopPollingForTrackChange();
         return;
       }
-      createPopup();
+      // Always call the page context function if available
+      if (window.createPopupInjected && window.createPopup) {
+        window.createPopup();
+      } else {
+        // Fallback: dispatch event directly
+        document.dispatchEvent(new CustomEvent('LyricsPlusCreatePopup'));
+      }
     };
     controls.insertBefore(btn, targetBtn);
   };
@@ -3650,4 +3656,34 @@ popupObserver.observe(document.body, { childList: true, subtree: true });
       applyProportionToPopup(popup);
     }
   });
+
+  // Expose createPopup to window for page context access
+  window.createPopup = createPopup;
 })();
+
+// ------------------------
+// Context Bridge for Violentmonkey Support
+// ------------------------
+
+// 1. Inject createPopup into the real window
+function injectCreatePopupToPage() {
+  const script = document.createElement('script');
+  script.textContent = '(' + function() {
+    window.createPopupInjected = true;
+    window.createPopup = function() {
+      document.dispatchEvent(new CustomEvent('LyricsPlusCreatePopup'));
+    };
+  } + ')();';
+  document.documentElement.appendChild(script);
+  script.remove();
+}
+
+// 2. Call injection function to bridge contexts
+injectCreatePopupToPage();
+
+// 3. Listen for LyricsPlusCreatePopup event and call userscript's createPopup
+document.addEventListener('LyricsPlusCreatePopup', function() {
+  if (typeof window.createPopup === 'function') {
+    window.createPopup();
+  }
+});
