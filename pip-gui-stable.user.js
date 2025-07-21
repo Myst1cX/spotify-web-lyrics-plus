@@ -30,6 +30,734 @@
   let translationPresent = false;
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
+  
+  // New variables for separate window functionality
+  let popupWindow = null;
+  let broadcastChannel = null;
+
+  // ------------------------
+  // Window Communication Setup
+  // ------------------------
+  
+  // Initialize communication channel
+  function initializeCommunication() {
+    if (!broadcastChannel) {
+      try {
+        broadcastChannel = new BroadcastChannel('lyrics-plus-channel');
+        broadcastChannel.addEventListener('message', handlePopupMessage);
+      } catch (e) {
+        // Fallback to localStorage events if BroadcastChannel is not supported
+        console.log('BroadcastChannel not supported, using localStorage fallback');
+        window.addEventListener('storage', handleStorageMessage);
+      }
+    }
+  }
+
+  // Handle messages from popup window
+  function handlePopupMessage(event) {
+    const { type, data } = event.data;
+    
+    switch (type) {
+      case 'REQUEST_TRACK_INFO':
+        sendTrackInfoToPopup();
+        break;
+      case 'PLAYBACK_CONTROL':
+        handlePlaybackControl(data);
+        break;
+      case 'PROVIDER_CHANGE':
+        // Handle provider change if needed
+        break;
+      case 'POPUP_CLOSED':
+        popupWindow = null;
+        stopPollingForTrackChange();
+        break;
+      case 'SAVE_STATE':
+        localStorage.setItem('lyricsPlusPopupState', JSON.stringify(data));
+        break;
+    }
+  }
+
+  // Fallback handler for localStorage communication
+  function handleStorageMessage(event) {
+    if (event.key === 'lyrics-plus-message') {
+      const message = JSON.parse(event.newValue || '{}');
+      handlePopupMessage({ data: message });
+      localStorage.removeItem('lyrics-plus-message'); // Clean up
+    }
+  }
+
+  // Send message to popup window
+  function sendMessageToPopup(type, data) {
+    if (popupWindow && !popupWindow.closed) {
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({ type, data });
+      } else {
+        // Fallback to localStorage
+        localStorage.setItem('lyrics-plus-popup-message', JSON.stringify({ type, data }));
+        localStorage.removeItem('lyrics-plus-popup-message'); // Trigger event
+      }
+    }
+  }
+
+  // Send current track info to popup
+  function sendTrackInfoToPopup() {
+    const info = getCurrentTrackInfo();
+    if (info) {
+      sendMessageToPopup('TRACK_INFO', info);
+    }
+  }
+
+  // Handle playback controls from popup window
+  function handlePlaybackControl(command) {
+    // Use the existing sendSpotifyCommand function
+    sendSpotifyCommand(command);
+  }
+
+  // Move sendSpotifyCommand to global scope for popup communication
+  function sendSpotifyCommand(command) {
+    // List of selectors per command, covering desktop and mobile
+    const selectors = {
+      playpause: [
+        '[aria-label="Play"]',
+        '[aria-label="Pause"]',
+        '[data-testid="control-button-playpause"]',
+        '[data-testid="mobile-play-button"]',
+        '[data-testid="mobile-pause-button"]'
+      ],
+      next: [
+        '[aria-label="Next"]',
+        '[data-testid="control-button-skip-forward"]',
+        '[data-testid="mobile-next-button"]'
+      ],
+      previous: [
+        '[aria-label="Previous"]',
+        '[data-testid="control-button-skip-back"]',
+        '[data-testid="mobile-prev-button"]'
+      ],
+      repeat: [
+        '[aria-label="Enable repeat"]',
+        '[aria-label="Enable repeat one"]',
+        '[aria-label="Disable repeat"]',
+        '[data-testid="control-button-repeat"]'
+      ]
+    };
+
+    let btn = null;
+
+    if (command === "shuffle") {
+      // Always re-query the DOM for the currently visible shuffle button
+      btn = Array.from(document.querySelectorAll('button[aria-label]')).find(button => {
+        if (button.offsetParent === null) return false;
+        const ariaLabel = button.getAttribute('aria-label');
+        if (!ariaLabel) return false;
+        const lower = ariaLabel.toLowerCase();
+        return lower.includes('enable shuffle') ||
+               lower.includes('enable smart shuffle') ||
+               lower.includes('disable shuffle');
+      });
+    } else if (command === "playpause") {
+      // Prefer specific selectors for playpause
+      btn = document.querySelector('[data-testid="control-button-playpause"]')
+         || document.querySelector('[aria-label="Play"]')
+         || document.querySelector('[aria-label="Pause"]');
+      // Only fallback if ALL of the above fail:
+      if (!btn) {
+        btn = Array.from(document.querySelectorAll("button"))
+          .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
+      }
+    } else {
+      // For other commands, use selectors
+      for (const sel of selectors[command] || []) {
+        btn = document.querySelector(sel);
+        if (btn && btn.offsetParent !== null) break;
+      }
+    }
+
+    if (btn) {
+      btn.click();
+
+      // If on mobile, try touch events as a fallback
+      if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        btn.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, cancelable:true}));
+        btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
+      }
+    } else {
+      console.warn("Spotify control button not found for:", command);
+    }
+  }
+
+  // ------------------------
+  // Popup Window HTML Generation
+  // ------------------------
+  
+  function generatePopupHTML() {
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lyrics+</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            user-select: none;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .hide-scrollbar::-webkit-scrollbar { 
+            display: none; 
+        }
+        
+        .hide-scrollbar { 
+            scrollbar-width: none !important; 
+            ms-overflow-style: none !important; 
+        }
+        
+        #popup-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #121212;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        #header-wrapper {
+            padding: 12px;
+            border-bottom: 1px solid #333;
+            background-color: #121212;
+            cursor: move;
+            user-select: none;
+        }
+        
+        #header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #header h3 {
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        #tabs {
+            display: flex;
+            margin-top: 12px;
+        }
+        
+        .tab-button {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            margin-right: 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            user-select: none;
+        }
+        
+        .tab-button:hover {
+            background: #444;
+        }
+        
+        .tab-button.active {
+            background: #1db954;
+        }
+        
+        #offset-wrapper {
+            padding: 12px;
+            background-color: #181818;
+            border-bottom: 1px solid #333;
+            transition: max-height 0.3s, padding 0.3s;
+            overflow: hidden;
+        }
+        
+        #translator-wrapper {
+            padding: 12px;
+            background-color: #181818;
+            border-bottom: 1px solid #333;
+            transition: max-height 0.3s;
+            overflow: hidden;
+        }
+        
+        #lyrics-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 12px;
+            white-space: pre-wrap;
+            font-size: 22px;
+            line-height: 1.5;
+            background-color: #121212;
+            user-select: text;
+            text-align: center;
+        }
+        
+        #lyrics-container p {
+            margin: 0 0 6px 0;
+            transition: transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s;
+        }
+        
+        #controls-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-top: 1px solid #333;
+            background-color: #121212;
+            user-select: none;
+            transition: max-height 0.3s;
+            overflow: hidden;
+        }
+        
+        .control-button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .control-button:hover {
+            background: #333;
+        }
+        
+        .control-button svg {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        
+        .dropdown-button {
+            cursor: pointer;
+            background: none;
+            border: none;
+            border-radius: 5px;
+            width: 28px;
+            height: 28px;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            padding: 0 2px;
+            margin-left: 2px;
+            margin-right: 2px;
+        }
+        
+        .dropdown-button:hover {
+            background: #222;
+        }
+        
+        select {
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 4px 8px;
+            font-size: 13px;
+        }
+        
+        .translate-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 8px;
+        }
+        
+        .translate-button {
+            flex: 1;
+            min-width: 0;
+            height: 28px;
+            background: #1db954;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 13px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        
+        .translate-button:hover {
+            background: #1ed760;
+        }
+        
+        .original-button {
+            flex: 1;
+            min-width: 0;
+            height: 28px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 13px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        
+        .original-button:hover {
+            background: #444;
+        }
+        
+        .offset-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .offset-input {
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            width: 60px;
+            text-align: center;
+        }
+        
+        .offset-button {
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .offset-button:hover {
+            background: #555;
+        }
+        
+        #resizer {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 16px;
+            height: 16px;
+            cursor: nw-resize;
+            background: rgba(255, 255, 255, 0.1);
+            border-left: 1.5px solid rgba(255, 255, 255, 0.15);
+            border-top: 1.5px solid rgba(255, 255, 255, 0.15);
+            clip-path: polygon(100% 0, 0 100%, 100% 100%);
+        }
+    </style>
+</head>
+<body>
+    <div id="popup-container">
+        <div id="header-wrapper">
+            <div id="header">
+                <h3>Lyrics+</h3>
+                <div class="button-group">
+                    <button id="translation-toggle" class="dropdown-button" title="Show/hide translation controls">🌐</button>
+                    <button id="font-size-btn" class="dropdown-button" title="Font size">A</button>
+                    <button id="download-btn" class="dropdown-button" title="Download lyrics">⬇</button>
+                    <button id="playback-toggle" class="dropdown-button" title="Show/hide playback controls">🎛️</button>
+                    <button id="offset-toggle" class="dropdown-button" title="Show/hide timing offset controls">⚙️</button>
+                    <button id="reset-btn" class="dropdown-button" title="Restore Default Position and Size">↻</button>
+                    <button id="close-btn" class="dropdown-button" title="Close">✕</button>
+                </div>
+            </div>
+            <div id="tabs">
+                <!-- Tabs will be populated by JavaScript -->
+            </div>
+        </div>
+        
+        <div id="offset-wrapper" style="display: none;">
+            <div class="offset-controls">
+                <label>Timing Offset (ms):</label>
+                <input type="number" id="offset-input" class="offset-input" value="0" step="50">
+                <button id="offset-apply" class="offset-button">Apply</button>
+                <button id="offset-reset" class="offset-button">Reset</button>
+            </div>
+        </div>
+        
+        <div id="translator-wrapper" style="display: none;">
+            <div class="translate-controls">
+                <select id="language-select">
+                    <!-- Language options will be populated by JavaScript -->
+                </select>
+                <button id="translate-btn" class="translate-button">Translate</button>
+                <button id="original-btn" class="original-button">Original</button>
+            </div>
+        </div>
+        
+        <div id="lyrics-container">
+            Loading lyrics...
+        </div>
+        
+        <div id="controls-bar" style="display: none;">
+            <button id="shuffle-btn" class="control-button" title="Shuffle"></button>
+            <button id="previous-btn" class="control-button" title="Previous"></button>
+            <button id="play-pause-btn" class="control-button" title="Play/Pause"></button>
+            <button id="next-btn" class="control-button" title="Next"></button>
+            <button id="repeat-btn" class="control-button" title="Repeat"></button>
+        </div>
+        
+        <div id="resizer"></div>
+    </div>
+    
+    <script>
+        // Popup window JavaScript will be injected here
+    </script>
+</body>
+</html>`;
+  }
+
+  // Generate JavaScript for the popup window
+  function generatePopupJS() {
+    return `
+// Popup window JavaScript
+(function() {
+    'use strict';
+    
+    let broadcastChannel = null;
+    let currentTrackInfo = null;
+    let currentSyncedLyrics = null;
+    let currentUnsyncedLyrics = null;
+    let highlightTimer = null;
+    let isTranslating = false;
+    let translationPresent = false;
+    let lastTranslatedLang = null;
+    
+    // Initialize communication
+    function initCommunication() {
+        try {
+            broadcastChannel = new BroadcastChannel('lyrics-plus-channel');
+            broadcastChannel.addEventListener('message', handleMessage);
+        } catch (e) {
+            console.log('BroadcastChannel not supported, using localStorage fallback');
+            window.addEventListener('storage', handleStorageMessage);
+        }
+        
+        // Request initial track info
+        sendMessage('REQUEST_TRACK_INFO');
+    }
+    
+    function handleMessage(event) {
+        const { type, data } = event.data;
+        
+        switch (type) {
+            case 'TRACK_INFO':
+                currentTrackInfo = data;
+                updateLyricsForTrack(data);
+                break;
+            case 'LYRICS_UPDATE':
+                updateLyricsContent(data.lyrics, data.type);
+                break;
+        }
+    }
+    
+    function handleStorageMessage(event) {
+        if (event.key === 'lyrics-plus-popup-message') {
+            const message = JSON.parse(event.newValue || '{}');
+            handleMessage({ data: message });
+        }
+    }
+    
+    function sendMessage(type, data) {
+        if (broadcastChannel) {
+            broadcastChannel.postMessage({ type, data });
+        } else {
+            localStorage.setItem('lyrics-plus-message', JSON.stringify({ type, data }));
+            localStorage.removeItem('lyrics-plus-message');
+        }
+    }
+    
+    // Drag functionality
+    function makeDraggable() {
+        const headerWrapper = document.getElementById('header-wrapper');
+        let isDragging = false;
+        let startX, startY;
+        
+        headerWrapper.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.screenX - window.screenX;
+            startY = e.screenY - window.screenY;
+            document.body.style.userSelect = 'none';
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            window.moveTo(e.screenX - startX, e.screenY - startY);
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                document.body.style.userSelect = '';
+                saveWindowState();
+            }
+        });
+    }
+    
+    // Resize functionality
+    function makeResizable() {
+        const resizer = document.getElementById('resizer');
+        let isResizing = false;
+        let startX, startY, startWidth, startHeight;
+        
+        resizer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isResizing = true;
+            startX = e.screenX;
+            startY = e.screenY;
+            startWidth = window.outerWidth;
+            startHeight = window.outerHeight;
+            document.body.style.userSelect = 'none';
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const newWidth = Math.max(370, startWidth + (e.screenX - startX));
+            const newHeight = Math.max(240, startHeight + (e.screenY - startY));
+            window.resizeTo(newWidth, newHeight);
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.userSelect = '';
+                saveWindowState();
+            }
+        });
+    }
+    
+    function saveWindowState() {
+        const state = {
+            left: window.screenX,
+            top: window.screenY,
+            width: window.outerWidth,
+            height: window.outerHeight
+        };
+        sendMessage('SAVE_STATE', state);
+    }
+    
+    // Control button handlers
+    function setupControlButtons() {
+        document.getElementById('close-btn').onclick = () => {
+            saveWindowState();
+            sendMessage('POPUP_CLOSED');
+            window.close();
+        };
+        
+        document.getElementById('play-pause-btn').onclick = () => {
+            sendMessage('PLAYBACK_CONTROL', 'playpause');
+        };
+        
+        document.getElementById('next-btn').onclick = () => {
+            sendMessage('PLAYBACK_CONTROL', 'next');
+        };
+        
+        document.getElementById('previous-btn').onclick = () => {
+            sendMessage('PLAYBACK_CONTROL', 'previous');
+        };
+        
+        document.getElementById('shuffle-btn').onclick = () => {
+            sendMessage('PLAYBACK_CONTROL', 'shuffle');
+        };
+        
+        document.getElementById('repeat-btn').onclick = () => {
+            sendMessage('PLAYBACK_CONTROL', 'repeat');
+        };
+        
+        // Toggle buttons
+        document.getElementById('offset-toggle').onclick = () => {
+            const wrapper = document.getElementById('offset-wrapper');
+            const isVisible = wrapper.style.display !== 'none';
+            wrapper.style.display = isVisible ? 'none' : 'block';
+            localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(!isVisible));
+        };
+        
+        document.getElementById('translation-toggle').onclick = () => {
+            const wrapper = document.getElementById('translator-wrapper');
+            const isVisible = wrapper.style.display !== 'none';
+            wrapper.style.display = isVisible ? 'none' : 'block';
+            localStorage.setItem('lyricsPlusTranslationVisible', JSON.stringify(!isVisible));
+        };
+        
+        document.getElementById('playback-toggle').onclick = () => {
+            const wrapper = document.getElementById('controls-bar');
+            const isVisible = wrapper.style.display !== 'none';
+            wrapper.style.display = isVisible ? 'none' : 'flex';
+            localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(!isVisible));
+        };
+    }
+    
+    function updateLyricsForTrack(trackInfo) {
+        const lyricsContainer = document.getElementById('lyrics-container');
+        lyricsContainer.textContent = 'Loading lyrics...';
+        
+        // This will be handled by the main window for now
+        // The main window will send lyrics updates
+    }
+    
+    function updateLyricsContent(lyrics, type) {
+        const lyricsContainer = document.getElementById('lyrics-container');
+        lyricsContainer.innerHTML = '';
+        
+        if (lyrics && lyrics.length > 0) {
+            lyrics.forEach(({ text, time }) => {
+                const p = document.createElement('p');
+                p.textContent = text;
+                if (time !== undefined) p.dataset.time = time;
+                lyricsContainer.appendChild(p);
+            });
+        } else {
+            lyricsContainer.textContent = 'No lyrics found';
+        }
+    }
+    
+    // Initialize everything when the window loads
+    window.addEventListener('load', () => {
+        initCommunication();
+        makeDraggable();
+        makeResizable();
+        setupControlButtons();
+        
+        // Load saved visibility states
+        const offsetVisible = JSON.parse(localStorage.getItem('lyricsPlusOffsetVisible') || 'false');
+        const translationVisible = JSON.parse(localStorage.getItem('lyricsPlusTranslationVisible') || 'false');
+        const controlsVisible = JSON.parse(localStorage.getItem('lyricsPlusControlsVisible') || 'false');
+        
+        document.getElementById('offset-wrapper').style.display = offsetVisible ? 'block' : 'none';
+        document.getElementById('translator-wrapper').style.display = translationVisible ? 'block' : 'none';
+        document.getElementById('controls-bar').style.display = controlsVisible ? 'flex' : 'none';
+    });
+    
+    // Handle window close
+    window.addEventListener('beforeunload', () => {
+        saveWindowState();
+        sendMessage('POPUP_CLOSED');
+    });
+})();`;
 
 
   // Global flag (window.lyricsPlusPopupIsResizing) is used to prevent lyric highlighting updates from interfering with popup resizing
@@ -1838,12 +2566,34 @@ const Providers = {
       clearInterval(pollingInterval);
       pollingInterval = null;
     }
+    
+    // Handle popup window
+    if (popupWindow && !popupWindow.closed) {
+      try {
+        popupWindow.close();
+      } catch (e) {
+        console.warn('Failed to close popup window:', e);
+      }
+      popupWindow = null;
+    }
+    
+    // Handle old DIV popup (fallback compatibility)
     const existing = document.getElementById("lyrics-plus-popup");
     if (existing) {
       if (existing._playPauseObserver) existing._playPauseObserver.disconnect();
       existing._playPauseObserver = null;
       existing._playPauseBtn = null;
       existing.remove();
+    }
+    
+    // Clean up broadcast channel
+    if (broadcastChannel) {
+      try {
+        broadcastChannel.close();
+      } catch (e) {
+        // Ignore errors when closing channel
+      }
+      broadcastChannel = null;
     }
   }
 
@@ -1900,19 +2650,140 @@ function observeSpotifyPlayPause(popup) {
 }
 
   function createPopup() {
+    // Close existing popup if any
     removePopup();
-
-    // Load saved state from localStorage
+    
+    // Initialize communication
+    initializeCommunication();
+    
+    // Load saved window state
     const savedState = localStorage.getItem('lyricsPlusPopupState');
-let pos = null;
-if (savedState) {
-  try {
-    pos = JSON.parse(savedState);
-  } catch {
-    pos = null;
+    let windowOptions = 'width=370,height=600,scrollbars=no,resizable=yes,menubar=no,toolbar=no,location=no,status=no';
+    
+    if (savedState) {
+      try {
+        const pos = JSON.parse(savedState);
+        if (pos.left !== null && pos.top !== null && pos.width && pos.height) {
+          windowOptions = `width=${pos.width},height=${pos.height},left=${pos.left},top=${pos.top},scrollbars=no,resizable=yes,menubar=no,toolbar=no,location=no,status=no`;
+        }
+      } catch (e) {
+        console.warn('Failed to parse saved popup state:', e);
+      }
+    }
+    
+    // Try to open popup window
+    try {
+      popupWindow = window.open('', 'lyricsPlus', windowOptions);
+      
+      if (!popupWindow || popupWindow.closed) {
+        // Popup blocked - show fallback message
+        alert('Popup blocked! Please allow popups for Spotify and try again. The Lyrics+ popup needs to open in a separate window to stay visible when you minimize Spotify.');
+        return;
+      }
+      
+      // Write the complete HTML to the popup window
+      const html = generatePopupHTML();
+      const js = generatePopupJS();
+      const completeHTML = html.replace('<script>', `<script>${js}`);
+      
+      popupWindow.document.write(completeHTML);
+      popupWindow.document.close();
+      
+      // Focus the popup window
+      popupWindow.focus();
+      
+      // Start tracking current song and send initial data
+      const info = getCurrentTrackInfo();
+      if (info) {
+        currentTrackId = info.id;
+        setTimeout(() => {
+          sendTrackInfoToPopup();
+          autodetectProviderAndLoadForWindow(info);
+        }, 500); // Give popup time to initialize
+      }
+      
+      // Start polling for track changes
+      startPollingForTrackChangeWindow();
+      
+    } catch (error) {
+      console.error('Failed to create popup window:', error);
+      alert('Failed to create popup window. Please check your browser settings and try again.');
+    }
   }
-} else {
-}
+
+  // Modified version of autodetectProviderAndLoad for popup window
+  async function autodetectProviderAndLoadForWindow(info) {
+    if (!popupWindow || popupWindow.closed) return;
+    
+    const detectionOrder = [
+      { name: "LRCLIB", type: "getSynced" },
+      { name: "Spotify", type: "getSynced" },
+      { name: "KPoe", type: "getSynced" },
+      { name: "Musixmatch", type: "getSynced" },
+      { name: "LRCLIB", type: "getUnsynced" },
+      { name: "Spotify", type: "getUnsynced" },
+      { name: "KPoe", type: "getUnsynced" },
+      { name: "Musixmatch", type: "getUnsynced" },
+      { name: "Genius", type: "getUnsynced" }
+    ];
+
+    for (const { name, type } of detectionOrder) {
+      try {
+        const provider = Providers.map[name];
+        if (!provider) continue;
+
+        const result = await provider.findLyrics(info);
+        if (!result.error) {
+          const lyrics = provider[type](result);
+          if (lyrics && lyrics.length > 0) {
+            Providers.setCurrent(name);
+            
+            // Send lyrics to popup window
+            sendMessageToPopup('LYRICS_UPDATE', { 
+              lyrics: lyrics, 
+              type: type === 'getSynced' ? 'synced' : 'unsynced',
+              provider: name
+            });
+            
+            // Store in global variables for other functions
+            if (type === 'getSynced') {
+              currentSyncedLyrics = lyrics;
+              isShowingSyncedLyrics = true;
+            } else {
+              currentUnsyncedLyrics = lyrics;
+              isShowingSyncedLyrics = false;
+            }
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to get lyrics from ${name}:`, error);
+      }
+    }
+    
+    // No lyrics found from any provider
+    sendMessageToPopup('LYRICS_UPDATE', { 
+      lyrics: [], 
+      type: 'none',
+      provider: 'none'
+    });
+  }
+
+  // Update startPollingForTrackChange to work with popup window
+  function startPollingForTrackChangeWindow() {
+    if (pollingInterval) clearInterval(pollingInterval);
+    pollingInterval = setInterval(() => {
+      const info = getCurrentTrackInfo();
+      if (!info) return;
+      if (info.id !== currentTrackId) {
+        currentTrackId = info.id;
+        sendTrackInfoToPopup();
+        if (popupWindow && !popupWindow.closed) {
+          autodetectProviderAndLoadForWindow(info);
+        }
+      }
+    }, 1000);
+  }
 
     const popup = document.createElement("div");
     popup.id = "lyrics-plus-popup";
@@ -2962,77 +3833,6 @@ offsetWrapper.appendChild(inputStack);
       return { button, iconWrapper };
     }
 
-    function sendSpotifyCommand(command) {
-  // List of selectors per command, covering desktop and mobile
-  const selectors = {
-    playpause: [
-      '[aria-label="Play"]',
-      '[aria-label="Pause"]',
-      '[data-testid="control-button-playpause"]',
-      '[data-testid="mobile-play-button"]',
-      '[data-testid="mobile-pause-button"]'
-    ],
-    next: [
-      '[aria-label="Next"]',
-      '[data-testid="control-button-skip-forward"]',
-      '[data-testid="mobile-next-button"]'
-    ],
-    previous: [
-      '[aria-label="Previous"]',
-      '[data-testid="control-button-skip-back"]',
-      '[data-testid="mobile-prev-button"]'
-    ],
-    repeat: [
-      '[aria-label="Enable repeat"]',
-      '[aria-label="Enable repeat one"]',
-      '[aria-label="Disable repeat"]',
-      '[data-testid="control-button-repeat"]'
-    ]
-  };
-
-  let btn = null;
-
-  if (command === "shuffle") {
-    // Always re-query the DOM for the currently visible shuffle button
-    btn = Array.from(document.querySelectorAll('button[aria-label]')).find(button => {
-      if (button.offsetParent === null) return false;
-      const ariaLabel = button.getAttribute('aria-label');
-      if (!ariaLabel) return false;
-      const lower = ariaLabel.toLowerCase();
-      return lower.includes('enable shuffle') ||
-             lower.includes('enable smart shuffle') ||
-             lower.includes('disable shuffle');
-    });
-  } else if (command === "playpause") {
-    // Prefer specific selectors for playpause
-    btn = document.querySelector('[data-testid="control-button-playpause"]')
-       || document.querySelector('[aria-label="Play"]')
-       || document.querySelector('[aria-label="Pause"]');
-    // Only fallback if ALL of the above fail:
-    if (!btn) {
-      btn = Array.from(document.querySelectorAll("button"))
-        .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
-    }
-  } else {
-    // For other commands, use selectors
-    for (const sel of selectors[command] || []) {
-      btn = document.querySelector(sel);
-      if (btn && btn.offsetParent !== null) break;
-    }
-  }
-
-  if (btn) {
-    btn.click();
-
-    // If on mobile, try touch events as a fallback
-    if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-      btn.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, cancelable:true}));
-      btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
-    }
-  } else {
-    console.warn("Spotify control button not found for:", command);
-  }
-}
     // Create all control buttons
     const { button: btnShuffle, iconWrapper: shuffleIconWrapper } = createSpotifyControlButton(
       "shuffle",
