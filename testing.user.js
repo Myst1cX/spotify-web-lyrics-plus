@@ -3657,8 +3657,8 @@ popupObserver.observe(document.body, { childList: true, subtree: true });
     }
   });
 
-  // Expose createPopup to window for page context access
-  window.createPopup = createPopup;
+  // Store reference to createPopup for the event listener outside IIFE
+  window.lyricsPlusCreatePopupInternal = createPopup;
 })();
 
 // ------------------------
@@ -3683,7 +3683,8 @@ injectCreatePopupToPage();
 
 // 3. Listen for LyricsPlusCreatePopup event and call userscript's createPopup
 document.addEventListener('LyricsPlusCreatePopup', function() {
-  if (typeof window.createPopup === 'function') {
-    window.createPopup();
+  // Call the userscript's createPopup function via the internal reference
+  if (typeof window.lyricsPlusCreatePopupInternal === 'function') {
+    window.lyricsPlusCreatePopupInternal();
   }
 });
