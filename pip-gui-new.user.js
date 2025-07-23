@@ -1947,7 +1947,7 @@ function observeSpotifyPlayPause(popup) {
 
  function getBannerHeight() {
   // Look for Spotify's banner container by more specific class or structure
-  const banner = document.querySelector('div.gQoa8JTSpjSmYyABcag2');
+  const banner = document.querySelector('div.gQoa8JTSpjSmYyABcag2'); //div of "Playing on Web Browser" container
   if (banner) {
     return banner.getBoundingClientRect().height;
   }
@@ -3230,22 +3230,21 @@ if (container) {
   document.body.appendChild(popup);
 }
 
-    function savePopupState(el) {
+   function savePopupState(el) {
   const rect = el.getBoundingClientRect();
-  
-  // If banner is currently affecting the height, update the original height to account for user resize
+  // Save original height, not reduced height
+  let heightToSave = rect.height;
   if (el._bannerAdjusted && isMobileDevice()) {
     const bannerHeight = getBannerHeight();
     if (bannerHeight > 0) {
-      el._originalHeight = rect.height + bannerHeight;
+      heightToSave = rect.height + bannerHeight;
     }
   }
-  
   localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
     left: rect.left,
     top: rect.top,
     width: rect.width,
-    height: rect.height
+    height: heightToSave
   }));
 }
 
