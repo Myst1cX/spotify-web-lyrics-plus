@@ -1843,6 +1843,10 @@ const Providers = {
       if (existing._playPauseObserver) existing._playPauseObserver.disconnect();
       existing._playPauseObserver = null;
       existing._playPauseBtn = null;
+      
+      // Cleanup mobile banner observer
+      cleanupMobileBannerObserver(existing);
+      
       existing.remove();
     }
   }
@@ -1898,6 +1902,124 @@ function observeSpotifyPlayPause(popup) {
   observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
   popup._playPauseObserver = observer;
 }
+
+  // ------------------------
+  // Mobile Banner Detection and Adjustment
+  // ------------------------
+
+  function isMobileDevice() {
+    return window.innerWidth <= 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  }
+
+  function detectPlayingOnBanner() {
+    // Look for the "Playing on Web Player" banner by text content or aria-live attribute
+    const bannerSelectors = [
+      '[aria-live="polite"]',
+      '[aria-live="assertive"]',
+      '[data-testid*="connect"]',
+      '[data-testid*="banner"]'
+    ];
+    
+    for (const selector of bannerSelectors) {
+      const elements = document.querySelectorAll(selector);
+      for (const element of elements) {
+        const text = element.textContent.toLowerCase();
+        if (text.includes('playing on') || text.includes('web player')) {
+          return element;
+        }
+      }
+    }
+    
+    // Fallback: search for any element containing "Playing on" text
+    const allElements = document.querySelectorAll('*');
+    for (const element of allElements) {
+      if (element.children.length === 0) { // Only check leaf nodes to avoid duplicates
+        const text = element.textContent.toLowerCase();
+        if (text.includes('playing on') && text.includes('web player')) {
+          // Return the closest parent that likely represents the banner container
+          return element.closest('[class*="banner"]') || element.closest('[style*="bottom"]') || element;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  function getBannerHeight() {
+    const banner = detectPlayingOnBanner();
+    if (!banner) return 0;
+    
+    const rect = banner.getBoundingClientRect();
+    return rect.height;
+  }
+
+  function adjustPopupForMobileBanner(popup) {
+    if (!isMobileDevice() || !popup) return;
+    
+    const bannerHeight = getBannerHeight();
+    const currentHeight = parseInt(popup.style.height) || popup.offsetHeight;
+    
+    if (bannerHeight > 0) {
+      // Store original height if not already stored (use current height if no banner was previously detected)
+      if (!popup._originalHeight) {
+        popup._originalHeight = currentHeight;
+      }
+      
+      // Adjust height by subtracting banner height
+      const newHeight = popup._originalHeight - bannerHeight;
+      if (newHeight > 240) { // Ensure minimum height
+        popup.style.height = newHeight + 'px';
+        popup._bannerAdjusted = true;
+      }
+    } else {
+      // Restore original height if banner is gone and we had adjusted it
+      if (popup._originalHeight && popup._bannerAdjusted) {
+        popup.style.height = popup._originalHeight + 'px';
+        popup._bannerAdjusted = false;
+      }
+    }
+  }
+
+  function setupMobileBannerObserver(popup) {
+    if (!isMobileDevice() || !popup) return;
+    
+    // Initial adjustment
+    adjustPopupForMobileBanner(popup);
+    
+    // Set up MutationObserver to watch for banner changes
+    const observer = new MutationObserver(() => {
+      adjustPopupForMobileBanner(popup);
+    });
+    
+    // Observe changes to the document body and main container
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
+    
+    // Store observer reference for cleanup
+    popup._bannerObserver = observer;
+    
+    // Also poll every 2 seconds as a fallback
+    const pollInterval = setInterval(() => {
+      adjustPopupForMobileBanner(popup);
+    }, 2000);
+    
+    popup._bannerPollInterval = pollInterval;
+  }
+
+  function cleanupMobileBannerObserver(popup) {
+    if (popup && popup._bannerObserver) {
+      popup._bannerObserver.disconnect();
+      popup._bannerObserver = null;
+    }
+    if (popup && popup._bannerPollInterval) {
+      clearInterval(popup._bannerPollInterval);
+      popup._bannerPollInterval = null;
+    }
+  }
 
   function createPopup() {
     removePopup();
@@ -3104,6 +3226,15 @@ if (container) {
 
     function savePopupState(el) {
   const rect = el.getBoundingClientRect();
+  
+  // If banner is currently affecting the height, update the original height to account for user resize
+  if (el._bannerAdjusted && isMobileDevice()) {
+    const bannerHeight = getBannerHeight();
+    if (bannerHeight > 0) {
+      el._originalHeight = rect.height + bannerHeight;
+    }
+  }
+  
   localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
     left: rect.left,
     top: rect.top,
@@ -3207,6 +3338,9 @@ if (container) {
     observeSpotifyPlayPause(popup);
     observeSpotifyShuffle(popup);
     observeSpotifyRepeat(popup);
+    
+    // Setup mobile banner detection and adjustment
+    setupMobileBannerObserver(popup);
 
     const info = getCurrentTrackInfo();
     if (info) {
