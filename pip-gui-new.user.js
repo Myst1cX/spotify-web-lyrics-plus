@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Stable
+// @name         Spotify Lyrics+ New
 // @namespace    http://tampermonkey.net/
-// @version      8.8
+// @version      8.9
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -9,8 +9,8 @@
 // @connect      genius.com
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-new.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-new.user.js
 // ==/UserScript==
 
 (function () {
