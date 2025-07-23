@@ -1960,32 +1960,23 @@ function observeSpotifyPlayPause(popup) {
 }
 
   function adjustPopupForMobileBanner(popup) {
-    if (!isMobileDevice() || !popup) return;
-    
-    const bannerHeight = getBannerHeight();
-    const currentHeight = parseInt(popup.style.height) || popup.offsetHeight;
-    
-    if (bannerHeight > 0) {
-      // Store original height if not already stored (use current height if no banner was previously detected)
-      if (!popup._originalHeight) {
-        popup._originalHeight = currentHeight;
-      }
-      
-      // Adjust height by subtracting banner height
-      const newHeight = popup._originalHeight - bannerHeight;
-      if (newHeight > 240) { // Ensure minimum height
-        popup.style.height = newHeight + 'px';
-        popup._bannerAdjusted = true;
-      }
-    } else {
-      // Restore original height if banner is gone and we had adjusted it
-      if (popup._originalHeight && popup._bannerAdjusted) {
-        popup.style.height = popup._originalHeight + 'px';
-        popup._bannerAdjusted = false;
-      }
+  if (!isMobileDevice() || !popup) return;
+  const bannerHeight = getBannerHeight();
+  // Always use _originalHeight as base
+  let baseHeight = popup._originalHeight || popup.offsetHeight;
+  if (bannerHeight > 0) {
+    const newHeight = Math.max(240, baseHeight - bannerHeight);
+    popup.style.height = newHeight + 'px';
+    popup._bannerAdjusted = true;
+  } else {
+    // Restore original height if banner is gone and we had adjusted it
+    if (popup._bannerAdjusted) {
+      popup.style.height = baseHeight + 'px';
+      popup._bannerAdjusted = false;
     }
   }
-
+}
+  
   function setupMobileBannerObserver(popup) {
     if (!isMobileDevice() || !popup) return;
     
@@ -2068,12 +2059,17 @@ function getSpotifyLyricsContainerRect() {
 
 // Usage:
 if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
+  // Clamp to viewport
+  let left = Math.max(0, Math.min(pos.left, window.innerWidth - 50));
+  let top = Math.max(0, Math.min(pos.top, window.innerHeight - 50));
+  let width = Math.max(200, Math.min(pos.width, window.innerWidth - 10));
+  let height = Math.max(240, Math.min(pos.height, window.innerHeight - 10));
   Object.assign(popup.style, {
     position: "fixed",
-    left: pos.left + "px",
-    top: pos.top + "px",
-    width: pos.width + "px",
-    height: pos.height + "px",
+    left: left + "px",
+    top: top + "px",
+    width: width + "px",
+    height: height + "px",
     minWidth: "370px",
     minHeight: "240px",
     backgroundColor: "#121212",
@@ -2090,6 +2086,8 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
     right: "auto",
     bottom: "auto"
   });
+  // Set the "original" height for later banner adjustment
+  popup._originalHeight = height;
 } else {
   // fallback to container or default
   let rect = getSpotifyLyricsContainerRect();
@@ -3230,22 +3228,32 @@ if (container) {
   document.body.appendChild(popup);
 }
 
-   function savePopupState(el) {
+    function savePopupState(el) {
   const rect = el.getBoundingClientRect();
-  // Save original height, not reduced height
-  let heightToSave = rect.height;
-  if (el._bannerAdjusted && isMobileDevice()) {
-    const bannerHeight = getBannerHeight();
-    if (bannerHeight > 0) {
-      heightToSave = rect.height + bannerHeight;
+  // Always save "base" height (before banner adjustment)
+  let heightToSave;
+  if (el._originalHeight) {
+    heightToSave = el._originalHeight;
+  } else {
+    heightToSave = rect.height;
+    // If currently reduced by banner, add back the banner height
+    if (el._bannerAdjusted && isMobileDevice()) {
+      const bannerHeight = getBannerHeight();
+      if (bannerHeight > 0) heightToSave += bannerHeight;
     }
   }
+  // Clamp height to viewport (min 240, max window.innerHeight-10)
+  heightToSave = Math.max(240, Math.min(heightToSave, window.innerHeight - 10));
+  // Clamp position
+  let left = Math.max(0, Math.min(rect.left, window.innerWidth - 50));
+  let top = Math.max(0, Math.min(rect.top, window.innerHeight - 50));
+  // Clamp width
+  let width = Math.max(200, Math.min(rect.width, window.innerWidth - 10));
   localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-    left: rect.left,
-    top: rect.top,
-    width: rect.width,
-    height: heightToSave
+    left, top, width, height: heightToSave
   }));
+  // Also save to popup object
+  el._originalHeight = heightToSave;
 }
 
     (function makeDraggable(el, handle) {
