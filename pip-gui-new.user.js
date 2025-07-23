@@ -1945,13 +1945,19 @@ function observeSpotifyPlayPause(popup) {
     return null;
   }
 
-  function getBannerHeight() {
-    const banner = detectPlayingOnBanner();
-    if (!banner) return 0;
-    
-    const rect = banner.getBoundingClientRect();
-    return rect.height;
+ function getBannerHeight() {
+  // Look for Spotify's banner container by more specific class or structure
+  const banner = document.querySelector('div.gQoa8JTSpjSmYyABcag2');
+  if (banner) {
+    return banner.getBoundingClientRect().height;
   }
+  // Fallback to your old logic if the selector doesn't match
+  const detected = detectPlayingOnBanner();
+  if (detected) {
+    return detected.getBoundingClientRect().height;
+  }
+  return 0;
+}
 
   function adjustPopupForMobileBanner(popup) {
     if (!isMobileDevice() || !popup) return;
