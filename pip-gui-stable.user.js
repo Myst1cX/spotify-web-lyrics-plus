@@ -1825,6 +1825,122 @@ const Providers = {
   getCurrent() { return this.map[this.current]; },
   setCurrent(name) { if (this.map[name]) this.current = name; }
 };
+
+  // ------------------------
+  // Mobile Banner Detection and Adjustment
+  // ------------------------
+
+  function isMobileDevice() {
+    return window.innerWidth <= 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  }
+
+  function detectPlayingOnBanner() {
+    // Look for the "Playing on Web Player" banner by text content or aria-live attribute
+    const bannerSelectors = [
+      '[aria-live="polite"]',
+      '[aria-live="assertive"]',
+      '[data-testid*="connect"]',
+      '[data-testid*="banner"]'
+    ];
+    
+    for (const selector of bannerSelectors) {
+      const elements = document.querySelectorAll(selector);
+      for (const element of elements) {
+        const text = element.textContent.toLowerCase();
+        if (text.includes('playing on') || text.includes('web player')) {
+          return element;
+        }
+      }
+    }
+    
+    // Fallback: search for any element containing "Playing on" text
+    const allElements = document.querySelectorAll('*');
+    for (const element of allElements) {
+      if (element.children.length === 0) { // Only check leaf nodes to avoid duplicates
+        const text = element.textContent.toLowerCase();
+        if (text.includes('playing on') && text.includes('web player')) {
+          // Return the closest parent that likely represents the banner container
+          return element.closest('[class*="banner"]') || element.closest('[style*="bottom"]') || element;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+ function getBannerHeight() {
+  // Look for Spotify's banner container by more specific class or structure
+  const banner = document.querySelector('div.gQoa8JTSpjSmYyABcag2'); //div of "Playing on Web Browser" container
+  if (banner) {
+    return banner.getBoundingClientRect().height;
+  }
+  // Fallback to your old logic if the selector doesn't match
+  const detected = detectPlayingOnBanner();
+  if (detected) {
+    return detected.getBoundingClientRect().height;
+  }
+  return 0;
+}
+
+  function adjustPopupForMobileBanner(popup) {
+  if (!isMobileDevice() || !popup) return;
+  const bannerHeight = getBannerHeight();
+  // Always use _originalHeight as base
+  let baseHeight = popup._originalHeight || popup.offsetHeight;
+  if (bannerHeight > 0) {
+    const newHeight = Math.max(240, baseHeight - bannerHeight);
+    popup.style.height = newHeight + 'px';
+    popup._bannerAdjusted = true;
+  } else {
+    // Restore original height if banner is gone and we had adjusted it
+    if (popup._bannerAdjusted) {
+      popup.style.height = baseHeight + 'px';
+      popup._bannerAdjusted = false;
+    }
+  }
+}
+  
+  function setupMobileBannerObserver(popup) {
+    if (!isMobileDevice() || !popup) return;
+    
+    // Initial adjustment
+    adjustPopupForMobileBanner(popup);
+    
+    // Set up MutationObserver to watch for banner changes
+    const observer = new MutationObserver(() => {
+      adjustPopupForMobileBanner(popup);
+    });
+    
+    // Observe changes to the document body and main container
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
+    
+    // Store observer reference for cleanup
+    popup._bannerObserver = observer;
+    
+    // Also poll every 2 seconds as a fallback
+    const pollInterval = setInterval(() => {
+      adjustPopupForMobileBanner(popup);
+    }, 2000);
+    
+    popup._bannerPollInterval = pollInterval;
+  }
+
+  function cleanupMobileBannerObserver(popup) {
+    if (popup && popup._bannerObserver) {
+      popup._bannerObserver.disconnect();
+      popup._bannerObserver = null;
+    }
+    if (popup && popup._bannerPollInterval) {
+      clearInterval(popup._bannerPollInterval);
+      popup._bannerPollInterval = null;
+    }
+  }
+
   // ------------------------
   // UI and Popup Functions (UNCHANGED, see previous version)
   // ------------------------
@@ -1843,6 +1959,10 @@ const Providers = {
       if (existing._playPauseObserver) existing._playPauseObserver.disconnect();
       existing._playPauseObserver = null;
       existing._playPauseBtn = null;
+      
+      // Cleanup mobile banner observer
+      cleanupMobileBannerObserver(existing);
+      
       existing.remove();
     }
   }
@@ -3104,12 +3224,30 @@ if (container) {
 
     function savePopupState(el) {
   const rect = el.getBoundingClientRect();
+  // Always save "base" height (before banner adjustment)
+  let heightToSave;
+  if (el._originalHeight) {
+    heightToSave = el._originalHeight;
+  } else {
+    heightToSave = rect.height;
+    // If currently reduced by banner, add back the banner height
+    if (el._bannerAdjusted && isMobileDevice()) {
+      const bannerHeight = getBannerHeight();
+      if (bannerHeight > 0) heightToSave += bannerHeight;
+    }
+  }
+  // Clamp height to viewport (min 240, max window.innerHeight-10)
+  heightToSave = Math.max(240, Math.min(heightToSave, window.innerHeight - 10));
+  // Clamp position
+  let left = Math.max(0, Math.min(rect.left, window.innerWidth - 50));
+  let top = Math.max(0, Math.min(rect.top, window.innerHeight - 50));
+  // Clamp width
+  let width = Math.max(200, Math.min(rect.width, window.innerWidth - 10));
   localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-    left: rect.left,
-    top: rect.top,
-    width: rect.width,
-    height: rect.height
+    left, top, width, height: heightToSave
   }));
+  // Also save to popup object
+  el._originalHeight = heightToSave;
 }
 
     (function makeDraggable(el, handle) {
@@ -3207,6 +3345,9 @@ if (container) {
     observeSpotifyPlayPause(popup);
     observeSpotifyShuffle(popup);
     observeSpotifyRepeat(popup);
+    
+    // Setup mobile banner detection and adjustment
+    setupMobileBannerObserver(popup);
 
     const info = getCurrentTrackInfo();
     if (info) {
