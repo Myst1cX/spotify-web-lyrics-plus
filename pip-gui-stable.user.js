@@ -255,33 +255,67 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   // ------------------------
 
  function getCurrentTrackId() {
+  // Primary selector (works when NPV/context is available)
   const contextLink = document.querySelector('a[data-testid="context-link"][data-context-item-type="track"][href*="uri=spotify%3Atrack%3A"]');
   if (contextLink) {
     const href = contextLink.getAttribute('href');
     const match = decodeURIComponent(href).match(/spotify:track:([a-zA-Z0-9]{22})/);
     if (match) return match[1];
   }
+  
+  // Fallback: try to get from footer/playbar area
+  const footerLink = document.querySelector('[data-testid="now-playing-bar"] a[href*="track/"], footer a[href*="track/"]');
+  if (footerLink) {
+    const href = footerLink.getAttribute('href');
+    const match = href.match(/track\/([a-zA-Z0-9]{22})/);
+    if (match) return match[1];
+  }
+  
   return null;
 }
 
  function getCurrentTrackInfo() {
+  // Primary selectors (work when NPV/context is available)
   const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
   const artistEl = document.querySelector('[data-testid="context-item-info-subtitles"]');
   const durationEl = document.querySelector('[data-testid="playback-duration"]');
   const trackId = getCurrentTrackId();
-  if (!titleEl || !artistEl) return null;
-  const title = titleEl.textContent.trim();
-  const artist = artistEl.textContent.trim();
-  const duration = durationEl ? timeStringToMs(durationEl.textContent) : 0;
-  return {
-    id: `${title}-${artist}`,
-    title,
-    artist,
-    album: "",
-    duration,
-    uri: "",
-    trackId
-  };
+  
+  if (titleEl && artistEl) {
+    const title = titleEl.textContent.trim();
+    const artist = artistEl.textContent.trim();
+    const duration = durationEl ? timeStringToMs(durationEl.textContent) : 0;
+    return {
+      id: `${title}-${artist}`,
+      title,
+      artist,
+      album: "",
+      duration,
+      uri: "",
+      trackId
+    };
+  }
+  
+  // Fallback: try to get from footer/playbar area when NPV is closed
+  const footerTitleEl = document.querySelector('[data-testid="now-playing-bar"] [data-testid="context-item-link"] div:first-child, footer [data-testid="context-item-link"] div:first-child');
+  const footerArtistEl = document.querySelector('[data-testid="now-playing-bar"] [data-testid="context-item-link"] div:last-child, footer [data-testid="context-item-link"] div:last-child');
+  
+  if (footerTitleEl && footerArtistEl) {
+    const title = footerTitleEl.textContent.trim();
+    const artist = footerArtistEl.textContent.trim();
+    const duration = durationEl ? timeStringToMs(durationEl.textContent) : 0;
+    return {
+      id: `${title}-${artist}`,
+      title,
+      artist,
+      album: "",
+      duration,
+      uri: "",
+      trackId
+    };
+  }
+  
+  return null;
 }
 
   function timeStringToMs(str) {
