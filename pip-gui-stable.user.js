@@ -254,34 +254,90 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   // Utility Functions
   // ------------------------
 
- function getCurrentTrackId() {
-  const contextLink = document.querySelector('a[data-testid="context-link"][data-context-item-type="track"][href*="uri=spotify%3Atrack%3A"]');
-  if (contextLink) {
-    const href = contextLink.getAttribute('href');
-    const match = decodeURIComponent(href).match(/spotify:track:([a-zA-Z0-9]{22})/);
-    if (match) return match[1];
+ async function getCurrentTrackId() {
+  const token = localStorage.getItem("lyricsPlusSpotifyToken");
+  if (!token) {
+    console.warn("[SpotifyLyrics+] No Spotify token found for API call");
+    return null;
   }
-  return null;
+
+  try {
+    const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.warn("[SpotifyLyrics+] Spotify token expired or invalid");
+        return null;
+      }
+      throw new Error(`API request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data && data.item && data.item.id) {
+      return data.item.id;
+    }
+    return null;
+  } catch (error) {
+    console.error("[SpotifyLyrics+] Error getting current track ID:", error);
+    return null;
+  }
 }
 
- function getCurrentTrackInfo() {
-  const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
-  const artistEl = document.querySelector('[data-testid="context-item-info-subtitles"]');
-  const durationEl = document.querySelector('[data-testid="playback-duration"]');
-  const trackId = getCurrentTrackId();
-  if (!titleEl || !artistEl) return null;
-  const title = titleEl.textContent.trim();
-  const artist = artistEl.textContent.trim();
-  const duration = durationEl ? timeStringToMs(durationEl.textContent) : 0;
-  return {
-    id: `${title}-${artist}`,
-    title,
-    artist,
-    album: "",
-    duration,
-    uri: "",
-    trackId
-  };
+ async function getCurrentTrackInfo() {
+  const token = localStorage.getItem("lyricsPlusSpotifyToken");
+  if (!token) {
+    console.warn("[SpotifyLyrics+] No Spotify token found for API call");
+    return null;
+  }
+
+  try {
+    const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.warn("[SpotifyLyrics+] Spotify token expired or invalid");
+        return null;
+      }
+      throw new Error(`API request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data && data.item) {
+      const item = data.item;
+      const title = item.name || "";
+      const artist = item.artists && item.artists.length > 0 ? item.artists[0].name : "";
+      const album = item.album ? item.album.name : "";
+      const duration = item.duration_ms || 0;
+      const trackId = item.id;
+      const uri = item.uri || "";
+
+      return {
+        id: `${title}-${artist}`,
+        title,
+        artist,
+        album,
+        duration,
+        uri,
+        trackId
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("[SpotifyLyrics+] Error getting current track info:", error);
+    return null;
+  }
 }
 
   function timeStringToMs(str) {
@@ -1933,7 +1989,7 @@ function observeSpotifyPlayPause(popup) {
   popup._playPauseObserver = observer;
 }
 
-  function createPopup() {
+  async function createPopup() {
     removePopup();
 
     // Load saved state from localStorage
@@ -2400,18 +2456,30 @@ downloadBtn.onclick = (e) => {
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
     if (!lyricsContainer) return;
     const lines = Array.from(lyricsContainer.querySelectorAll('p')).map(p => ({ text: p.textContent }));
-    if (lines.length) downloadUnsyncedLyrics(lines, getCurrentTrackInfo(), Providers.current);
+    if (lines.length) {
+      getCurrentTrackInfo().then(info => {
+        if (info) downloadUnsyncedLyrics(lines, info, Providers.current);
+      });
+    }
   }
 };
 
 // Set up dropdown options
 syncOption.onclick = (e) => {
   downloadDropdown.style.display = "none";
-  if (currentSyncedLyrics) downloadSyncedLyrics(currentSyncedLyrics, getCurrentTrackInfo(), Providers.current);
+  if (currentSyncedLyrics) {
+    getCurrentTrackInfo().then(info => {
+      if (info) downloadSyncedLyrics(currentSyncedLyrics, info, Providers.current);
+    });
+  }
 };
 unsyncOption.onclick = (e) => {
   downloadDropdown.style.display = "none";
-  if (currentUnsyncedLyrics) downloadUnsyncedLyrics(currentUnsyncedLyrics, getCurrentTrackInfo(), Providers.current);
+  if (currentUnsyncedLyrics) {
+    getCurrentTrackInfo().then(info => {
+      if (info) downloadUnsyncedLyrics(currentUnsyncedLyrics, info, Providers.current);
+    });
+  }
 };
 
 // --- Font Size Selector ---
@@ -2510,7 +2578,7 @@ Providers.list.forEach(name => {
     providerClickTimer = setTimeout(async () => {
       Providers.setCurrent(name);
       updateTabs(tabs);
-      await updateLyricsContent(popup, getCurrentTrackInfo());
+      await updateLyricsContent(popup, await getCurrentTrackInfo());
       providerClickTimer = null;
     }, 250);
   };
@@ -3242,12 +3310,12 @@ if (container) {
     observeSpotifyShuffle(popup);
     observeSpotifyRepeat(popup);
 
-    const info = getCurrentTrackInfo();
+    const info = await getCurrentTrackInfo();
     if (info) {
   currentTrackId = info.id;
   const lyricsContainer = popup.querySelector("#lyrics-plus-content");
   if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-  autodetectProviderAndLoad(popup, info);
+  await autodetectProviderAndLoad(popup, info);
 }
     startPollingForTrackChange(popup);
   }
@@ -3370,14 +3438,14 @@ currentLyricsContainer = lyricsContainer;
 
   function startPollingForTrackChange(popup) {
     if (pollingInterval) clearInterval(pollingInterval);
-    pollingInterval = setInterval(() => {
-      const info = getCurrentTrackInfo();
+    pollingInterval = setInterval(async () => {
+      const info = await getCurrentTrackInfo();
       if (!info) return;
       if (info.id !== currentTrackId) {
         currentTrackId = info.id;
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-        autodetectProviderAndLoad(popup, info);
+        await autodetectProviderAndLoad(popup, info);
       }
 
       // Update all button states
@@ -3437,14 +3505,14 @@ currentLyricsContainer = lyricsContainer;
       marginLeft: "8px",
       userSelect: "none",
     });
-    btn.onclick = () => {
+    btn.onclick = async () => {
       let popup = document.getElementById("lyrics-plus-popup");
       if (popup) {
         removePopup();
         stopPollingForTrackChange();
         return;
       }
-      createPopup();
+      await createPopup();
     };
     controls.insertBefore(btn, targetBtn);
   };
