@@ -48,7 +48,7 @@
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
 
-     // --- NowPlayingView logic: Allow only user-initiated opens ---
+  // --- NowPlayingView logic: Allow only user-initiated opens ---
   let userOpenedNPV = false;
 
 const NPV_BTN_SELECTOR = 'button[data-testid="control-button-npv"]';
