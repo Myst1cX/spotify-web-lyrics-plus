@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      8.8
+// @version      8.9
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -31,6 +31,39 @@
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
 
+   // --- NowPlayingView logic: Allow only user-initiated opens ---
+  let userOpenedNPV = false;
+
+const NPV_BTN_SELECTOR = 'button[data-testid="control-button-npv"]';
+const NPV_VIEW_SELECTOR = '.NowPlayingView, aside[data-testid="now-playing-bar"]';
+const HIDE_BTN_SELECTOR = 'button[aria-label="Hide Now Playing view"]';
+
+document.addEventListener('click', function(e) {
+    const openBtn = e.target.closest(NPV_BTN_SELECTOR);
+    const closeBtn = e.target.closest(HIDE_BTN_SELECTOR);
+    if (openBtn && e.isTrusted) userOpenedNPV = true;
+    if (closeBtn && e.isTrusted) userOpenedNPV = false;
+    if (openBtn && !e.isTrusted) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+    }
+}, true);
+
+function closeNPV() {
+    const hideBtn = document.querySelector(HIDE_BTN_SELECTOR);
+    if (hideBtn && hideBtn.offsetParent !== null) hideBtn.click();
+}
+
+const npvObserver = new MutationObserver(() => {
+    const npv = document.querySelector(NPV_VIEW_SELECTOR);
+    if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
+});
+npvObserver.observe(document.body, { childList: true, subtree: true });
+
+setTimeout(() => {
+    const npv = document.querySelector(NPV_VIEW_SELECTOR);
+    if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
+}, 1000);
 
   // Global flag (window.lyricsPlusPopupIsResizing) is used to prevent lyric highlighting updates from interfering with popup resizing
 
@@ -687,7 +720,7 @@ function labelMeansPlay(label) {
       updatePlayPauseButton(btnPlayPause.button, btnPlayPause.iconWrapper);
     }
   }
-  
+
   // ------------------------
   // Providers and Fetchers
   // ------------------------
@@ -1153,7 +1186,7 @@ return data;
   getUnsynced: musixmatchGetUnsynced,
   getSynced: musixmatchGetSynced,
 };
-  
+
   // --- Genius ---
 async function fetchGeniusLyrics(info) {
 
