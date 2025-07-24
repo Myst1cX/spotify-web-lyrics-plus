@@ -254,21 +254,51 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   // Utility Functions
   // ------------------------
 
- function getCurrentTrackId() {
+ async function getCurrentTrackId() {
+  // First try DOM parsing as fallback
   const contextLink = document.querySelector('a[data-testid="context-link"][data-context-item-type="track"][href*="uri=spotify%3Atrack%3A"]');
   if (contextLink) {
     const href = contextLink.getAttribute('href');
     const match = decodeURIComponent(href).match(/spotify:track:([a-zA-Z0-9]{22})/);
     if (match) return match[1];
   }
+
+  // Try to get from Spotify Web API if available
+  try {
+    // Look for Spotify's internal state or API calls
+    const spotifyApi = window.Spotify?.Player || window.webpackChunkopen_spotify || window.__spotify;
+    if (spotifyApi) {
+      // Try to access current playback state through Spotify's internal APIs
+      const playbackState = await new Promise((resolve) => {
+        // Try multiple approaches to get current track
+        const playerBar = document.querySelector('[data-testid="now-playing-bar"]');
+        if (playerBar) {
+          const trackLink = playerBar.querySelector('a[href*="/track/"]');
+          if (trackLink) {
+            const trackHref = trackLink.getAttribute('href');
+            const trackMatch = trackHref.match(/\/track\/([a-zA-Z0-9]{22})/);
+            if (trackMatch) {
+              resolve(trackMatch[1]);
+              return;
+            }
+          }
+        }
+        resolve(null);
+      });
+      if (playbackState) return playbackState;
+    }
+  } catch (error) {
+    console.warn('Failed to get track ID from Spotify API:', error);
+  }
+
   return null;
 }
 
- function getCurrentTrackInfo() {
+ async function getCurrentTrackInfo() {
   const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
   const artistEl = document.querySelector('[data-testid="context-item-info-subtitles"]');
   const durationEl = document.querySelector('[data-testid="playback-duration"]');
-  const trackId = getCurrentTrackId();
+  const trackId = await getCurrentTrackId();
   if (!titleEl || !artistEl) return null;
   const title = titleEl.textContent.trim();
   const artist = artistEl.textContent.trim();
@@ -1933,7 +1963,7 @@ function observeSpotifyPlayPause(popup) {
   popup._playPauseObserver = observer;
 }
 
-  function createPopup() {
+  async function createPopup() {
     removePopup();
 
     // Load saved state from localStorage
@@ -2373,7 +2403,7 @@ downloadBtnWrapper.appendChild(downloadBtn);
 downloadBtnWrapper.appendChild(downloadDropdown);
 
 // Logic for showing/hiding the dropdown and downloading
-downloadBtn.onclick = (e) => {
+downloadBtn.onclick = async (e) => {
   // Always show dropdown if at least one download option is available
   let hasSynced = !!currentSyncedLyrics;
   let hasUnsynced = !!currentUnsyncedLyrics;
@@ -2400,18 +2430,18 @@ downloadBtn.onclick = (e) => {
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
     if (!lyricsContainer) return;
     const lines = Array.from(lyricsContainer.querySelectorAll('p')).map(p => ({ text: p.textContent }));
-    if (lines.length) downloadUnsyncedLyrics(lines, getCurrentTrackInfo(), Providers.current);
+    if (lines.length) downloadUnsyncedLyrics(lines, await getCurrentTrackInfo(), Providers.current);
   }
 };
 
 // Set up dropdown options
-syncOption.onclick = (e) => {
+syncOption.onclick = async (e) => {
   downloadDropdown.style.display = "none";
-  if (currentSyncedLyrics) downloadSyncedLyrics(currentSyncedLyrics, getCurrentTrackInfo(), Providers.current);
+  if (currentSyncedLyrics) downloadSyncedLyrics(currentSyncedLyrics, await getCurrentTrackInfo(), Providers.current);
 };
-unsyncOption.onclick = (e) => {
+unsyncOption.onclick = async (e) => {
   downloadDropdown.style.display = "none";
-  if (currentUnsyncedLyrics) downloadUnsyncedLyrics(currentUnsyncedLyrics, getCurrentTrackInfo(), Providers.current);
+  if (currentUnsyncedLyrics) downloadUnsyncedLyrics(currentUnsyncedLyrics, await getCurrentTrackInfo(), Providers.current);
 };
 
 // --- Font Size Selector ---
@@ -2510,7 +2540,7 @@ Providers.list.forEach(name => {
     providerClickTimer = setTimeout(async () => {
       Providers.setCurrent(name);
       updateTabs(tabs);
-      await updateLyricsContent(popup, getCurrentTrackInfo());
+      await updateLyricsContent(popup, await getCurrentTrackInfo());
       providerClickTimer = null;
     }, 250);
   };
@@ -3242,12 +3272,12 @@ if (container) {
     observeSpotifyShuffle(popup);
     observeSpotifyRepeat(popup);
 
-    const info = getCurrentTrackInfo();
+    const info = await getCurrentTrackInfo();
     if (info) {
   currentTrackId = info.id;
   const lyricsContainer = popup.querySelector("#lyrics-plus-content");
   if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-  autodetectProviderAndLoad(popup, info);
+  await autodetectProviderAndLoad(popup, info);
 }
     startPollingForTrackChange(popup);
   }
@@ -3370,14 +3400,14 @@ currentLyricsContainer = lyricsContainer;
 
   function startPollingForTrackChange(popup) {
     if (pollingInterval) clearInterval(pollingInterval);
-    pollingInterval = setInterval(() => {
-      const info = getCurrentTrackInfo();
+    pollingInterval = setInterval(async () => {
+      const info = await getCurrentTrackInfo();
       if (!info) return;
       if (info.id !== currentTrackId) {
         currentTrackId = info.id;
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-        autodetectProviderAndLoad(popup, info);
+        await autodetectProviderAndLoad(popup, info);
       }
 
       // Update all button states
@@ -3437,14 +3467,14 @@ currentLyricsContainer = lyricsContainer;
       marginLeft: "8px",
       userSelect: "none",
     });
-    btn.onclick = () => {
+    btn.onclick = async () => {
       let popup = document.getElementById("lyrics-plus-popup");
       if (popup) {
         removePopup();
         stopPollingForTrackChange();
         return;
       }
-      createPopup();
+      await createPopup();
     };
     controls.insertBefore(btn, targetBtn);
   };
