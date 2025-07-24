@@ -263,10 +263,18 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
     if (match) return match[1];
   }
   
-  // Fallback: try to get from footer/playbar area
+  // Fallback 1: try to get from footer/playbar area
   const footerLink = document.querySelector('[data-testid="now-playing-bar"] a[href*="track/"], footer a[href*="track/"]');
   if (footerLink) {
     const href = footerLink.getAttribute('href');
+    const match = href.match(/track\/([a-zA-Z0-9]{22})/);
+    if (match) return match[1];
+  }
+  
+  // Fallback 2: try alternative footer link selector
+  const altFooterLink = document.querySelector('footer [data-testid="context-item-link"], [data-testid="now-playing-bar"] [data-testid="context-item-link"]');
+  if (altFooterLink && altFooterLink.href) {
+    const href = altFooterLink.href;
     const match = href.match(/track\/([a-zA-Z0-9]{22})/);
     if (match) return match[1];
   }
@@ -296,13 +304,32 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
     };
   }
   
-  // Fallback: try to get from footer/playbar area when NPV is closed
+  // Fallback 1: try to get from footer/playbar area when NPV is closed
   const footerTitleEl = document.querySelector('[data-testid="now-playing-bar"] [data-testid="context-item-link"] div:first-child, footer [data-testid="context-item-link"] div:first-child');
   const footerArtistEl = document.querySelector('[data-testid="now-playing-bar"] [data-testid="context-item-link"] div:last-child, footer [data-testid="context-item-link"] div:last-child');
   
-  if (footerTitleEl && footerArtistEl) {
+  if (footerTitleEl && footerArtistEl && footerTitleEl !== footerArtistEl) {
     const title = footerTitleEl.textContent.trim();
     const artist = footerArtistEl.textContent.trim();
+    const duration = durationEl ? timeStringToMs(durationEl.textContent) : 0;
+    return {
+      id: `${title}-${artist}`,
+      title,
+      artist,
+      album: "",
+      duration,
+      uri: "",
+      trackId
+    };
+  }
+  
+  // Fallback 2: try alternative playbar selectors
+  const playbarTitle = document.querySelector('footer [data-testid="context-item-info-title"], [data-testid="now-playing-bar"] [data-testid="context-item-info-title"]');
+  const playbarArtist = document.querySelector('footer [data-testid="context-item-info-subtitles"], [data-testid="now-playing-bar"] [data-testid="context-item-info-subtitles"]');
+  
+  if (playbarTitle && playbarArtist) {
+    const title = playbarTitle.textContent.trim();
+    const artist = playbarArtist.textContent.trim();
     const duration = durationEl ? timeStringToMs(durationEl.textContent) : 0;
     return {
       id: `${title}-${artist}`,
