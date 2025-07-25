@@ -8,6 +8,8 @@
 // @grant        GM_xmlhttpRequest
 // @connect      genius.com
 // @connect      gew1-spclient.spotify.com
+// @connect      spclient.wg.spotify.com
+// @connect      api.spotify.com
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
@@ -37,12 +39,102 @@
   // ------------------------
 
   let tokenRefreshTimer = null;
+  let spotifyTokenInterceptor = null;
+
+  // Hook into fetch to intercept Spotify requests and extract tokens
+  function setupTokenInterceptor() {
+    if (spotifyTokenInterceptor) return; // Already set up
+    
+    console.log('[SpotifyLyrics+] Setting up token interceptor...');
+    
+    // Store original fetch
+    const originalFetch = window.fetch;
+    
+    // Override fetch to intercept Spotify requests
+    window.fetch = function(...args) {
+      const [url, options] = args;
+      
+      // Check if this is a request to gabo-receiver-service or other Spotify endpoints
+      if (typeof url === 'string' && 
+          (url.includes('gew1-spclient.spotify.com') || 
+           url.includes('spclient.wg.spotify.com') ||
+           url.includes('api.spotify.com'))) {
+        
+        // Check if the request has an Authorization header
+        if (options && options.headers) {
+          const headers = options.headers;
+          let authHeader = null;
+          
+          // Handle different header formats
+          if (headers instanceof Headers) {
+            authHeader = headers.get('Authorization') || headers.get('authorization');
+          } else if (typeof headers === 'object') {
+            authHeader = headers['Authorization'] || headers['authorization'];
+          }
+          
+          // Extract and store the token
+          if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.replace('Bearer ', '').trim();
+            if (token.length > 10) { // Basic validation
+              console.log('[SpotifyLyrics+] Token intercepted from fetch request to:', url);
+              localStorage.setItem('lyricsPlusSpotifyToken', token);
+            }
+          }
+        }
+      }
+      
+      // Call original fetch
+      return originalFetch.apply(this, args);
+    };
+    
+    // Also override XMLHttpRequest
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    const originalXHRSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+    
+    XMLHttpRequest.prototype.open = function(method, url, ...args) {
+      this._url = url;
+      this._headers = {};
+      return originalXHROpen.apply(this, [method, url, ...args]);
+    };
+    
+    XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
+      this._headers[name] = value;
+      
+      // Check for Authorization header on Spotify requests
+      if (typeof this._url === 'string' && 
+          (this._url.includes('gew1-spclient.spotify.com') || 
+           this._url.includes('spclient.wg.spotify.com') ||
+           this._url.includes('api.spotify.com')) &&
+          name.toLowerCase() === 'authorization' && 
+          value.startsWith('Bearer ')) {
+        
+        const token = value.replace('Bearer ', '').trim();
+        if (token.length > 10) {
+          console.log('[SpotifyLyrics+] Token intercepted from XHR request to:', this._url);
+          localStorage.setItem('lyricsPlusSpotifyToken', token);
+        }
+      }
+      
+      return originalXHRSetRequestHeader.apply(this, [name, value]);
+    };
+    
+    spotifyTokenInterceptor = true;
+  }
 
   // Function to automatically extract Spotify token from network requests
   async function extractSpotifyToken() {
     try {
       console.log('[SpotifyLyrics+] Attempting to extract Spotify token...');
       
+      // First, check if Spotify has stored a token in localStorage/sessionStorage
+      const existingToken = checkExistingSpotifyTokens();
+      if (existingToken) {
+        localStorage.setItem('lyricsPlusSpotifyToken', existingToken);
+        console.log('[SpotifyLyrics+] Found existing Spotify token in storage');
+        return existingToken;
+      }
+      
+      // Try to make a request that might trigger token usage
       const response = await new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
           method: 'GET',
@@ -57,20 +149,75 @@
         });
       });
 
-      // Extract token from Authorization header
-      const authHeader = response.responseHeaders.match(/authorization:\s*Bearer\s+([^\r\n]+)/i);
-      if (authHeader && authHeader[1]) {
-        const token = authHeader[1].trim();
-        localStorage.setItem('lyricsPlusSpotifyToken', token);
-        console.log('[SpotifyLyrics+] Successfully extracted and saved Spotify token');
+      // Check if we got any useful headers
+      console.log('[SpotifyLyrics+] Response status:', response.status);
+      
+      // Also try to trigger Spotify's own requests by interacting with the page
+      // This might cause Spotify to make authenticated requests that we can intercept
+      await triggerSpotifyTokenRequests();
+      
+      // Check if we now have a token from interception
+      const token = localStorage.getItem('lyricsPlusSpotifyToken');
+      if (token && token.length > 10) {
+        console.log('[SpotifyLyrics+] Token found in localStorage');
         return token;
-      } else {
-        console.warn('[SpotifyLyrics+] No Authorization header found in response');
-        return null;
       }
+      
+      console.warn('[SpotifyLyrics+] No token found through extraction');
+      return null;
     } catch (error) {
       console.error('[SpotifyLyrics+] Failed to extract Spotify token:', error);
       return null;
+    }
+  }
+
+  // Check for existing Spotify tokens in browser storage
+  function checkExistingSpotifyTokens() {
+    try {
+      // Check localStorage for Spotify-related tokens
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.includes('spotify') && key.includes('token')) {
+          const value = localStorage.getItem(key);
+          if (value && typeof value === 'string' && value.length > 20) {
+            console.log('[SpotifyLyrics+] Found potential token in localStorage key:', key);
+            return value;
+          }
+        }
+      }
+      
+      // Check sessionStorage too
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.includes('spotify') && key.includes('token')) {
+          const value = sessionStorage.getItem(key);
+          if (value && typeof value === 'string' && value.length > 20) {
+            console.log('[SpotifyLyrics+] Found potential token in sessionStorage key:', key);
+            return value;
+          }
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.log('[SpotifyLyrics+] Error checking existing tokens:', error);
+      return null;
+    }
+  }
+
+  // Function to trigger Spotify requests that might contain tokens
+  async function triggerSpotifyTokenRequests() {
+    try {
+      // Try to get current track info which might trigger authenticated requests
+      const trackId = getCurrentTrackId();
+      if (trackId) {
+        console.log('[SpotifyLyrics+] Found track ID, this might trigger authenticated requests');
+      }
+      
+      // Wait a bit for any triggered requests to complete
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } catch (error) {
+      console.log('[SpotifyLyrics+] Error triggering requests:', error);
     }
   }
 
@@ -92,11 +239,14 @@
   async function initializeSpotifyToken() {
     console.log('[SpotifyLyrics+] Initializing automatic token extraction...');
     
-    // Extract token immediately
-    await extractSpotifyToken();
+    // Set up the fetch interceptor first
+    setupTokenInterceptor();
     
-    // Set up periodic refresh
-    setupTokenRefresh();
+    // Wait a bit for the page to load and Spotify to make initial requests
+    setTimeout(async () => {
+      await extractSpotifyToken();
+      setupTokenRefresh();
+    }, 3000);
   }
 
 // --- Forcibly hide NowPlayingView and its button in the playback controls menu ---
