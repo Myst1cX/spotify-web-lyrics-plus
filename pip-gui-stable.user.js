@@ -1747,66 +1747,413 @@ function showSpotifyTokenModal() {
   input.focus();
 }
 
-const ProviderSpotify = {
-  async findLyrics(info) {
-    const token = localStorage.getItem("lyricsPlusSpotifyToken");
+// ------------------------
+// Spotify Token Auto-Fetch Functions
+// ------------------------
 
-    if (!token) {
-      console.warn("[SpotifyLyrics+] No Spotify user token found in localStorage.");
-      return { error: "Double click on the Spotify provider to set up your token.\n" + "A fresh token is required every hour/upon page reload for security." };
+/**
+ * Attempts to automatically fetch a Spotify Bearer token using the sp_dc cookie
+ * @returns {Promise<{success: boolean, token?: string, error?: string, statusCode?: number}>}
+ */
+
+// Feature flag for auto-fetch (can be disabled if needed)
+// Users can disable auto-fetch by setting localStorage.setItem('lyricsPlusDisableAutoFetch', 'true')
+const SPOTIFY_AUTO_FETCH_ENABLED = localStorage.getItem('lyricsPlusDisableAutoFetch') !== 'true';
+
+/**
+ * Attempts to extract Bearer token from Spotify's Web Player context
+ * This looks for tokens that might be available in the global scope or localStorage
+ */
+function extractTokenFromPageContext() {
+  console.log("[SpotifyLyrics+] Attempting to extract token from page context...");
+  
+  // Check various possible locations where Spotify might store the token
+  const possibleTokenSources = [
+    // Check localStorage keys that might contain tokens
+    () => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('spotify') || key.includes('token') || key.includes('auth'))) {
+          try {
+            const value = localStorage.getItem(key);
+            if (value && typeof value === 'string') {
+              // Try to parse as JSON
+              try {
+                const parsed = JSON.parse(value);
+                if (parsed.access_token || parsed.accessToken || parsed.token) {
+                  return parsed.access_token || parsed.accessToken || parsed.token;
+                }
+              } catch (e) {
+                // Not JSON, check if it looks like a token directly
+                if (value.length > 100 && !value.includes(' ')) {
+                  return value;
+                }
+              }
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+      return null;
+    },
+    
+    // Check sessionStorage
+    () => {
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && (key.includes('spotify') || key.includes('token') || key.includes('auth'))) {
+          try {
+            const value = sessionStorage.getItem(key);
+            if (value && typeof value === 'string') {
+              try {
+                const parsed = JSON.parse(value);
+                if (parsed.access_token || parsed.accessToken || parsed.token) {
+                  return parsed.access_token || parsed.accessToken || parsed.token;
+                }
+              } catch (e) {
+                if (value.length > 100 && !value.includes(' ')) {
+                  return value;
+                }
+              }
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+      return null;
+    },
+    
+    // Check window object for Spotify-related properties
+    () => {
+      try {
+        if (window.Spotify && window.Spotify.Player) {
+          // Check if there's a token in the Spotify SDK
+          const player = window.Spotify.Player;
+          if (player._token) return player._token;
+          if (player.token) return player.token;
+        }
+        
+        // Check for other Spotify globals
+        if (window.spotifyApi && window.spotifyApi.getAccessToken) {
+          return window.spotifyApi.getAccessToken();
+        }
+        
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
+  ];
+  
+  for (const extractor of possibleTokenSources) {
+    try {
+      const token = extractor();
+      if (token && typeof token === 'string' && token.length > 50) {
+        console.log("[SpotifyLyrics+] Found potential token in page context");
+        return { success: true, token: token };
+      }
+    } catch (e) {
+      continue;
+    }
+  }
+  
+  console.warn("[SpotifyLyrics+] No token found in page context");
+  return { 
+    success: false, 
+    error: "No access token found in page context",
+    statusCode: 404 
+  };
+}
+
+/**
+ * Attempts to automatically fetch a Spotify Bearer token using multiple strategies
+ * @returns {Promise<{success: boolean, token?: string, error?: string, statusCode?: number}>}
+ */
+async function autoFetchSpotifyToken() {
+  if (!SPOTIFY_AUTO_FETCH_ENABLED) {
+    console.log("[SpotifyLyrics+] Auto-fetch is disabled");
+    return { 
+      success: false, 
+      error: "Auto-fetch is disabled. Please use manual token entry.",
+      statusCode: 503
+    };
+  }
+
+  console.log("[SpotifyLyrics+] Attempting to auto-fetch Spotify Bearer token...");
+  
+  try {
+    // Check if sp_dc cookie exists first
+    const spDcCookie = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('sp_dc='));
+    
+    if (!spDcCookie) {
+      console.warn("[SpotifyLyrics+] Auto-fetch failed: sp_dc cookie not found");
+      return { 
+        success: false, 
+        error: "sp_dc cookie not found. Please log into Spotify first, then try manual token entry.",
+        statusCode: 404
+      };
     }
 
+    console.log("[SpotifyLyrics+] Found sp_dc cookie, trying multiple strategies...");
+
+    // Strategy 1: Extract from page context (fastest and most reliable)
+    console.log("[SpotifyLyrics+] Strategy 1: Extracting from page context...");
+    const contextResult = extractTokenFromPageContext();
+    if (contextResult.success) {
+      return contextResult;
+    }
+    console.warn("[SpotifyLyrics+] Strategy 1 failed:", contextResult.error);
+
+    // Strategy 2: Try known Spotify endpoints
+    console.log("[SpotifyLyrics+] Strategy 2: Trying known endpoints...");
+    const endpoints = [
+      'https://open.spotify.com/get_access_token?reason=transport&productType=web_player',
+      'https://open.spotify.com/get_access_token',
+    ];
+
+    for (const endpoint of endpoints) {
+      console.log(`[SpotifyLyrics+] Trying endpoint: ${endpoint}`);
+      
+      try {
+        const response = await fetch(endpoint, {
+          method: 'GET', 
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'User-Agent': navigator.userAgent,
+          }
+        });
+
+        console.log(`[SpotifyLyrics+] ${endpoint} response status: ${response.status}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.access_token || data.accessToken) {
+            const token = data.access_token || data.accessToken;
+            console.log(`[SpotifyLyrics+] Auto-fetch successful from ${endpoint}! Bearer token obtained.`);
+            return { 
+              success: true, 
+              token: token 
+            };
+          } else {
+            console.warn(`[SpotifyLyrics+] ${endpoint}: No access token in response`, Object.keys(data));
+          }
+        } else {
+          // Log specific error codes but continue trying
+          if (response.status === 401) {
+            console.warn(`[SpotifyLyrics+] ${endpoint}: Unauthorized (401) - sp_dc cookie may be expired`);
+          } else if (response.status === 403) {
+            console.warn(`[SpotifyLyrics+] ${endpoint}: Forbidden (403) - endpoint may be blocked`);
+          } else if (response.status === 404) {
+            console.warn(`[SpotifyLyrics+] ${endpoint}: Not found (404) - endpoint doesn't exist`);
+          } else {
+            console.warn(`[SpotifyLyrics+] ${endpoint}: HTTP ${response.status}`);
+          }
+        }
+
+      } catch (endpointError) {
+        console.warn(`[SpotifyLyrics+] ${endpoint} error:`, endpointError.message);
+      }
+    }
+
+    // All strategies failed
+    console.warn("[SpotifyLyrics+] Auto-fetch failed: All strategies exhausted");
+    return { 
+      success: false, 
+      error: "All auto-fetch strategies failed. Spotify may be blocking automatic token retrieval, or no active session found. Please use manual token entry.",
+      statusCode: 403
+    };
+
+  } catch (error) {
+    console.error("[SpotifyLyrics+] Auto-fetch error:", error);
+    
+    // Check for common error types
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      return { 
+        success: false, 
+        error: "Network error during auto-fetch. Check your connection or use manual token entry.",
+        statusCode: 0
+      };
+    }
+    
+    if (error.name === 'SecurityError' || error.message.includes('CSP')) {
+      return { 
+        success: false, 
+        error: "Browser security policy blocked auto-fetch. Please use manual token entry.",
+        statusCode: 0
+      };
+    }
+
+    return { 
+      success: false, 
+      error: `Auto-fetch error: ${error.message}. Please use manual token entry.`,
+      statusCode: 0
+    };
+  }
+}
+
+/**
+ * Attempts to get a valid Spotify token, trying auto-fetch first, then falling back to stored token
+ * @param {boolean} forceAutoFetch - Force auto-fetch even if stored token exists
+ * @returns {Promise<{success: boolean, token?: string, error?: string, shouldShowModal?: boolean}>}
+ */
+async function getSpotifyToken(forceAutoFetch = false) {
+  const storedToken = localStorage.getItem("lyricsPlusSpotifyToken");
+  
+  // If we have a stored token and not forcing auto-fetch, use it
+  if (storedToken && !forceAutoFetch) {
+    console.log("[SpotifyLyrics+] Using stored token");
+    return { success: true, token: storedToken };
+  }
+
+  // Try auto-fetch
+  const autoFetchResult = await autoFetchSpotifyToken();
+  
+  if (autoFetchResult.success) {
+    // Save the auto-fetched token
+    localStorage.setItem("lyricsPlusSpotifyToken", autoFetchResult.token);
+    console.log("[SpotifyLyrics+] Auto-fetched token saved to localStorage");
+    return { success: true, token: autoFetchResult.token };
+  }
+
+  // Auto-fetch failed, log the reason and determine next steps
+  console.warn(`[SpotifyLyrics+] ${autoFetchResult.error}`);
+
+  // If we have a stored token but auto-fetch was forced (likely due to 401), 
+  // and auto-fetch failed, still try the stored token as last resort
+  if (storedToken && forceAutoFetch) {
+    console.log("[SpotifyLyrics+] Auto-fetch failed, falling back to stored token");
+    return { success: true, token: storedToken };
+  }
+
+  // No token available, need manual entry
+  return {
+    success: false,
+    error: autoFetchResult.error,
+    shouldShowModal: true
+  };
+}
+
+const ProviderSpotify = {
+  async findLyrics(info) {
     if (!info.trackId) {
       console.warn("[SpotifyLyrics+] No trackId in song info:", info);
       return { error: "No lyrics found for this track from Spotify" };
     }
 
+    // Try to get a valid token (auto-fetch or stored)
+    const tokenResult = await getSpotifyToken();
+    
+    if (!tokenResult.success) {
+      console.warn("[SpotifyLyrics+] Failed to obtain Spotify token:", tokenResult.error);
+      if (tokenResult.shouldShowModal) {
+        return { error: "Double click on the Spotify provider to set up your token.\n" + tokenResult.error };
+      }
+      return { error: tokenResult.error };
+    }
+
     const endpoint = `https://spclient.wg.spotify.com/color-lyrics/v2/track/${info.trackId}?format=json&vocalRemoval=false&market=from_token`;
 
-
-    try {
-      const res = await fetch(endpoint, {
-        method: "GET",
-        headers: {
-          "app-platform": "WebPlayer",
-          "User-Agent": navigator.userAgent,
-          "Authorization": "Bearer " + token,
-        },
-      });
-
-
-      if (!res.ok) {
-    const text = await res.text();
-    console.warn("[SpotifyLyrics+] Non-ok response:", res.status, text);
-
-    if (res.status === 401) {
-        return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
-    }
-    if (res.status === 404) {
-        return { error: "No lyrics found for this track from Spotify" };
-    }
-    return { error: "No lyrics found for this track from Spotify" };
-}
-
-      let data;
+    // Function to make the lyrics request with a given token
+    const makeRequest = async (token) => {
+      console.log("[SpotifyLyrics+] Making lyrics request to Spotify API...");
+      
       try {
-        data = await res.json();
-      } catch (jsonErr) {
-        const text = await res.text();
-        console.error("[SpotifyLyrics+] Failed to parse JSON. Raw response:", text);
-        return { error: "No lyrics found for this track from Spotify" };
-      }
+        const res = await fetch(endpoint, {
+          method: "GET",
+          headers: {
+            "app-platform": "WebPlayer",
+            "User-Agent": navigator.userAgent,
+            "Authorization": "Bearer " + token,
+          },
+        });
 
-      // Adapt to your UI's expected data shape:
-      if (!data || !data.lyrics || !data.lyrics.lines || !data.lyrics.lines.length) {
-        console.warn("[SpotifyLyrics+] No lines in API response:", data);
-        return { error: "No lyrics found for this track from Spotify" };
+        console.log(`[SpotifyLyrics+] Spotify API response status: ${res.status}`);
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.warn("[SpotifyLyrics+] Non-ok response:", res.status, text);
+
+          if (res.status === 401) {
+            console.warn("[SpotifyLyrics+] Token expired (401), will attempt auto-refresh...");
+            return { needsTokenRefresh: true };
+          }
+          if (res.status === 404) {
+            return { error: "No lyrics found for this track from Spotify" };
+          }
+          return { error: `Spotify API error ${res.status}: No lyrics found for this track` };
+        }
+
+        let data;
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          const text = await res.text();
+          console.error("[SpotifyLyrics+] Failed to parse JSON. Raw response:", text);
+          return { error: "Invalid response from Spotify API" };
+        }
+
+        // Validate response structure
+        if (!data || !data.lyrics || !data.lyrics.lines || !data.lyrics.lines.length) {
+          console.warn("[SpotifyLyrics+] No lines in API response:", data);
+          return { error: "No lyrics found for this track from Spotify" };
+        }
+        
+        console.log("[SpotifyLyrics+] Successfully retrieved lyrics from Spotify API");
+        return { success: true, lyrics: data.lyrics };
+        
+      } catch (e) {
+        console.error("[SpotifyLyrics+] Fetch error:", e);
+        return { error: "Network error while fetching lyrics from Spotify" };
       }
-      return data.lyrics;
-    } catch (e) {
-      console.error("[SpotifyLyrics+] Fetch error:", e);
-      return { error: "No lyrics found for this track from Spotify" };
+    };
+
+    // First attempt with current token
+    const firstAttempt = await makeRequest(tokenResult.token);
+    
+    if (firstAttempt.success) {
+      return firstAttempt.lyrics;
     }
+    
+    if (firstAttempt.needsTokenRefresh) {
+      console.log("[SpotifyLyrics+] Token expired, attempting auto-refresh...");
+      
+      // Try to auto-fetch a new token
+      const refreshResult = await getSpotifyToken(true); // Force auto-fetch
+      
+      if (refreshResult.success) {
+        console.log("[SpotifyLyrics+] Token refreshed successfully, retrying lyrics request...");
+        
+        // Retry the request with the new token
+        const retryAttempt = await makeRequest(refreshResult.token);
+        
+        if (retryAttempt.success) {
+          console.log("[SpotifyLyrics+] Lyrics request successful after token refresh");
+          return retryAttempt.lyrics;
+        }
+        
+        if (retryAttempt.needsTokenRefresh) {
+          console.error("[SpotifyLyrics+] Token still expired after refresh - this shouldn't happen");
+          return { error: "Token refresh failed. Double click on the Spotify provider to set up your token manually." };
+        }
+        
+        return { error: retryAttempt.error || "Failed to fetch lyrics after token refresh" };
+      } else {
+        console.warn("[SpotifyLyrics+] Auto-refresh failed:", refreshResult.error);
+        return { 
+          error: "Token expired and auto-refresh failed. Double click on the Spotify provider to set up your token manually.\n" + 
+                 "Auto-refresh failed: " + refreshResult.error 
+        };
+      }
+    }
+    
+    return { error: firstAttempt.error || "Failed to fetch lyrics from Spotify" };
   },
 
   getSynced(data) {
