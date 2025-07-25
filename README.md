@@ -8,7 +8,8 @@
 
 > **MULTI-PROVIDER LYRICS (LRCLIB, Spotify, KPoe, Musixmatch, Genius)**  
 > Get lyrics from LRCLIB, Spotify, KPoe (Apple Music source), Musixmatch or Genius.
-> Spotify and Musixmatch require a user token, guides for both are further down in the README.
+> **NEW:** Spotify tokens are now automatically extracted - no manual setup required!
+> Musixmatch still requires a user token (guide below).
 > 
 > **POPUP WINDOW**  
 > Move and resize anywhere on your screen.  
@@ -39,6 +40,10 @@
 >
 > **STATE SAVING**  
 > Remembers all your popup settings and preferences.
+>
+> **AUTOMATIC TOKEN MANAGEMENT**  
+> Spotify tokens are automatically extracted and refreshed every 50 minutes.
+> No more manual token setup required for Spotify lyrics!
 
 ## Screenshots
 
@@ -50,7 +55,7 @@
 > 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
 > 3. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
 > 4. Optional - for stock lyrics button: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
-> 4. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
+> 4. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)
 > 5. Open [Spotify Web Player](https://open.spotify.com/) 
 > 6. Play a song
 > 7. Click on the Lyrics+ button to open the interface popup and see the song lyrics
@@ -83,7 +88,16 @@
 > 8. Copy the value of `web-desktop-app-v1.0` — this is your user token.  
 > 9. In the Lyrics+ popup, double-click on the Musixmatch provider, paste your token and press Save.
 
-## Retrieve your Spotify user token
+## Spotify Token (Automatic)
+
+> **NEW:** Spotify tokens are now automatically extracted! No manual setup required in most cases.
+>
+> The script automatically:
+> - Intercepts Spotify's network requests to extract authorization tokens
+> - Stores and refreshes tokens every 50 minutes to prevent expiration  
+> - Retries requests automatically if tokens expire
+>
+> **Manual Setup (Fallback):** If automatic extraction fails, you can still set up tokens manually:
 
 > 1. Go to [Spotify Web Player](https://open.spotify.com/) and login. Play a song. 
 > 2. Open DevTools (Press F12 or Right click and Inspect).
@@ -110,7 +124,7 @@
 > 4. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
 > 5. Optional - for stock lyrics button: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
 > 6. Install [Spotifuck](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v4.user.js)
-> 7. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
+> 7. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)
 > 8. Install Chameleon extension
 > 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)
 > 10. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option
