@@ -7,6 +7,7 @@
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      genius.com
+// @connect      gew1-spclient.spotify.com
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
@@ -30,6 +31,73 @@
   let translationPresent = false;
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
+
+  // ------------------------
+  // Automatic Spotify Token Extraction
+  // ------------------------
+
+  let tokenRefreshTimer = null;
+
+  // Function to automatically extract Spotify token from network requests
+  async function extractSpotifyToken() {
+    try {
+      console.log('[SpotifyLyrics+] Attempting to extract Spotify token...');
+      
+      const response = await new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+          method: 'GET',
+          url: 'https://gew1-spclient.spotify.com/gabo-receiver-service/public/v3/events',
+          headers: {
+            'User-Agent': navigator.userAgent,
+          },
+          onload: resolve,
+          onerror: reject,
+          ontimeout: reject,
+          timeout: 10000,
+        });
+      });
+
+      // Extract token from Authorization header
+      const authHeader = response.responseHeaders.match(/authorization:\s*Bearer\s+([^\r\n]+)/i);
+      if (authHeader && authHeader[1]) {
+        const token = authHeader[1].trim();
+        localStorage.setItem('lyricsPlusSpotifyToken', token);
+        console.log('[SpotifyLyrics+] Successfully extracted and saved Spotify token');
+        return token;
+      } else {
+        console.warn('[SpotifyLyrics+] No Authorization header found in response');
+        return null;
+      }
+    } catch (error) {
+      console.error('[SpotifyLyrics+] Failed to extract Spotify token:', error);
+      return null;
+    }
+  }
+
+  // Function to set up periodic token refresh
+  function setupTokenRefresh() {
+    // Clear existing timer
+    if (tokenRefreshTimer) {
+      clearInterval(tokenRefreshTimer);
+    }
+    
+    // Set up refresh every 50 minutes (3000000 ms)
+    tokenRefreshTimer = setInterval(() => {
+      console.log('[SpotifyLyrics+] Refreshing Spotify token (periodic)...');
+      extractSpotifyToken();
+    }, 50 * 60 * 1000);
+  }
+
+  // Initialize token extraction on script load
+  async function initializeSpotifyToken() {
+    console.log('[SpotifyLyrics+] Initializing automatic token extraction...');
+    
+    // Extract token immediately
+    await extractSpotifyToken();
+    
+    // Set up periodic refresh
+    setupTokenRefresh();
+  }
 
 // --- Forcibly hide NowPlayingView and its button in the playback controls menu ---
 /* To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
@@ -1693,9 +1761,10 @@ function showSpotifyTokenModal() {
   box.id = "lyrics-plus-spotify-modal-box";
   box.innerHTML = `
     <button id="lyrics-plus-spotify-modal-close" title="Close">&times;</button>
-    <div id="lyrics-plus-spotify-modal-title">Set your Spotify User Token</div>
+    <div id="lyrics-plus-spotify-modal-title">Manual Spotify Token Setup (Fallback)</div>
     <div style="font-size:14px;line-height:1.6;margin-bottom:12px">
-      <b>How to retrieve your token:</b><br>
+      <p style="color:#f39c12;"><b>NOTE:</b> This extension now automatically extracts your Spotify token. This manual setup is only needed if automatic extraction fails.</p>
+      <b>How to retrieve your token manually:</b><br>
       1. Go to <a href="https://open.spotify.com/" target="_blank">Spotify Web Player</a> and log in. Play a song.<br>
       2. Open DevTools (Press F12 or Right click and Inspect).<br>
       3. Go to the Network tab and search for "spclient".<br>
@@ -1748,12 +1817,18 @@ function showSpotifyTokenModal() {
 }
 
 const ProviderSpotify = {
-  async findLyrics(info) {
+  async findLyrics(info, isRetry = false) {
     const token = localStorage.getItem("lyricsPlusSpotifyToken");
 
     if (!token) {
       console.warn("[SpotifyLyrics+] No Spotify user token found in localStorage.");
-      return { error: "Double click on the Spotify provider to set up your token.\n" + "A fresh token is required every hour/upon page reload for security." };
+      // Try to extract token automatically
+      const extractedToken = await extractSpotifyToken();
+      if (!extractedToken) {
+        return { error: "Unable to automatically extract Spotify token. Double click on the Spotify provider to set up your token manually.\n" + "A fresh token is required every hour/upon page reload for security." };
+      }
+      // Retry with the newly extracted token
+      return this.findLyrics(info, true);
     }
 
     if (!info.trackId) {
@@ -1762,7 +1837,6 @@ const ProviderSpotify = {
     }
 
     const endpoint = `https://spclient.wg.spotify.com/color-lyrics/v2/track/${info.trackId}?format=json&vocalRemoval=false&market=from_token`;
-
 
     try {
       const res = await fetch(endpoint, {
@@ -1774,19 +1848,27 @@ const ProviderSpotify = {
         },
       });
 
-
       if (!res.ok) {
-    const text = await res.text();
-    console.warn("[SpotifyLyrics+] Non-ok response:", res.status, text);
+        const text = await res.text();
+        console.warn("[SpotifyLyrics+] Non-ok response:", res.status, text);
 
-    if (res.status === 401) {
-        return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
-    }
-    if (res.status === 404) {
+        if (res.status === 401) {
+          // Token expired or invalid - try to get a fresh one automatically
+          if (!isRetry) {
+            console.log("[SpotifyLyrics+] Token expired, attempting to refresh...");
+            const newToken = await extractSpotifyToken();
+            if (newToken) {
+              console.log("[SpotifyLyrics+] Token refreshed, retrying request...");
+              return this.findLyrics(info, true);
+            }
+          }
+          return { error: "Spotify token expired and auto-refresh failed. Double click on the Spotify provider to set up your token manually." };
+        }
+        if (res.status === 404) {
+          return { error: "No lyrics found for this track from Spotify" };
+        }
         return { error: "No lyrics found for this track from Spotify" };
-    }
-    return { error: "No lyrics found for this track from Spotify" };
-}
+      }
 
       let data;
       try {
@@ -1810,22 +1892,22 @@ const ProviderSpotify = {
   },
 
   getSynced(data) {
-  if (Array.isArray(data.lines) && data.syncType === "LINE_SYNCED") {
-    return data.lines.map(line => ({
-      time: line.startTimeMs,
-      text: line.words
-    }));
-  }
-  return null;
-},
+    if (Array.isArray(data.lines) && data.syncType === "LINE_SYNCED") {
+      return data.lines.map(line => ({
+        time: line.startTimeMs,
+        text: line.words
+      }));
+    }
+    return null;
+  },
 
-getUnsynced(data) {
-  // Accept both unsynced and fallback if lines exist
-  if (Array.isArray(data.lines) && (data.syncType === "UNSYNCED" || data.syncType !== "LINE_SYNCED")) {
-    return data.lines.map(line => ({ text: line.words }));
-  }
-  return null;
-},
+  getUnsynced(data) {
+    // Accept both unsynced and fallback if lines exist
+    if (Array.isArray(data.lines) && (data.syncType === "UNSYNCED" || data.syncType !== "LINE_SYNCED")) {
+      return data.lines.map(line => ({ text: line.words }));
+    }
+    return null;
+  },
 };
 
   // --- Providers List ---
@@ -3440,6 +3522,9 @@ currentLyricsContainer = lyricsContainer;
   observer.observe(document.body, { childList: true, subtree: true });
 
   function init() {
+    // Initialize automatic Spotify token extraction
+    initializeSpotifyToken();
+    
     addButton();
   }
 
