@@ -1755,6 +1755,11 @@ function showSpotifyTokenModal() {
  * Attempts to automatically fetch a Spotify Bearer token using the sp_dc cookie
  * @returns {Promise<{success: boolean, token?: string, error?: string, statusCode?: number}>}
  */
+
+// Feature flag for auto-fetch (can be disabled if needed)
+// Users can disable auto-fetch by setting localStorage.setItem('lyricsPlusDisableAutoFetch', 'true')
+const SPOTIFY_AUTO_FETCH_ENABLED = localStorage.getItem('lyricsPlusDisableAutoFetch') !== 'true';
+
 /**
  * Attempts to extract Bearer token from Spotify's Web Player context
  * This looks for tokens that might be available in the global scope or localStorage
@@ -1867,6 +1872,15 @@ function extractTokenFromPageContext() {
  * @returns {Promise<{success: boolean, token?: string, error?: string, statusCode?: number}>}
  */
 async function autoFetchSpotifyToken() {
+  if (!SPOTIFY_AUTO_FETCH_ENABLED) {
+    console.log("[SpotifyLyrics+] Auto-fetch is disabled");
+    return { 
+      success: false, 
+      error: "Auto-fetch is disabled. Please use manual token entry.",
+      statusCode: 503
+    };
+  }
+
   console.log("[SpotifyLyrics+] Attempting to auto-fetch Spotify Bearer token...");
   
   try {
