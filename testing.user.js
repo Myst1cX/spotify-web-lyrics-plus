@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Testing
 // @namespace    http://tampermonkey.net/
-// @version      8.9.testing
+// @version      9.0.testing
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -14,7 +14,7 @@
 // ==/UserScript==
 
 // DO NOT INSTALL - Testing Instance for new implementations
-// AT THE MOMENT - Equal to Stable release; contains console logs (Last update: 19.7.25)
+// AT THE MOMENT - Equal to Stable release; contains console logs (Last update: 25.7.25)
 
 (function () {
   'use strict';
@@ -34,45 +34,28 @@
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
 
-  // --- NowPlayingView logic: Allow only user-initiated opens ---
-  let userOpenedNPV = false;
+// --- Forcibly hide NowPlayingView and its button in the playback controls menu ---
+/* To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
+   The CSS "display: none" and "width: 0" make the NowPlayingView invisible to the user. However, the elements remain present in the page's HTML and accessible to JavaScript
+   which allows the SpotifyProvider to succesfully extract the trackId and fetch lyrics without requiring the user to have their window space occupied by the NowPlayingView. */
 
-const NPV_BTN_SELECTOR = 'button[data-testid="control-button-npv"]';
-const NPV_VIEW_SELECTOR = '.NowPlayingView, aside[data-testid="now-playing-bar"]';
-const HIDE_BTN_SELECTOR = 'button[aria-label="Hide Now Playing view"]';
-
- // Track user opening NPV
-document.addEventListener('click', function(e) {
-    const openBtn = e.target.closest(NPV_BTN_SELECTOR);
-    const closeBtn = e.target.closest(HIDE_BTN_SELECTOR);
-    if (openBtn && e.isTrusted) userOpenedNPV = true;
-    if (closeBtn && e.isTrusted) userOpenedNPV = false;
-    // Still block synthetic (non-trusted) opens
-    if (openBtn && !e.isTrusted) {
-        e.stopImmediatePropagation();
-        e.preventDefault();
+    const styleId = 'lyricsplus-hide-npv-style';
+    if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .NowPlayingView,
+            .OTfMDdomT5S7B5dbYTT8:has(.NowPlayingView) {
+                width: 0 !important;
+                display: none !important;
+            }
+            [data-testid=control-button-npv] {
+                display: none !important;
+            }
+        `;
+        document.head.appendChild(style);
     }
-}, true);
-
-// Close NPV only if it was NOT opened by the user
-function closeNPV() {
-    const hideBtn = document.querySelector(HIDE_BTN_SELECTOR);
-    if (hideBtn && hideBtn.offsetParent !== null) hideBtn.click();
-}
-
-const npvObserver = new MutationObserver(() => {
-    const npv = document.querySelector(NPV_VIEW_SELECTOR);
-    // If NPV is open and user didn't open it, close it
-    if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
-});
-npvObserver.observe(document.body, { childList: true, subtree: true });
-
-// On page load, ensure NPV is closed if not user-initiated
-setTimeout(() => {
-    const npv = document.querySelector(NPV_VIEW_SELECTOR);
-    if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
-}, 1000);
-
+  
   // Global flag (window.lyricsPlusPopupIsResizing) is used to prevent lyric highlighting updates from interfering with popup resizing
 
   // Global flags below are used to prevent a bug with Revert to default position button
