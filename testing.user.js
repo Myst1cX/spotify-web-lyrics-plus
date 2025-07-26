@@ -1864,15 +1864,58 @@ function showSpotifyTokenModal() {
   input.focus();
 }
 
+// Helper function to automatically fetch Spotify access token using sp_dc cookie
+async function fetchSpotifyAccessToken() {
+  try {
+    console.log("[SpotifyLyrics+] Attempting to auto-fetch access token...");
+    
+    const response = await fetch("https://open.spotify.com/get_access_token", {
+      method: "GET",
+      credentials: "include", // Include cookies (sp_dc)
+      headers: {
+        "User-Agent": navigator.userAgent,
+      }
+    });
+
+    if (!response.ok) {
+      console.warn("[SpotifyLyrics+] Auto-fetch failed with status:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (data && data.accessToken) {
+      console.log("[SpotifyLyrics+] Successfully auto-fetched access token");
+      // Store the token in localStorage for future use
+      localStorage.setItem("lyricsPlusSpotifyToken", data.accessToken);
+      return data.accessToken;
+    } else {
+      console.warn("[SpotifyLyrics+] Auto-fetch response missing accessToken:", data);
+      return null;
+    }
+  } catch (error) {
+    console.error("[SpotifyLyrics+] Auto-fetch error:", error);
+    return null;
+  }
+}
+
 const ProviderSpotify = {
   async findLyrics(info) {
-    const token = localStorage.getItem("lyricsPlusSpotifyToken");
+    let token = localStorage.getItem("lyricsPlusSpotifyToken");
     console.log("[SpotifyLyrics+] Starting fetch:");
     console.log("[SpotifyLyrics+] TrackInfo:", info);
 
     if (!token) {
       console.warn("[SpotifyLyrics+] No Spotify user token found in localStorage.");
-      return { error: "Double click on the Spotify provider to set up your token.\n" + "A fresh token is required every hour/upon page reload for security." };
+      console.log("[SpotifyLyrics+] Attempting to auto-fetch token...");
+      
+      // Try to auto-fetch token using sp_dc cookie
+      token = await fetchSpotifyAccessToken();
+      
+      if (!token) {
+        console.warn("[SpotifyLyrics+] Auto-fetch failed, falling back to manual token entry.");
+        return { error: "Double click on the Spotify provider to set up your token.\n" + "A fresh token is required every hour/upon page reload for security." };
+      }
     }
 
     if (!info.trackId) {
@@ -1902,6 +1945,43 @@ const ProviderSpotify = {
     console.warn("[SpotifyLyrics+] Non-ok response:", res.status, text);
 
     if (res.status === 401) {
+        console.log("[SpotifyLyrics+] Token appears expired (401), attempting to auto-fetch new token...");
+        
+        // Try to auto-fetch a new token
+        const newToken = await fetchSpotifyAccessToken();
+        
+        if (newToken && newToken !== token) {
+          console.log("[SpotifyLyrics+] Got new token, retrying request...");
+          // Retry the request with the new token
+          try {
+            const retryRes = await fetch(endpoint, {
+              method: "GET",
+              headers: {
+                "app-platform": "WebPlayer",
+                "User-Agent": navigator.userAgent,
+                "Authorization": "Bearer " + newToken,
+              },
+            });
+            
+            console.log("[SpotifyLyrics+] Retry response status:", retryRes.status);
+            
+            if (retryRes.ok) {
+              // Success with new token, continue with the response
+              const retryData = await retryRes.json();
+              if (!retryData || !retryData.lyrics || !retryData.lyrics.lines || !retryData.lyrics.lines.length) {
+                console.warn("[SpotifyLyrics+] No lines in retry API response:", retryData);
+                return { error: "No lyrics found for this track from Spotify" };
+              }
+              return retryData.lyrics;
+            } else {
+              console.warn("[SpotifyLyrics+] Retry also failed:", retryRes.status);
+            }
+          } catch (retryError) {
+            console.error("[SpotifyLyrics+] Retry request failed:", retryError);
+          }
+        }
+        
+        // If auto-fetch failed or retry failed, fall back to manual token entry
         return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
     }
     if (res.status === 404) {
