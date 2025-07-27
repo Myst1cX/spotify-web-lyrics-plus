@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Testing
 // @namespace    http://tampermonkey.net/
-// @version      9.0.testing
+// @version      9.1.testing
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -14,7 +14,7 @@
 // ==/UserScript==
 
 // DO NOT INSTALL - Testing Instance for new implementations
-// AT THE MOMENT - Equal to Stable release; contains console logs (Last update: 25.7.25)
+// AT THE MOMENT - Equal to Stable release; contains console logs (Last update: 28.7.25)
 
 (function () {
   'use strict';
@@ -1012,7 +1012,13 @@ btnSave.className = "lyrics-btn";
 btnSave.onclick = () => {
   localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
   modal.remove();
-  // Optionally: reload lyrics if popup open and provider is Musixmatch
+   // Optionally: reload lyrics if popup open and provider is Musixmatch
+  const popup = document.getElementById("lyrics-plus-popup");
+  if (popup && Providers.current === "Musixmatch") {
+    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+    if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+    updateLyricsContent(popup, getCurrentTrackInfo());
+  }
 };
 
   const btnCancel = document.createElement("button");
@@ -1843,7 +1849,13 @@ function showSpotifyTokenModal() {
     localStorage.setItem("lyricsPlusSpotifyToken", input.value.trim());
     modal.remove();
     // Optionally: reload lyrics if popup open and provider is Spotify
-  };
+  const popup = document.getElementById("lyrics-plus-popup");
+  if (popup && Providers.current === "Spotify") {
+    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+    if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+    updateLyricsContent(popup, getCurrentTrackInfo());
+  }
+};
 
   const btnCancel = document.createElement("button");
   btnCancel.textContent = "Cancel";
