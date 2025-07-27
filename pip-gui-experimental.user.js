@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Nightly (Experimental)
 // @namespace    http://tampermonkey.net/
-// @version      9.0.nightly
+// @version      9.1.nightly
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -14,7 +14,7 @@
 // ==/UserScript==
 
 // DO NOT INSTALL - Backup Instance for debugging and troubleshooting
-// AT THE MOMENT - Equal to Stable release; contains console logs (Last update: 25.7.25)
+// AT THE MOMENT - Equal to Stable release; contains console logs (Last update: 28.7.25)
 
 // FIX IN THE FUTURE: 
 // Currently shuffle button and repeat button (and its icon state changes) will only be reflected correctly if Spotify locale is set to English language..
@@ -22,7 +22,7 @@
 // TO DO:
 // Converting the userscript into a browser extension would unlock two things:
 // 1. Possibilitate having a floating popup ui with spotify lyrics (always on top) that works on other sites too, outside open.spotify.com
-// 2. Auto fetch spotify token for user when it expires and apply it (maybe for Musixmatch too if user logged in inside browser)
+// 2. Auto fetch spotify token for user when it expires and apply it --> tried, CSP prevents it. (plan was: maybe for Musixmatch too if user logged in inside browser)
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 
 // PROBABLY NOT:
@@ -1026,7 +1026,13 @@ btnSave.className = "lyrics-btn";
 btnSave.onclick = () => {
   localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
   modal.remove();
-  // Optionally: reload lyrics if popup open and provider is Musixmatch
+   // Optionally: reload lyrics if popup open and provider is Musixmatch
+  const popup = document.getElementById("lyrics-plus-popup");
+  if (popup && Providers.current === "Musixmatch") {
+    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+    if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+    updateLyricsContent(popup, getCurrentTrackInfo());
+  }
 };
 
   const btnCancel = document.createElement("button");
@@ -1857,7 +1863,13 @@ function showSpotifyTokenModal() {
     localStorage.setItem("lyricsPlusSpotifyToken", input.value.trim());
     modal.remove();
     // Optionally: reload lyrics if popup open and provider is Spotify
-  };
+  const popup = document.getElementById("lyrics-plus-popup");
+  if (popup && Providers.current === "Spotify") {
+    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+    if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+    updateLyricsContent(popup, getCurrentTrackInfo());
+  }
+};
 
   const btnCancel = document.createElement("button");
   btnCancel.textContent = "Cancel";
