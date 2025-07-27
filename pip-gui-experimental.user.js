@@ -48,6 +48,84 @@
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
 
+  // ------------------------
+  // Token Auto-Scraping System
+  // ------------------------
+
+  function injectTokenScraper() {
+    // Only inject if not already present
+    if (window.lyricsPlusTokenScraperInjected) return;
+    
+    const script = document.createElement('script');
+    script.textContent = `
+      (function() {
+        // Mark as injected to prevent duplicate injection
+        window.lyricsPlusTokenScraperInjected = true;
+        
+        // Patch fetch
+        const origFetch = window.fetch;
+        window.fetch = function(input, init) {
+          let url = typeof input === "string" ? input : input.url;
+          let headers = (init && init.headers) || (input && input.headers);
+          if (url && /spclient\\.spotify\\.com/.test(url)) {
+            let authHeader;
+            if (headers) {
+              if (headers.get && typeof headers.get === "function") {
+                authHeader = headers.get("Authorization");
+              } else if (headers.Authorization) {
+                authHeader = headers.Authorization;
+              } else if (headers.authorization) {
+                authHeader = headers.authorization;
+              }
+            }
+            if (authHeader && authHeader.startsWith("Bearer ")) {
+              let token = authHeader.replace("Bearer ", "").trim();
+              localStorage.setItem("lyricsPlusSpotifyToken", token);
+              console.log("[Lyrics+] Scraped Spotify token via fetch:", token.substring(0, 20) + "...");
+              
+              // Notify userscript that new token was found
+              window.dispatchEvent(new CustomEvent('lyricsPlusTokenScraped', { detail: { token } }));
+            }
+          }
+          return origFetch.apply(this, arguments);
+        };
+
+        // Patch XHR
+        const origOpen = XMLHttpRequest.prototype.open;
+        const origSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+        XMLHttpRequest.prototype.open = function(method, url) {
+          this._isSpotifyReq = /spclient\\.spotify\\.com/.test(url);
+          return origOpen.apply(this, arguments);
+        };
+        XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+          if (this._isSpotifyReq && /^authorization$/i.test(header) && value.startsWith("Bearer ")) {
+            let token = value.replace("Bearer ", "").trim();
+            localStorage.setItem("lyricsPlusSpotifyToken", token);
+            console.log("[Lyrics+] Scraped Spotify token via XHR:", token.substring(0, 20) + "...");
+            
+            // Notify userscript that new token was found
+            window.dispatchEvent(new CustomEvent('lyricsPlusTokenScraped', { detail: { token } }));
+          }
+          return origSetRequestHeader.apply(this, arguments);
+        };
+      })();
+    `;
+    
+    (document.head || document.documentElement).appendChild(script);
+    script.remove();
+    
+    console.log("[Lyrics+] Token scraper injected into page context");
+  }
+
+  // Listen for token scraping events
+  window.addEventListener('lyricsPlusTokenScraped', (event) => {
+    console.log("[Lyrics+] New token detected from page context");
+    // Could trigger UI updates here if needed
+  });
+
+  // Initialize token scraper immediately
+  injectTokenScraper();
+
 // --- Forcibly hide NowPlayingView and its button in the playback controls menu ---
 /* To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
    The CSS "display: none" and "width: 0" make the NowPlayingView invisible to the user. However, the elements remain present in the page's HTML and accessible to JavaScript
@@ -1826,7 +1904,10 @@ function showSpotifyTokenModal() {
     <button id="lyrics-plus-spotify-modal-close" title="Close">&times;</button>
     <div id="lyrics-plus-spotify-modal-title">Set your Spotify User Token</div>
     <div style="font-size:14px;line-height:1.6;margin-bottom:12px">
-      <b>How to retrieve your token:</b><br>
+      <b style="color:#1db954;">NEW: Auto-Detection Available!</b><br>
+      Simply play a song in Spotify and tokens will be automatically detected and refreshed.<br><br>
+      
+      <b>Manual token setup (if auto-detection fails):</b><br>
       1. Go to <a href="https://open.spotify.com/" target="_blank">Spotify Web Player</a> and log in. Play a song.<br>
       2. Open DevTools (Press F12 or Right click and Inspect).<br>
       3. Go to the Network tab and search for "spclient".<br>
@@ -1886,7 +1967,7 @@ const ProviderSpotify = {
 
     if (!token) {
       console.warn("[SpotifyLyrics+] No Spotify user token found in localStorage.");
-      return { error: "Double click on the Spotify provider to set up your token.\n" + "A fresh token is required every hour/upon page reload for security." };
+      return { error: "Double click on the Spotify provider to set up your token.\nAlternatively, play a song and the token will be auto-detected." };
     }
 
     if (!info.trackId) {
@@ -1899,7 +1980,20 @@ const ProviderSpotify = {
     console.log("[SpotifyLyrics+] Using endpoint:", endpoint);
 
     try {
-      console.log("[SpotifyLyrics+] Sending GET with token (first 12 chars):", token.slice(0,12)+"...");
+      const res = await this._makeRequestWithTokenRefresh(endpoint, token, info);
+      return res;
+    } catch (e) {
+      console.error("[SpotifyLyrics+] Fetch error:", e);
+      return { error: "No lyrics found for this track from Spotify" };
+    }
+  },
+
+  async _makeRequestWithTokenRefresh(endpoint, token, info, retryCount = 0) {
+    const MAX_RETRIES = 1;
+    
+    console.log("[SpotifyLyrics+] Sending GET with token (first 12 chars):", token.slice(0,12)+"...");
+    
+    try {
       const res = await fetch(endpoint, {
         method: "GET",
         headers: {
@@ -1912,17 +2006,30 @@ const ProviderSpotify = {
       console.log("[SpotifyLyrics+] API Response status:", res.status);
 
       if (!res.ok) {
-    const text = await res.text();
-    console.warn("[SpotifyLyrics+] Non-ok response:", res.status, text);
+        const text = await res.text();
+        console.warn("[SpotifyLyrics+] Non-ok response:", res.status, text);
 
-    if (res.status === 401) {
-        return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
-    }
-    if (res.status === 404) {
+        // Handle 401 Unauthorized - token expired
+        if (res.status === 401 && retryCount < MAX_RETRIES) {
+          console.log("[SpotifyLyrics+] Token expired, attempting auto-refresh...");
+          
+          const newToken = await this._attemptTokenRefresh();
+          if (newToken && newToken !== token) {
+            console.log("[SpotifyLyrics+] New token obtained, retrying request...");
+            return this._makeRequestWithTokenRefresh(endpoint, newToken, info, retryCount + 1);
+          } else {
+            return { error: "Spotify token expired. Playing a song or double-clicking the Spotify provider may help refresh it." };
+          }
+        }
+        
+        if (res.status === 401) {
+          return { error: "Spotify token expired. Double click on the Spotify provider and follow the instructions." };
+        }
+        if (res.status === 404) {
+          return { error: "No lyrics found for this track from Spotify" };
+        }
         return { error: "No lyrics found for this track from Spotify" };
-    }
-    return { error: "No lyrics found for this track from Spotify" };
-}
+      }
 
       let data;
       try {
@@ -1941,9 +2048,45 @@ const ProviderSpotify = {
       }
       return data.lyrics;
     } catch (e) {
-      console.error("[SpotifyLyrics+] Fetch error:", e);
-      return { error: "No lyrics found for this track from Spotify" };
+      throw e;
     }
+  },
+
+  async _attemptTokenRefresh() {
+    console.log("[SpotifyLyrics+] Attempting to refresh Spotify token...");
+    
+    // Re-inject the token scraper to catch any new requests
+    injectTokenScraper();
+    
+    // Try to trigger Spotify to make a new request by checking current track
+    const originalToken = localStorage.getItem("lyricsPlusSpotifyToken");
+    
+    // Wait for a potential new token to be scraped
+    return new Promise((resolve) => {
+      let attempts = 0;
+      const maxAttempts = 10; // 5 seconds total
+      
+      const checkForNewToken = () => {
+        attempts++;
+        const currentToken = localStorage.getItem("lyricsPlusSpotifyToken");
+        
+        if (currentToken && currentToken !== originalToken) {
+          console.log("[SpotifyLyrics+] New token detected via auto-scraping");
+          resolve(currentToken);
+          return;
+        }
+        
+        if (attempts >= maxAttempts) {
+          console.log("[SpotifyLyrics+] Token refresh timeout - no new token found");
+          resolve(null);
+          return;
+        }
+        
+        setTimeout(checkForNewToken, 500);
+      };
+      
+      checkForNewToken();
+    });
   },
 
   getSynced(data) {
