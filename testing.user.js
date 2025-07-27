@@ -366,7 +366,7 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
         p.style.fontWeight = "400";
         p.style.filter = "blur(0.7px)";
         p.style.opacity = "0.8";
-        p.style.transform = "scale(1.10)";
+        p.style.transform = "scale(1.0)";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
       });
       return;
@@ -377,7 +377,7 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
         p.style.fontWeight = "700";
         p.style.filter = "none";
         p.style.opacity = "1";
-        p.style.transform = "scale(1.05)";
+        p.style.transform = "scale(1.10)";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
       } else {
         p.style.color = "white";
