@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      9.1
+// @version      9.2
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -374,7 +374,7 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
         p.style.fontWeight = "700";
         p.style.filter = "none";
         p.style.opacity = "1";
-        p.style.transform = "scale(1.05)";
+        p.style.transform = "scale(1.10)";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
       } else {
         p.style.color = "white";
@@ -2419,7 +2419,7 @@ fontSizeSelect.style.border = "none";
 fontSizeSelect.style.color = "white";
 fontSizeSelect.style.fontSize = "14px";
 fontSizeSelect.style.lineHeight = "1";
-["16", "22", "28", "32", "38", "44"].forEach(size => {
+["16", "22", "28", "32", "38", "44", "50", "56"].forEach(size => {
   const opt = document.createElement("option");
   opt.value = size;
   opt.textContent = size + "px";
@@ -2533,20 +2533,23 @@ Providers.list.forEach(name => {
 
     // Lyrics container
     const lyricsContainer = document.createElement("div");
-    lyricsContainer.id = "lyrics-plus-content";
-    Object.assign(lyricsContainer.style, {
-      flex: "1",
-      overflowY: "auto",
-      overflowX: "hidden",
-      padding: "12px",
-      whiteSpace: "pre-wrap",
-      fontSize: "22px",
-      lineHeight: "1.5",
-      backgroundColor: "#121212",
-      userSelect: "text",
-      textAlign: "center",
-    });
-    lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
+lyricsContainer.id = "lyrics-plus-content";
+Object.assign(lyricsContainer.style, {
+  flex: "1",
+  overflowY: "auto",
+  overflowX: "hidden",
+  padding: "12px",
+  whiteSpace: "pre-wrap",
+  fontSize: "22px",
+  lineHeight: "1.5",
+  backgroundColor: "#121212",
+  userSelect: "text",
+  textAlign: "center",
+});
+lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
+// Add horizontal padding to ensure lyrics never overflow
+lyricsContainer.style.paddingLeft = "10.0%";
+lyricsContainer.style.paddingRight = "10.0%";
 
     async function translateLinesBatch(lines, targetLang) {
   if (!lines.length) return [];
