@@ -14,7 +14,7 @@
 // ==/UserScript==
 
 // DO NOT INSTALL - Backup Instance for debugging and troubleshooting
-// AT THE MOMENT - Equal to Stable release; contains console logs (Last update: 28.7.25)
+// AT THE MOMENT - Not Updated to match Stable release yet; contains console logs (Last update: 28.7.25)
 
 // FIX IN THE FUTURE: 
 // Currently shuffle button and repeat button (and its icon state changes) will only be reflected correctly if Spotify locale is set to English language..
