@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      9.2
+// @version      9.3
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -2103,56 +2103,58 @@ btnReset.onmouseleave = () => { btnReset.style.background = "none"; };
 
     // Default Position and Size of the Popup Gui
     btnReset.onclick = () => {
-      const rect = getSpotifyLyricsContainerRect();
-      if (rect) {
-        Object.assign(popup.style, {
-          position: "fixed",
-          left: rect.left + "px",
-          top: rect.top + "px",
-          width: rect.width + "px",
-          height: rect.height + "px",
-          right: "auto",
-          bottom: "auto",
-          zIndex: 100000
-        });
-        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height
-        }));
-      } else {
-        Object.assign(popup.style, {
-          position: "fixed",
-          bottom: "87px",
-          right: "0px",
-          left: "auto",
-          top: "auto",
-          width: "370px",
-          height: "79.5vh",
-          zIndex: 100000
-        });
-        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-          left: null,
-          top: null,
-          width: 370,
-          height: window.innerHeight * 0.795
-        }));
-      }
-      localStorage.removeItem("lyricsPlusPopupProportion");
-      window.lastProportion = { w: null, h: null };
-      window.lyricsPlusPopupIgnoreProportion = true;
-      setTimeout(() => {
-        window.lyricsPlusPopupIgnoreProportion = false;
-        if (
-          popup.style.width === "370px" &&
-          popup.style.height === "79.5vh"
-        ) {
-          window.lastProportion = { w: null, h: null };
-        }
-      }, 3000);
-    };
-
+  const rect = getSpotifyLyricsContainerRect();
+  if (rect) {
+    Object.assign(popup.style, {
+      position: "fixed",
+      left: rect.left + "px",
+      top: rect.top + "px",
+      width: rect.width + "px",
+      height: rect.height + "px",
+      right: "auto",
+      bottom: "auto",
+      zIndex: 100000
+    });
+    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height
+    }));
+    savePopupState(popup);
+  } else {
+    Object.assign(popup.style, {
+      position: "fixed",
+      bottom: "87px",
+      right: "0px",
+      left: "auto",
+      top: "auto",
+      width: "370px",
+      height: "79.5vh",
+      zIndex: 100000
+    });
+    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+      left: null,
+      top: null,
+      width: 370,
+      height: window.innerHeight * 0.795
+    }));
+    savePopupState(popup);
+  }
+  // Remove these lines:
+  // localStorage.removeItem("lyricsPlusPopupProportion");
+  // window.lastProportion = { w: null, h: null };
+  // window.lyricsPlusPopupIgnoreProportion = true;
+  // setTimeout(() => {
+  //   window.lyricsPlusPopupIgnoreProportion = false;
+  //   if (
+  //     popup.style.width === "370px" &&
+  //     popup.style.height === "79.5vh"
+  //   ) {
+  //     window.lastProportion = { w: null, h: null };
+  //   }
+  // }, 3000);
+};
 // --- Translation controls dropdown, translate button, and remove translation button ---
 const translationControls = document.createElement('div');
 translationControls.style.display = 'flex';
@@ -3136,12 +3138,13 @@ if (container) {
 
     function savePopupState(el) {
   const rect = el.getBoundingClientRect();
-  localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-    left: rect.left,
-    top: rect.top,
-    width: rect.width,
-    height: rect.height
-  }));
+  window.lastProportion = {
+    w: rect.width / window.innerWidth,
+    h: rect.height / window.innerHeight,
+    x: rect.left / window.innerWidth,
+    y: rect.top / window.innerHeight
+  };
+  localStorage.setItem('lyricsPlusPopupProportion', JSON.stringify(window.lastProportion));
 }
 
     (function makeDraggable(el, handle) {
@@ -3484,27 +3487,17 @@ currentLyricsContainer = lyricsContainer;
   }
   loadProportion();
 
-  function saveProportionFromPopup(popup) {
-  if (!popup) return;
-  window.lastProportion = {
-    w: popup.offsetWidth / window.innerWidth,
-    h: popup.offsetHeight / window.innerHeight
-  };
-  // Clamp to [0.2,1] for sanity (optional)
-  window.lastProportion.w = Math.max(0.2, Math.min(window.lastProportion.w, 1));
-  window.lastProportion.h = Math.max(0.2, Math.min(window.lastProportion.h, 1));
-  localStorage.setItem("lyricsPlusPopupProportion", JSON.stringify(window.lastProportion));
-}
-
   function applyProportionToPopup(popup) {
   if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion) {
     return;
   }
-  if (!popup || !window.lastProportion.w || !window.lastProportion.h) {
+  if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
     return;
   }
   popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
   popup.style.height = (window.innerHeight * window.lastProportion.h) + "px";
+  popup.style.left = (window.innerWidth * window.lastProportion.x) + "px";
+  popup.style.top = (window.innerHeight * window.lastProportion.y) + "px";
   popup.style.right = "auto";
   popup.style.bottom = "auto";
   popup.style.position = "fixed";
@@ -3522,7 +3515,7 @@ currentLyricsContainer = lyricsContainer;
   resizer.addEventListener("mousedown", () => { isResizing = true; });
   window.addEventListener("mouseup", () => {
     if (isResizing) {
-      saveProportionFromPopup(popup);
+      savePopupState(popup);
     }
     isResizing = false;
   });
