@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      9.4
+// @version      9.5
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -58,6 +58,9 @@
   // Global flags below are used to prevent a bug with Revert to default position button
   window.lyricsPlusPopupIgnoreProportion = false;
   window.lastProportion = { w: null, h: null };
+
+  // Global flag to prevent popup glitch during manual drag
+  window.lyricsPlusPopupIsDragging = false;
 
   // ------------------------
   // Utils.js Functions
@@ -3140,6 +3143,7 @@ if (container) {
       let origX, origY;
       handle.addEventListener("mousedown", (e) => {
         isDragging = true;
+        window.lyricsPlusPopupIsDragging = true;
         startX = e.clientX;
         startY = e.clientY;
         const rect = el.getBoundingClientRect();
@@ -3169,6 +3173,10 @@ if (container) {
           document.body.style.userSelect = "";
           window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
+          // Set flag to false with a short timeout after drag end
+          setTimeout(() => {
+            window.lyricsPlusPopupIsDragging = false;
+          }, 200);
         }
       });
     })(popup, headerWrapper);
@@ -3476,7 +3484,7 @@ currentLyricsContainer = lyricsContainer;
   loadProportion();
 
   function applyProportionToPopup(popup) {
-  if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion) {
+  if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion || window.lyricsPlusPopupIsDragging) {
     return;
   }
   // Skip applying proportion if user has dragged the popup within the last 1.5 seconds
