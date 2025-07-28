@@ -3167,6 +3167,7 @@ if (container) {
         if (isDragging) {
           isDragging = false;
           document.body.style.userSelect = "";
+          window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
         }
       });
@@ -3476,6 +3477,10 @@ currentLyricsContainer = lyricsContainer;
 
   function applyProportionToPopup(popup) {
   if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion) {
+    return;
+  }
+  // Skip applying proportion if user has dragged the popup within the last 1.5 seconds
+  if (window.lyricsPlusPopupLastDragged && (Date.now() - window.lyricsPlusPopupLastDragged) < 1500) {
     return;
   }
   if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
