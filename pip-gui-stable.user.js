@@ -2141,19 +2141,6 @@ btnReset.onmouseleave = () => { btnReset.style.background = "none"; };
     }));
     savePopupState(popup);
   }
-  // Remove these lines:
-  // localStorage.removeItem("lyricsPlusPopupProportion");
-  // window.lastProportion = { w: null, h: null };
-  // window.lyricsPlusPopupIgnoreProportion = true;
-  // setTimeout(() => {
-  //   window.lyricsPlusPopupIgnoreProportion = false;
-  //   if (
-  //     popup.style.width === "370px" &&
-  //     popup.style.height === "79.5vh"
-  //   ) {
-  //     window.lastProportion = { w: null, h: null };
-  //   }
-  // }, 3000);
 };
 // --- Translation controls dropdown, translate button, and remove translation button ---
 const translationControls = document.createElement('div');
