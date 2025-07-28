@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Testing
 // @namespace    http://tampermonkey.net/
-// @version      9.3.testing
+// @version      9.4.testing
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -2144,19 +2144,6 @@ btnReset.onmouseleave = () => { btnReset.style.background = "none"; };
     }));
     savePopupState(popup);
   }
-  // Remove these lines:
-  // localStorage.removeItem("lyricsPlusPopupProportion");
-  // window.lastProportion = { w: null, h: null };
-  // window.lyricsPlusPopupIgnoreProportion = true;
-  // setTimeout(() => {
-  //   window.lyricsPlusPopupIgnoreProportion = false;
-  //   if (
-  //     popup.style.width === "370px" &&
-  //     popup.style.height === "79.5vh"
-  //   ) {
-  //     window.lastProportion = { w: null, h: null };
-  //   }
-  // }, 3000);
 };
 // --- Translation controls dropdown, translate button, and remove translation button ---
 const translationControls = document.createElement('div');
@@ -3183,6 +3170,7 @@ if (container) {
         if (isDragging) {
           isDragging = false;
           document.body.style.userSelect = "";
+          window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
         }
       });
@@ -3492,6 +3480,10 @@ currentLyricsContainer = lyricsContainer;
 
   function applyProportionToPopup(popup) {
   if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion) {
+    return;
+  }
+  // Skip applying proportion if user has dragged the popup within the last 1.5 seconds
+  if (window.lyricsPlusPopupLastDragged && (Date.now() - window.lyricsPlusPopupLastDragged) < 1500) {
     return;
   }
   if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
