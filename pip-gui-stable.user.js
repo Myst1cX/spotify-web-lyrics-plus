@@ -64,16 +64,12 @@ const NPV_BTN_SELECTOR = 'button[data-testid="control-button-npv"]';
 const NPV_VIEW_SELECTOR = '.NowPlayingView, aside[data-testid="now-playing-bar"]';
 const HIDE_BTN_SELECTOR = 'button[aria-label="Hide Now Playing view"]';
 
-// Track user opening NPV
+ // Track user opening NPV
 document.addEventListener('click', function(e) {
     const openBtn = e.target.closest(NPV_BTN_SELECTOR);
     const closeBtn = e.target.closest(HIDE_BTN_SELECTOR);
-    if (openBtn && e.isTrusted) {
-        userOpenedNPV = true;
-    }
-    if (closeBtn && e.isTrusted) {
-        userOpenedNPV = false;
-    }
+    if (openBtn && e.isTrusted) userOpenedNPV = true;
+    if (closeBtn && e.isTrusted) userOpenedNPV = false;
     // Still block synthetic (non-trusted) opens
     if (openBtn && !e.isTrusted) {
         e.stopImmediatePropagation();
@@ -84,29 +80,23 @@ document.addEventListener('click', function(e) {
 // Close NPV only if it was NOT opened by the user
 function closeNPV() {
     const hideBtn = document.querySelector(HIDE_BTN_SELECTOR);
-    if (hideBtn && hideBtn.offsetParent !== null) {
-        hideBtn.click();
-    }
+    if (hideBtn && hideBtn.offsetParent !== null) hideBtn.click();
 }
 
-const observer = new MutationObserver(() => {
+const npvObserver = new MutationObserver(() => {
     const npv = document.querySelector(NPV_VIEW_SELECTOR);
     // If NPV is open and user didn't open it, close it
-    if (npv && npv.offsetParent !== null && !userOpenedNPV) {
-        closeNPV();
-    }
+    if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
 });
-observer.observe(document.body, { childList: true, subtree: true });
+npvObserver.observe(document.body, { childList: true, subtree: true });
 
 // On page load, ensure NPV is closed if not user-initiated
 setTimeout(() => {
     const npv = document.querySelector(NPV_VIEW_SELECTOR);
-    if (npv && npv.offsetParent !== null && !userOpenedNPV) {
-        closeNPV();
-    }
-}, 1000); 
+    if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
+}, 1000);
 
-/*
+*/
 
   // Global flag (window.lyricsPlusPopupIsResizing) is used to prevent lyric highlighting updates from interfering with popup resizing
 
