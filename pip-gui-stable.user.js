@@ -183,6 +183,10 @@ async function translateText(text, targetLang) {
     }
   };
 
+function clamp(val, min, max) {
+  return Math.max(min, Math.min(max, val));
+}
+
 function makeSafeFilename(str) {
     // Remove illegal Windows filename characters, collapse spaces
     return str.replace(/[\/\\:\*\?"<>\|]/g, '').replace(/\s+/g, ' ').trim();
