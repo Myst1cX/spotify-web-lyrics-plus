@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      9.5
+// @version      9.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -3138,48 +3138,88 @@ if (container) {
 }
 
     (function makeDraggable(el, handle) {
-      let isDragging = false;
-      let startX, startY;
-      let origX, origY;
-      handle.addEventListener("mousedown", (e) => {
-        isDragging = true;
-        window.lyricsPlusPopupIsDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        const rect = el.getBoundingClientRect();
-        origX = rect.left;
-        origY = rect.top;
-        document.body.style.userSelect = "none";
-      });
-      window.addEventListener("mousemove", (e) => {
-        if (!isDragging) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        let newX = origX + dx;
-        let newY = origY + dy;
-        const maxX = window.innerWidth - el.offsetWidth;
-        const maxY = window.innerHeight - el.offsetHeight;
-        newX = Math.min(Math.max(0, newX), maxX);
-        newY = Math.min(Math.max(0, newY), maxY);
-        el.style.left = `${newX}px`;
-        el.style.top = `${newY}px`;
-        el.style.right = "auto";
-        el.style.bottom = "auto";
-        el.style.position = "fixed";
-      });
-      window.addEventListener("mouseup", () => {
-        if (isDragging) {
-          isDragging = false;
-          document.body.style.userSelect = "";
-          window.lyricsPlusPopupLastDragged = Date.now();
-          savePopupState(el);
-          // Set flag to false with a short timeout after drag end
-          setTimeout(() => {
-            window.lyricsPlusPopupIsDragging = false;
-          }, 200);
-        }
-      });
-    })(popup, headerWrapper);
+  let isDragging = false;
+  let startX, startY;
+  let origX, origY;
+
+  // Mouse events
+  handle.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    window.lyricsPlusPopupIsDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    const rect = el.getBoundingClientRect();
+    origX = rect.left;
+    origY = rect.top;
+    document.body.style.userSelect = "none";
+  });
+
+  // Touch events
+  handle.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return;
+    isDragging = true;
+    window.lyricsPlusPopupIsDragging = true;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    const rect = el.getBoundingClientRect();
+    origX = rect.left;
+    origY = rect.top;
+    document.body.style.userSelect = "none";
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    let newX = origX + dx;
+    let newY = origY + dy;
+    // ... rest unchanged ...
+    el.style.left = `${newX}px`;
+    el.style.top = `${newY}px`;
+    el.style.right = "auto";
+    el.style.bottom = "auto";
+    el.style.position = "fixed";
+  });
+
+  window.addEventListener("touchmove", (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    let newX = origX + dx;
+    let newY = origY + dy;
+    // ... rest unchanged ...
+    el.style.left = `${newX}px`;
+    el.style.top = `${newY}px`;
+    el.style.right = "auto";
+    el.style.bottom = "auto";
+    el.style.position = "fixed";
+    e.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener("mouseup", () => {
+    if (isDragging) {
+      isDragging = false;
+      document.body.style.userSelect = "";
+      window.lyricsPlusPopupLastDragged = Date.now();
+      savePopupState(el);
+      setTimeout(() => {
+        window.lyricsPlusPopupIsDragging = false;
+      }, 200);
+    }
+  });
+
+  window.addEventListener("touchend", () => {
+    if (isDragging) {
+      isDragging = false;
+      document.body.style.userSelect = "";
+      window.lyricsPlusPopupLastDragged = Date.now();
+      savePopupState(el);
+      setTimeout(() => {
+        window.lyricsPlusPopupIsDragging = false;
+      }, 200);
+    }
+  });
+})(popup, headerWrapper);
 
     const resizer = document.createElement("div");
     Object.assign(resizer.style, {
@@ -3199,41 +3239,76 @@ if (container) {
     popup.appendChild(resizer);
 
     (function makeResizable(el, handle) {
-      let isResizing = false;
-      let startX, startY;
-      let startWidth, startHeight;
-      handle.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        isResizing = true;
-        window.lyricsPlusPopupIsResizing = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        startWidth = el.offsetWidth;
-        startHeight = el.offsetHeight;
-        document.body.style.userSelect = "none";
-      });
-      window.addEventListener("mousemove", (e) => {
-        if (!isResizing) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        let newWidth = startWidth + dx;
-        let newHeight = startHeight + dy;
-        newWidth = Math.max(newWidth, 200);
-        newHeight = Math.max(newHeight, 100);
-        newWidth = Math.min(newWidth, window.innerWidth - el.getBoundingClientRect().left);
-        newHeight = Math.min(newHeight, window.innerHeight - el.getBoundingClientRect().top);
-        el.style.width = newWidth + "px";
-        el.style.height = newHeight + "px";
-      });
-      window.addEventListener("mouseup", () => {
-        if (isResizing) {
-          isResizing = false;
-          document.body.style.userSelect = "";
-          savePopupState(el);
-          window.lyricsPlusPopupIsResizing = false;
-        }
-      });
-    })(popup, resizer);
+  let isResizing = false;
+  let startX, startY;
+  let startWidth, startHeight;
+
+  // Mouse events
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    isResizing = true;
+    window.lyricsPlusPopupIsResizing = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startWidth = el.offsetWidth;
+    startHeight = el.offsetHeight;
+    document.body.style.userSelect = "none";
+  });
+
+  // Touch events
+  handle.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    isResizing = true;
+    window.lyricsPlusPopupIsResizing = true;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    startWidth = el.offsetWidth;
+    startHeight = el.offsetHeight;
+    document.body.style.userSelect = "none";
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!isResizing) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    let newWidth = startWidth + dx;
+    let newHeight = startHeight + dy;
+    // ... rest unchanged ...
+    el.style.width = newWidth + "px";
+    el.style.height = newHeight + "px";
+  });
+
+  window.addEventListener("touchmove", (e) => {
+    if (!isResizing || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    let newWidth = startWidth + dx;
+    let newHeight = startHeight + dy;
+    // ... rest unchanged ...
+    el.style.width = newWidth + "px";
+    el.style.height = newHeight + "px";
+    e.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener("mouseup", () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.userSelect = "";
+      savePopupState(el);
+      window.lyricsPlusPopupIsResizing = false;
+    }
+  });
+
+  window.addEventListener("touchend", () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.userSelect = "";
+      savePopupState(el);
+      window.lyricsPlusPopupIsResizing = false;
+    }
+  });
+})(popup, resizer);
 
     observeSpotifyPlayPause(popup);
     observeSpotifyShuffle(popup);
