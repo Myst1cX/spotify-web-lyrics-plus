@@ -1962,10 +1962,10 @@ function getSpotifyLyricsContainerRect() {
   const isMobile = window.innerWidth <= 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   if (isMobile) {
-    // Subtract 25% from right side only, no left margin
-    const rightMarginPx = rect.width * 0.75;
-    const left = rect.left - 75;   // Moves popup 25px outside the left edge
-    const width = rect.width - rightMarginPx + 75; // Compensate to keep right edge same
+    // Subtract 28% from right side only, no left margin
+    const rightMarginPx = rect.width * 0.72;
+    const left = rect.left - 72;   // Moves popup 28px outside the left edge
+    const width = rect.width - rightMarginPx + 72; // Compensate to keep right edge same
     const top = rect.top;
     const height = rect.height;
     return { left, top, width, height };
@@ -1983,7 +1983,7 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
     width: pos.width + "px",
     height: pos.height + "px",
     minWidth: "360px",
-    minHeight: "240px",
+    minHeight: "241px",
     backgroundColor: "#121212",
     color: "white",
     borderRadius: "12px",
@@ -2009,7 +2009,7 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
       width: rect.width + "px",
       height: rect.height + "px",
       minWidth: "360px",
-      minHeight: "240px",
+      minHeight: "241px",
       backgroundColor: "#121212",
       color: "white",
       borderRadius: "12px",
@@ -2041,7 +2041,7 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
       width: "360px",
       height: "79.5vh",
       minWidth: "360px",
-      minHeight: "240px",
+      minHeight: "241px",
       backgroundColor: "#121212",
       color: "white",
       borderRadius: "12px",
@@ -3300,7 +3300,7 @@ popup.appendChild(resizer);
   let newHeight = startHeight + dy;
     
   const minWidth = 360; // match your minWidth style
-  const minHeight = 240; // match your minHeight style
+  const minHeight = 241; // match your minHeight style
   const maxWidth = window.innerWidth - el.offsetLeft;
   const maxHeight = window.innerHeight - el.offsetTop;
 
@@ -3319,7 +3319,7 @@ window.addEventListener("touchmove", (e) => {
   let newHeight = startHeight + dy;
   
   const minWidth = 360;
-  const minHeight = 240;
+  const minHeight = 241;
   const maxWidth = window.innerWidth - el.offsetLeft;
   const maxHeight = window.innerHeight - el.offsetTop;
 
