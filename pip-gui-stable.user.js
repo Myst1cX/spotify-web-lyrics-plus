@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      10.4
+// @version      10.5
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -1983,7 +1983,7 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
     width: pos.width + "px",
     height: pos.height + "px",
     minWidth: "360px",
-    minHeight: "246px",
+    minHeight: "240px",
     backgroundColor: "#121212",
     color: "white",
     borderRadius: "12px",
@@ -2009,7 +2009,7 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
       width: rect.width + "px",
       height: rect.height + "px",
       minWidth: "360px",
-      minHeight: "246px",
+      minHeight: "240px",
       backgroundColor: "#121212",
       color: "white",
       borderRadius: "12px",
@@ -2041,7 +2041,7 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
       width: "360px",
       height: "79.5vh",
       minWidth: "360px",
-      minHeight: "246px",
+      minHeight: "240px",
       backgroundColor: "#121212",
       color: "white",
       borderRadius: "12px",
@@ -3300,7 +3300,7 @@ popup.appendChild(resizer);
   let newHeight = startHeight + dy;
     
   const minWidth = 360; // match your minWidth style
-  const minHeight = 246; // match your minHeight style
+  const minHeight = 240; // match your minHeight style
   const maxWidth = window.innerWidth - el.offsetLeft;
   const maxHeight = window.innerHeight - el.offsetTop;
 
@@ -3319,7 +3319,7 @@ window.addEventListener("touchmove", (e) => {
   let newHeight = startHeight + dy;
   
   const minWidth = 360;
-  const minHeight = 246;
+  const minHeight = 240;
   const maxWidth = window.innerWidth - el.offsetLeft;
   const maxHeight = window.innerHeight - el.offsetTop;
 
