@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      9.6
+// @version      9.7
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -3187,7 +3187,6 @@ if (container) {
     const dy = e.touches[0].clientY - startY;
     let newX = origX + dx;
     let newY = origY + dy;
-    // ... rest unchanged ...
     el.style.left = `${newX}px`;
     el.style.top = `${newY}px`;
     el.style.right = "auto";
@@ -3221,52 +3220,66 @@ if (container) {
   });
 })(popup, headerWrapper);
 
-    const resizer = document.createElement("div");
-    Object.assign(resizer.style, {
-      width: "16px",
-      height: "16px",
-      position: "absolute",
-      right: "4px",
-      bottom: "4px",
-      cursor: "nwse-resize",
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
-      borderTop: "1.5px solid rgba(255, 255, 255, 0.15)",
-      borderLeft: "1.5px solid rgba(255, 255, 255, 0.15)",
-      boxSizing: "border-box",
-      zIndex: 20,
-      clipPath: "polygon(100% 0, 0 100%, 100% 100%)"
-    });
-    popup.appendChild(resizer);
+    // Create a larger invisible hit area
+const resizerHitArea = document.createElement("div");
+Object.assign(resizerHitArea.style, {
+  position: "absolute",
+  right: "0px",
+  bottom: "0px",
+  width: "48px", // much larger for finger touch
+  height: "48px",
+  zIndex: 19, // just below visible resizer
+  background: "transparent",
+  touchAction: "none",
+});
 
+// Create the visual resizer
+const resizer = document.createElement("div");
+Object.assign(resizer.style, {
+  width: "16px",
+  height: "16px",
+  position: "absolute",
+  right: "4px",
+  bottom: "4px",
+  cursor: "nwse-resize",
+  backgroundColor: "rgba(255, 255, 255, 0.1)",
+  borderTop: "1.5px solid rgba(255, 255, 255, 0.15)",
+  borderLeft: "1.5px solid rgba(255, 255, 255, 0.15)",
+  boxSizing: "border-box",
+  zIndex: 20,
+  clipPath: "polygon(100% 0, 0 100%, 100% 100%)"
+});
+
+popup.appendChild(resizerHitArea);
+popup.appendChild(resizer);
+    
     (function makeResizable(el, handle) {
   let isResizing = false;
   let startX, startY;
   let startWidth, startHeight;
 
-  // Mouse events
-  handle.addEventListener("mousedown", (e) => {
+  function startResize(e) {
     e.preventDefault();
     isResizing = true;
     window.lyricsPlusPopupIsResizing = true;
-    startX = e.clientX;
-    startY = e.clientY;
+    if (e.type === "mousedown") {
+      startX = e.clientX;
+      startY = e.clientY;
+    } else if (e.type === "touchstart" && e.touches.length === 1) {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    }
     startWidth = el.offsetWidth;
     startHeight = el.offsetHeight;
     document.body.style.userSelect = "none";
-  });
+  }
 
-  // Touch events
-  handle.addEventListener("touchstart", (e) => {
-    if (e.touches.length !== 1) return;
-    e.preventDefault();
-    isResizing = true;
-    window.lyricsPlusPopupIsResizing = true;
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    startWidth = el.offsetWidth;
-    startHeight = el.offsetHeight;
-    document.body.style.userSelect = "none";
-  });
+  handle.addEventListener("mousedown", startResize);
+  handle.addEventListener("touchstart", startResize);
+
+  // Also attach to the hit area!
+  resizerHitArea.addEventListener("mousedown", startResize);
+  resizerHitArea.addEventListener("touchstart", startResize);
 
   window.addEventListener("mousemove", (e) => {
     if (!isResizing) return;
@@ -3274,7 +3287,6 @@ if (container) {
     const dy = e.clientY - startY;
     let newWidth = startWidth + dx;
     let newHeight = startHeight + dy;
-    // ... rest unchanged ...
     el.style.width = newWidth + "px";
     el.style.height = newHeight + "px";
   });
@@ -3285,7 +3297,6 @@ if (container) {
     const dy = e.touches[0].clientY - startY;
     let newWidth = startWidth + dx;
     let newHeight = startHeight + dy;
-    // ... rest unchanged ...
     el.style.width = newWidth + "px";
     el.style.height = newHeight + "px";
     e.preventDefault();
