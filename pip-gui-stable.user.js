@@ -3250,6 +3250,8 @@ Object.assign(resizer.style, {
   clipPath: "polygon(100% 0, 0 100%, 100% 100%)"
 });
 
+resizer.innerHTML = `<svg width="28" height="28" style="position:absolute;right:6px;bottom:6px;opacity:0.5" viewBox="0 0 28 28"><polyline points="10,18 18,18 18,10" stroke="#fff" stroke-width="2" fill="none"/></svg>`;   
+
 popup.appendChild(resizerHitArea);
 popup.appendChild(resizer);
     
