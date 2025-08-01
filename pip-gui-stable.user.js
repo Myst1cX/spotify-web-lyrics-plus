@@ -3175,13 +3175,13 @@ if (container) {
     let newY = origY + dy;
     const maxX = window.innerWidth - el.offsetWidth;
     const maxY = window.innerHeight - el.offsetHeight;
-      newX = Math.min(Math.max(0, newX), maxX);
-      newY = Math.min(Math.max(0, newY), maxY);
-      el.style.left = `${newX}px`;
-      el.style.top = `${newY}px`;
-      el.style.right = "auto";
-      el.style.bottom = "auto";
-      el.style.position = "fixed";
+    newX = Math.min(Math.max(0, newX), maxX);
+    newY = Math.min(Math.max(0, newY), maxY);
+    el.style.left = `${newX}px`;
+    el.style.top = `${newY}px`;
+    el.style.right = "auto";
+    el.style.bottom = "auto";
+    el.style.position = "fixed";
   });
 
   window.addEventListener("touchmove", (e) => {
@@ -3190,6 +3190,10 @@ if (container) {
     const dy = e.touches[0].clientY - startY;
     let newX = origX + dx;
     let newY = origY + dy;
+    const maxX = window.innerWidth - el.offsetWidth;
+    const maxY = window.innerHeight - el.offsetHeight;
+    newX = Math.min(Math.max(0, newX), maxX);
+    newY = Math.min(Math.max(0, newY), maxY);
     el.style.left = `${newX}px`;
     el.style.top = `${newY}px`;
     el.style.right = "auto";
