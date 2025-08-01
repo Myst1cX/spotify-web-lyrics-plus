@@ -3289,26 +3289,44 @@ popup.appendChild(resizer);
   resizerHitArea.addEventListener("touchstart", startResize);
 
   window.addEventListener("mousemove", (e) => {
-    if (!isResizing) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    let newWidth = startWidth + dx;
-    let newHeight = startHeight + dy;
-    el.style.width = newWidth + "px";
-    el.style.height = newHeight + "px";
-  });
+  if (!isResizing) return;
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+  let newWidth = startWidth + dx;
+  let newHeight = startHeight + dy;
+    
+  const minWidth = 370; // match your minWidth style
+  const minHeight = 240; // match your minHeight style
+  const maxWidth = window.innerWidth - el.offsetLeft;
+  const maxHeight = window.innerHeight - el.offsetTop;
 
-  window.addEventListener("touchmove", (e) => {
-    if (!isResizing || e.touches.length !== 1) return;
-    const dx = e.touches[0].clientX - startX;
-    const dy = e.touches[0].clientY - startY;
-    let newWidth = startWidth + dx;
-    let newHeight = startHeight + dy;
-    el.style.width = newWidth + "px";
-    el.style.height = newHeight + "px";
-    e.preventDefault();
-  }, { passive: false });
+  newWidth = clamp(newWidth, minWidth, maxWidth);
+  newHeight = clamp(newHeight, minHeight, maxHeight);
 
+  el.style.width = newWidth + "px";
+  el.style.height = newHeight + "px";
+});
+
+window.addEventListener("touchmove", (e) => {
+  if (!isResizing || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - startX;
+  const dy = e.touches[0].clientY - startY;
+  let newWidth = startWidth + dx;
+  let newHeight = startHeight + dy;
+  
+  const minWidth = 370;
+  const minHeight = 240;
+  const maxWidth = window.innerWidth - el.offsetLeft;
+  const maxHeight = window.innerHeight - el.offsetTop;
+
+  newWidth = clamp(newWidth, minWidth, maxWidth);
+  newHeight = clamp(newHeight, minHeight, maxHeight);
+
+  el.style.width = newWidth + "px";
+  el.style.height = newHeight + "px";
+  e.preventDefault();
+}, { passive: false });
+      
   window.addEventListener("mouseup", () => {
     if (isResizing) {
       isResizing = false;
