@@ -1982,7 +1982,7 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
     top: pos.top + "px",
     width: pos.width + "px",
     height: pos.height + "px",
-    minWidth: "362px",
+    minWidth: "359px",
     minHeight: "240px",
     backgroundColor: "#121212",
     color: "white",
@@ -2008,7 +2008,7 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
       top: rect.top + "px",
       width: rect.width + "px",
       height: rect.height + "px",
-      minWidth: "362px",
+      minWidth: "359px",
       minHeight: "240px",
       backgroundColor: "#121212",
       color: "white",
@@ -2038,9 +2038,9 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
       right: "0px",
       left: "auto",
       top: "auto",
-      width: "362px",
+      width: "359px",
       height: "79.5vh",
-      minWidth: "362px",
+      minWidth: "359px",
       minHeight: "240px",
       backgroundColor: "#121212",
       color: "white",
@@ -2136,14 +2136,14 @@ btnReset.onmouseleave = () => { btnReset.style.background = "none"; };
       right: "0px",
       left: "auto",
       top: "auto",
-      width: "362px",
+      width: "359px",
       height: "79.5vh",
       zIndex: 100000
     });
     localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
       left: null,
       top: null,
-      width: 362,
+      width: 359,
       height: window.innerHeight * 0.795
     }));
     savePopupState(popup);
@@ -3299,7 +3299,7 @@ popup.appendChild(resizer);
   let newWidth = startWidth + dx;
   let newHeight = startHeight + dy;
     
-  const minWidth = 362; // match your minWidth style
+  const minWidth = 359; // match your minWidth style
   const minHeight = 240; // match your minHeight style
   const maxWidth = window.innerWidth - el.offsetLeft;
   const maxHeight = window.innerHeight - el.offsetTop;
@@ -3318,7 +3318,7 @@ window.addEventListener("touchmove", (e) => {
   let newWidth = startWidth + dx;
   let newHeight = startHeight + dy;
   
-  const minWidth = 362;
+  const minWidth = 359;
   const minHeight = 240;
   const maxWidth = window.innerWidth - el.offsetLeft;
   const maxHeight = window.innerHeight - el.offsetTop;
