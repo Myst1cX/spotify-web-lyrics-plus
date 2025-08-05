@@ -16,14 +16,33 @@
 // DO NOT INSTALL - Backup Instance for debugging and troubleshooting
 // AT THE MOMENT - Not Updated to match Stable release yet; contains console logs (Last update: 28.7.25)
 
-// FIX IN THE FUTURE: 
+// MORE URGENT: 
 // Currently shuffle button and repeat button (and its icon state changes) will only be reflected correctly if Spotify locale is set to English language..
 // I would have to manually add the buttons' aria label names in other languages.. Soon.
-// TO DO:
+// Idea: FORCE ENGLISH LOCALE (might help) --> https://open.spotify.com/?locale=en (note: if u refresh page it gets overriden)
+// If Fullscreen --> fullscreen-lyric as default position.
+// Function with example of the two lyricContainers:
+/* function waitForLyrics() {
+const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]') || document.querySelector('[data-testid="fullscreen-lyric"]'); 
+*/
+// When playing a single, the shuffle and repeat buttons are disabled by default, i haven't added those styles yet to my popup's player controls
+// for shuffle and repeat buttons.. Song example: (https://open.spotify.com/track/5lehoWkVPujeOAwb8BO0uK?si=fb660aa566f54082)
+
+
+// WHEN THE TIME IS RIGHT: 
+// Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
+// Fix upper corners of popup, make em at same proportion fold as spotify's library view.
+// Improve google translation, currently only translates line by line (tho it outputs all lines instantly, line by line causes lack of content awareness = lower quality translation)
+// Lol spotify ad getting detected as track in console. Maybe do something to block them. Also refresh Spotifuck userscript adblock method. : Object { id: "Spotify-Advertisement", title: "Spotify", artist: "Advertisement", album: "", duration: 26000, uri: "", trackId: null }
+/* fix ReferenceError: savePopupState is not defined 25 sandbox eval code:3678:7
+   observePopupResize moz-extension://1b8e1133-2f8b-4475-936e-fe6a40022769/ Spotify Lyrics+ Stable.user.js#347:3678
+- basically just combine whole script under function use strict IIFE instead of keeping 2 iife's which separates code unnecessarily
+*/
+
+// CONSIDER CONVERTING TO BROWSER EXTENSION:
 // Converting the userscript into a browser extension would unlock two things:
 // 1. Possibilitate having a floating popup ui with spotify lyrics (always on top) that works on other sites too, outside open.spotify.com
 // 2. Auto fetch spotify token for user when it expires and apply it --> tried, CSP prevents it. (plan was: maybe for Musixmatch too if user logged in inside browser)
-// Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 
 // PROBABLY NOT:
 // Add Deezer provider (synced and unsynced)
