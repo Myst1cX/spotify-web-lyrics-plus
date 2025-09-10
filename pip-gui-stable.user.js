@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      10.5
+// @version      10.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
 // @author       Myst1cX
 // @match        https://open.spotify.com/*
@@ -64,72 +64,120 @@ const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
 
-// --- Forcibly hide NowPlayingView and its button in the playback controls menu ---
-/* To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
-   The CSS "display: none" and "width: 0" make the NowPlayingView invisible to the user. However, the elements remain present in the page's HTML and accessible to JavaScript
-   which allows the SpotifyProvider to succesfully extract the trackId and fetch lyrics without requiring the user to have their window space occupied by the NowPlayingView. */
+  // --- Forcibly hide NowPlayingView and its button in the playback controls menu ---
 
-    const styleId = 'lyricsplus-hide-npv-style';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-            .NowPlayingView,
-            .OTfMDdomT5S7B5dbYTT8:has(.NowPlayingView) {
-                width: 0 !important;
-                display: none !important;
-            }
-            [data-testid=control-button-npv] {
-                display: none !important;
-            }
-        `;
-        document.head.appendChild(style);
-    }
+  /*
+  --- To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
+      This CSS method hides the NowPlayingView from the user interface in a way that allows the rest of the Spotify home UI to seamlessly fill the space it would otherwise
+      occupy, without leaving a black area present. Crucially, it keeps the NowPlayingView and its DOM structure present and accessible to JavaScript (so scripts can still read
+      track info), but makes it invisible and non-interactive to the user.
 
-/*   
---- Old NowPlayingView logic: Allow only user-initiated opens; keeping the NowPlaying button ---
-I decided to disband the following code in favour of the current SpotifyProvider logic which requires the track informations selectors 
-from the NowPlayingView to remain present in the DOM. 
+      The `.NowPlayingView` element is made invisible by setting `opacity: 0` and `pointer-events: none`, but remains in the DOM for selector access.
+      It is positioned absolutely and given a negative z-index, so it does not participate in the normal document flow or block other content.
+      Its flex value is set to `0 0 0%` to ensure it does not reserve any space in the parent flex container.
+      The immediate parent (currently `.oXO9_yYs6JyOwkBn8E4a` was found by inspecting the black area parent of old method) is forced to `width: 0`, `min-width: 0`,
+      `max-width: 0`, and `flex-basis: 0` so that it collapses entirely, allowing the rest of the UI to expand and fill the area, eliminating the black gap.
+      The NPV button in the playback controls (`[data-testid=control-button-npv]`) is simply hidden from the UI.
 
-let userOpenedNPV = false;
+  */
+      const styleId = 'lyricsplus-hide-npv-style';
+      if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+          .NowPlayingView {
+              position: absolute !important;
+              left: 0; top: 0;
+              width: 100% !important;
+              height: 100% !important;
+              opacity: 0 !important;
+              pointer-events: none !important;
+              z-index: -1 !important;
+              flex: 0 0 0% !important;
+          }
+          .oXO9_yYs6JyOwkBn8E4a {
+              width: 0 !important;
+              min-width: 0 !important;
+              max-width: 0 !important;
+              flex-basis: 0 !important;
+              overflow: hidden !important;
+          }
+          [data-testid=control-button-npv] {
+              display: none !important;
+          }
+      `;
+      document.head.appendChild(style);
+  }
 
-const NPV_BTN_SELECTOR = 'button[data-testid="control-button-npv"]';
-const NPV_VIEW_SELECTOR = '.NowPlayingView, aside[data-testid="now-playing-bar"]';
-const HIDE_BTN_SELECTOR = 'button[aria-label="Hide Now Playing view"]';
+  /*
+  --- Old NowPlayingView logic: To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
+      The CSS "display: none" and "width: 0" make the NowPlayingView invisible to the user. However, the elements remain present in the page's HTML and accessible to JavaScript
+      which allows the SpotifyProvider to succesfully extract the trackId and fetch lyrics without requiring the user to have their window space occupied by the NowPlayingView.
+      Disbanded because the hiding method left a black area since the parent container still reserved space.
 
- // Track user opening NPV
-document.addEventListener('click', function(e) {
-    const openBtn = e.target.closest(NPV_BTN_SELECTOR);
-    const closeBtn = e.target.closest(HIDE_BTN_SELECTOR);
-    if (openBtn && e.isTrusted) userOpenedNPV = true;
-    if (closeBtn && e.isTrusted) userOpenedNPV = false;
-    // Still block synthetic (non-trusted) opens
-    if (openBtn && !e.isTrusted) {
-        e.stopImmediatePropagation();
-        e.preventDefault();
-    }
-}, true);
+      const styleId = 'lyricsplus-hide-npv-style';
+      if (!document.getElementById(styleId)) {
+          const style = document.createElement('style');
+          style.id = styleId;
+          style.textContent = `
+              .NowPlayingView,
+              .OTfMDdomT5S7B5dbYTT8:has(.NowPlayingView) {
+                  width: 0 !important;
+                  display: none !important;
+              }
+              [data-testid=control-button-npv] {
+                  display: none !important;
+              }
+          `;
+          document.head.appendChild(style);
+      }
 
-// Close NPV only if it was NOT opened by the user
-function closeNPV() {
-    const hideBtn = document.querySelector(HIDE_BTN_SELECTOR);
-    if (hideBtn && hideBtn.offsetParent !== null) hideBtn.click();
-}
+  */
 
-const npvObserver = new MutationObserver(() => {
-    const npv = document.querySelector(NPV_VIEW_SELECTOR);
-    // If NPV is open and user didn't open it, close it
-    if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
-});
-npvObserver.observe(document.body, { childList: true, subtree: true });
+  /*
+  --- Disbanded NowPlayingView logic: Allow only user-initiated opens; keeping the NowPlaying button ---
+  I decided to disband the following code in favour of the current SpotifyProvider logic which requires the track informations selectors
+  from the NowPlayingView to remain present in the DOM.
 
-// On page load, ensure NPV is closed if not user-initiated
-setTimeout(() => {
-    const npv = document.querySelector(NPV_VIEW_SELECTOR);
-    if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
-}, 1000);
+  let userOpenedNPV = false;
 
-*/
+  const NPV_BTN_SELECTOR = 'button[data-testid="control-button-npv"]';
+  const NPV_VIEW_SELECTOR = '.NowPlayingView, aside[data-testid="now-playing-bar"]';
+  const HIDE_BTN_SELECTOR = 'button[aria-label="Hide Now Playing view"]';
+
+  // Track user opening NPV
+  document.addEventListener('click', function(e) {
+      const openBtn = e.target.closest(NPV_BTN_SELECTOR);
+      const closeBtn = e.target.closest(HIDE_BTN_SELECTOR);
+      if (openBtn && e.isTrusted) userOpenedNPV = true;
+      if (closeBtn && e.isTrusted) userOpenedNPV = false;
+      // Still block synthetic (non-trusted) opens
+      if (openBtn && !e.isTrusted) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+      }
+  }, true);
+
+  // Close NPV only if it was NOT opened by the user
+  function closeNPV() {
+      const hideBtn = document.querySelector(HIDE_BTN_SELECTOR);
+      if (hideBtn && hideBtn.offsetParent !== null) hideBtn.click();
+  }
+
+  const npvObserver = new MutationObserver(() => {
+      const npv = document.querySelector(NPV_VIEW_SELECTOR);
+      // If NPV is open and user didn't open it, close it
+      if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
+  });
+  npvObserver.observe(document.body, { childList: true, subtree: true });
+
+  // On page load, ensure NPV is closed if not user-initiated
+  setTimeout(() => {
+      const npv = document.querySelector(NPV_VIEW_SELECTOR);
+      if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
+  }, 1000);
+
+  */
 
   // Global flag (window.lyricsPlusPopupIsResizing) is used to prevent lyric highlighting updates from interfering with popup resizing
 
@@ -3732,4 +3780,5 @@ popupObserver.observe(document.body, { childList: true, subtree: true });
     }
   });
 })();
+
 
