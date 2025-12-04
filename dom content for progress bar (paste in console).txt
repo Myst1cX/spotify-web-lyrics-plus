@@ -1,3 +1,5 @@
+// PASTE IN CONSOLE
+
 (() => {
   function id(el) { return el ? (el.id ? `#${el.id}` : el.tagName.toLowerCase()) : null; }
   const out = {};
@@ -58,3 +60,42 @@
   console.log('LYRICS+ PROGRESS DIAG', out);
   return out;
 })();
+
+// RESPONSE:
+
+Object { progressBar: div.LS6q7yFFlYCqXoVxEETT, progressBar_html: '<div class="LS6q7yFFlYCqXoVxEETT" style="--progress-bar-transform: 34.747558241173564%; --hover-bar-transform: 0%; --progress-bar-duration: 1000ms;" data-testid="progress-bar"><div class="NuZQwzwm2yKxIGrFO_y4" data-testid="progress-bar-background"><div class="nfLzZOKzyFjyut6toQIa"><div class="D3ukq4oRWEkyLsWPYziv"></div></div><div class="nfLzZOKzyFjyut6toQIa"><div class="JZ3wV4Y5GgAD0UFsQpE7 PicITxs1LJ19qJsznlgI"></div></div><div class="sUkzLbFQJMcD0k4CVDRl PicITxs1LJ19qJsznlgI" data-testid="progress-bar-handle"></div></div></div>', progressBar_classes: (1) […], progressBar_style: {}, cssVars: {…}, handle: div.sUkzLbFQJMcD0k4CVDRl.PicITxs1LJ19qJsznlgI
+, handle_classes: (2) […], handle_rect: DOMRect, bar_rect: DOMRect, rangeInputs: (4) […], … }
+​
+audio: Object { exists: false }
+​
+bar_rect: DOMRect { x: 490.566650390625, y: 570, width: 450.066650390625, … }
+​
+candidateSelectors: Object { rangeInputFound: true, audioFound: false, posDurFound: true, … }
+​
+cssVars: Object { progressBarTransform: "34.747558241173564%", hoverBarTransform: "0%", progressBarDuration: "1000ms" }
+​
+handle: <div class="sUkzLbFQJMcD0k4CVDRl PicITxs1LJ19qJsznlgI" data-testid="progress-bar-handle">​
+handle_classes: Array [ "sUkzLbFQJMcD0k4CVDRl", "PicITxs1LJ19qJsznlgI" ]
+​
+handle_rect: DOMRect { x: 0, y: 0, width: 0, … }
+​
+playbackDurationEl: <div class="e-91000-text encore-text…s4 GXsSVpgcy07kLerWwAAX" data-encore-id="text" data-testid="playback-duration" data-test-position="74949">
+​
+playbackDuration_text: "-2:18"
+​
+playbackPositionEl: <div class="e-91000-text encore-text…ed SRm6aI_til4K8p38XAxv" data-encore-id="text" data-testid="playback-position">
+​
+playbackPosition_text: "1:12"
+​
+progressBar: <div class="LS6q7yFFlYCqXoVxEETT" style="--progress-bar-transform…s-bar-duration: 1000ms;" data-testid="progress-bar">​
+progressBar_children: Array [ {…} ]
+​
+progressBar_classes: Array [ "LS6q7yFFlYCqXoVxEETT" ]
+​
+progressBar_html: '<div class="LS6q7yFFlYCqXoVxEETT" style="--progress-bar-transform: 34.747558241173564%; --hover-bar-transform: 0%; --progress-bar-duration: 1000ms;" data-testid="progress-bar"><div class="NuZQwzwm2yKxIGrFO_y4" data-testid="progress-bar-background"><div class="nfLzZOKzyFjyut6toQIa"><div class="D3ukq4oRWEkyLsWPYziv"></div></div><div class="nfLzZOKzyFjyut6toQIa"><div class="JZ3wV4Y5GgAD0UFsQpE7 PicITxs1LJ19qJsznlgI"></div></div><div class="sUkzLbFQJMcD0k4CVDRl PicITxs1LJ19qJsznlgI" data-testid="progress-bar-handle"></div></div></div>'
+​
+progressBar_style: Object {  }
+​
+rangeInputs: Array(4) [ {…}, {…}, {…}, … ]
+​
+<prototype>: Object { … }
