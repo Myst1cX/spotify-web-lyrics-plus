@@ -1,0 +1,60 @@
+(() => {
+  function id(el) { return el ? (el.id ? `#${el.id}` : el.tagName.toLowerCase()) : null; }
+  const out = {};
+  out.progressBar = document.querySelector('[data-testid="progress-bar"]') || document.querySelector('.LS6q7yFFlYCqXoVxEETT') || null;
+  if (out.progressBar) {
+    out.progressBar_html = out.progressBar.outerHTML.slice(0, 6000);
+    out.progressBar_classes = Array.from(out.progressBar.classList || []);
+    try { out.progressBar_style = window.getComputedStyle(out.progressBar).cssText || {}; } catch(e){ out.progressBar_style = 'err'; }
+    const cs = window.getComputedStyle(out.progressBar);
+    out.cssVars = {
+      progressBarTransform: cs.getPropertyValue('--progress-bar-transform'),
+      hoverBarTransform: cs.getPropertyValue('--hover-bar-transform'),
+      progressBarDuration: cs.getPropertyValue('--progress-bar-duration')
+    };
+    out.handle = out.progressBar.querySelector('[data-testid="progress-bar-handle"]') || out.progressBar.querySelector('.PicITxs1LJ19qJsznlgI') || null;
+    out.handle_classes = out.handle ? Array.from(out.handle.classList || []) : null;
+    if (out.handle) out.handle_rect = out.handle.getBoundingClientRect ? out.handle.getBoundingClientRect() : null;
+    out.bar_rect = out.progressBar.getBoundingClientRect ? out.progressBar.getBoundingClientRect() : null;
+  } else {
+    out.progressBar = null;
+  }
+
+  out.rangeInputs = Array.from(document.querySelectorAll('input[type="range"]')).map(r => ({
+    html: r.outerHTML.slice(0,500),
+    min: r.min, max: r.max, value: r.value, step: r.step,
+    visible: r.offsetParent !== null
+  }));
+
+  out.playbackPositionEl = document.querySelector('[data-testid="playback-position"]');
+  out.playbackDurationEl = document.querySelector('[data-testid="playback-duration"]');
+  out.playbackPosition_text = out.playbackPositionEl ? out.playbackPositionEl.textContent.trim() : null;
+  out.playbackDuration_text = out.playbackDurationEl ? out.playbackDurationEl.textContent.trim() : null;
+
+  const audio = document.querySelector('audio');
+  out.audio = audio ? {
+    exists: true,
+    duration: isNaN(audio.duration) ? null : audio.duration,
+    currentTime: isNaN(audio.currentTime) ? null : audio.currentTime,
+    paused: audio.paused
+  } : { exists: false };
+
+  // quick test: presence of data-testid on progress children
+  out.progressBar_children = out.progressBar ? Array.from(out.progressBar.children).map(c => ({
+    tag: c.tagName, classes: Array.from(c.classList || []), dataset: {...c.dataset}, htmlStart: c.outerHTML.slice(0,300)
+  })) : null;
+
+  // helpful: list of candidate selectors that appear relevant
+  out.candidateSelectors = {
+    progressBarSelectorsFound: [
+      !!document.querySelector('[data-testid="progress-bar"]'),
+      !!document.querySelector('.LS6q7yFFlYCqXoVxEETT')
+    ],
+    rangeInputFound: document.querySelector('input[type="range"]') ? true : false,
+    audioFound: !!audio,
+    posDurFound: !!out.playbackPositionEl && !!out.playbackDurationEl
+  };
+
+  console.log('LYRICS+ PROGRESS DIAG', out);
+  return out;
+})();
