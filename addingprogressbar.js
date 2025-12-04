@@ -3552,10 +3552,15 @@ const Providers = {
     let lastSpotifyReadTime = 0;   // Timestamp when we last read from Spotify
     let lastSpotifyDurMs = 0;      // Last duration read from Spotify
     let lastSpotifyPosSource = ''; // Which source we read from ('range', 'css', 'text')
+    let lastSeekTime = 0;          // Timestamp of last user seek (to ignore stale Spotify data)
 
     // Threshold for detecting a position change from Spotify (in milliseconds)
     // If the difference between current and last position exceeds this, we consider it a new read
     const POSITION_CHANGE_THRESHOLD_MS = 500;
+    
+    // After seeking, ignore Spotify's position data for this duration (ms)
+    // This prevents jumping back to the old position while Spotify catches up
+    const SEEK_IGNORE_DURATION_MS = 1500;
 
     /**
      * findSpotifyRangeInput()
@@ -3813,18 +3818,36 @@ const Providers = {
         const playing = isSpotifyPlaying();
         let displayPosMs = spotifyPosMs;
 
+        // Check if we recently sought - if so, ignore Spotify's stale position data
+        // and continue interpolating from our seek target until Spotify catches up
+        const recentlySeeked = (now - lastSeekTime) < SEEK_IGNORE_DURATION_MS;
+        
         // Check if Spotify position changed significantly (new read from Spotify)
-        const positionChanged = Math.abs(spotifyPosMs - lastSpotifyPosMs) > POSITION_CHANGE_THRESHOLD_MS || 
-                                source !== lastSpotifyPosSource ||
-                                spotifyDurMs !== lastSpotifyDurMs;
+        // Only consider position changes if we haven't recently sought, OR if Spotify's
+        // position is close to our expected position (meaning Spotify has caught up)
+        const expectedPos = lastSpotifyPosMs + (now - lastSpotifyReadTime);
+        const spotifyMatchesExpected = Math.abs(spotifyPosMs - expectedPos) < POSITION_CHANGE_THRESHOLD_MS;
+        
+        const positionChanged = !recentlySeeked && (
+          Math.abs(spotifyPosMs - lastSpotifyPosMs) > POSITION_CHANGE_THRESHOLD_MS || 
+          source !== lastSpotifyPosSource ||
+          spotifyDurMs !== lastSpotifyDurMs
+        );
+        
+        // Also accept Spotify's position if it matches our expected position (Spotify caught up after seek)
+        const spotifyCaughtUp = recentlySeeked && spotifyMatchesExpected;
 
-        if (positionChanged) {
+        if (positionChanged || spotifyCaughtUp) {
           // New position data from Spotify - update our baseline
           lastSpotifyPosMs = spotifyPosMs;
           lastSpotifyReadTime = now;
           lastSpotifyDurMs = spotifyDurMs;
           lastSpotifyPosSource = source;
           displayPosMs = spotifyPosMs;
+          // If Spotify caught up, clear the seek time to resume normal operation
+          if (spotifyCaughtUp) {
+            lastSeekTime = 0;
+          }
         } else if (playing && lastSpotifyReadTime > 0) {
           // Music is playing and we have a baseline - interpolate
           const elapsed = now - lastSpotifyReadTime;
@@ -4113,11 +4136,13 @@ const Providers = {
       const val = Number(progressInput.value) || 0;
       const max = Number(progressInput.max) || 0;
       userSeeking = false;
-      // Reset all interpolation state so next read from Spotify is used as new baseline
+      // Reset all interpolation state so we interpolate from the seek target
+      // and ignore stale Spotify data until it catches up
       lastSpotifyPosMs = val;
       lastSpotifyReadTime = Date.now();
       lastSpotifyDurMs = max;
       lastSpotifyPosSource = ''; // Clear source to force re-detection
+      lastSeekTime = Date.now(); // Mark that we just seeked
       seekTo(val);
     };
     progressInput.addEventListener('change', commitSeek);
