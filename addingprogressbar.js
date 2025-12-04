@@ -1,15 +1,15 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ exp (keyword: dynamic progress bar)
 // @namespace    http://tampermonkey.net/
-// @version      10.7
+// @version      10.8
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.// @author       Myst1cX
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      genius.com
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/addingprogressbar.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/addingprogressbar.js
 // ==/UserScript==
 
 // MORE URGENT:
@@ -3818,48 +3818,40 @@ const Providers = {
         const playing = isSpotifyPlaying();
         let displayPosMs = spotifyPosMs;
 
-        // Calculate expected position based on interpolation from last known state
-        const elapsedSinceRead = now - lastSpotifyReadTime;
-        const expectedPos = lastSpotifyPosMs + (playing ? elapsedSinceRead : 0);
-        
-        // Check if we recently sought - if so, be more careful about accepting Spotify's data
+        // Check if we recently sought - if so, ignore Spotify's stale position data
+        // and continue interpolating from our seek target until Spotify catches up
         const recentlySeeked = (now - lastSeekTime) < SEEK_IGNORE_DURATION_MS;
         
-        // Determine if Spotify's reported position is close to our expected position
-        // This helps detect when Spotify has caught up after a seek
-        const spotifyNearExpected = Math.abs(spotifyPosMs - expectedPos) < POSITION_CHANGE_THRESHOLD_MS;
+        // Check if Spotify position changed significantly (new read from Spotify)
+        // Only consider position changes if we haven't recently sought, OR if Spotify's
+        // position is close to our expected position (meaning Spotify has caught up)
+        const expectedPos = lastSpotifyPosMs + (now - lastSpotifyReadTime);
+        const spotifyMatchesExpected = Math.abs(spotifyPosMs - expectedPos) < POSITION_CHANGE_THRESHOLD_MS;
         
-        // Determine if this is a genuine position change we should accept:
-        // 1. If we recently seeked, only accept if Spotify is near our expected position (caught up)
-        // 2. If we haven't seeked recently, accept significant position changes
-        //    (but NOT if Spotify is way off from expected - that could be stale data)
-        const maxAcceptableDrift = playing ? 3000 : POSITION_CHANGE_THRESHOLD_MS; // 3s drift max while playing
-        const spotifyWithinReasonableDrift = Math.abs(spotifyPosMs - expectedPos) < maxAcceptableDrift;
+        const positionChanged = !recentlySeeked && (
+          Math.abs(spotifyPosMs - lastSpotifyPosMs) > POSITION_CHANGE_THRESHOLD_MS || 
+          source !== lastSpotifyPosSource ||
+          spotifyDurMs !== lastSpotifyDurMs
+        );
         
-        const shouldAcceptSpotifyPosition = 
-          // Case 1: Spotify caught up after a seek
-          (recentlySeeked && spotifyNearExpected) ||
-          // Case 2: Not recently seeked, position changed, but drift is reasonable
-          (!recentlySeeked && spotifyWithinReasonableDrift && (
-            Math.abs(spotifyPosMs - lastSpotifyPosMs) > POSITION_CHANGE_THRESHOLD_MS || 
-            source !== lastSpotifyPosSource ||
-            spotifyDurMs !== lastSpotifyDurMs
-          ));
+        // Also accept Spotify's position if it matches our expected position (Spotify caught up after seek)
+        const spotifyCaughtUp = recentlySeeked && spotifyMatchesExpected;
 
-        if (shouldAcceptSpotifyPosition) {
-          // Accept Spotify's position - update our baseline
+        if (positionChanged || spotifyCaughtUp) {
+          // New position data from Spotify - update our baseline
           lastSpotifyPosMs = spotifyPosMs;
           lastSpotifyReadTime = now;
           lastSpotifyDurMs = spotifyDurMs;
           lastSpotifyPosSource = source;
           displayPosMs = spotifyPosMs;
-          // Clear seek time since we've synced with Spotify
-          if (recentlySeeked) {
+          // If Spotify caught up, clear the seek time to resume normal operation
+          if (spotifyCaughtUp) {
             lastSeekTime = 0;
           }
         } else if (playing && lastSpotifyReadTime > 0) {
-          // Continue interpolating from our last known good position
-          displayPosMs = expectedPos;
+          // Music is playing and we have a baseline - interpolate
+          const elapsed = now - lastSpotifyReadTime;
+          displayPosMs = lastSpotifyPosMs + elapsed;
           // Clamp to duration
           displayPosMs = clamp(displayPosMs, 0, spotifyDurMs);
         }
