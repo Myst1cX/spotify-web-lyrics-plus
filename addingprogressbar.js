@@ -3674,27 +3674,68 @@ const Providers = {
      * and display that. This avoids any jumps or sync issues.
      * 
      * Fallback order for reading position:
-     *   (a) Native range input - most accurate when available
-     *   (b) CSS-driven progress-bar percent + computed duration from text/trackInfo
-     *   (c) Visible playback-position/playback-duration text or audio.duration
+     *   (a) Visible playback-position/playback-duration text (most reliable - matches what user sees)
+     *   (b) Native range input
+     *   (c) CSS-driven progress-bar percent + computed duration from text/trackInfo
      */
     function updateProgressUIFromSpotify() {
       try {
         let spotifyPosMs = null;
         let spotifyDurMs = null;
 
-        // --- (a) Try native range input first (most accurate) ---
-        const spotifyRange = findSpotifyRangeInput();
-        if (spotifyRange) {
-          const max = Number(spotifyRange.max) || 0;
-          const val = Number(spotifyRange.value) || 0;
-          if (max > 0) {
-            spotifyPosMs = val;
-            spotifyDurMs = max;
+        // --- (a) Try visible playback-position text first (most reliable - matches what user sees) ---
+        const posEl = document.querySelector('[data-testid="playback-position"]');
+        const durEl = document.querySelector('[data-testid="playback-duration"]');
+        if (posEl) {
+          const posMs = timeStringToMs(posEl.textContent);
+          let durMs = 0;
+
+          if (durEl) {
+            const raw = durEl.textContent.trim();
+            if (raw.startsWith('-')) {
+              const remainMs = timeStringToMs(raw);
+              durMs = posMs + remainMs;
+            } else {
+              durMs = timeStringToMs(raw);
+            }
+          }
+
+          // Fallback for duration: try audio.duration
+          if (durMs <= 0) {
+            const audio = document.querySelector('audio');
+            if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+              durMs = audio.duration * 1000;
+            }
+          }
+
+          // Fallback for duration: try getCurrentTrackInfo().duration
+          if (durMs <= 0) {
+            const trackInfo = getCurrentTrackInfo();
+            if (trackInfo && trackInfo.duration > 0) {
+              durMs = trackInfo.duration;
+            }
+          }
+
+          if (durMs > 0) {
+            spotifyPosMs = posMs;
+            spotifyDurMs = durMs;
           }
         }
 
-        // --- (b) Try CSS-driven progress-bar percent + computed duration ---
+        // --- (b) Fallback: Try native range input ---
+        if (spotifyPosMs === null) {
+          const spotifyRange = findSpotifyRangeInput();
+          if (spotifyRange) {
+            const max = Number(spotifyRange.max) || 0;
+            const val = Number(spotifyRange.value) || 0;
+            if (max > 0) {
+              spotifyPosMs = val;
+              spotifyDurMs = max;
+            }
+          }
+        }
+
+        // --- (c) Fallback: Try CSS-driven progress-bar percent + computed duration ---
         if (spotifyPosMs === null) {
           const cssPercent = readSpotifyProgressBarPercent();
           if (cssPercent !== null) {
@@ -3702,9 +3743,9 @@ const Providers = {
             let durMs = 0;
 
             // Try getting duration from visible playback-duration text
-            const durEl = document.querySelector('[data-testid="playback-duration"]');
-            if (durEl) {
-              const raw = durEl.textContent.trim();
+            const durElCss = document.querySelector('[data-testid="playback-duration"]');
+            if (durElCss) {
+              const raw = durElCss.textContent.trim();
               if (!raw.startsWith('-')) {
                 durMs = timeStringToMs(raw);
               }
@@ -3727,11 +3768,11 @@ const Providers = {
             }
 
             // If remaining time format, compute total from position + remaining
-            if (durMs <= 0 && durEl) {
-              const raw = durEl.textContent.trim();
+            if (durMs <= 0 && durElCss) {
+              const raw = durElCss.textContent.trim();
               if (raw.startsWith('-')) {
-                const posEl = document.querySelector('[data-testid="playback-position"]');
-                const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
+                const posElCss = document.querySelector('[data-testid="playback-position"]');
+                const posMs = posElCss ? timeStringToMs(posElCss.textContent) : 0;
                 const remainMs = timeStringToMs(raw);
                 durMs = posMs + remainMs;
               }
@@ -3741,45 +3782,6 @@ const Providers = {
               spotifyPosMs = (cssPercent / 100) * durMs;
               spotifyDurMs = durMs;
             }
-          }
-        }
-
-        // --- (c) Fallback: visible playback-position/playback-duration text ---
-        if (spotifyPosMs === null) {
-          const posEl = document.querySelector('[data-testid="playback-position"]');
-          const durEl = document.querySelector('[data-testid="playback-duration"]');
-          const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
-          let durMs = 0;
-
-          if (durEl) {
-            const raw = durEl.textContent.trim();
-            if (raw.startsWith('-')) {
-              const remainMs = timeStringToMs(raw);
-              durMs = posMs + remainMs;
-            } else {
-              durMs = timeStringToMs(raw);
-            }
-          }
-
-          // Fallback: try audio.duration
-          if (durMs <= 0) {
-            const audio = document.querySelector('audio');
-            if (audio && !isNaN(audio.duration) && audio.duration > 0) {
-              durMs = audio.duration * 1000;
-            }
-          }
-
-          // Fallback: try getCurrentTrackInfo().duration
-          if (durMs <= 0) {
-            const trackInfo = getCurrentTrackInfo();
-            if (trackInfo && trackInfo.duration > 0) {
-              durMs = trackInfo.duration;
-            }
-          }
-
-          if (durMs > 0) {
-            spotifyPosMs = posMs;
-            spotifyDurMs = durMs;
           }
         }
 
