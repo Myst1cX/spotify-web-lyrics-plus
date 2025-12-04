@@ -3818,40 +3818,48 @@ const Providers = {
         const playing = isSpotifyPlaying();
         let displayPosMs = spotifyPosMs;
 
-        // Check if we recently sought - if so, ignore Spotify's stale position data
-        // and continue interpolating from our seek target until Spotify catches up
+        // Calculate expected position based on interpolation from last known state
+        const elapsedSinceRead = now - lastSpotifyReadTime;
+        const expectedPos = lastSpotifyPosMs + (playing ? elapsedSinceRead : 0);
+        
+        // Check if we recently sought - if so, be more careful about accepting Spotify's data
         const recentlySeeked = (now - lastSeekTime) < SEEK_IGNORE_DURATION_MS;
         
-        // Check if Spotify position changed significantly (new read from Spotify)
-        // Only consider position changes if we haven't recently sought, OR if Spotify's
-        // position is close to our expected position (meaning Spotify has caught up)
-        const expectedPos = lastSpotifyPosMs + (now - lastSpotifyReadTime);
-        const spotifyMatchesExpected = Math.abs(spotifyPosMs - expectedPos) < POSITION_CHANGE_THRESHOLD_MS;
+        // Determine if Spotify's reported position is close to our expected position
+        // This helps detect when Spotify has caught up after a seek
+        const spotifyNearExpected = Math.abs(spotifyPosMs - expectedPos) < POSITION_CHANGE_THRESHOLD_MS;
         
-        const positionChanged = !recentlySeeked && (
-          Math.abs(spotifyPosMs - lastSpotifyPosMs) > POSITION_CHANGE_THRESHOLD_MS || 
-          source !== lastSpotifyPosSource ||
-          spotifyDurMs !== lastSpotifyDurMs
-        );
+        // Determine if this is a genuine position change we should accept:
+        // 1. If we recently seeked, only accept if Spotify is near our expected position (caught up)
+        // 2. If we haven't seeked recently, accept significant position changes
+        //    (but NOT if Spotify is way off from expected - that could be stale data)
+        const maxAcceptableDrift = playing ? 3000 : POSITION_CHANGE_THRESHOLD_MS; // 3s drift max while playing
+        const spotifyWithinReasonableDrift = Math.abs(spotifyPosMs - expectedPos) < maxAcceptableDrift;
         
-        // Also accept Spotify's position if it matches our expected position (Spotify caught up after seek)
-        const spotifyCaughtUp = recentlySeeked && spotifyMatchesExpected;
+        const shouldAcceptSpotifyPosition = 
+          // Case 1: Spotify caught up after a seek
+          (recentlySeeked && spotifyNearExpected) ||
+          // Case 2: Not recently seeked, position changed, but drift is reasonable
+          (!recentlySeeked && spotifyWithinReasonableDrift && (
+            Math.abs(spotifyPosMs - lastSpotifyPosMs) > POSITION_CHANGE_THRESHOLD_MS || 
+            source !== lastSpotifyPosSource ||
+            spotifyDurMs !== lastSpotifyDurMs
+          ));
 
-        if (positionChanged || spotifyCaughtUp) {
-          // New position data from Spotify - update our baseline
+        if (shouldAcceptSpotifyPosition) {
+          // Accept Spotify's position - update our baseline
           lastSpotifyPosMs = spotifyPosMs;
           lastSpotifyReadTime = now;
           lastSpotifyDurMs = spotifyDurMs;
           lastSpotifyPosSource = source;
           displayPosMs = spotifyPosMs;
-          // If Spotify caught up, clear the seek time to resume normal operation
-          if (spotifyCaughtUp) {
+          // Clear seek time since we've synced with Spotify
+          if (recentlySeeked) {
             lastSeekTime = 0;
           }
         } else if (playing && lastSpotifyReadTime > 0) {
-          // Music is playing and we have a baseline - interpolate
-          const elapsed = now - lastSpotifyReadTime;
-          displayPosMs = lastSpotifyPosMs + elapsed;
+          // Continue interpolating from our last known good position
+          displayPosMs = expectedPos;
           // Clamp to duration
           displayPosMs = clamp(displayPosMs, 0, spotifyDurMs);
         }
