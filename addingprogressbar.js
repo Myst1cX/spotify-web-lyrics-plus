@@ -3544,23 +3544,10 @@ const Providers = {
     // This section implements robust detection and seeking for Spotify's progress bar,
     // supporting both CSS-driven progress bars (using --progress-bar-transform) and
     // native range inputs, with fallback to visible position/duration text or audio element.
-
-    // State for smooth progress interpolation
-    // Spotify updates CSS vars/text approximately every 1s; we interpolate between updates
-    // to provide smooth progress display while playing
-    let lastSpotifyPosMs = 0;       // Last position read from Spotify
-    let lastSpotifyReadTime = 0;   // Timestamp when we last read from Spotify
-    let lastSpotifyDurMs = 0;      // Last duration read from Spotify
-    let lastSpotifyPosSource = ''; // Which source we read from ('range', 'css', 'text')
-    let lastSeekTime = 0;          // Timestamp of last user seek (to ignore stale Spotify data)
-
-    // Threshold for detecting a position change from Spotify (in milliseconds)
-    // If the difference between current and last position exceeds this, we consider it a new read
-    const POSITION_CHANGE_THRESHOLD_MS = 500;
     
-    // After seeking, ignore Spotify's position data for this duration (ms)
-    // This prevents jumping back to the old position while Spotify catches up
-    const SEEK_IGNORE_DURATION_MS = 1500;
+    // No interpolation - we just read directly from Spotify's DOM every 100ms.
+    // If Spotify's DOM updates slowly, we show what Spotify shows. This avoids
+    // any jumps or sync issues from our own interpolation logic.
 
     /**
      * findSpotifyRangeInput()
@@ -3683,8 +3670,8 @@ const Providers = {
      * Updates the popup's progressInput, timeNow, timeTotal, and background gradient
      * from Spotify's playback state.
      * 
-     * Uses interpolation for smooth updates: Spotify only updates CSS vars/text ~1s,
-     * so we interpolate between reads when music is playing for smoother display.
+     * No interpolation - we just read directly from Spotify's DOM every 100ms
+     * and display that. This avoids any jumps or sync issues.
      * 
      * Fallback order for reading position:
      *   (a) Native range input - most accurate when available
@@ -3693,10 +3680,8 @@ const Providers = {
      */
     function updateProgressUIFromSpotify() {
       try {
-        const now = Date.now();
         let spotifyPosMs = null;
         let spotifyDurMs = null;
-        let source = '';
 
         // --- (a) Try native range input first (most accurate) ---
         const spotifyRange = findSpotifyRangeInput();
@@ -3706,7 +3691,6 @@ const Providers = {
           if (max > 0) {
             spotifyPosMs = val;
             spotifyDurMs = max;
-            source = 'range';
           }
         }
 
@@ -3756,7 +3740,6 @@ const Providers = {
             if (durMs > 0) {
               spotifyPosMs = (cssPercent / 100) * durMs;
               spotifyDurMs = durMs;
-              source = 'css';
             }
           }
         }
@@ -3797,7 +3780,6 @@ const Providers = {
           if (durMs > 0) {
             spotifyPosMs = posMs;
             spotifyDurMs = durMs;
-            source = 'text';
           }
         }
 
@@ -3811,55 +3793,15 @@ const Providers = {
           return;
         }
 
-        // --- Interpolation logic for smooth updates ---
-        // Spotify typically updates position data every ~1s. When playing, we interpolate
-        // based on elapsed real time to provide smoother progress display.
-        // Note: Spotify Web doesn't support variable playback speed, so we assume 1:1 relationship
-        const playing = isSpotifyPlaying();
-        let displayPosMs = spotifyPosMs;
-
-        // Check if we recently sought - if so, ignore Spotify's stale position data
-        // and continue interpolating from our seek target until Spotify catches up
-        const recentlySeeked = (now - lastSeekTime) < SEEK_IGNORE_DURATION_MS;
-        
-        // Check if Spotify position changed significantly (new read from Spotify)
-        // Only consider position changes if we haven't recently sought, OR if Spotify's
-        // position is close to our expected position (meaning Spotify has caught up)
-        const expectedPos = lastSpotifyPosMs + (now - lastSpotifyReadTime);
-        const spotifyMatchesExpected = Math.abs(spotifyPosMs - expectedPos) < POSITION_CHANGE_THRESHOLD_MS;
-        
-        const positionChanged = !recentlySeeked && (
-          Math.abs(spotifyPosMs - lastSpotifyPosMs) > POSITION_CHANGE_THRESHOLD_MS || 
-          source !== lastSpotifyPosSource ||
-          spotifyDurMs !== lastSpotifyDurMs
-        );
-        
-        // Also accept Spotify's position if it matches our expected position (Spotify caught up after seek)
-        const spotifyCaughtUp = recentlySeeked && spotifyMatchesExpected;
-
-        if (positionChanged || spotifyCaughtUp) {
-          // New position data from Spotify - update our baseline
-          lastSpotifyPosMs = spotifyPosMs;
-          lastSpotifyReadTime = now;
-          lastSpotifyDurMs = spotifyDurMs;
-          lastSpotifyPosSource = source;
-          displayPosMs = spotifyPosMs;
-          // If Spotify caught up, clear the seek time to resume normal operation
-          if (spotifyCaughtUp) {
-            lastSeekTime = 0;
-          }
-        } else if (playing && lastSpotifyReadTime > 0) {
-          // Music is playing and we have a baseline - interpolate
-          const elapsed = now - lastSpotifyReadTime;
-          displayPosMs = lastSpotifyPosMs + elapsed;
-          // Clamp to duration
-          displayPosMs = clamp(displayPosMs, 0, spotifyDurMs);
-        }
-        // If paused, just use the last known position without interpolation
+        // --- No interpolation: Just display what Spotify reports ---
+        // This is the simplest approach - we show exactly what Spotify's DOM says.
+        // If Spotify updates slowly, our display updates slowly too. But we avoid
+        // any jumps or sync issues from trying to interpolate/predict positions.
+        const displayPosMs = clamp(spotifyPosMs, 0, spotifyDurMs);
 
         // Update the UI
         progressInput.max = String(spotifyDurMs);
-        progressInput.value = String(clamp(displayPosMs, 0, spotifyDurMs));
+        progressInput.value = String(displayPosMs);
         const pct = (displayPosMs / spotifyDurMs) * 100;
         progressInput.style.background = `linear-gradient(90deg, #1db954 ${pct}%, #444 ${pct}%)`;
         timeNow.textContent = formatMs(displayPosMs);
@@ -4157,15 +4099,8 @@ const Providers = {
     // Commit seek on mouseup/touchend
     const commitSeek = (e) => {
       const val = Number(progressInput.value) || 0;
-      const max = Number(progressInput.max) || 0;
       userSeeking = false;
-      // Reset all interpolation state so we interpolate from the seek target
-      // and ignore stale Spotify data until it catches up
-      lastSpotifyPosMs = val;
-      lastSpotifyReadTime = Date.now();
-      lastSpotifyDurMs = max;
-      lastSpotifyPosSource = ''; // Clear source to force re-detection
-      lastSeekTime = Date.now(); // Mark that we just seeked
+      // Just seek - no interpolation state to manage
       seekTo(val);
     };
     progressInput.addEventListener('change', commitSeek);
