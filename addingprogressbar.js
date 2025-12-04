@@ -3545,6 +3545,18 @@ const Providers = {
     // supporting both CSS-driven progress bars (using --progress-bar-transform) and
     // native range inputs, with fallback to visible position/duration text or audio element.
 
+    // State for smooth progress interpolation
+    // Spotify updates CSS vars/text approximately every 1s; we interpolate between updates
+    // to provide smooth progress display while playing
+    let lastSpotifyPosMs = 0;       // Last position read from Spotify
+    let lastSpotifyReadTime = 0;   // Timestamp when we last read from Spotify
+    let lastSpotifyDurMs = 0;      // Last duration read from Spotify
+    let lastSpotifyPosSource = ''; // Which source we read from ('range', 'css', 'text')
+
+    // Threshold for detecting a position change from Spotify (in milliseconds)
+    // If the difference between current and last position exceeds this, we consider it a new read
+    const POSITION_CHANGE_THRESHOLD_MS = 500;
+
     /**
      * findSpotifyRangeInput()
      * Attempts to find Spotify's native range input for playback progress.
@@ -3665,50 +3677,99 @@ const Providers = {
      * updateProgressUIFromSpotify()
      * Updates the popup's progressInput, timeNow, timeTotal, and background gradient
      * from Spotify's playback state.
-     * Fallback order:
+     * 
+     * Uses interpolation for smooth updates: Spotify only updates CSS vars/text ~1s,
+     * so we interpolate between reads when music is playing for smoother display.
+     * 
+     * Fallback order for reading position:
      *   (a) Native range input - most accurate when available
      *   (b) CSS-driven progress-bar percent + computed duration from text/trackInfo
      *   (c) Visible playback-position/playback-duration text or audio.duration
      */
     function updateProgressUIFromSpotify() {
       try {
+        const now = Date.now();
+        let spotifyPosMs = null;
+        let spotifyDurMs = null;
+        let source = '';
+
         // --- (a) Try native range input first (most accurate) ---
         const spotifyRange = findSpotifyRangeInput();
         if (spotifyRange) {
           const max = Number(spotifyRange.max) || 0;
           const val = Number(spotifyRange.value) || 0;
           if (max > 0) {
-            progressInput.max = String(max);
-            progressInput.value = String(val);
-            const pct = (val / max) * 100;
-            progressInput.style.background = `linear-gradient(90deg, #1db954 ${pct}%, #444 ${pct}%)`;
-            timeNow.textContent = formatMs(val);
-            timeTotal.textContent = formatMs(max);
-            return;
+            spotifyPosMs = val;
+            spotifyDurMs = max;
+            source = 'range';
           }
         }
 
         // --- (b) Try CSS-driven progress-bar percent + computed duration ---
-        const cssPercent = readSpotifyProgressBarPercent();
-        if (cssPercent !== null) {
-          // Need to determine total duration to compute position
-          let durMs = 0;
+        if (spotifyPosMs === null) {
+          const cssPercent = readSpotifyProgressBarPercent();
+          if (cssPercent !== null) {
+            // Need to determine total duration to compute position
+            let durMs = 0;
 
-          // Try getting duration from visible playback-duration text
-          const durEl = document.querySelector('[data-testid="playback-duration"]');
-          if (durEl) {
-            const raw = durEl.textContent.trim();
-            if (!raw.startsWith('-')) {
-              // Direct duration display (e.g., "3:30")
-              durMs = timeStringToMs(raw);
+            // Try getting duration from visible playback-duration text
+            const durEl = document.querySelector('[data-testid="playback-duration"]');
+            if (durEl) {
+              const raw = durEl.textContent.trim();
+              if (!raw.startsWith('-')) {
+                durMs = timeStringToMs(raw);
+              }
+            }
+
+            // Fallback: try getCurrentTrackInfo().duration
+            if (durMs <= 0) {
+              const trackInfo = getCurrentTrackInfo();
+              if (trackInfo && trackInfo.duration > 0) {
+                durMs = trackInfo.duration;
+              }
+            }
+
+            // Fallback: try audio.duration
+            if (durMs <= 0) {
+              const audio = document.querySelector('audio');
+              if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+                durMs = audio.duration * 1000;
+              }
+            }
+
+            // If remaining time format, compute total from position + remaining
+            if (durMs <= 0 && durEl) {
+              const raw = durEl.textContent.trim();
+              if (raw.startsWith('-')) {
+                const posEl = document.querySelector('[data-testid="playback-position"]');
+                const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
+                const remainMs = timeStringToMs(raw);
+                durMs = posMs + remainMs;
+              }
+            }
+
+            if (durMs > 0) {
+              spotifyPosMs = (cssPercent / 100) * durMs;
+              spotifyDurMs = durMs;
+              source = 'css';
             }
           }
+        }
 
-          // Fallback: try getCurrentTrackInfo().duration
-          if (durMs <= 0) {
-            const trackInfo = getCurrentTrackInfo();
-            if (trackInfo && trackInfo.duration > 0) {
-              durMs = trackInfo.duration;
+        // --- (c) Fallback: visible playback-position/playback-duration text ---
+        if (spotifyPosMs === null) {
+          const posEl = document.querySelector('[data-testid="playback-position"]');
+          const durEl = document.querySelector('[data-testid="playback-duration"]');
+          const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
+          let durMs = 0;
+
+          if (durEl) {
+            const raw = durEl.textContent.trim();
+            if (raw.startsWith('-')) {
+              const remainMs = timeStringToMs(raw);
+              durMs = posMs + remainMs;
+            } else {
+              durMs = timeStringToMs(raw);
             }
           }
 
@@ -3720,76 +3781,67 @@ const Providers = {
             }
           }
 
-          // If remaining time format, compute total from position + remaining
-          if (durMs <= 0 && durEl) {
-            const raw = durEl.textContent.trim();
-            if (raw.startsWith('-')) {
-              const posEl = document.querySelector('[data-testid="playback-position"]');
-              const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
-              const remainMs = timeStringToMs(raw); // timeStringToMs strips the minus
-              durMs = posMs + remainMs;
+          // Fallback: try getCurrentTrackInfo().duration
+          if (durMs <= 0) {
+            const trackInfo = getCurrentTrackInfo();
+            if (trackInfo && trackInfo.duration > 0) {
+              durMs = trackInfo.duration;
             }
           }
 
           if (durMs > 0) {
-            const posMs = (cssPercent / 100) * durMs;
-            progressInput.max = String(durMs);
-            progressInput.value = String(clamp(posMs, 0, durMs));
-            progressInput.style.background = `linear-gradient(90deg, #1db954 ${cssPercent}%, #444 ${cssPercent}%)`;
-            timeNow.textContent = formatMs(posMs);
-            timeTotal.textContent = formatMs(durMs);
-            return;
+            spotifyPosMs = posMs;
+            spotifyDurMs = durMs;
+            source = 'text';
           }
         }
 
-        // --- (c) Fallback: visible playback-position/playback-duration text ---
-        const posEl = document.querySelector('[data-testid="playback-position"]');
-        const durEl = document.querySelector('[data-testid="playback-duration"]');
-        const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
-        let durMs = 0;
-
-        if (durEl) {
-          const raw = durEl.textContent.trim();
-          if (raw.startsWith('-')) {
-            // Remaining time format: compute total = position + remaining
-            const remainMs = timeStringToMs(raw);
-            durMs = posMs + remainMs;
-          } else {
-            durMs = timeStringToMs(raw);
-          }
-        }
-
-        // Fallback: try audio.duration
-        if (durMs <= 0) {
-          const audio = document.querySelector('audio');
-          if (audio && !isNaN(audio.duration) && audio.duration > 0) {
-            durMs = audio.duration * 1000;
-          }
-        }
-
-        // Fallback: try getCurrentTrackInfo().duration
-        if (durMs <= 0) {
-          const trackInfo = getCurrentTrackInfo();
-          if (trackInfo && trackInfo.duration > 0) {
-            durMs = trackInfo.duration;
-          }
-        }
-
-        if (durMs > 0) {
-          progressInput.max = String(durMs);
-          progressInput.value = String(clamp(posMs, 0, durMs));
-          const pct = (posMs / durMs) * 100;
-          progressInput.style.background = `linear-gradient(90deg, #1db954 ${pct}%, #444 ${pct}%)`;
-          timeNow.textContent = formatMs(posMs);
-          timeTotal.textContent = formatMs(durMs);
-        } else {
-          // No progress info available
+        // If we couldn't get position from any source, show zeros
+        if (spotifyPosMs === null || spotifyDurMs === null || spotifyDurMs <= 0) {
           progressInput.max = "100";
           progressInput.value = "0";
           progressInput.style.background = `linear-gradient(90deg, #1db954 0%, #444 0%)`;
           timeNow.textContent = "0:00";
           timeTotal.textContent = "0:00";
+          return;
         }
+
+        // --- Interpolation logic for smooth updates ---
+        // Spotify typically updates position data every ~1s. When playing, we interpolate
+        // based on elapsed real time to provide smoother progress display.
+        // Note: Spotify Web doesn't support variable playback speed, so we assume 1:1 relationship
+        const playing = isSpotifyPlaying();
+        let displayPosMs = spotifyPosMs;
+
+        // Check if Spotify position changed significantly (new read from Spotify)
+        const positionChanged = Math.abs(spotifyPosMs - lastSpotifyPosMs) > POSITION_CHANGE_THRESHOLD_MS || 
+                                source !== lastSpotifyPosSource ||
+                                spotifyDurMs !== lastSpotifyDurMs;
+
+        if (positionChanged) {
+          // New position data from Spotify - update our baseline
+          lastSpotifyPosMs = spotifyPosMs;
+          lastSpotifyReadTime = now;
+          lastSpotifyDurMs = spotifyDurMs;
+          lastSpotifyPosSource = source;
+          displayPosMs = spotifyPosMs;
+        } else if (playing && lastSpotifyReadTime > 0) {
+          // Music is playing and we have a baseline - interpolate
+          const elapsed = now - lastSpotifyReadTime;
+          displayPosMs = lastSpotifyPosMs + elapsed;
+          // Clamp to duration
+          displayPosMs = clamp(displayPosMs, 0, spotifyDurMs);
+        }
+        // If paused, just use the last known position without interpolation
+
+        // Update the UI
+        progressInput.max = String(spotifyDurMs);
+        progressInput.value = String(clamp(displayPosMs, 0, spotifyDurMs));
+        const pct = (displayPosMs / spotifyDurMs) * 100;
+        progressInput.style.background = `linear-gradient(90deg, #1db954 ${pct}%, #444 ${pct}%)`;
+        timeNow.textContent = formatMs(displayPosMs);
+        timeTotal.textContent = formatMs(spotifyDurMs);
+
       } catch (e) {
         console.warn('updateProgressUIFromSpotify error:', e);
       }
@@ -4059,7 +4111,13 @@ const Providers = {
     // Commit seek on mouseup/touchend
     const commitSeek = (e) => {
       const val = Number(progressInput.value) || 0;
+      const max = Number(progressInput.max) || 0;
       userSeeking = false;
+      // Reset all interpolation state so next read from Spotify is used as new baseline
+      lastSpotifyPosMs = val;
+      lastSpotifyReadTime = Date.now();
+      lastSpotifyDurMs = max;
+      lastSpotifyPosSource = ''; // Clear source to force re-detection
       seekTo(val);
     };
     progressInput.addEventListener('change', commitSeek);
@@ -4071,12 +4129,13 @@ const Providers = {
     attachProgressBarWatcher();
 
     // Start interval to refresh progress
+    // Using 100ms interval for smooth interpolated updates
     if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
     progressInterval = setInterval(() => {
       // Don't auto-update while user is actively dragging
       if (document.activeElement === progressInput || userSeeking) return;
       updateProgressUIFromSpotify();
-    }, 250);
+    }, 100);
 
     startPollingForTrackChange(popup);
   }
