@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ exp (keyword: dynamic progress bar)
 // @namespace    http://tampermonkey.net/
-// @version      10.7
+// @version      10.8
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.// @author       Myst1cX
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -3540,20 +3540,136 @@ const Providers = {
       autodetectProviderAndLoad(popup, info);
     }
 
-    // --- NEW: DYNAMIC PROGRESS BAR'S PROGRESS UPDATES AND SEEKING LOGIC ---
+    // --- DYNAMIC PROGRESS BAR: PROGRESS UPDATES AND SEEKING LOGIC ---
+    // This section implements robust detection and seeking for Spotify's progress bar,
+    // supporting both CSS-driven progress bars (using --progress-bar-transform) and
+    // native range inputs, with fallback to visible position/duration text or audio element.
 
+    // State for smooth progress interpolation
+    // Spotify updates CSS vars/text approximately every 1s; we interpolate between updates
+    // to provide smooth progress display while playing
+    let lastSpotifyPosMs = 0;       // Last position read from Spotify
+    let lastSpotifyReadTime = 0;   // Timestamp when we last read from Spotify
+    let lastSpotifyDurMs = 0;      // Last duration read from Spotify
+    let lastSpotifyPosSource = ''; // Which source we read from ('range', 'css', 'text')
+    let lastSeekTime = 0;          // Timestamp of last user seek (to ignore stale Spotify data)
+
+    // Threshold for detecting a position change from Spotify (in milliseconds)
+    // If the difference between current and last position exceeds this, we consider it a new read
+    const POSITION_CHANGE_THRESHOLD_MS = 500;
+    
+    // After seeking, ignore Spotify's position data for this duration (ms)
+    // This prevents jumping back to the old position while Spotify catches up
+    const SEEK_IGNORE_DURATION_MS = 1500;
+
+    /**
+     * findSpotifyRangeInput()
+     * Attempts to find Spotify's native range input for playback progress.
+     * Fallback order:
+     *   1. Hidden numeric input[type=range] with max > 0 (preferred - most accurate)
+     *   2. Visible range inputs with max > 0
+     *   3. Any range input with numeric max/min/step
+     * @returns {HTMLInputElement|null}
+     */
     function findSpotifyRangeInput() {
-      // Try to locate Spotify's native (hidden) range input used in the web player
-      // Example from pasted HTML: label.hidden-visually > input[type=range]
-      const r1 = document.querySelector('label.hidden-visually input[type="range"]');
-      if (r1) return r1;
-      // try data-testid within progress bar element
-      const r2 = document.querySelector('[data-testid="progress-bar"] input[type="range"]');
-      if (r2) return r2;
-      // generic fallback
-      return Array.from(document.querySelectorAll('input[type="range"]')).find(inp => inp.max && inp.min && inp.step);
+      try {
+        // Collect all range inputs in the document
+        const allRanges = Array.from(document.querySelectorAll('input[type="range"]'));
+
+        // Filter for hidden ranges with max > 0 (preferred - Spotify often uses hidden inputs)
+        const hiddenRanges = allRanges.filter(inp => {
+          const max = Number(inp.max);
+          // Check if hidden: not visible in DOM (hidden-visually class, or offsetParent null)
+          // Use specific class matching to avoid false positives like 'unhidden'
+          const isHidden = inp.offsetParent === null ||
+                           inp.closest('label.hidden-visually') !== null ||
+                           inp.closest('.hidden-visually') !== null ||
+                           inp.closest('[class~="hidden"]') !== null;
+          return isHidden && max > 0;
+        });
+        if (hiddenRanges.length > 0) {
+          // Prefer the one with the largest max value (likely the playback progress)
+          hiddenRanges.sort((a, b) => Number(b.max) - Number(a.max));
+          return hiddenRanges[0];
+        }
+
+        // Fallback: visible range inputs with max > 0
+        const visibleRanges = allRanges.filter(inp => {
+          const max = Number(inp.max);
+          return inp.offsetParent !== null && max > 0;
+        });
+        if (visibleRanges.length > 0) {
+          visibleRanges.sort((a, b) => Number(b.max) - Number(a.max));
+          return visibleRanges[0];
+        }
+
+        // Last resort: any range with valid numeric attributes
+        const anyValid = allRanges.find(inp =>
+          inp.max && !isNaN(Number(inp.max)) && Number(inp.max) > 0 &&
+          inp.step && !isNaN(Number(inp.step))
+        );
+        return anyValid || null;
+      } catch (e) {
+        console.warn('findSpotifyRangeInput error:', e);
+        return null;
+      }
     }
 
+    /**
+     * readSpotifyProgressBarPercent()
+     * Parses the --progress-bar-transform CSS variable from [data-testid="progress-bar"]
+     * to get the current playback progress as a percentage (0-100).
+     * Falls back to approximating from handle geometry when CSS var is unavailable.
+     * @returns {number|null} Percentage (0-100) or null if unavailable
+     */
+    function readSpotifyProgressBarPercent() {
+      try {
+        const progressBar = document.querySelector('[data-testid="progress-bar"]');
+        if (!progressBar) return null;
+
+        // Try reading the --progress-bar-transform CSS variable
+        const computedStyle = window.getComputedStyle(progressBar);
+        const transformVar = computedStyle.getPropertyValue('--progress-bar-transform');
+        if (transformVar) {
+          // Parse "34.747558241173564%" -> 34.747558241173564
+          // Use precise regex to match valid decimal numbers (including '0', '0.0', '.5', etc.)
+          const match = transformVar.trim().match(/^(\d*\.?\d+)%?$/);
+          if (match) {
+            const pct = parseFloat(match[1]);
+            if (!isNaN(pct) && pct >= 0 && pct <= 100) {
+              return pct;
+            }
+          }
+        }
+
+        // Fallback: approximate from handle position relative to bar width
+        const handle = progressBar.querySelector('[data-testid="progress-bar-handle"]');
+        const barRect = progressBar.getBoundingClientRect();
+        if (handle && barRect.width > 0) {
+          const handleRect = handle.getBoundingClientRect();
+          // Handle center position relative to bar start
+          const handleCenter = handleRect.left + handleRect.width / 2;
+          const barStart = barRect.left;
+          const barWidth = barRect.width;
+          const pct = ((handleCenter - barStart) / barWidth) * 100;
+          if (!isNaN(pct) && pct >= 0 && pct <= 100) {
+            return pct;
+          }
+        }
+
+        return null;
+      } catch (e) {
+        console.warn('readSpotifyProgressBarPercent error:', e);
+        return null;
+      }
+    }
+
+    /**
+     * formatMs(ms)
+     * Converts milliseconds to a human-readable time string (m:ss).
+     * @param {number} ms - Milliseconds
+     * @returns {string} Formatted time string
+     */
     function formatMs(ms) {
       if (!ms || isNaN(ms)) return "0:00";
       const s = Math.floor(ms / 1000);
@@ -3562,98 +3678,469 @@ const Providers = {
       return `${m}:${String(sec).padStart(2, '0')}`;
     }
 
+    /**
+     * updateProgressUIFromSpotify()
+     * Updates the popup's progressInput, timeNow, timeTotal, and background gradient
+     * from Spotify's playback state.
+     * 
+     * Uses interpolation for smooth updates: Spotify only updates CSS vars/text ~1s,
+     * so we interpolate between reads when music is playing for smoother display.
+     * 
+     * Fallback order for reading position:
+     *   (a) Native range input - most accurate when available
+     *   (b) CSS-driven progress-bar percent + computed duration from text/trackInfo
+     *   (c) Visible playback-position/playback-duration text or audio.duration
+     */
     function updateProgressUIFromSpotify() {
-      // Attempt to read Spotify's internal range input. It uses ms in max/value (per pasted sample).
-      const spotifyRange = findSpotifyRangeInput();
-      if (spotifyRange) {
-        const max = Number(spotifyRange.max) || 0;
-        const val = Number(spotifyRange.value) || 0;
-        if (max > 0) {
-          progressInput.max = String(max);
-          progressInput.value = String(val);
-          // update gradient background to show progress
-          const pct = (val / max) * 100;
-          progressInput.style.background = `linear-gradient(90deg, #1db954 ${pct}%, #444 ${pct}%)`;
-          timeNow.textContent = formatMs(val);
-          timeTotal.textContent = formatMs(max);
+      try {
+        const now = Date.now();
+        let spotifyPosMs = null;
+        let spotifyDurMs = null;
+        let source = '';
+
+        // --- (a) Try native range input first (most accurate) ---
+        const spotifyRange = findSpotifyRangeInput();
+        if (spotifyRange) {
+          const max = Number(spotifyRange.max) || 0;
+          const val = Number(spotifyRange.value) || 0;
+          if (max > 0) {
+            spotifyPosMs = val;
+            spotifyDurMs = max;
+            source = 'range';
+          }
+        }
+
+        // --- (b) Try CSS-driven progress-bar percent + computed duration ---
+        if (spotifyPosMs === null) {
+          const cssPercent = readSpotifyProgressBarPercent();
+          if (cssPercent !== null) {
+            // Need to determine total duration to compute position
+            let durMs = 0;
+
+            // Try getting duration from visible playback-duration text
+            const durEl = document.querySelector('[data-testid="playback-duration"]');
+            if (durEl) {
+              const raw = durEl.textContent.trim();
+              if (!raw.startsWith('-')) {
+                durMs = timeStringToMs(raw);
+              }
+            }
+
+            // Fallback: try getCurrentTrackInfo().duration
+            if (durMs <= 0) {
+              const trackInfo = getCurrentTrackInfo();
+              if (trackInfo && trackInfo.duration > 0) {
+                durMs = trackInfo.duration;
+              }
+            }
+
+            // Fallback: try audio.duration
+            if (durMs <= 0) {
+              const audio = document.querySelector('audio');
+              if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+                durMs = audio.duration * 1000;
+              }
+            }
+
+            // If remaining time format, compute total from position + remaining
+            if (durMs <= 0 && durEl) {
+              const raw = durEl.textContent.trim();
+              if (raw.startsWith('-')) {
+                const posEl = document.querySelector('[data-testid="playback-position"]');
+                const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
+                const remainMs = timeStringToMs(raw);
+                durMs = posMs + remainMs;
+              }
+            }
+
+            if (durMs > 0) {
+              spotifyPosMs = (cssPercent / 100) * durMs;
+              spotifyDurMs = durMs;
+              source = 'css';
+            }
+          }
+        }
+
+        // --- (c) Fallback: visible playback-position/playback-duration text ---
+        if (spotifyPosMs === null) {
+          const posEl = document.querySelector('[data-testid="playback-position"]');
+          const durEl = document.querySelector('[data-testid="playback-duration"]');
+          const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
+          let durMs = 0;
+
+          if (durEl) {
+            const raw = durEl.textContent.trim();
+            if (raw.startsWith('-')) {
+              const remainMs = timeStringToMs(raw);
+              durMs = posMs + remainMs;
+            } else {
+              durMs = timeStringToMs(raw);
+            }
+          }
+
+          // Fallback: try audio.duration
+          if (durMs <= 0) {
+            const audio = document.querySelector('audio');
+            if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+              durMs = audio.duration * 1000;
+            }
+          }
+
+          // Fallback: try getCurrentTrackInfo().duration
+          if (durMs <= 0) {
+            const trackInfo = getCurrentTrackInfo();
+            if (trackInfo && trackInfo.duration > 0) {
+              durMs = trackInfo.duration;
+            }
+          }
+
+          if (durMs > 0) {
+            spotifyPosMs = posMs;
+            spotifyDurMs = durMs;
+            source = 'text';
+          }
+        }
+
+        // If we couldn't get position from any source, show zeros
+        if (spotifyPosMs === null || spotifyDurMs === null || spotifyDurMs <= 0) {
+          progressInput.max = "100";
+          progressInput.value = "0";
+          progressInput.style.background = `linear-gradient(90deg, #1db954 0%, #444 0%)`;
+          timeNow.textContent = "0:00";
+          timeTotal.textContent = "0:00";
           return;
         }
-      }
 
-      // Fallback: read visible position/duration text nodes
-      const posEl = document.querySelector('[data-testid="playback-position"]');
-      const durEl = document.querySelector('[data-testid="playback-duration"]');
-      const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
-      let durMs = 0;
-      // If durEl shows "-2:04" (remaining), use spotifyRange to calculate; otherwise parse the displayed value.
-      if (durEl) {
-        const raw = durEl.textContent.trim();
-        if (raw.startsWith('-')) {
-          // can't derive total from remaining alone
-          const spotifyRange2 = findSpotifyRangeInput();
-          if (spotifyRange2) {
-            const max = Number(spotifyRange2.max) || 0;
-            durMs = max;
-          } else {
-            durMs = posMs; // fallback
+        // --- Interpolation logic for smooth updates ---
+        // Spotify typically updates position data every ~1s. When playing, we interpolate
+        // based on elapsed real time to provide smoother progress display.
+        // Note: Spotify Web doesn't support variable playback speed, so we assume 1:1 relationship
+        const playing = isSpotifyPlaying();
+        let displayPosMs = spotifyPosMs;
+
+        // Check if we recently sought - if so, ignore Spotify's stale position data
+        // and continue interpolating from our seek target until Spotify catches up
+        const recentlySeeked = (now - lastSeekTime) < SEEK_IGNORE_DURATION_MS;
+        
+        // Check if Spotify position changed significantly (new read from Spotify)
+        // Only consider position changes if we haven't recently sought, OR if Spotify's
+        // position is close to our expected position (meaning Spotify has caught up)
+        const expectedPos = lastSpotifyPosMs + (now - lastSpotifyReadTime);
+        const spotifyMatchesExpected = Math.abs(spotifyPosMs - expectedPos) < POSITION_CHANGE_THRESHOLD_MS;
+        
+        const positionChanged = !recentlySeeked && (
+          Math.abs(spotifyPosMs - lastSpotifyPosMs) > POSITION_CHANGE_THRESHOLD_MS || 
+          source !== lastSpotifyPosSource ||
+          spotifyDurMs !== lastSpotifyDurMs
+        );
+        
+        // Also accept Spotify's position if it matches our expected position (Spotify caught up after seek)
+        const spotifyCaughtUp = recentlySeeked && spotifyMatchesExpected;
+
+        if (positionChanged || spotifyCaughtUp) {
+          // New position data from Spotify - update our baseline
+          lastSpotifyPosMs = spotifyPosMs;
+          lastSpotifyReadTime = now;
+          lastSpotifyDurMs = spotifyDurMs;
+          lastSpotifyPosSource = source;
+          displayPosMs = spotifyPosMs;
+          // If Spotify caught up, clear the seek time to resume normal operation
+          if (spotifyCaughtUp) {
+            lastSeekTime = 0;
           }
-        } else {
-          durMs = timeStringToMs(raw);
+        } else if (playing && lastSpotifyReadTime > 0) {
+          // Music is playing and we have a baseline - interpolate
+          const elapsed = now - lastSpotifyReadTime;
+          displayPosMs = lastSpotifyPosMs + elapsed;
+          // Clamp to duration
+          displayPosMs = clamp(displayPosMs, 0, spotifyDurMs);
         }
-      } else {
-        const spotifyRange3 = findSpotifyRangeInput();
-        durMs = spotifyRange3 ? Number(spotifyRange3.max) || 0 : 0;
-      }
+        // If paused, just use the last known position without interpolation
 
-      if (durMs > 0) {
-        progressInput.max = String(durMs);
-        progressInput.value = String(clamp(posMs, 0, durMs));
-        const pct = (posMs / durMs) * 100;
+        // Update the UI
+        progressInput.max = String(spotifyDurMs);
+        progressInput.value = String(clamp(displayPosMs, 0, spotifyDurMs));
+        const pct = (displayPosMs / spotifyDurMs) * 100;
         progressInput.style.background = `linear-gradient(90deg, #1db954 ${pct}%, #444 ${pct}%)`;
-        timeNow.textContent = formatMs(posMs);
-        timeTotal.textContent = formatMs(durMs);
-      } else {
-        progressInput.max = "100";
-        progressInput.value = "0";
-        progressInput.style.background = `linear-gradient(90deg, #1db954 0%, #444 0%)`;
-        timeNow.textContent = "0:00";
-        timeTotal.textContent = "0:00";
+        timeNow.textContent = formatMs(displayPosMs);
+        timeTotal.textContent = formatMs(spotifyDurMs);
+
+      } catch (e) {
+        console.warn('updateProgressUIFromSpotify error:', e);
       }
     }
 
+    /**
+     * seekTo(ms)
+     * Attempts to seek Spotify's playback to the specified position in milliseconds.
+     * Fallback order:
+     *   (a) audio.currentTime - direct audio element control
+     *   (b) Hidden/native range input value + dispatch input/change + pointer events
+     *   (c) Emulate pointer/mouse events on CSS progress-bar handle (last resort)
+     * @param {number} ms - Target position in milliseconds
+     * @returns {boolean} Whether seeking was attempted
+     */
     function seekTo(ms) {
-      // Try to set HTMLAudioElement currentTime first
-      const audio = document.querySelector('audio');
-      if (audio && !isNaN(audio.currentTime)) {
-        try {
-          audio.currentTime = ms / 1000;
-          // dispatch events to ensure Spotify UI updates
-          audio.dispatchEvent(new Event('input', { bubbles: true }));
-          audio.dispatchEvent(new Event('change', { bubbles: true }));
-          return true;
-        } catch (e) {
-          console.warn('Failed to set audio.currentTime', e);
+      try {
+        // --- (a) Try audio.currentTime first ---
+        const audio = document.querySelector('audio');
+        if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+          try {
+            audio.currentTime = ms / 1000;
+            audio.dispatchEvent(new Event('input', { bubbles: true }));
+            audio.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+          } catch (e) {
+            console.warn('seekTo: Failed to set audio.currentTime', e);
+          }
         }
-      }
-      // Fallback: try to update Spotify's hidden range input
-      const spotifyRange = findSpotifyRangeInput();
-      if (spotifyRange) {
-        try {
-          spotifyRange.value = String(ms);
-          // dispatch events to trigger Spotify handlers
-          spotifyRange.dispatchEvent(new Event('input', { bubbles: true }));
-          spotifyRange.dispatchEvent(new Event('change', { bubbles: true }));
-          return true;
-        } catch (e) {
-          console.warn('Failed to set spotify range', e);
+
+        // --- (b) Try hidden/native range input ---
+        const spotifyRange = findSpotifyRangeInput();
+        if (spotifyRange) {
+          try {
+            const max = Number(spotifyRange.max) || 0;
+            if (max > 0) {
+              // Set the value
+              spotifyRange.value = String(clamp(ms, 0, max));
+
+              // Dispatch input and change events
+              spotifyRange.dispatchEvent(new Event('input', { bubbles: true }));
+              spotifyRange.dispatchEvent(new Event('change', { bubbles: true }));
+
+              // Also try pointer events for better compatibility
+              // Note: We omit 'view' property as it can cause errors in Firefox extensions
+              const rangeRect = spotifyRange.getBoundingClientRect();
+              const percentage = clamp(ms, 0, max) / max;
+              const clientX = rangeRect.left + rangeRect.width * percentage;
+              const clientY = rangeRect.top + rangeRect.height / 2;
+
+              try {
+                const pointerDownEvent = new PointerEvent('pointerdown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0, buttons: 1
+                });
+                const pointerUpEvent = new PointerEvent('pointerup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+
+                spotifyRange.dispatchEvent(pointerDownEvent);
+                spotifyRange.dispatchEvent(pointerUpEvent);
+              } catch (pointerErr) {
+                // Pointer events failed, try mouse events instead
+                const mouseDownEvent = new MouseEvent('mousedown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const mouseUpEvent = new MouseEvent('mouseup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                spotifyRange.dispatchEvent(mouseDownEvent);
+                spotifyRange.dispatchEvent(mouseUpEvent);
+              }
+
+              return true;
+            }
+          } catch (e) {
+            console.warn('seekTo: Failed to set range input', e);
+          }
         }
+
+        // --- (c) Emulate pointer events on CSS progress-bar handle (last resort) ---
+        const progressBar = document.querySelector('[data-testid="progress-bar"]');
+        if (progressBar) {
+          try {
+            const barRect = progressBar.getBoundingClientRect();
+            if (barRect.width > 0) {
+              // Determine duration to calculate percentage
+              let durMs = 0;
+
+              // Try range input max
+              const range = findSpotifyRangeInput();
+              if (range && Number(range.max) > 0) {
+                durMs = Number(range.max);
+              }
+
+              // Fallback: visible text
+              if (durMs <= 0) {
+                const durEl = document.querySelector('[data-testid="playback-duration"]');
+                const posEl = document.querySelector('[data-testid="playback-position"]');
+                if (durEl) {
+                  const raw = durEl.textContent.trim();
+                  if (raw.startsWith('-')) {
+                    const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
+                    const remainMs = timeStringToMs(raw);
+                    durMs = posMs + remainMs;
+                  } else {
+                    durMs = timeStringToMs(raw);
+                  }
+                }
+              }
+
+              // Fallback: track info
+              if (durMs <= 0) {
+                const trackInfo = getCurrentTrackInfo();
+                if (trackInfo && trackInfo.duration > 0) {
+                  durMs = trackInfo.duration;
+                }
+              }
+
+              if (durMs > 0) {
+                const percentage = clamp(ms, 0, durMs) / durMs;
+                const clientX = barRect.left + barRect.width * percentage;
+                const clientY = barRect.top + barRect.height / 2;
+
+                // Try the handle first, then the progress bar
+                const handle = progressBar.querySelector('[data-testid="progress-bar-handle"]');
+                const target = handle || progressBar;
+
+                // Try pointer events first (without 'view' property to avoid Firefox extension issues)
+                try {
+                  const downEvent = new PointerEvent('pointerdown', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 1,
+                    pointerType: 'mouse'
+                  });
+                  const moveEvent = new PointerEvent('pointermove', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 1,
+                    pointerType: 'mouse'
+                  });
+                  const upEvent = new PointerEvent('pointerup', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 0,
+                    pointerType: 'mouse'
+                  });
+
+                  target.dispatchEvent(downEvent);
+                  target.dispatchEvent(moveEvent);
+                  target.dispatchEvent(upEvent);
+                } catch (pointerErr) {
+                  // Pointer events failed, continue to mouse events
+                }
+
+                // Also try mouse events as fallback
+                const mouseDownEvent = new MouseEvent('mousedown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const mouseUpEvent = new MouseEvent('mouseup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const clickEvent = new MouseEvent('click', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+
+                progressBar.dispatchEvent(mouseDownEvent);
+                progressBar.dispatchEvent(mouseUpEvent);
+                progressBar.dispatchEvent(clickEvent);
+
+                return true;
+              }
+            }
+          } catch (e) {
+            console.warn('seekTo: Failed to emulate pointer events on progress bar', e);
+          }
+        }
+
+        return false;
+      } catch (e) {
+        console.warn('seekTo error:', e);
+        return false;
       }
-      return false;
     }
 
+    // --- Progress bar watcher for DOM node swaps ---
+    let progressBarWatcherAttached = false;
+    let progressBarWatcherTimeout = null; // Closure variable for debounce timeout
+
+    /**
+     * attachProgressBarWatcher()
+     * Installs a MutationObserver on document.body to detect when Spotify may swap
+     * DOM nodes (e.g., during navigation or track changes) and re-runs updateProgressUIFromSpotify().
+     * The observer is idempotent - calling multiple times only installs one observer.
+     */
+    function attachProgressBarWatcher() {
+      if (progressBarWatcherAttached) return; // Idempotent
+      progressBarWatcherAttached = true;
+
+      try {
+        const observer = new MutationObserver((mutations) => {
+          // Check if any mutation affects progress-related elements
+          let shouldUpdate = false;
+          for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+              // Check added/removed nodes for progress bar elements
+              const relevantSelectors = [
+                '[data-testid="progress-bar"]',
+                '[data-testid="progress-bar-handle"]',
+                '[data-testid="playback-position"]',
+                '[data-testid="playback-duration"]',
+                'input[type="range"]'
+              ];
+
+              const checkNodes = (nodes) => {
+                for (const node of nodes) {
+                  if (node.nodeType !== Node.ELEMENT_NODE) continue;
+                  for (const sel of relevantSelectors) {
+                    if (node.matches && node.matches(sel)) return true;
+                    if (node.querySelector && node.querySelector(sel)) return true;
+                  }
+                }
+                return false;
+              };
+
+              if (checkNodes(mutation.addedNodes) || checkNodes(mutation.removedNodes)) {
+                shouldUpdate = true;
+                break;
+              }
+            } else if (mutation.type === 'attributes') {
+              // Check if style attribute changed on progress bar (CSS var updates)
+              if (mutation.target.matches &&
+                  mutation.target.matches('[data-testid="progress-bar"]') &&
+                  mutation.attributeName === 'style') {
+                shouldUpdate = true;
+                break;
+              }
+            }
+          }
+
+          if (shouldUpdate) {
+            // Debounce updates to avoid excessive calls
+            if (!progressBarWatcherTimeout) {
+              progressBarWatcherTimeout = setTimeout(() => {
+                progressBarWatcherTimeout = null;
+                try {
+                  updateProgressUIFromSpotify();
+                } catch (e) {
+                  console.warn('Progress bar watcher update error:', e);
+                }
+              }, 100);
+            }
+          }
+        });
+
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['style']
+        });
+      } catch (e) {
+        console.warn('attachProgressBarWatcher error:', e);
+        progressBarWatcherAttached = false;
+      }
+    }
+
+    // --- Event handlers for popup progress input ---
     let userSeeking = false;
     progressInput.addEventListener('input', (e) => {
-      // show immediate feedback while dragging
+      userSeeking = true;
+      // Show immediate feedback while dragging
       const val = Number(progressInput.value) || 0;
       const max = Number(progressInput.max) || 1;
       const pct = (val / max) * 100;
@@ -3661,23 +4148,42 @@ const Providers = {
       timeNow.textContent = formatMs(val);
     });
 
-    // commit seek on mouseup/touchend
+    // Reset userSeeking if user releases mouse outside the element or touch is cancelled
+    const resetSeeking = () => { userSeeking = false; };
+    progressInput.addEventListener('mouseleave', resetSeeking);
+    progressInput.addEventListener('touchcancel', resetSeeking);
+    progressInput.addEventListener('blur', resetSeeking);
+
+    // Commit seek on mouseup/touchend
     const commitSeek = (e) => {
       const val = Number(progressInput.value) || 0;
+      const max = Number(progressInput.max) || 0;
       userSeeking = false;
+      // Reset all interpolation state so we interpolate from the seek target
+      // and ignore stale Spotify data until it catches up
+      lastSpotifyPosMs = val;
+      lastSpotifyReadTime = Date.now();
+      lastSpotifyDurMs = max;
+      lastSpotifyPosSource = ''; // Clear source to force re-detection
+      lastSeekTime = Date.now(); // Mark that we just seeked
       seekTo(val);
     };
     progressInput.addEventListener('change', commitSeek);
     progressInput.addEventListener('mouseup', commitSeek);
     progressInput.addEventListener('touchend', commitSeek);
 
+    // --- Start progress bar watcher and interval ---
+    // Wire attachProgressBarWatcher() to run once popup is created
+    attachProgressBarWatcher();
+
     // Start interval to refresh progress
+    // Using 100ms interval for smooth interpolated updates
     if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
     progressInterval = setInterval(() => {
-      // don't auto-update while user is actively dragging
-      if (document.activeElement === progressInput) return;
+      // Don't auto-update while user is actively dragging
+      if (document.activeElement === progressInput || userSeeking) return;
       updateProgressUIFromSpotify();
-    }, 250);
+    }, 100);
 
     startPollingForTrackChange(popup);
   }
