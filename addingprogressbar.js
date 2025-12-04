@@ -3909,22 +3909,37 @@ const Providers = {
               spotifyRange.dispatchEvent(new Event('change', { bubbles: true }));
 
               // Also try pointer events for better compatibility
+              // Note: We omit 'view' property as it can cause errors in Firefox extensions
               const rangeRect = spotifyRange.getBoundingClientRect();
               const percentage = clamp(ms, 0, max) / max;
               const clientX = rangeRect.left + rangeRect.width * percentage;
               const clientY = rangeRect.top + rangeRect.height / 2;
 
-              const pointerDownEvent = new PointerEvent('pointerdown', {
-                bubbles: true, cancelable: true, view: window,
-                clientX, clientY, button: 0, buttons: 1
-              });
-              const pointerUpEvent = new PointerEvent('pointerup', {
-                bubbles: true, cancelable: true, view: window,
-                clientX, clientY, button: 0
-              });
+              try {
+                const pointerDownEvent = new PointerEvent('pointerdown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0, buttons: 1
+                });
+                const pointerUpEvent = new PointerEvent('pointerup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
 
-              spotifyRange.dispatchEvent(pointerDownEvent);
-              spotifyRange.dispatchEvent(pointerUpEvent);
+                spotifyRange.dispatchEvent(pointerDownEvent);
+                spotifyRange.dispatchEvent(pointerUpEvent);
+              } catch (pointerErr) {
+                // Pointer events failed, try mouse events instead
+                const mouseDownEvent = new MouseEvent('mousedown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const mouseUpEvent = new MouseEvent('mouseup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                spotifyRange.dispatchEvent(mouseDownEvent);
+                spotifyRange.dispatchEvent(mouseUpEvent);
+              }
 
               return true;
             }
@@ -3977,41 +3992,49 @@ const Providers = {
                 const clientX = barRect.left + barRect.width * percentage;
                 const clientY = barRect.top + barRect.height / 2;
 
-                // Create and dispatch pointer events to simulate click-to-seek
-                const eventOptions = {
-                  bubbles: true, cancelable: true, view: window,
-                  clientX, clientY, button: 0, buttons: 1,
-                  pointerType: 'mouse'
-                };
-
-                // Sequence: pointerdown, pointermove (to position), pointerup
-                const downEvent = new PointerEvent('pointerdown', eventOptions);
-                const moveEvent = new PointerEvent('pointermove', { ...eventOptions, buttons: 1 });
-                const upEvent = new PointerEvent('pointerup', { ...eventOptions, button: 0, buttons: 0 });
-
-                // Also create mouse events as fallback
-                const mouseDownEvent = new MouseEvent('mousedown', {
-                  bubbles: true, cancelable: true, view: window,
-                  clientX, clientY, button: 0
-                });
-                const mouseUpEvent = new MouseEvent('mouseup', {
-                  bubbles: true, cancelable: true, view: window,
-                  clientX, clientY, button: 0
-                });
-                const clickEvent = new MouseEvent('click', {
-                  bubbles: true, cancelable: true, view: window,
-                  clientX, clientY, button: 0
-                });
-
                 // Try the handle first, then the progress bar
                 const handle = progressBar.querySelector('[data-testid="progress-bar-handle"]');
                 const target = handle || progressBar;
 
-                target.dispatchEvent(downEvent);
-                target.dispatchEvent(moveEvent);
-                target.dispatchEvent(upEvent);
+                // Try pointer events first (without 'view' property to avoid Firefox extension issues)
+                try {
+                  const downEvent = new PointerEvent('pointerdown', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 1,
+                    pointerType: 'mouse'
+                  });
+                  const moveEvent = new PointerEvent('pointermove', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 1,
+                    pointerType: 'mouse'
+                  });
+                  const upEvent = new PointerEvent('pointerup', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 0,
+                    pointerType: 'mouse'
+                  });
 
-                // Fallback mouse events on progress bar
+                  target.dispatchEvent(downEvent);
+                  target.dispatchEvent(moveEvent);
+                  target.dispatchEvent(upEvent);
+                } catch (pointerErr) {
+                  // Pointer events failed, continue to mouse events
+                }
+
+                // Also try mouse events as fallback
+                const mouseDownEvent = new MouseEvent('mousedown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const mouseUpEvent = new MouseEvent('mouseup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const clickEvent = new MouseEvent('click', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+
                 progressBar.dispatchEvent(mouseDownEvent);
                 progressBar.dispatchEvent(mouseUpEvent);
                 progressBar.dispatchEvent(clickEvent);
