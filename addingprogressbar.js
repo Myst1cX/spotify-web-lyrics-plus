@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ exp (keyword: dynamic progress bar)
 // @namespace    http://tampermonkey.net/
-// @version      10.8
+// @version      10.9 (reverted to before)
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.// @author       Myst1cX
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -3814,36 +3814,48 @@ const Providers = {
         // --- Interpolation logic for smooth updates ---
         // Spotify typically updates position data every ~1s. When playing, we interpolate
         // based on elapsed real time to provide smoother progress display.
+        // Note: Spotify Web doesn't support variable playback speed, so we assume 1:1 relationship
         const playing = isSpotifyPlaying();
         let displayPosMs = spotifyPosMs;
 
-        // Check if we recently sought - if so, ignore Spotify's data and interpolate from seek target
+        // Check if we recently sought - if so, ignore Spotify's stale position data
+        // and continue interpolating from our seek target until Spotify catches up
         const recentlySeeked = (now - lastSeekTime) < SEEK_IGNORE_DURATION_MS;
         
-        // Calculate our expected position based on last known state + elapsed time
-        const elapsed = now - lastSpotifyReadTime;
-        const expectedPos = lastSpotifyPosMs + (playing ? elapsed : 0);
+        // Check if Spotify position changed significantly (new read from Spotify)
+        // Only consider position changes if we haven't recently sought, OR if Spotify's
+        // position is close to our expected position (meaning Spotify has caught up)
+        const expectedPos = lastSpotifyPosMs + (now - lastSpotifyReadTime);
+        const spotifyMatchesExpected = Math.abs(spotifyPosMs - expectedPos) < POSITION_CHANGE_THRESHOLD_MS;
         
-        if (recentlySeeked) {
-          // After seeking, interpolate from our seek target and ignore Spotify's stale data
-          displayPosMs = clamp(expectedPos, 0, spotifyDurMs);
-        } else {
-          // Not recently seeked - check if Spotify's position is reasonable
-          // Only accept if within 2 seconds of our expected position (to avoid jumps from stale data)
-          const drift = Math.abs(spotifyPosMs - expectedPos);
-          
-          if (drift < 2000) {
-            // Spotify's position is reasonable - accept it and update baseline
-            lastSpotifyPosMs = spotifyPosMs;
-            lastSpotifyReadTime = now;
-            lastSpotifyDurMs = spotifyDurMs;
-            lastSpotifyPosSource = source;
-            displayPosMs = spotifyPosMs;
-          } else {
-            // Spotify's position is too far off - continue interpolating from our known position
-            displayPosMs = clamp(expectedPos, 0, spotifyDurMs);
+        const positionChanged = !recentlySeeked && (
+          Math.abs(spotifyPosMs - lastSpotifyPosMs) > POSITION_CHANGE_THRESHOLD_MS || 
+          source !== lastSpotifyPosSource ||
+          spotifyDurMs !== lastSpotifyDurMs
+        );
+        
+        // Also accept Spotify's position if it matches our expected position (Spotify caught up after seek)
+        const spotifyCaughtUp = recentlySeeked && spotifyMatchesExpected;
+
+        if (positionChanged || spotifyCaughtUp) {
+          // New position data from Spotify - update our baseline
+          lastSpotifyPosMs = spotifyPosMs;
+          lastSpotifyReadTime = now;
+          lastSpotifyDurMs = spotifyDurMs;
+          lastSpotifyPosSource = source;
+          displayPosMs = spotifyPosMs;
+          // If Spotify caught up, clear the seek time to resume normal operation
+          if (spotifyCaughtUp) {
+            lastSeekTime = 0;
           }
+        } else if (playing && lastSpotifyReadTime > 0) {
+          // Music is playing and we have a baseline - interpolate
+          const elapsed = now - lastSpotifyReadTime;
+          displayPosMs = lastSpotifyPosMs + elapsed;
+          // Clamp to duration
+          displayPosMs = clamp(displayPosMs, 0, spotifyDurMs);
         }
+        // If paused, just use the last known position without interpolation
 
         // Update the UI
         progressInput.max = String(spotifyDurMs);
