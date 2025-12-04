@@ -1,9 +1,8 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      10.6
-// @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation.
-// @author       Myst1cX
+// @version      10.8
+// @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      genius.com
@@ -13,20 +12,21 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// MORE URGENT: 
+// MORE URGENT:
+// Fixing KPoe provider (error: response is not provided) - might be on their end, will be observing
 // Currently shuffle button and repeat button (and its icon state changes) will only be reflected correctly if Spotify locale is set to English language..
 // I would have to manually add the buttons' aria label names in other languages.. Soon.
 // Idea: FORCE ENGLISH LOCALE (might help) --> https://open.spotify.com/?locale=en (note: if u refresh page it gets overriden)
 // If Fullscreen --> fullscreen-lyric as default position.
 // Function with example of the two lyricContainers:
 /* function waitForLyrics() {
-const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]') || document.querySelector('[data-testid="fullscreen-lyric"]'); 
+const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]') || document.querySelector('[data-testid="fullscreen-lyric"]');
 */
 // When playing a single, the shuffle and repeat buttons are disabled by default, i haven't added those styles yet to my popup's player controls
 // for shuffle and repeat buttons.. Song example: (https://open.spotify.com/track/5lehoWkVPujeOAwb8BO0uK?si=fb660aa566f54082)
 
 
-// WHEN THE TIME IS RIGHT: 
+// WHEN THE TIME IS RIGHT:
 // Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
 // Fix upper corners of popup, make em at same proportion fold as spotify's library view.
 // Improve google translation, currently only translates line by line (tho it outputs all lines instantly, line by line causes lack of content awareness = lower quality translation)
@@ -55,6 +55,7 @@ const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]
 
   let highlightTimer = null;
   let pollingInterval = null;
+  let progressInterval = null; // <-- NEW: interval for progress bar updates
   let currentTrackId = null;
   let currentSyncedLyrics = null;
   let currentUnsyncedLyrics = null;
@@ -80,11 +81,12 @@ const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]
       The NPV button in the playback controls (`[data-testid=control-button-npv]`) is simply hidden from the UI.
 
   */
-      const styleId = 'lyricsplus-hide-npv-style';
-      if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.textContent = `
+
+  const styleId = 'lyricsplus-hide-npv-style';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
           .NowPlayingView {
               position: absolute !important;
               left: 0; top: 0;
@@ -106,7 +108,7 @@ const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]
               display: none !important;
           }
       `;
-      document.head.appendChild(style);
+    document.head.appendChild(style);
   }
 
   /*
@@ -193,49 +195,49 @@ const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]
   // ------------------------
 
   // --- Translation Language List and Utilities ---
-const TRANSLATION_LANGUAGES = {
-  en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian',
-  pt: 'Portuguese', ru: 'Russian', ja: 'Japanese', ko: 'Korean', zh: 'Chinese',
-  ar: 'Arabic', hi: 'Hindi', tr: 'Turkish', af: 'Afrikaans', sq: 'Albanian',
-  am: 'Amharic', hy: 'Armenian', az: 'Azerbaijani', eu: 'Basque', be: 'Belarusian',
-  bn: 'Bengali', bs: 'Bosnian', bg: 'Bulgarian', ca: 'Catalan', ceb: 'Cebuano',
-  co: 'Corsican', hr: 'Croatian', cs: 'Czech', da: 'Danish', nl: 'Dutch',
-  eo: 'Esperanto', et: 'Estonian', fi: 'Finnish', fy: 'Frisian', gl: 'Galician',
-  ka: 'Georgian', el: 'Greek', gu: 'Gujarati', ht: 'Haitian Creole', ha: 'Hausa',
-  haw: 'Hawaiian', he: 'Hebrew', hmn: 'Hmong', hu: 'Hungarian', is: 'Icelandic',
-  ig: 'Igbo', id: 'Indonesian', ga: 'Irish', jv: 'Javanese', kn: 'Kannada',
-  kk: 'Kazakh', km: 'Khmer', rw: 'Kinyarwanda', ku: 'Kurdish', ky: 'Kyrgyz',
-  lo: 'Lao', la: 'Latin', lv: 'Latvian', lt: 'Lithuanian', lb: 'Luxembourgish',
-  mk: 'Macedonian', mg: 'Malagasy', ms: 'Malay', ml: 'Malayalam', mt: 'Maltese',
-  mi: 'Maori', mr: 'Marathi', mn: 'Mongolian', my: 'Myanmar (Burmese)',
-  ne: 'Nepali', no: 'Norwegian', ny: 'Nyanja (Chichewa)', or: 'Odia (Oriya)',
-  ps: 'Pashto', fa: 'Persian', pl: 'Polish', pa: 'Punjabi', ro: 'Romanian',
-  sm: 'Samoan', gd: 'Scots Gaelic', sr: 'Serbian', st: 'Sesotho', sn: 'Shona',
-  sd: 'Sindhi', si: 'Sinhala', sk: 'Slovak', sl: 'Slovenian', so: 'Somali',
-  su: 'Sundanese', sw: 'Swahili', sv: 'Swedish', tl: 'Tagalog (Filipino)',
-  tg: 'Tajik', ta: 'Tamil', tt: 'Tatar', te: 'Telugu', th: 'Thai', tk: 'Turkmen',
-  uk: 'Ukrainian', ur: 'Urdu', ug: 'Uyghur', uz: 'Uzbek', vi: 'Vietnamese',
-  cy: 'Welsh', xh: 'Xhosa', yi: 'Yiddish', yo: 'Yoruba', zu: 'Zulu'
-};
+  const TRANSLATION_LANGUAGES = {
+    en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian',
+    pt: 'Portuguese', ru: 'Russian', ja: 'Japanese', ko: 'Korean', zh: 'Chinese',
+    ar: 'Arabic', hi: 'Hindi', tr: 'Turkish', af: 'Afrikaans', sq: 'Albanian',
+    am: 'Amharic', hy: 'Armenian', az: 'Azerbaijani', eu: 'Basque', be: 'Belarusian',
+    bn: 'Bengali', bs: 'Bosnian', bg: 'Bulgarian', ca: 'Catalan', ceb: 'Cebuano',
+    co: 'Corsican', hr: 'Croatian', cs: 'Czech', da: 'Danish', nl: 'Dutch',
+    eo: 'Esperanto', et: 'Estonian', fi: 'Finnish', fy: 'Frisian', gl: 'Galician',
+    ka: 'Georgian', el: 'Greek', gu: 'Gujarati', ht: 'Haitian Creole', ha: 'Hausa',
+    haw: 'Hawaiian', he: 'Hebrew', hmn: 'Hmong', hu: 'Hungarian', is: 'Icelandic',
+    ig: 'Igbo', id: 'Indonesian', ga: 'Irish', jv: 'Javanese', kn: 'Kannada',
+    kk: 'Kazakh', km: 'Khmer', rw: 'Kinyarwanda', ku: 'Kurdish', ky: 'Kyrgyz',
+    lo: 'Lao', la: 'Latin', lv: 'Latvian', lt: 'Lithuanian', lb: 'Luxembourgish',
+    mk: 'Macedonian', mg: 'Malagasy', ms: 'Malay', ml: 'Malayalam', mt: 'Maltese',
+    mi: 'Maori', mr: 'Marathi', mn: 'Mongolian', my: 'Myanmar (Burmese)',
+    ne: 'Nepali', no: 'Norwegian', ny: 'Nyanja (Chichewa)', or: 'Odia (Oriya)',
+    ps: 'Pashto', fa: 'Persian', pl: 'Polish', pa: 'Punjabi', ro: 'Romanian',
+    sm: 'Samoan', gd: 'Scots Gaelic', sr: 'Serbian', st: 'Sesotho', sn: 'Shona',
+    sd: 'Sindhi', si: 'Sinhala', sk: 'Slovak', sl: 'Slovenian', so: 'Somali',
+    su: 'Sundanese', sw: 'Swahili', sv: 'Swedish', tl: 'Tagalog (Filipino)',
+    tg: 'Tajik', ta: 'Tamil', tt: 'Tatar', te: 'Telugu', th: 'Thai', tk: 'Turkmen',
+    uk: 'Ukrainian', ur: 'Urdu', ug: 'Uyghur', uz: 'Uzbek', vi: 'Vietnamese',
+    cy: 'Welsh', xh: 'Xhosa', yi: 'Yiddish', yo: 'Yoruba', zu: 'Zulu'
+  };
 
-function getSavedTranslationLang() {
-  return localStorage.getItem('lyricsPlusTranslationLang') || 'en';
-}
-function saveTranslationLang(lang) {
-  localStorage.setItem('lyricsPlusTranslationLang', lang);
-}
-
-async function translateText(text, targetLang) {
-  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-    return data[0][0][0];
-  } catch (error) {
-    console.error('Translation failed:', error);
-    return '[Translation Error]';
+  function getSavedTranslationLang() {
+    return localStorage.getItem('lyricsPlusTranslationLang') || 'en';
   }
-}
+  function saveTranslationLang(lang) {
+    localStorage.setItem('lyricsPlusTranslationLang', lang);
+  }
+
+  async function translateText(text, targetLang) {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      return data[0][0][0];
+    } catch (error) {
+      console.error('Translation failed:', error);
+      return '[Translation Error]';
+    }
+  }
 
   const Utils = {
     normalize(str) {
@@ -309,57 +311,58 @@ async function translateText(text, targetLang) {
     }
   };
 
-function clamp(val, min, max) {
-  return Math.max(min, Math.min(max, val));
-}
+  function clamp(val, min, max) {
+    return Math.max(min, Math.min(max, val));
+  }
 
-function makeSafeFilename(str) {
+  function makeSafeFilename(str) {
     // Remove illegal Windows filename characters, collapse spaces
     return str.replace(/[\/\\:\*\?"<>\|]/g, '').replace(/\s+/g, ' ').trim();
-}
+  }
 
-// --- Download Synced Lyrics as LRC ---
-function downloadSyncedLyrics(syncedLyrics, trackInfo, providerName) {
-  if (!syncedLyrics || !syncedLyrics.length) return;
-  let lines = syncedLyrics.map(line => {
-    let ms = Number(line.time) || 0;
-    let min = String(Math.floor(ms / 60000)).padStart(2, '0');
-    let sec = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
-    let hundredths = String(Math.floor((ms % 1000) / 10)).padStart(2, '0');
-    return `[${min}:${sec}.${hundredths}] ${line.text}`;
-  }).join('\n');
-  let title = makeSafeFilename(trackInfo?.title || "lyrics");
-  let artist = makeSafeFilename(trackInfo?.artist || "unknown");
-  let filename = `${artist} - ${title}.lrc`;
+  // --- Download Synced Lyrics as LRC ---
+  function downloadSyncedLyrics(syncedLyrics, trackInfo, providerName) {
+    if (!syncedLyrics || !syncedLyrics.length) return;
+    let lines = syncedLyrics.map(line => {
+      let ms = Number(line.time) || 0;
+      let min = String(Math.floor(ms / 60000)).padStart(2, '0');
+      let sec = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
+      let hundredths = String(Math.floor((ms % 1000) / 10)).padStart(2, '0');
+      return `[${min}:${sec}.${hundredths}] ${line.text}`;
+    }).join('\n');
+    let title = makeSafeFilename(trackInfo?.title || "lyrics");
+    let artist = makeSafeFilename(trackInfo?.artist || "unknown");
+    let filename = `${artist} - ${title}.lrc`;
 
-  // Try application/octet-stream for better compatibility (helps detect as .lrc in mobile browser)
-  let blob = new Blob([lines], { type: "application/octet-stream" });
 
-  let a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
+    // Try application/octet-stream for better compatibility (helps detect as .lrc in mobile browser)
+    let blob = new Blob([lines], { type: "application/octet-stream" });
 
-// --- Download Unsynced Lyrics as TXT ---
-function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
-  if (!unsyncedLyrics || !unsyncedLyrics.length) return;
-  let lines = unsyncedLyrics.map(line => line.text).join('\n');
-  let title = makeSafeFilename(trackInfo?.title || "lyrics");
-  let artist = makeSafeFilename(trackInfo?.artist || "unknown");
-  let filename = `${artist} - ${title}.txt`;
-  let blob = new Blob([lines], { type: "text/plain" });
-  let a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
+    let a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
 
-    const style = document.createElement('style');
+  // --- Download Unsynced Lyrics as TXT ---
+  function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
+    if (!unsyncedLyrics || !unsyncedLyrics.length) return;
+    let lines = unsyncedLyrics.map(line => line.text).join('\n');
+    let title = makeSafeFilename(trackInfo?.title || "lyrics");
+    let artist = makeSafeFilename(trackInfo?.artist || "unknown");
+    let filename = `${artist} - ${title}.txt`;
+    let blob = new Blob([lines], { type: "text/plain" });
+    let a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  const style = document.createElement('style');
   style.textContent = `
     .hide-scrollbar::-webkit-scrollbar { display: none; }
     .hide-scrollbar { scrollbar-width: none !important; ms-overflow-style: none !important; }
@@ -371,37 +374,40 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   // ------------------------
 
   function getCurrentTrackId() {
-  const contextLink = document.querySelector('a[data-testid="context-link"][data-context-item-type="track"][href*="uri=spotify%3Atrack%3A"]');
-  if (contextLink) {
-    const href = contextLink.getAttribute('href');
-    const match = decodeURIComponent(href).match(/spotify:track:([a-zA-Z0-9]{22})/);
-    if (match) return match[1];
+    const contextLink = document.querySelector('a[data-testid="context-link"][data-context-item-type="track"][href*="uri=spotify%3Atrack%3A"]');
+    if (contextLink) {
+      const href = contextLink.getAttribute('href');
+      const match = decodeURIComponent(href).match(/spotify:track:([a-zA-Z0-9]{22})/);
+      if (match) return match[1];
+    }
+    return null;
   }
-  return null;
-}
 
- function getCurrentTrackInfo() {
-  const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
-  const artistEl = document.querySelector('[data-testid="context-item-info-subtitles"]');
-  const durationEl = document.querySelector('[data-testid="playback-duration"]');
-  const trackId = getCurrentTrackId();
-  if (!titleEl || !artistEl) return null;
-  const title = titleEl.textContent.trim();
-  const artist = artistEl.textContent.trim();
-  const duration = durationEl ? timeStringToMs(durationEl.textContent) : 0;
-  return {
-    id: `${title}-${artist}`,
-    title,
-    artist,
-    album: "",
-    duration,
-    uri: "",
-    trackId
-  };
-}
+  function getCurrentTrackInfo() {
+    const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
+    const artistEl = document.querySelector('[data-testid="context-item-info-subtitles"]');
+    const durationEl = document.querySelector('[data-testid="playback-duration"]');
+    const trackId = getCurrentTrackId();
+    if (!titleEl || !artistEl) return null;
+    const title = titleEl.textContent.trim();
+    const artist = artistEl.textContent.trim();
+    const duration = durationEl ? timeStringToMs(durationEl.textContent) : 0;
+    return {
+      id: `${title}-${artist}`,
+      title,
+      artist,
+      album: "",
+      duration,
+      uri: "",
+      trackId
+    };
+  }
 
   function timeStringToMs(str) {
-    const parts = str.split(":").map((p) => parseInt(p));
+    if (!str) return 0;
+    // Remove leading minus for "-2:04" cases (Spotify shows remaining as -mm:ss)
+    const cleaned = str.replace(/^-/, '').trim();
+    const parts = cleaned.split(":").map((p) => parseInt(p));
     if (parts.length === 2) return (parts[0] * 60 + parts[1]) * 1000;
     if (parts.length === 3) return (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1000;
     return 0;
@@ -419,123 +425,123 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   }
 
   function isSpotifyPlaying() {
-  // Try using Spotify's play/pause button aria-label (robust, language-universal)
-  let playPauseBtn =
-    document.querySelector('[data-testid="control-button-playpause"]') ||
-    document.querySelector('[aria-label]');
+    // Try using Spotify's play/pause button aria-label (robust, language-universal)
+    let playPauseBtn =
+      document.querySelector('[data-testid="control-button-playpause"]') ||
+      document.querySelector('[aria-label]');
 
-  function isVisible(el) {
-    if (!el) return false;
-    const style = window.getComputedStyle(el);
-    return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+    function isVisible(el) {
+      if (!el) return false;
+      const style = window.getComputedStyle(el);
+      return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+    }
+
+    if (playPauseBtn && isVisible(playPauseBtn)) {
+      const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
+      if (labelMeansPause(label)) return true; // "Pause" means music is playing
+      if (labelMeansPlay(label)) return false; // "Play" means music is paused/stopped
+    }
+
+    // Fallback: use <audio> element if available
+    const audio = document.querySelector('audio');
+    if (audio) return !audio.paused;
+
+    // Default: assume not playing
+    return false;
   }
-
-  if (playPauseBtn && isVisible(playPauseBtn)) {
-    const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
-    if (labelMeansPause(label)) return true; // "Pause" means music is playing
-    if (labelMeansPlay(label)) return false; // "Play" means music is paused/stopped
-  }
-
-  // Fallback: use <audio> element if available
-  const audio = document.querySelector('audio');
-  if (audio) return !audio.paused;
-
-  // Default: assume not playing
-  return false;
-}
 
   function highlightSyncedLyrics(lyrics, container) {
-  if (!lyrics || lyrics.length === 0) return;
-  const pElements = [...container.querySelectorAll("p")];
-  if (pElements.length === 0) return;
-  if (highlightTimer) {
-    clearInterval(highlightTimer);
-    highlightTimer = null;
-  }
-  highlightTimer = setInterval(() => {
-    // Skip all style/size changes while popup is being resized
-    if (window.lyricsPlusPopupIsResizing) return;
-
-    const posEl = document.querySelector('[data-testid="playback-position"]');
-    const isPlaying = isSpotifyPlaying();
-
-        if (isShowingSyncedLyrics) {
-  if (isPlaying) {
-    container.style.overflowY = "auto";
-    container.style.pointerEvents = "none";
-    container.style.scrollbarWidth = "none"; // Firefox
-    container.style.msOverflowStyle = "none"; // IE 10+
-    container.classList.add('hide-scrollbar');
-  } else {
-    container.style.overflowY = "auto";
-    container.style.pointerEvents = "";
-    container.classList.remove('hide-scrollbar');
-    container.style.scrollbarWidth = "";
-    container.style.msOverflowStyle = "";
-  }
-} else {
-  // Always allow scroll and show scrollbar for unsynced
-  container.style.overflowY = "auto";
-  container.style.pointerEvents = "";
-  container.classList.remove('hide-scrollbar');
-  container.style.scrollbarWidth = "";
-  container.style.msOverflowStyle = "";
-}
-
-    if (!posEl) return;
-    const curPosMs = timeStringToMs(posEl.textContent);
-    const anticipatedMs = curPosMs + getAnticipationOffset();
-    let activeIndex = -1;
-    for (let i = 0; i < lyrics.length; i++) {
-      if (anticipatedMs >= (lyrics[i].time ?? lyrics[i].startTime)) activeIndex = i;
-      else break;
+    if (!lyrics || lyrics.length === 0) return;
+    const pElements = [...container.querySelectorAll("p")];
+    if (pElements.length === 0) return;
+    if (highlightTimer) {
+      clearInterval(highlightTimer);
+      highlightTimer = null;
     }
-    if (activeIndex === -1) {
-      pElements.forEach(p => {
-        p.style.color = "white";
-        p.style.fontWeight = "400";
-        p.style.filter = "blur(0.7px)";
-        p.style.opacity = "0.8";
-        p.style.transform = "scale(1.0)";
-        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-      });
-      return;
-    }
-    pElements.forEach((p, idx) => {
-      if (idx === activeIndex) {
-        p.style.color = "#1db954";
-        p.style.fontWeight = "700";
-        p.style.filter = "none";
-        p.style.opacity = "1";
-        p.style.transform = "scale(1.10)";
-        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+    highlightTimer = setInterval(() => {
+      // Skip all style/size changes while popup is being resized
+      if (window.lyricsPlusPopupIsResizing) return;
+
+      const posEl = document.querySelector('[data-testid="playback-position"]');
+      const isPlaying = isSpotifyPlaying();
+
+      if (isShowingSyncedLyrics) {
+        if (isPlaying) {
+          container.style.overflowY = "auto";
+          container.style.pointerEvents = "none";
+          container.style.scrollbarWidth = "none"; // Firefox
+          container.style.msOverflowStyle = "none"; // IE 10+
+          container.classList.add('hide-scrollbar');
+        } else {
+          container.style.overflowY = "auto";
+          container.style.pointerEvents = "";
+          container.classList.remove('hide-scrollbar');
+          container.style.scrollbarWidth = "";
+          container.style.msOverflowStyle = "";
+        }
       } else {
-        p.style.color = "white";
-        p.style.fontWeight = "400";
-        p.style.filter = "blur(0.7px)";
-        p.style.opacity = "0.8";
-        p.style.transform = "scale(1.0)";
-        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        // Always allow scroll and show scrollbar for unsynced
+        container.style.overflowY = "auto";
+        container.style.pointerEvents = "";
+        container.classList.remove('hide-scrollbar');
+        container.style.scrollbarWidth = "";
+        container.style.msOverflowStyle = "";
       }
-    });
 
-    // Always auto-center while playing (do NOT auto-center when stopped)
-    const activeP = pElements[activeIndex];
-    if (activeP && isPlaying) {
-      activeP.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, 50);
-}
+      if (!posEl) return;
+      const curPosMs = timeStringToMs(posEl.textContent);
+      const anticipatedMs = curPosMs + getAnticipationOffset();
+      let activeIndex = -1;
+      for (let i = 0; i < lyrics.length; i++) {
+        if (anticipatedMs >= (lyrics[i].time ?? lyrics[i].startTime)) activeIndex = i;
+        else break;
+      }
+      if (activeIndex === -1) {
+        pElements.forEach(p => {
+          p.style.color = "white";
+          p.style.fontWeight = "400";
+          p.style.filter = "blur(0.7px)";
+          p.style.opacity = "0.8";
+          p.style.transform = "scale(1.0)";
+          p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        });
+        return;
+      }
+      pElements.forEach((p, idx) => {
+        if (idx === activeIndex) {
+          p.style.color = "#1db954";
+          p.style.fontWeight = "700";
+          p.style.filter = "none";
+          p.style.opacity = "1";
+          p.style.transform = "scale(1.10)";
+          p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        } else {
+          p.style.color = "white";
+          p.style.fontWeight = "400";
+          p.style.filter = "blur(0.7px)";
+          p.style.opacity = "0.8";
+          p.style.transform = "scale(1.0)";
+          p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        }
+      });
+
+      // Always auto-center while playing (do NOT auto-center when stopped)
+      const activeP = pElements[activeIndex];
+      if (activeP && isPlaying) {
+        activeP.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 50);
+  }
 
   function updateTabs(tabsContainer, noneSelected) {
-  [...tabsContainer.children].forEach(btn => {
-    if (noneSelected || !Providers.current) {
-      btn.style.backgroundColor = "#333";
-    } else {
-      btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
-    }
-  });
-}
+    [...tabsContainer.children].forEach(btn => {
+      if (noneSelected || !Providers.current) {
+        btn.style.backgroundColor = "#333";
+      } else {
+        btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
+      }
+    });
+  }
 
   // --- Play/Pause Icon SVGs ---
   const playSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -613,7 +619,7 @@ function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
   pauseSmallSVG.innerHTML = `<path d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"/>`;
 
   // --- Language-universal play/pause root words for major Spotify UI languages (Aids Play/Pause button detection to reflect playback state inside gui)---
-const PAUSE_WORDS = [
+  const PAUSE_WORDS = [
   // English
   "pause",
   // Spanish, Italian, Portuguese, Galician, Filipino
@@ -719,16 +725,16 @@ const PLAY_WORDS = [
   "redare",
 ];
 
-function labelMeansPause(label) {
-  if (!label) return false;
-  label = label.toLowerCase();
-  return PAUSE_WORDS.some(word => label.includes(word));
-}
-function labelMeansPlay(label) {
-  if (!label) return false;
-  label = label.toLowerCase();
-  return PLAY_WORDS.some(word => label.includes(word));
-}
+  function labelMeansPause(label) {
+    if (!label) return false;
+    label = label.toLowerCase();
+    return PAUSE_WORDS.some(word => label.includes(word));
+  }
+  function labelMeansPlay(label) {
+    if (!label) return false;
+    label = label.toLowerCase();
+    return PLAY_WORDS.some(word => label.includes(word));
+  }
 
   // --- Global Button Update Functions ---
   function getShuffleState() {
@@ -799,6 +805,7 @@ function labelMeansPlay(label) {
   function updateRepeatButton(button, iconWrapper) {
     const state = getRepeatState();
 
+     // Clear existing icon
     iconWrapper.innerHTML = "";
 
     if (state === 'off') {
@@ -822,7 +829,7 @@ function labelMeansPlay(label) {
   function updatePlayPauseButton(button, iconWrapper) {
     const isPlaying = isSpotifyPlaying();
 
-    // Clear existing icon
+     // Clear existing icon
     iconWrapper.innerHTML = "";
 
     if (isPlaying) {
@@ -922,7 +929,6 @@ function labelMeansPlay(label) {
       forceReloadParam = `&forceReload=true`;
     }
     const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
-    const response = await fetch(url, fetchOptions);
     if (!response.ok) return null;
     const data = await response.json();
     return data;
@@ -976,16 +982,11 @@ function labelMeansPlay(label) {
     },
     getUnsynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({
-        text: line.text
-      }));
+      return body.data.map(line => ({ text: line.text }));
     },
     getSynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({
-        time: Math.round(line.startTime * 1000),
-        text: line.text
-      }));
+      return body.data.map(line => ({ time: Math.round(line.startTime * 1000), text: line.text }));
     },
   };
 
@@ -1712,7 +1713,9 @@ const ProviderGenius = {
   },
 };
 
-function showSpotifyTokenModal() {
+  // --- Spotify ---
+
+  function showSpotifyTokenModal() {
   // Remove any existing modal
   const old = document.getElementById("lyrics-plus-spotify-modal");
   if (old) old.remove();
@@ -1987,8 +1990,9 @@ const Providers = {
   getCurrent() { return this.map[this.current]; },
   setCurrent(name) { if (this.map[name]) this.current = name; }
 };
+
   // ------------------------
-  // UI and Popup Functions (UNCHANGED, see previous version)
+  // UI and Popup Functions
   // ------------------------
 
   function removePopup() {
@@ -2000,6 +2004,10 @@ const Providers = {
       clearInterval(pollingInterval);
       pollingInterval = null;
     }
+    if (progressInterval) { // Stop progress updates when removing popup (dynamic progress bar)
+      clearInterval(progressInterval);
+      progressInterval = null;
+    }
     const existing = document.getElementById("lyrics-plus-popup");
     if (existing) {
       if (existing._playPauseObserver) existing._playPauseObserver.disconnect();
@@ -2009,179 +2017,175 @@ const Providers = {
     }
   }
 
-function observeSpotifyShuffle(popup) {
-  if (!popup || !popup._shuffleBtn) return;
-  if (popup._shuffleObserver) popup._shuffleObserver.disconnect();
+  function observeSpotifyShuffle(popup) {
+    if (!popup || !popup._shuffleBtn) return;
+    if (popup._shuffleObserver) popup._shuffleObserver.disconnect();
 
-  // Always observe the actual shuffle button itself
-  const shuffleBtn = Array.from(document.querySelectorAll('button[aria-label]')).find(btn => {
-    const label = btn.getAttribute('aria-label') || '';
-    return /^Enable Shuffle|^Enable Smart Shuffle|^Disable Shuffle/i.test(label);
-  });
-  if (!shuffleBtn) return;
+    // Always observe the actual shuffle button itself
+    const shuffleBtn = Array.from(document.querySelectorAll('button[aria-label]')).find(btn => {
+      const label = btn.getAttribute('aria-label') || '';
+      return /^Enable Shuffle|^Enable Smart Shuffle|^Disable Shuffle/i.test(label);
+    });
+    if (!shuffleBtn) return;
 
-  const observer = new MutationObserver(() => {
-    updateShuffleButton(popup._shuffleBtn.button, popup._shuffleBtn.iconWrapper);
-    // Re-attach observer if the node is replaced
-    setTimeout(() => observeSpotifyShuffle(popup), 0);
-  });
-  observer.observe(shuffleBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
-  popup._shuffleObserver = observer;
-}
+    const observer = new MutationObserver(() => {
+      updateShuffleButton(popup._shuffleBtn.button, popup._shuffleBtn.iconWrapper);
+      // Re-attach observer if the node is replaced
+      setTimeout(() => observeSpotifyShuffle(popup), 0);
+    });
+    observer.observe(shuffleBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
+    popup._shuffleObserver = observer;
+  }
 
-function observeSpotifyRepeat(popup) {
-  if (!popup || !popup._repeatBtn) return;
-  if (popup._repeatObserver) popup._repeatObserver.disconnect();
+  function observeSpotifyRepeat(popup) {
+    if (!popup || !popup._repeatBtn) return;
+    if (popup._repeatObserver) popup._repeatObserver.disconnect();
 
-  let repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
-  if (!repeatBtn) return;
+    let repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+    if (!repeatBtn) return;
 
-  const observer = new MutationObserver(() => {
-    updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
-    // Re-attach observer if the node is replaced
-    setTimeout(() => observeSpotifyRepeat(popup), 0);
-  });
-  observer.observe(repeatBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style', 'aria-checked'] });
-  popup._repeatObserver = observer;
-}
+    const observer = new MutationObserver(() => {
+      updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
+      // Re-attach observer if the node is replaced
+      setTimeout(() => observeSpotifyRepeat(popup), 0);
+    });
+    observer.observe(repeatBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style', 'aria-checked'] });
+    popup._repeatObserver = observer;
+  }
 
-function observeSpotifyPlayPause(popup) {
-  if (!popup || !popup._playPauseBtn) return;
-  if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
+  function observeSpotifyPlayPause(popup) {
+    if (!popup || !popup._playPauseBtn) return;
+    if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
 
-  let spBtn = document.querySelector('[data-testid="control-button-playpause"]');
-  if (!spBtn) spBtn = document.querySelector('[aria-label]');
-  if (!spBtn) return;
-  const observer = new MutationObserver(() => {
-    if (popup._playPauseBtn) {
-      updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
-    }
-  });
-  observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
-  popup._playPauseObserver = observer;
-}
+    let spBtn = document.querySelector('[data-testid="control-button-playpause"]');
+    if (!spBtn) spBtn = document.querySelector('[aria-label]');
+    if (!spBtn) return;
+    const observer = new MutationObserver(() => {
+      if (popup._playPauseBtn) {
+        updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
+      }
+    });
+    observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
+    popup._playPauseObserver = observer;
+  }
 
   function createPopup() {
     removePopup();
 
     // Load saved state from localStorage
     const savedState = localStorage.getItem('lyricsPlusPopupState');
-let pos = null;
-if (savedState) {
-  try {
-    pos = JSON.parse(savedState);
-  } catch {
-    pos = null;
-  }
-} else {
-}
+    let pos = null;
+    if (savedState) {
+      try { pos = JSON.parse(savedState); } catch { pos = null; }
+    }
 
     const popup = document.createElement("div");
     popup.id = "lyrics-plus-popup";
 
-function getSpotifyLyricsContainerRect() {
-  const el = document.querySelector('.main-view-container');
-  if (!el || !el.getBoundingClientRect) {
-    return null;
-  }
-  const rect = el.getBoundingClientRect();
-  const isMobile = window.innerWidth <= 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    function getSpotifyLyricsContainerRect() {
+      const el = document.querySelector('.main-view-container');
+      if (!el || !el.getBoundingClientRect) {
+        return null;
+      }
+      const rect = el.getBoundingClientRect();
+      const isMobile = window.innerWidth <= 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  if (isMobile) {
-    // Subtract 28% from right side only, no left margin
-    const rightMarginPx = rect.width * 0.72;
-    const left = rect.left - 72;   // Moves popup 28px outside the left edge
-    const width = rect.width - rightMarginPx + 72; // Compensate to keep right edge same
-    const top = rect.top;
-    const height = rect.height;
-    return { left, top, width, height };
-  } else {
-    return rect;
-  }
-}
+      if (isMobile) {
+        // Subtract 28% from right side only, no left margin
+        const rightMarginPx = rect.width * 0.72;
+        const left = rect.left - 72; // Moves popup 28px outside the left edge
+        const width = rect.width - rightMarginPx + 72; // Compensate to keep right edge same
+        const top = rect.top;
+        const height = rect.height;
+        return { left, top, width, height };
+      } else {
+        return rect;
+      }
+    }
 
-// Usage:
-if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
-  Object.assign(popup.style, {
-    position: "fixed",
-    left: pos.left + "px",
-    top: pos.top + "px",
-    width: pos.width + "px",
-    height: pos.height + "px",
-    minWidth: "360px",
-    minHeight: "240px",
-    backgroundColor: "#121212",
-    color: "white",
-    borderRadius: "12px",
-    boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    zIndex: 100000,
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    padding: "0",
-    userSelect: "none",
-    right: "auto",
-    bottom: "auto"
-  });
-} else {
-  // fallback to container or default
-  let rect = getSpotifyLyricsContainerRect();
-  if (rect) {
-    Object.assign(popup.style, {
-      position: "fixed",
-      left: rect.left + "px",
-      top: rect.top + "px",
-      width: rect.width + "px",
-      height: rect.height + "px",
-      minWidth: "360px",
-      minHeight: "240px",
-      backgroundColor: "#121212",
-      color: "white",
-      borderRadius: "12px",
-      boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      zIndex: 100000,
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-      padding: "0",
-      userSelect: "none",
-      right: "auto",
-      bottom: "auto"
-    });
-    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height
-    }));
-  } else {
-    // fallback
-    Object.assign(popup.style, {
-      position: "fixed",
-      bottom: "87px",
-      right: "0px",
-      left: "auto",
-      top: "auto",
-      width: "360px",
-      height: "79.5vh",
-      minWidth: "360px",
-      minHeight: "240px",
-      backgroundColor: "#121212",
-      color: "white",
-      borderRadius: "12px",
-      boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      zIndex: 100000,
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-      padding: "0",
-      userSelect: "none",
-    });
-  }
-}
+    // Usage:
+    if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
+      Object.assign(popup.style, {
+        position: "fixed",
+        left: pos.left + "px",
+        top: pos.top + "px",
+        width: pos.width + "px",
+        height: pos.height + "px",
+        minWidth: "360px",
+        minHeight: "240px",
+        backgroundColor: "#121212",
+        color: "white",
+        borderRadius: "12px",
+        boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        zIndex: 100000,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        padding: "0",
+        userSelect: "none",
+        right: "auto",
+        bottom: "auto"
+      });
+    } else {
+      // fallback to container or default
+      let rect = getSpotifyLyricsContainerRect();
+      if (rect) {
+        Object.assign(popup.style, {
+          position: "fixed",
+          left: rect.left + "px",
+          top: rect.top + "px",
+          width: rect.width + "px",
+          height: rect.height + "px",
+          minWidth: "360px",
+          minHeight: "240px",
+          backgroundColor: "#121212",
+          color: "white",
+          borderRadius: "12px",
+          boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          zIndex: 100000,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          padding: "0",
+          userSelect: "none",
+          right: "auto",
+          bottom: "auto"
+        });
+        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height
+        }));
+      } else {
+        // fallback
+        Object.assign(popup.style, {
+          position: "fixed",
+          bottom: "87px",
+          right: "0px",
+          left: "auto",
+          top: "auto",
+          width: "360px",
+          height: "79.5vh",
+          minWidth: "360px",
+          minHeight: "240px",
+          backgroundColor: "#121212",
+          color: "white",
+          borderRadius: "12px",
+          boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          zIndex: 100000,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          padding: "0",
+          userSelect: "none",
+        });
+      }
+    }
+
     // Header with title and close button - drag handle
     const headerWrapper = document.createElement("div");
     Object.assign(headerWrapper.style, {
@@ -2203,153 +2207,153 @@ if (pos && pos.left !== null && pos.top !== null && pos.width && pos.height) {
     title.style.margin = "0";
     title.style.fontWeight = "600";
 
-        // Restore Default Position and Size button for the header
+    // Restore Default Position and Size button for the header
     const btnReset = document.createElement("button");
-btnReset.title = "Restore Default Position and Size";
-Object.assign(btnReset.style, {
-  cursor: "pointer",
-  background: "none",
-  border: "none",
-  borderRadius: "5px",
-  width: "28px",
-  height: "28px",
-  color: "#fff",
-  fontWeight: "bold",
-  fontSize: "18px",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  userSelect: "none",
-  padding: "0 2px",
-  marginLeft: "2px",
-  marginRight: "2px"
-});
-btnReset.innerHTML = `
+    btnReset.title = "Restore Default Position and Size";
+    Object.assign(btnReset.style, {
+      cursor: "pointer",
+      background: "none",
+      border: "none",
+      borderRadius: "5px",
+      width: "28px",
+      height: "28px",
+      color: "#fff",
+      fontWeight: "bold",
+      fontSize: "18px",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      userSelect: "none",
+      padding: "0 2px",
+      marginLeft: "2px",
+      marginRight: "2px"
+    });
+    btnReset.innerHTML = `
   <svg width="21" height="21" viewBox="0 0 24 24" style="display:block;">
     <g transform="rotate(-90 12 12)">
       <path fill="currentColor" d="M17.65,6.35 C16.2,4.9 14.21,4 12,4 C7.58,4 4,7.58 4,12 C4,16.42 7.58,20 12,20 C15.31,20 18.23,17.69 19.42,14.61 L17.65,13.97 C16.68,16.36 14.54,18 12,18 C8.69,18 6,15.31 6,12 C6,8.69 8.69,6 12,6 C13.66,6 15.14,6.69 16.22,7.78 L13,11 L20,11 L20,4 L17.65,6.35 Z"/>
     </g>
   </svg>
 `;
-btnReset.onmouseenter = () => { btnReset.style.background = "#222"; };
-btnReset.onmouseleave = () => { btnReset.style.background = "none"; };
+    btnReset.onmouseenter = () => { btnReset.style.background = "#222"; };
+    btnReset.onmouseleave = () => { btnReset.style.background = "none"; };
 
     // Default Position and Size of the Popup Gui
     btnReset.onclick = () => {
-  const rect = getSpotifyLyricsContainerRect();
-  if (rect) {
-    Object.assign(popup.style, {
-      position: "fixed",
-      left: rect.left + "px",
-      top: rect.top + "px",
-      width: rect.width + "px",
-      height: rect.height + "px",
-      right: "auto",
-      bottom: "auto",
-      zIndex: 100000
-    });
-    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height
-    }));
-    savePopupState(popup);
-  } else {
-    Object.assign(popup.style, {
-      position: "fixed",
-      bottom: "87px",
-      right: "0px",
-      left: "auto",
-      top: "auto",
-      width: "360px",
-      height: "79.5vh",
-      zIndex: 100000
-    });
-    localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-      left: null,
-      top: null,
-      width: 360,
-      height: window.innerHeight * 0.795
-    }));
-    savePopupState(popup);
-  }
-};
-// --- Translation controls dropdown, translate button, and remove translation button ---
-const translationControls = document.createElement('div');
-translationControls.style.display = 'flex';
-translationControls.style.alignItems = 'center';
-translationControls.style.justifyContent = 'space-between';
-translationControls.style.width = '100%';
-translationControls.style.gap = '8px';
+      const rect = getSpotifyLyricsContainerRect();
+      if (rect) {
+        Object.assign(popup.style, {
+          position: "fixed",
+          left: rect.left + "px",
+          top: rect.top + "px",
+          width: rect.width + "px",
+          height: rect.height + "px",
+          right: "auto",
+          bottom: "auto",
+          zIndex: 100000
+        });
+        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height
+        }));
+        savePopupState(popup);
+      } else {
+        Object.assign(popup.style, {
+          position: "fixed",
+          bottom: "87px",
+          right: "0px",
+          left: "auto",
+          top: "auto",
+          width: "360px",
+          height: "79.5vh",
+          zIndex: 100000
+        });
+        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
+          left: null,
+          top: null,
+          width: 360,
+          height: window.innerHeight * 0.795
+        }));
+        savePopupState(popup);
+      }
+    };
 
-const controlHeight = '28px';
-const fontSize = '13px';
+    // --- Translation controls dropdown, translate button, and remove translation button ---
+    const translationControls = document.createElement('div');
+    translationControls.style.display = 'flex';
+    translationControls.style.alignItems = 'center';
+    translationControls.style.justifyContent = 'space-between';
+    translationControls.style.width = '100%';
+    translationControls.style.gap = '8px';
 
-// Language selector (dropdown)
-const langSelect = document.createElement('select');
-for (const [code, name] of Object.entries(TRANSLATION_LANGUAGES)) {
-  const opt = document.createElement('option');
-  opt.value = code;
-  opt.textContent = name;
-  langSelect.appendChild(opt);
-}
-langSelect.value = getSavedTranslationLang();
-langSelect.title = 'Select translation language';
-langSelect.style.flex = '1';
-langSelect.style.minWidth = '0';
-langSelect.style.height = controlHeight;
-langSelect.style.background = '#333';
-langSelect.style.color = 'white';
-langSelect.style.border = 'none';
-langSelect.style.borderRadius = '5px';
-langSelect.style.fontSize = fontSize;
-langSelect.style.boxSizing = 'border-box';
-langSelect.onchange = () => {
-  saveTranslationLang(langSelect.value);
-  removeTranslatedLyrics();
-  lastTranslatedLang = null;
-};
+    const controlHeight = '28px';
+    const fontSize = '13px';
 
-// Translate button
-const translateBtn = document.createElement('button');
-translateBtn.textContent = 'Translate';
-translateBtn.style.flex = '1';
-translateBtn.style.minWidth = '0';
-translateBtn.style.height = controlHeight;
-translateBtn.style.background = '#1db954';
-translateBtn.style.color = 'white';
-translateBtn.style.border = 'none';
-translateBtn.style.borderRadius = '5px';
-translateBtn.style.fontSize = fontSize;
-translateBtn.style.cursor = 'pointer';
-translateBtn.style.boxSizing = 'border-box';
-translateBtn.onclick = translateLyricsInPopup;
+    // Language selector (dropdown)
+    const langSelect = document.createElement('select');
+    for (const [code, name] of Object.entries(TRANSLATION_LANGUAGES)) {
+      const opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = name;
+      langSelect.appendChild(opt);
+    }
+    langSelect.value = getSavedTranslationLang();
+    langSelect.title = 'Select translation language';
+    langSelect.style.flex = '1';
+    langSelect.style.minWidth = '0';
+    langSelect.style.height = controlHeight;
+    langSelect.style.background = '#333';
+    langSelect.style.color = 'white';
+    langSelect.style.border = 'none';
+    langSelect.style.borderRadius = '5px';
+    langSelect.style.fontSize = fontSize;
+    langSelect.style.boxSizing = 'border-box';
+    langSelect.onchange = () => {
+      saveTranslationLang(langSelect.value);
+      removeTranslatedLyrics();
+      lastTranslatedLang = null;
+    };
 
-// Remove translation button
-const removeBtn = document.createElement('button');
-removeBtn.textContent = 'Original'; // Remove Translation Button
-removeBtn.style.flex = '1';
-removeBtn.style.minWidth = '0';
-removeBtn.style.height = controlHeight;
-removeBtn.style.background = '#333';
-removeBtn.style.color = 'white';
-removeBtn.style.border = 'none';
-removeBtn.style.borderRadius = '5px';
-removeBtn.style.fontSize = fontSize;
-removeBtn.style.cursor = 'pointer';
-removeBtn.style.boxSizing = 'border-box';
-removeBtn.onclick = () => {
-  removeTranslatedLyrics();
-  lastTranslatedLang = null;
-};
+    // Translate button
+    const translateBtn = document.createElement('button');
+    translateBtn.textContent = 'Translate';
+    translateBtn.style.flex = '1';
+    translateBtn.style.minWidth = '0';
+    translateBtn.style.height = controlHeight;
+    translateBtn.style.background = '#1db954';
+    translateBtn.style.color = 'white';
+    translateBtn.style.border = 'none';
+    translateBtn.style.borderRadius = '5px';
+    translateBtn.style.fontSize = fontSize;
+    translateBtn.style.cursor = 'pointer';
+    translateBtn.style.boxSizing = 'border-box';
+    translateBtn.onclick = translateLyricsInPopup;
 
-// Append controls in order: left, center, right
-translationControls.appendChild(langSelect);
-translationControls.appendChild(translateBtn);
-translationControls.appendChild(removeBtn);
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = 'Original'; // Remove Translation Button
+    removeBtn.style.flex = '1';
+    removeBtn.style.minWidth = '0';
+    removeBtn.style.height = controlHeight;
+    removeBtn.style.background = '#333';
+    removeBtn.style.color = 'white';
+    removeBtn.style.border = 'none';
+    removeBtn.style.borderRadius = '5px';
+    removeBtn.style.fontSize = fontSize;
+    removeBtn.style.cursor = 'pointer';
+    removeBtn.style.boxSizing = 'border-box';
+    removeBtn.onclick = () => {
+      removeTranslatedLyrics();
+      lastTranslatedLang = null;
+    };
 
-   const closeBtn = document.createElement("button");
+    // Append controls in order: left, center, right
+    translationControls.appendChild(langSelect);
+    translationControls.appendChild(translateBtn);
+    translationControls.appendChild(removeBtn);
+
+    const closeBtn = document.createElement("button");
     closeBtn.textContent = "×";
     closeBtn.title = "Close Lyrics+";
     Object.assign(closeBtn.style, {
@@ -2375,186 +2379,174 @@ translationControls.appendChild(removeBtn);
     };
 
     // --- Translation Toggle Button ---
-const translationToggleBtn = document.createElement("button");
-translationToggleBtn.textContent = "🌐";
-translationToggleBtn.title = "Show/hide translation controls";
-Object.assign(translationToggleBtn.style, {
-  marginRight: "6px",
-  cursor: "pointer",
-  background: "none",
-  border: "none",
-  color: "white",
-  fontSize: "16px",
-  lineHeight: "1",
-});
+    const translationToggleBtn = document.createElement("button");
+    translationToggleBtn.textContent = "🌐";
+    translationToggleBtn.title = "Show/hide translation controls";
+    Object.assign(translationToggleBtn.style, {
+      marginRight: "6px",
+      cursor: "pointer",
+      background: "none",
+      border: "none",
+      color: "white",
+      fontSize: "16px",
+      lineHeight: "1",
+    });
 
-// --- Download Synced Lyrics Button ---
-const downloadBtnWrapper = document.createElement("div");
-downloadBtnWrapper.style.position = "relative"; // For dropdown positioning
+    // --- Download Synced Lyrics Button ---
+    const downloadBtnWrapper = document.createElement("div");
+    downloadBtnWrapper.style.position = "relative"; // For dropdown positioning
 
-const downloadBtn = document.createElement("button");
-downloadBtn.title = "Download lyrics";
-Object.assign(downloadBtn.style, {
-  marginLeft: "0px",
-  marginRight: "2px",
-  background: "none",
-  color: "#fff",
-  border: "none",
-  borderRadius: "5px",
-  padding: "0 2px",
-  cursor: "pointer",
-  width: "28px",
-  height: "28px",
-  display: "none",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "none",
-  position: "relative"
-});
-downloadBtn.onmouseenter = () => { downloadBtn.style.background = "#222"; };
-downloadBtn.onmouseleave = () => { downloadBtn.style.background = "none"; };
+    const downloadBtn = document.createElement("button");
+    downloadBtn.title = "Download lyrics";
+    Object.assign(downloadBtn.style, {
+      marginLeft: "0px",
+      marginRight: "2px",
+      background: "none",
+      color: "#fff",
+      border: "none",
+      borderRadius: "5px",
+      padding: "0 2px",
+      cursor: "pointer",
+      width: "28px",
+      height: "28px",
+      display: "none",
+      alignItems: "center",
+      justifyContent: "center",
+      transition: "none",
+      position: "relative"
+    });
+    downloadBtn.onmouseenter = () => { downloadBtn.style.background = "#222"; };
+    downloadBtn.onmouseleave = () => { downloadBtn.style.background = "none"; };
 
-downloadBtn.innerHTML = `
-  <svg id="lyrics-download-svg" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#fff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" style="display:block;transition:stroke 0.18s;">
+    downloadBtn.innerHTML = `
+  <svg id="lyrics-download-svg" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#fff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" style="display:block;">
     <path d="M12 5v9"></path>
     <polyline points="8 13 12 17 16 13"></polyline>
     <rect x="4" y="19" width="16" height="2" rx="1"></rect>
   </svg>
 `;
 
-// Dropdown menu for download types
-const downloadDropdown = document.createElement("div");
-downloadBtn._dropdown = downloadDropdown;
-Object.assign(downloadDropdown.style, {
-  position: "absolute",
-  top: "110%",
-  left: "0",
-  minWidth: "90px",
-  backgroundColor: "#121212",
-  border: "1px solid #444",
-  borderRadius: "8px",
-  boxShadow: "0 2px 12px #0009",
-  zIndex: 99999,
-  display: "none",
-  flexDirection: "column",
-  padding: "4px 4px"
-});
-downloadDropdown.tabIndex = -1;
+    // Dropdown menu for download types
+    const downloadDropdown = document.createElement("div");
+    downloadBtn._dropdown = downloadDropdown;
+    Object.assign(downloadDropdown.style, {
+      position: "absolute",
+      top: "110%",
+      left: "0",
+      minWidth: "90px",
+      backgroundColor: "#121212",
+      border: "1px solid #444",
+      borderRadius: "8px",
+      boxShadow: "0 2px 12px #0009",
+      zIndex: 99999,
+      display: "none",
+      flexDirection: "column",
+      padding: "4px 4px"
+    });
+    downloadDropdown.tabIndex = -1;
 
-const syncOption = document.createElement("button");
-syncOption.textContent = "Synced";
-Object.assign(syncOption.style, {
-  background: "#121212",
-  color: "#fff",
-  border: "none",
-  padding: "8px 10px",
-  cursor: "pointer",
-  textAlign: "left",
-  fontSize: "14px",
-  borderRadius: "5px"
-});
-syncOption.onmouseenter = () => {
-  syncOption.style.background = "#333";
-  syncOption.style.color = "#fff";
-};
-syncOption.onmouseleave = () => {
-  syncOption.style.background = "#121212";
-  syncOption.style.color = "#fff";
-};
+    const syncOption = document.createElement("button");
+    syncOption.textContent = "Synced";
+    Object.assign(syncOption.style, {
+      background: "#121212",
+      color: "#fff",
+      border: "none",
+      padding: "8px 10px",
+      cursor: "pointer",
+      textAlign: "left",
+      fontSize: "14px",
+      borderRadius: "5px"
+    });
+    syncOption.onmouseenter = () => { syncOption.style.background = "#333"; syncOption.style.color = "#fff"; };
+    syncOption.onmouseleave = () => { syncOption.style.background = "#121212"; syncOption.style.color = "#fff"; };
 
-const unsyncOption = document.createElement("button");
-unsyncOption.textContent = "Unsynced";
-Object.assign(unsyncOption.style, {
-  background: "#121212",
-  color: "#fff",
-  border: "none",
-  padding: "8px 10px",
-  cursor: "pointer",
-  textAlign: "left",
-  fontSize: "14px",
-  borderRadius: "5px"
-});
-unsyncOption.onmouseenter = () => {
-  unsyncOption.style.background = "#333";
-  unsyncOption.style.color = "#fff";
-};
-unsyncOption.onmouseleave = () => {
-  unsyncOption.style.background = "#121212";
-  unsyncOption.style.color = "#fff";
-};
+    const unsyncOption = document.createElement("button");
+    unsyncOption.textContent = "Unsynced";
+    Object.assign(unsyncOption.style, {
+      background: "#121212",
+      color: "#fff",
+      border: "none",
+      padding: "8px 10px",
+      cursor: "pointer",
+      textAlign: "left",
+      fontSize: "14px",
+      borderRadius: "5px"
+    });
+    unsyncOption.onmouseenter = () => { unsyncOption.style.background = "#333"; unsyncOption.style.color = "#fff"; };
+    unsyncOption.onmouseleave = () => { unsyncOption.style.background = "#121212"; unsyncOption.style.color = "#fff"; };
 
-downloadDropdown.appendChild(syncOption);
-downloadDropdown.appendChild(unsyncOption);
+    downloadDropdown.appendChild(syncOption);
+    downloadDropdown.appendChild(unsyncOption);
 
-downloadBtnWrapper.appendChild(downloadBtn);
-downloadBtnWrapper.appendChild(downloadDropdown);
+    downloadBtnWrapper.appendChild(downloadBtn);
+    downloadBtnWrapper.appendChild(downloadDropdown);
 
-// Logic for showing/hiding the dropdown and downloading
-downloadBtn.onclick = (e) => {
-  // Always show dropdown if at least one download option is available
-  let hasSynced = !!currentSyncedLyrics;
-  let hasUnsynced = !!currentUnsyncedLyrics;
+    // Logic for showing/hiding the dropdown and downloading
+    downloadBtn.onclick = (e) => {
+      // Always show dropdown if at least one download option is available
+      let hasSynced = !!currentSyncedLyrics;
+      let hasUnsynced = !!currentUnsyncedLyrics;
 
-  // Show/hide options
-  syncOption.style.display = hasSynced ? "" : "none";
-  unsyncOption.style.display = hasUnsynced ? "" : "none";
+      // Show/hide options
+      syncOption.style.display = hasSynced ? "" : "none";
+      unsyncOption.style.display = hasUnsynced ? "" : "none";
 
-  if (hasSynced || hasUnsynced) {
-    downloadDropdown.style.display = "flex";
-    setTimeout(() => {
-      const hide = (ev) => {
-        if (!downloadDropdown.contains(ev.target) && ev.target !== downloadBtn) {
-          downloadDropdown.style.display = "none";
-          document.removeEventListener("mousedown", hide);
-        }
-      };
-      document.addEventListener("mousedown", hide);
-    }, 1);
-  } else {
-    // Fallback: try to extract from DOM as plain
-    const popup = document.getElementById("lyrics-plus-popup");
-    if (!popup) return;
-    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-    if (!lyricsContainer) return;
-    const lines = Array.from(lyricsContainer.querySelectorAll('p')).map(p => ({ text: p.textContent }));
-    if (lines.length) downloadUnsyncedLyrics(lines, getCurrentTrackInfo(), Providers.current);
-  }
-};
+      if (hasSynced || hasUnsynced) {
+        downloadDropdown.style.display = "flex";
+        setTimeout(() => {
+          const hide = (ev) => {
+            if (!downloadDropdown.contains(ev.target) && ev.target !== downloadBtn) {
+              downloadDropdown.style.display = "none";
+              document.removeEventListener("mousedown", hide);
+            }
+          };
+          document.addEventListener("mousedown", hide);
+        }, 1);
+      } else {
+        // Fallback: try to extract from DOM as plain
+        const popup = document.getElementById("lyrics-plus-popup");
+        if (!popup) return;
+        const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+        if (!lyricsContainer) return;
+        const lines = Array.from(lyricsContainer.querySelectorAll('p')).map(p => ({ text: p.textContent }));
+        if (lines.length) downloadUnsyncedLyrics(lines, getCurrentTrackInfo(), Providers.current);
+      }
+    };
 
-// Set up dropdown options
-syncOption.onclick = (e) => {
-  downloadDropdown.style.display = "none";
-  if (currentSyncedLyrics) downloadSyncedLyrics(currentSyncedLyrics, getCurrentTrackInfo(), Providers.current);
-};
-unsyncOption.onclick = (e) => {
-  downloadDropdown.style.display = "none";
-  if (currentUnsyncedLyrics) downloadUnsyncedLyrics(currentUnsyncedLyrics, getCurrentTrackInfo(), Providers.current);
-};
+    // Set up dropdown options
+    syncOption.onclick = (e) => {
+      downloadDropdown.style.display = "none";
+      if (currentSyncedLyrics) downloadSyncedLyrics(currentSyncedLyrics, getCurrentTrackInfo(), Providers.current);
+    };
+    unsyncOption.onclick = (e) => {
+      downloadDropdown.style.display = "none";
+      if (currentUnsyncedLyrics) downloadUnsyncedLyrics(currentUnsyncedLyrics, getCurrentTrackInfo(), Providers.current);
+    };
 
-// --- Font Size Selector ---
-const fontSizeSelect = document.createElement("select");
-fontSizeSelect.title = "Change lyrics font size";
-fontSizeSelect.style.marginRight = "2px";
-fontSizeSelect.style.cursor = "pointer";
-fontSizeSelect.style.background = "#121212";
-fontSizeSelect.style.border = "none";
-fontSizeSelect.style.color = "white";
-fontSizeSelect.style.fontSize = "14px";
-fontSizeSelect.style.lineHeight = "1";
-["16", "22", "28", "32", "38", "44", "50", "56"].forEach(size => {
-  const opt = document.createElement("option");
-  opt.value = size;
-  opt.textContent = size + "px";
-  fontSizeSelect.appendChild(opt);
-});
-fontSizeSelect.value = localStorage.getItem("lyricsPlusFontSize") || "22";
-fontSizeSelect.onchange = () => {
-  localStorage.setItem("lyricsPlusFontSize", fontSizeSelect.value);
-  const lyricsContent = document.getElementById("lyrics-plus-content");
-  if (lyricsContent) {
-    lyricsContent.style.fontSize = fontSizeSelect.value + "px";
-  }
-};
+    // --- Font Size Selector ---
+    const fontSizeSelect = document.createElement("select");
+    fontSizeSelect.title = "Change lyrics font size";
+    fontSizeSelect.style.marginRight = "2px";
+    fontSizeSelect.style.cursor = "pointer";
+    fontSizeSelect.style.background = "#121212";
+    fontSizeSelect.style.border = "none";
+    fontSizeSelect.style.color = "white";
+    fontSizeSelect.style.fontSize = "14px";
+    fontSizeSelect.style.lineHeight = "1";
+    ["16", "22", "28", "32", "38", "44", "50", "56"].forEach(size => {
+      const opt = document.createElement("option");
+      opt.value = size;
+      opt.textContent = size + "px";
+      fontSizeSelect.appendChild(opt);
+    });
+    fontSizeSelect.value = localStorage.getItem("lyricsPlusFontSize") || "22";
+    fontSizeSelect.onchange = () => {
+      localStorage.setItem("lyricsPlusFontSize", fontSizeSelect.value);
+      const lyricsContent = document.getElementById("lyrics-plus-content");
+      if (lyricsContent) {
+        lyricsContent.style.fontSize = fontSizeSelect.value + "px";
+      }
+    };
 
     // Toggle offset section
     const offsetToggleBtn = document.createElement("button");
@@ -2587,19 +2579,19 @@ fontSizeSelect.onchange = () => {
     header.appendChild(titleBar);
 
     // Button group right side
-const buttonGroup = document.createElement("div");
-buttonGroup.style.display = "flex";
-buttonGroup.style.alignItems = "center";
-buttonGroup.appendChild(downloadBtnWrapper);
-buttonGroup.appendChild(fontSizeSelect);
-buttonGroup.appendChild(btnReset);
-buttonGroup.appendChild(translationToggleBtn);
-buttonGroup.appendChild(playbackToggleBtn);
-buttonGroup.appendChild(offsetToggleBtn);
-buttonGroup.appendChild(closeBtn);
+    const buttonGroup = document.createElement("div");
+    buttonGroup.style.display = "flex";
+    buttonGroup.style.alignItems = "center";
+    buttonGroup.appendChild(downloadBtnWrapper);
+    buttonGroup.appendChild(fontSizeSelect);
+    buttonGroup.appendChild(btnReset);
+    buttonGroup.appendChild(translationToggleBtn);
+    buttonGroup.appendChild(playbackToggleBtn);
+    buttonGroup.appendChild(offsetToggleBtn);
+    buttonGroup.appendChild(closeBtn);
 
-header.appendChild(buttonGroup);
-headerWrapper.appendChild(header);
+    header.appendChild(buttonGroup);
+    headerWrapper.appendChild(header);
 
     // Tabs container
     const tabs = document.createElement("div");
@@ -2608,304 +2600,297 @@ headerWrapper.appendChild(header);
     tabs.style.gap = "8px";
 
     // --- PATCH: Separate single-click and double-click handlers for provider tabs ---
-let providerClickTimer = null;
+    let providerClickTimer = null;
 
-Providers.list.forEach(name => {
-  const btn = document.createElement("button");
-  btn.textContent = name;
-  btn.style.flex = "1";
-  btn.style.padding = "6px";
-  btn.style.borderRadius = "6px";
-  btn.style.border = "none";
-  btn.style.cursor = "pointer";
-  btn.style.backgroundColor = (Providers.current === name) ? "#1db954" : "#333";
-  btn.style.color = "white";
-  btn.style.fontWeight = "600";
+    Providers.list.forEach(name => {
+      const btn = document.createElement("button");
+      btn.textContent = name;
+      btn.style.flex = "1";
+      btn.style.padding = "6px";
+      btn.style.borderRadius = "6px";
+      btn.style.border = "none";
+      btn.style.cursor = "pointer";
+      btn.style.backgroundColor = (Providers.current === name) ? "#1db954" : "#333";
+      btn.style.color = "white";
+      btn.style.fontWeight = "600";
 
-  btn.onclick = async (e) => {
-    if (providerClickTimer) return; // already waiting for double-click, skip
-    providerClickTimer = setTimeout(async () => {
-      Providers.setCurrent(name);
-      updateTabs(tabs);
-      await updateLyricsContent(popup, getCurrentTrackInfo());
-      providerClickTimer = null;
-    }, 250);
-  };
+      btn.onclick = async (e) => {
+        if (providerClickTimer) return; // already waiting for double-click, skip
+        providerClickTimer = setTimeout(async () => {
+          Providers.setCurrent(name);
+          updateTabs(tabs);
+          await updateLyricsContent(popup, getCurrentTrackInfo());
+          providerClickTimer = null;
+        }, 250);
+      };
 
-  btn.ondblclick = (e) => {
-    e.preventDefault();
-    if (providerClickTimer) {
-      clearTimeout(providerClickTimer);
-      providerClickTimer = null;
-    }
-    // Double-click (desktop/mobile) for Musixmatch settings
-    if (name === "Musixmatch") {
-      showMusixmatchTokenModal();
-    }
-    // Double-click (desktop/mobile) for Spotify settings
-    if (name === "Spotify") {
-      showSpotifyTokenModal();
-    }
-  };
+      btn.ondblclick = (e) => {
+        e.preventDefault();
+        if (providerClickTimer) {
+          clearTimeout(providerClickTimer);
+          providerClickTimer = null;
+        }
+        // Double-click (desktop/mobile) for Musixmatch settings
+        if (name === "Musixmatch") {
+          showMusixmatchTokenModal();
+        }
+        // Double-click (desktop/mobile) for Spotify settings
+        if (name === "Spotify") {
+          showSpotifyTokenModal();
+        }
+      };
 
-  tabs.appendChild(btn);
-});
+      tabs.appendChild(btn);
+    });
     headerWrapper.appendChild(tabs);
     popup._lyricsTabs = tabs;
 
     // Lyrics container
     const lyricsContainer = document.createElement("div");
-lyricsContainer.id = "lyrics-plus-content";
-Object.assign(lyricsContainer.style, {
-  flex: "1",
-  overflowY: "auto",
-  overflowX: "hidden",
-  padding: "12px",
-  whiteSpace: "pre-wrap",
-  fontSize: "22px",
-  lineHeight: "1.5",
-  backgroundColor: "#121212",
-  userSelect: "text",
-  textAlign: "center",
-});
-lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
-// Add horizontal padding to ensure lyrics never overflow
-lyricsContainer.style.paddingLeft = "10.0%";
-lyricsContainer.style.paddingRight = "10.0%";
+    lyricsContainer.id = "lyrics-plus-content";
+    Object.assign(lyricsContainer.style, {
+      flex: "1",
+      overflowY: "auto",
+      overflowX: "hidden",
+      padding: "12px",
+      whiteSpace: "pre-wrap",
+      fontSize: "22px",
+      lineHeight: "1.5",
+      backgroundColor: "#121212",
+      userSelect: "text",
+      textAlign: "center",
+    });
+    lyricsContainer.style.fontSize = (localStorage.getItem("lyricsPlusFontSize") || "22") + "px";
+    // Add horizontal padding to ensure lyrics never overflow
+    lyricsContainer.style.paddingLeft = "10.0%";
+    lyricsContainer.style.paddingRight = "10.0%";
 
     async function translateLinesBatch(lines, targetLang) {
-  if (!lines.length) return [];
-  // Build the URL with multiple q= parameters (the right way!)
-  const baseUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + targetLang + "&dt=t";
-  const url = baseUrl + lines.map(line => "&q=" + encodeURIComponent(line)).join('');
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-    // data[0] is an array of arrays: [[translated, original, ...], ...]
-    return data[0].map(item => item[0]);
-  } catch (error) {
-    console.error('Batch translation failed:', error);
-    return lines.map(_ => '[Translation Error]');
-  }
-}
+      if (!lines.length) return [];
+      // Build the URL with multiple q= parameters (the right way!)
+      const baseUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + targetLang + "&dt=t";
+      const url = baseUrl + lines.map(line => "&q=" + encodeURIComponent(line)).join('');
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        // data[0] is an array of arrays: [[translated, original, ...], ...]
+        return data[0].map(item => item[0]);
+      } catch (error) {
+        console.error('Batch translation failed:', error);
+        return lines.map(_ => '[Translation Error]');
+      }
+    }
 
     function removeTranslatedLyrics() {
-  const translatedEls = lyricsContainer.querySelectorAll('[data-translated="true"]');
-  translatedEls.forEach(el => el.remove());
-  translationPresent = false;
-  lastTranslatedLang = null;
-}
+      const translatedEls = lyricsContainer.querySelectorAll('[data-translated="true"]');
+      translatedEls.forEach(el => el.remove());
+      translationPresent = false;
+      lastTranslatedLang = null;
+    }
 
-async function translateLyricsInPopup() {
-  if (!lyricsContainer || isTranslating) return;
-  const targetLang = getSavedTranslationLang();
+    async function translateLyricsInPopup() {
+      if (!lyricsContainer || isTranslating) return;
+      const targetLang = getSavedTranslationLang();
+      if (translationPresent && lastTranslatedLang === targetLang) return;
+      isTranslating = true;
+      translateBtn.disabled = true;
+      removeTranslatedLyrics();
+      const pEls = Array.from(lyricsContainer.querySelectorAll('p'));
+      const linesToTranslate = pEls.filter(el => el.textContent.trim() && el.textContent.trim() !== "♪");
+      await Promise.all(linesToTranslate.map(async (p) => {
+        const originalText = p.textContent.trim();
+        const translatedText = await translateText(originalText, targetLang);
+        const translationDiv = document.createElement('div');
+        translationDiv.textContent = translatedText;
+        translationDiv.style.color = 'gray';
+        translationDiv.setAttribute('data-translated', 'true');
+        p.parentNode.insertBefore(translationDiv, p.nextSibling);
+      }));
+      lastTranslatedLang = targetLang;
+      translationPresent = true;
+      translateBtn.disabled = false;
+      isTranslating = false;
+    }
 
-  if (translationPresent && lastTranslatedLang === targetLang) return;
-
-  isTranslating = true;
-  translateBtn.disabled = true;
-
-  removeTranslatedLyrics();
-
-  const pEls = Array.from(lyricsContainer.querySelectorAll('p'));
-  const linesToTranslate = pEls.filter(el => el.textContent.trim() && el.textContent.trim() !== "♪");
-
-  await Promise.all(linesToTranslate.map(async (p) => {
-    const originalText = p.textContent.trim();
-    const translatedText = await translateText(originalText, targetLang);
-    const translationDiv = document.createElement('div');
-    translationDiv.textContent = translatedText;
-    translationDiv.style.color = 'gray';
-    translationDiv.setAttribute('data-translated', 'true');
-    p.parentNode.insertBefore(translationDiv, p.nextSibling);
-  }));
-
-  lastTranslatedLang = targetLang;
-  translationPresent = true;
-
-  translateBtn.disabled = false;
-  isTranslating = false;
-}
     // Translator Controls Container
-const translatorWrapper = document.createElement("div");
-translatorWrapper.id = "lyrics-plus-translator-wrapper";
-translatorWrapper.style.display = "block";
-translatorWrapper.style.background = "#121212";
-translatorWrapper.style.borderBottom = "1px solid #333";
-translatorWrapper.style.padding = "8px 12px";
-translatorWrapper.style.transition = "max-height 0.3s, padding 0.3s";
-translatorWrapper.style.overflow = "hidden";
-translatorWrapper.style.maxHeight = "0";
-translatorWrapper.style.pointerEvents = "none";
-
-let translatorVisible = localStorage.getItem('lyricsPlusTranslatorVisible');
-if (translatorVisible === null) translatorVisible = false;
-else translatorVisible = JSON.parse(translatorVisible);
-
-if (translatorVisible) {
-  translatorWrapper.style.maxHeight = "100px";
-  translatorWrapper.style.pointerEvents = "";
-  translatorWrapper.style.padding = "8px 12px";
-} else {
-  translatorWrapper.style.maxHeight = "0";
-  translatorWrapper.style.pointerEvents = "none";
-  translatorWrapper.style.padding = "0 12px";
-}
-    translatorWrapper.appendChild(translationControls);
-
-translationToggleBtn.onclick = () => {
-  translatorVisible = !translatorVisible;
-  localStorage.setItem('lyricsPlusTranslatorVisible', JSON.stringify(translatorVisible));
-  if (translatorVisible) {
-    translatorWrapper.style.maxHeight = "100px";
-    translatorWrapper.style.pointerEvents = "";
+    const translatorWrapper = document.createElement("div");
+    translatorWrapper.id = "lyrics-plus-translator-wrapper";
+    translatorWrapper.style.display = "block";
+    translatorWrapper.style.background = "#121212";
+    translatorWrapper.style.borderBottom = "1px solid #333";
     translatorWrapper.style.padding = "8px 12px";
-  } else {
+    translatorWrapper.style.transition = "max-height 0.3s, padding 0.3s";
+    translatorWrapper.style.overflow = "hidden";
     translatorWrapper.style.maxHeight = "0";
     translatorWrapper.style.pointerEvents = "none";
-    translatorWrapper.style.padding = "0 12px";
-  }
-};
 
-// Offset Setting UI
-const offsetWrapper = document.createElement("div");
-offsetWrapper.style.display = "flex";
-offsetWrapper.style.alignItems = "center";
-offsetWrapper.style.justifyContent = "space-between";
-offsetWrapper.style.padding = "8px 12px";
-offsetWrapper.style.background = "#121212";
-offsetWrapper.style.borderBottom = "1px solid #333";
-offsetWrapper.style.fontSize = "15px";
-offsetWrapper.style.width = "100%";
+    let translatorVisible = localStorage.getItem('lyricsPlusTranslatorVisible');
+    if (translatorVisible === null) translatorVisible = false;
+    else translatorVisible = JSON.parse(translatorVisible);
 
-const offsetLabel = document.createElement("div");
-offsetLabel.innerHTML = `Adjust lyrics timing (ms):<br><span style="font-size: 11px; color: #aaa;">lower = appear later, higher = appear earlier</span>`;
-offsetLabel.style.color = "#fff";
+    if (translatorVisible) {
+      translatorWrapper.style.maxHeight = "100px";
+      translatorWrapper.style.pointerEvents = "";
+      translatorWrapper.style.padding = "8px 12px";
+    } else {
+      translatorWrapper.style.maxHeight = "0";
+      translatorWrapper.style.pointerEvents = "none";
+      translatorWrapper.style.padding = "0 12px";
+    }
+    translatorWrapper.appendChild(translationControls);
 
-// Compact input+spinner container
-const inputStack = document.createElement("div");
-inputStack.style.position = "relative";
-inputStack.style.display = "inline-block";
-inputStack.style.marginLeft = "16px";
-inputStack.style.height = "28px";
-inputStack.style.width = "68px";
+    translationToggleBtn.onclick = () => {
+      translatorVisible = !translatorVisible;
+      localStorage.setItem('lyricsPlusTranslatorVisible', JSON.stringify(translatorVisible));
+      if (translatorVisible) {
+        translatorWrapper.style.maxHeight = "100px";
+        translatorWrapper.style.pointerEvents = "";
+        translatorWrapper.style.padding = "8px 12px";
+      } else {
+        translatorWrapper.style.maxHeight = "0";
+        translatorWrapper.style.pointerEvents = "none";
+        translatorWrapper.style.padding = "0 12px";
+      }
+    };
 
-// The input itself - compact!
-const offsetInput = document.createElement("input");
-offsetInput.type = "number";
-offsetInput.min = "-5000";
-offsetInput.max = "5000";
-offsetInput.step = "50";
-offsetInput.value = getAnticipationOffset();
-offsetInput.style.width = "68px";
-offsetInput.style.height = "28px";
-offsetInput.style.background = "#222";
-offsetInput.style.color = "#fff";
-offsetInput.style.border = "1px solid #444";
-offsetInput.style.borderRadius = "6px";
-offsetInput.style.padding = "2px 24px 2px 6px";
-offsetInput.style.boxSizing = "border-box";
-offsetInput.style.fontSize = "14px";
-offsetInput.style.MozAppearance = "textfield";
-offsetInput.style.appearance = "textfield";
+    // Offset Settings UI
+    const offsetWrapper = document.createElement("div");
+    offsetWrapper.style.display = "flex";
+    offsetWrapper.style.alignItems = "center";
+    offsetWrapper.style.justifyContent = "space-between";
+    offsetWrapper.style.padding = "8px 12px";
+    offsetWrapper.style.background = "#121212";
+    offsetWrapper.style.borderBottom = "1px solid #333";
+    offsetWrapper.style.fontSize = "15px";
+    offsetWrapper.style.width = "100%";
 
-// Spinner container
-const spinnerContainer = document.createElement("div");
-spinnerContainer.style.position = "absolute";
-spinnerContainer.style.right = "0";
-spinnerContainer.style.top = "0";
-spinnerContainer.style.height = "28px";
-spinnerContainer.style.width = "24px";
-spinnerContainer.style.display = "flex";
-spinnerContainer.style.flexDirection = "column";
-spinnerContainer.style.justifyContent = "center";
-spinnerContainer.style.zIndex = "2";
+    const offsetLabel = document.createElement("div");
+    offsetLabel.innerHTML = `Adjust lyrics timing (ms):<br><span style="font-size: 11px; color: #aaa;">lower = appear later, higher = appear earlier</span>`;
+    offsetLabel.style.color = "#fff";
 
-const iconFill = "rgba(255, 255, 255, 0.85)";
+    // Compact input+spinner container
+    const inputStack = document.createElement("div");
+    inputStack.style.position = "relative";
+    inputStack.style.display = "inline-block";
+    inputStack.style.marginLeft = "16px";
+    inputStack.style.height = "28px";
+    inputStack.style.width = "68px";
 
-// Up button
-const upBtn = document.createElement("button");
-upBtn.innerHTML = `
+    // The input itself - compact!
+    const offsetInput = document.createElement("input");
+    offsetInput.type = "number";
+    offsetInput.min = "-5000";
+    offsetInput.max = "5000";
+    offsetInput.step = "50";
+    offsetInput.value = getAnticipationOffset();
+    offsetInput.style.width = "68px";
+    offsetInput.style.height = "28px";
+    offsetInput.style.background = "#222";
+    offsetInput.style.color = "#fff";
+    offsetInput.style.border = "1px solid #444";
+    offsetInput.style.borderRadius = "6px";
+    offsetInput.style.padding = "2px 24px 2px 6px";
+    offsetInput.style.boxSizing = "border-box";
+    offsetInput.style.fontSize = "14px";
+    offsetInput.style.MozAppearance = "textfield";
+    offsetInput.style.appearance = "textfield";
+
+    // Spinner container
+    const spinnerContainer = document.createElement("div");
+    spinnerContainer.style.position = "absolute";
+    spinnerContainer.style.right = "0";
+    spinnerContainer.style.top = "0";
+    spinnerContainer.style.height = "28px";
+    spinnerContainer.style.width = "24px";
+    spinnerContainer.style.display = "flex";
+    spinnerContainer.style.flexDirection = "column";
+    spinnerContainer.style.justifyContent = "center";
+    spinnerContainer.style.zIndex = "2";
+
+    const iconFill = "rgba(255, 255, 255, 0.85)";
+
+    // Up button
+    const upBtn = document.createElement("button");
+    upBtn.innerHTML = `
   <svg viewBox="0 0 24 20" xmlns="http://www.w3.org/2000/svg"
     style="display:block; margin:auto; width:20px; height:12px;" fill="${iconFill}" >
     <path d="M12 4L2 16H22L12 4Z" />
   </svg>
 `;
-upBtn.style.background = "#333";
-upBtn.style.border = "none";
-upBtn.style.borderRadius = "2px 2px 0 0";
-upBtn.style.width = "24px";
-upBtn.style.height = "14px";
-upBtn.style.cursor = "pointer";
-upBtn.style.padding = "0";
-upBtn.tabIndex = -1;
-upBtn.onmouseover = () => upBtn.style.background = "#444";
-upBtn.onmouseout = () => upBtn.style.background = "#333";
+    upBtn.style.background = "#333";
+    upBtn.style.border = "none";
+    upBtn.style.borderRadius = "2px 2px 0 0";
+    upBtn.style.width = "24px";
+    upBtn.style.height = "14px";
+    upBtn.style.cursor = "pointer";
+    upBtn.style.padding = "0";
+    upBtn.tabIndex = -1;
+    upBtn.onmouseover = () => upBtn.style.background = "#444";
+    upBtn.onmouseout = () => upBtn.style.background = "#333";
 
-// Down button
-const downBtn = document.createElement("button");
-downBtn.innerHTML = `
+    // Down button
+    const downBtn = document.createElement("button");
+    downBtn.innerHTML = `
   <svg viewBox="0 0 24 20" xmlns="http://www.w3.org/2000/svg"
     style="display:block; margin:auto; width:20px; height:12px;" fill="${iconFill}" >
     <path d="M12 16L2 4H22L12 16Z" />
   </svg>
 `;
-downBtn.style.background = "#333";
-downBtn.style.border = "none";
-downBtn.style.borderRadius = "0 0 2px 2px";
-downBtn.style.width = "24px";
-downBtn.style.height = "14px";
-downBtn.style.cursor = "pointer";
-downBtn.style.padding = "0";
-downBtn.tabIndex = -1;
-downBtn.onmouseover = () => downBtn.style.background = "#444";
-downBtn.onmouseout = () => downBtn.style.background = "#333";
+    downBtn.style.background = "#333";
+    downBtn.style.border = "none";
+    downBtn.style.borderRadius = "0 0 2px 2px";
+    downBtn.style.width = "24px";
+    downBtn.style.height = "14px";
+    downBtn.style.cursor = "pointer";
+    downBtn.style.padding = "0";
+    downBtn.tabIndex = -1;
+    downBtn.onmouseover = () => downBtn.style.background = "#444";
+    downBtn.onmouseout = () => downBtn.style.background = "#333";
 
+    // Shared value update function
+    function saveAndApplyOffset() {
+      let val = parseInt(offsetInput.value, 10) || 0;
+      if (val > 5000) val = 5000;
+      if (val < -5000) val = -5000;
+      offsetInput.value = val;
+      setAnticipationOffset(val);
+      if (currentSyncedLyrics && currentLyricsContainer) {
+        highlightSyncedLyrics(currentSyncedLyrics, currentLyricsContainer);
+      }
+    }
 
-// Shared value update function
-function saveAndApplyOffset() {
-  let val = parseInt(offsetInput.value, 10) || 0;
-  if (val > 5000) val = 5000;
-  if (val < -5000) val = -5000;
-  offsetInput.value = val;
-  setAnticipationOffset(val);
-  if (currentSyncedLyrics && currentLyricsContainer) {
-    highlightSyncedLyrics(currentSyncedLyrics, currentLyricsContainer);
-  }
-}
+    upBtn.onclick = (e) => {
+      e.preventDefault();
+      let val = parseInt(offsetInput.value, 10) || 0;
+      val += 50;
+      if (val > 5000) val = 5000;
+      offsetInput.value = val;
+      saveAndApplyOffset();
+    };
+    downBtn.onclick = (e) => {
+      e.preventDefault();
+      let val = parseInt(offsetInput.value, 10) || 0;
+      val -= 50;
+      if (val < -5000) val = -5000;
+      offsetInput.value = val;
+      saveAndApplyOffset();
+    };
 
-upBtn.onclick = (e) => {
-  e.preventDefault();
-  let val = parseInt(offsetInput.value, 10) || 0;
-  val += 50;
-  if (val > 5000) val = 5000;
-  offsetInput.value = val;
-  saveAndApplyOffset();
-};
-downBtn.onclick = (e) => {
-  e.preventDefault();
-  let val = parseInt(offsetInput.value, 10) || 0;
-  val -= 50;
-  if (val < -5000) val = -5000;
-  offsetInput.value = val;
-  saveAndApplyOffset();
-};
+    offsetInput.addEventListener("change", saveAndApplyOffset);
+    offsetInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        saveAndApplyOffset();
+        offsetInput.blur();
+      }
+    });
 
-offsetInput.addEventListener("change", saveAndApplyOffset);
-offsetInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    saveAndApplyOffset();
-    offsetInput.blur();
-  }
-});
+    spinnerContainer.appendChild(upBtn);
+    spinnerContainer.appendChild(downBtn);
+    inputStack.appendChild(offsetInput);
+    inputStack.appendChild(spinnerContainer);
 
-spinnerContainer.appendChild(upBtn);
-spinnerContainer.appendChild(downBtn);
-inputStack.appendChild(offsetInput);
-inputStack.appendChild(spinnerContainer);
-
-offsetWrapper.appendChild(offsetLabel);
-offsetWrapper.appendChild(inputStack);
+    offsetWrapper.appendChild(offsetLabel);
+    offsetWrapper.appendChild(inputStack);
 
     // Playback Controls Bar
     const controlsBar = document.createElement("div");
@@ -2986,73 +2971,71 @@ offsetWrapper.appendChild(inputStack);
 
     // Create Spotify-style control buttons
     function createSpotifyControlButton(type, ariaLabel, onClick) {
-  const button = document.createElement("button");
-  button.setAttribute("aria-label", ariaLabel);
-  button.setAttribute("data-encore-id", "buttonTertiary");
-  button.setAttribute("tabindex", "0");
+      const button = document.createElement("button");
+      button.setAttribute("aria-label", ariaLabel);
+      button.setAttribute("data-encore-id", "buttonTertiary");
+      button.setAttribute("tabindex", "0");
 
-  // Base button styling to match Spotify
-  Object.assign(button.style, {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    border: "none",
-    borderRadius: "50%",
-    cursor: "pointer",
-    textDecoration: "none",
-    color: "rgba(255, 255, 255, 0.7)",
-    backgroundColor: "transparent",
-    minWidth: "32px",
-    height: "32px",
-    padding: "8px",
-    fontSize: "16px",
-    fontWeight: "400",
-    transition: "all 0.2s ease",
-    userSelect: "none",
-    outline: "none"
-  });
+      // Base button styling to match Spotify
+      Object.assign(button.style, {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+        border: "none",
+        borderRadius: "50%",
+        cursor: "pointer",
+        textDecoration: "none",
+        color: "rgba(255, 255, 255, 0.7)",
+        backgroundColor: "transparent",
+        minWidth: "32px",
+        height: "32px",
+        padding: "8px",
+        fontSize: "16px",
+        fontWeight: "400",
+        transition: "all 0.2s ease",
+        userSelect: "none",
+        outline: "none"
+      });
 
-  // Icon wrapper
-  const iconWrapper = document.createElement("span");
-  iconWrapper.setAttribute("aria-hidden", "true");
-  Object.assign(iconWrapper.style, {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "16px",
-    height: "16px"
-  });
+      // Icon wrapper
+      const iconWrapper = document.createElement("span");
+      iconWrapper.setAttribute("aria-hidden", "true");
+      Object.assign(iconWrapper.style, {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "16px",
+        height: "16px"
+      });
+      button.appendChild(iconWrapper);
 
-  button.appendChild(iconWrapper);
+      // Hover/focus effects
+      button.addEventListener("mouseenter", () => {
+        // Only brighten if not green/active
+        const isActive = button.classList.contains("active");
+        if (isActive) {
+          button.style.color = "#1db954";
+        } else {
+          button.style.color = "rgba(255, 255, 255, 1)";
+        }
+        button.style.transform = "scale(1.04)";
+      });
 
-  // Hover/focus effects
-  button.addEventListener("mouseenter", () => {
-    // Only brighten if not green/active
-    const isActive = button.classList.contains("active");
-    if (isActive) {
-      button.style.color = "#1db954"; // keep green
-    } else {
-      button.style.color = "rgba(255, 255, 255, 1)";
+      button.addEventListener("mouseleave", () => {
+        const isActive = button.classList.contains("active");
+        button.style.color = isActive ? "#1db954" : "rgba(255, 255, 255, 0.7)";
+        button.style.transform = "scale(1)";
+      });
+
+      button.addEventListener("blur", () => {
+        button.style.outline = "none";
+      });
+
+      // Click handler
+      button.addEventListener("click", onClick);
+      return { button, iconWrapper };
     }
-    button.style.transform = "scale(1.04)";
-  });
-
-  button.addEventListener("mouseleave", () => {
-    const isActive = button.classList.contains("active");
-    button.style.color = isActive ? "#1db954" : "rgba(255, 255, 255, 0.7)";
-    button.style.transform = "scale(1)";
-  });
-
-  button.addEventListener("blur", () => {
-    button.style.outline = "none";
-  });
-
-  // Click handler
-  button.addEventListener("click", onClick);
-
-  return { button, iconWrapper };
-}
 
     // Create main play/pause button (larger, primary style)
     function createPlayPauseButton(onClick) {
@@ -3094,7 +3077,6 @@ offsetWrapper.appendChild(inputStack);
         width: "16px",
         height: "16px"
       });
-
       button.appendChild(iconWrapper);
 
       // Hover/focus effects
@@ -3117,76 +3099,77 @@ offsetWrapper.appendChild(inputStack);
     }
 
     function sendSpotifyCommand(command) {
-  // List of selectors per command, covering desktop and mobile
-  const selectors = {
-    playpause: [
-      '[aria-label="Play"]',
-      '[aria-label="Pause"]',
-      '[data-testid="control-button-playpause"]',
-      '[data-testid="mobile-play-button"]',
-      '[data-testid="mobile-pause-button"]'
-    ],
-    next: [
-      '[aria-label="Next"]',
-      '[data-testid="control-button-skip-forward"]',
-      '[data-testid="mobile-next-button"]'
-    ],
-    previous: [
-      '[aria-label="Previous"]',
-      '[data-testid="control-button-skip-back"]',
-      '[data-testid="mobile-prev-button"]'
-    ],
-    repeat: [
-      '[aria-label="Enable repeat"]',
-      '[aria-label="Enable repeat one"]',
-      '[aria-label="Disable repeat"]',
-      '[data-testid="control-button-repeat"]'
-    ]
-  };
+      // List of selectors per command, covering desktop and mobile
+      const selectors = {
+        playpause: [
+          '[aria-label="Play"]',
+          '[aria-label="Pause"]',
+          '[data-testid="control-button-playpause"]',
+          '[data-testid="mobile-play-button"]',
+          '[data-testid="mobile-pause-button"]'
+        ],
+        next: [
+          '[aria-label="Next"]',
+          '[data-testid="control-button-skip-forward"]',
+          '[data-testid="mobile-next-button"]'
+        ],
+        previous: [
+          '[aria-label="Previous"]',
+          '[data-testid="control-button-skip-back"]',
+          '[data-testid="mobile-prev-button"]'
+        ],
+        repeat: [
+          '[aria-label="Enable repeat"]',
+          '[aria-label="Enable repeat one"]',
+          '[aria-label="Disable repeat"]',
+          '[data-testid="control-button-repeat"]'
+        ]
+      };
 
-  let btn = null;
+      let btn = null;
 
-  if (command === "shuffle") {
-    // Always re-query the DOM for the currently visible shuffle button
-    btn = Array.from(document.querySelectorAll('button[aria-label]')).find(button => {
-      if (button.offsetParent === null) return false;
-      const ariaLabel = button.getAttribute('aria-label');
-      if (!ariaLabel) return false;
-      const lower = ariaLabel.toLowerCase();
-      return lower.includes('enable shuffle') ||
-             lower.includes('enable smart shuffle') ||
-             lower.includes('disable shuffle');
-    });
-  } else if (command === "playpause") {
-    // Prefer specific selectors for playpause
-    btn = document.querySelector('[data-testid="control-button-playpause"]')
-       || document.querySelector('[aria-label="Play"]')
-       || document.querySelector('[aria-label="Pause"]');
-    // Only fallback if ALL of the above fail:
-    if (!btn) {
-      btn = Array.from(document.querySelectorAll("button"))
-        .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
+      if (command === "shuffle") {
+        // Always re-query the DOM for the currently visible shuffle button
+        btn = Array.from(document.querySelectorAll('button[aria-label]')).find(button => {
+          if (button.offsetParent === null) return false;
+          const ariaLabel = button.getAttribute('aria-label');
+          if (!ariaLabel) return false;
+          const lower = ariaLabel.toLowerCase();
+          return lower.includes('enable shuffle') ||
+                 lower.includes('enable smart shuffle') ||
+                 lower.includes('disable shuffle');
+        });
+      } else if (command === "playpause") {
+        // Prefer specific selectors for playpause
+        btn = document.querySelector('[data-testid="control-button-playpause"]')
+           || document.querySelector('[aria-label="Play"]')
+           || document.querySelector('[aria-label="Pause"]');
+        // Only fallback if ALL of the above fail:
+        if (!btn) {
+          btn = Array.from(document.querySelectorAll("button"))
+            .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
+        }
+      } else {
+        // For other commands, use selectors
+        for (const sel of selectors[command] || []) {
+          btn = document.querySelector(sel);
+          if (btn && btn.offsetParent !== null) break;
+        }
+      }
+
+      if (btn) {
+        btn.click();
+
+        // If on mobile, try touch events as a fallback
+        if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+          btn.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, cancelable:true}));
+          btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
+        }
+      } else {
+        console.warn("Spotify control button not found for:", command);
+      }
     }
-  } else {
-    // For other commands, use selectors
-    for (const sel of selectors[command] || []) {
-      btn = document.querySelector(sel);
-      if (btn && btn.offsetParent !== null) break;
-    }
-  }
 
-  if (btn) {
-    btn.click();
-
-    // If on mobile, try touch events as a fallback
-    if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-      btn.dispatchEvent(new TouchEvent('touchstart', {bubbles:true, cancelable:true}));
-      btn.dispatchEvent(new TouchEvent('touchend', {bubbles:true, cancelable:true}));
-    }
-  } else {
-    console.warn("Spotify control button not found for:", command);
-  }
-}
     // Create all control buttons
     const { button: btnShuffle, iconWrapper: shuffleIconWrapper } = createSpotifyControlButton(
       "shuffle",
@@ -3243,238 +3226,308 @@ offsetWrapper.appendChild(inputStack);
     controlsBar.appendChild(btnNext);
     controlsBar.appendChild(btnRepeat);
 
+    // Add a realtime progress bar element (dynamic progress bar)
+    const progressWrapper = document.createElement("div");
+    progressWrapper.style.display = "flex";
+    progressWrapper.style.alignItems = "center";
+    progressWrapper.style.gap = "8px";
+    progressWrapper.style.padding = "8px 12px";
+    progressWrapper.style.borderTop = "1px solid #222";
+    progressWrapper.style.background = "#111";
+    progressWrapper.style.boxSizing = "border-box";
+
+    const timeNow = document.createElement("div");
+    timeNow.id = "lyrics-plus-time-now";
+    timeNow.textContent = "0:00";
+    timeNow.style.color = "#bbb";
+    timeNow.style.fontSize = "12px";
+    timeNow.style.width = "44px";
+    timeNow.style.textAlign = "right";
+
+    const progressInput = document.createElement("input");
+    progressInput.type = "range";
+    progressInput.id = "lyrics-plus-progress";
+    progressInput.min = "0";
+    progressInput.max = "100";
+    progressInput.step = "1";
+    progressInput.value = "0";
+    Object.assign(progressInput.style, {
+      flex: "1",
+      appearance: "none",
+      height: "6px",
+      borderRadius: "3px",
+      background: "linear-gradient(90deg, #1db954 0%, #1db954 0%, #444 0%)",
+      outline: "none",
+      margin: "0",
+    });
+
+    // Simple styling for thumb (dynamic progress bar)
+    const thumbStyle = document.createElement("style");
+    thumbStyle.textContent = `
+      #lyrics-plus-progress::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 0 0 4px rgba(29,185,84,0.12);
+        cursor: pointer;
+      }
+      #lyrics-plus-progress::-moz-range-thumb {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #fff;
+        cursor: pointer;
+      }
+    `;
+    document.head.appendChild(thumbStyle);
+
+    const timeTotal = document.createElement("div");
+    timeTotal.id = "lyrics-plus-time-total";
+    timeTotal.textContent = "0:00";
+    timeTotal.style.color = "#bbb";
+    timeTotal.style.fontSize = "12px";
+    timeTotal.style.width = "44px";
+    timeTotal.style.textAlign = "left";
+
+    progressWrapper.appendChild(timeNow);
+    progressWrapper.appendChild(progressInput);
+    progressWrapper.appendChild(timeTotal);
+
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
     popup.appendChild(translatorWrapper);
     popup.appendChild(lyricsContainer);
+    popup.appendChild(progressWrapper);
     popup.appendChild(controlsBar);
 
     const container = document.querySelector('.main-view-container');
-if (container) {
-  container.appendChild(popup);
-} else {
-  document.body.appendChild(popup);
-}
+    if (container) {
+      container.appendChild(popup);
+    } else {
+      document.body.appendChild(popup);
+    }
 
     function savePopupState(el) {
-  const rect = el.getBoundingClientRect();
-  window.lastProportion = {
-    w: rect.width / window.innerWidth,
-    h: rect.height / window.innerHeight,
-    x: rect.left / window.innerWidth,
-    y: rect.top / window.innerHeight
-  };
-  localStorage.setItem('lyricsPlusPopupProportion', JSON.stringify(window.lastProportion));
-}
+      const rect = el.getBoundingClientRect();
+      window.lastProportion = {
+        w: rect.width / window.innerWidth,
+        h: rect.height / window.innerHeight,
+        x: rect.left / window.innerWidth,
+        y: rect.top / window.innerHeight
+      };
+      localStorage.setItem('lyricsPlusPopupProportion', JSON.stringify(window.lastProportion));
+    }
 
     (function makeDraggable(el, handle) {
-  let isDragging = false;
-  let startX, startY;
-  let origX, origY;
+      let isDragging = false;
+      let startX, startY;
+      let origX, origY;
 
-  // Mouse events
-  handle.addEventListener("mousedown", (e) => {
-    isDragging = true;
-    window.lyricsPlusPopupIsDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    const rect = el.getBoundingClientRect();
-    origX = rect.left;
-    origY = rect.top;
-    document.body.style.userSelect = "none";
-  });
+      // Mouse events
+      handle.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        window.lyricsPlusPopupIsDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        const rect = el.getBoundingClientRect();
+        origX = rect.left;
+        origY = rect.top;
+        document.body.style.userSelect = "none";
+      });
 
-  // Touch events
-  handle.addEventListener("touchstart", (e) => {
-    if (e.touches.length !== 1) return;
-    isDragging = true;
-    window.lyricsPlusPopupIsDragging = true;
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    const rect = el.getBoundingClientRect();
-    origX = rect.left;
-    origY = rect.top;
-    document.body.style.userSelect = "none";
-  });
+      // Touch events
+      handle.addEventListener("touchstart", (e) => {
+        if (e.touches.length !== 1) return;
+        isDragging = true;
+        window.lyricsPlusPopupIsDragging = true;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        const rect = el.getBoundingClientRect();
+        origX = rect.left;
+        origY = rect.top;
+        document.body.style.userSelect = "none";
+      });
 
-  window.addEventListener("mousemove", (e) => {
-    if (!isDragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    let newX = origX + dx;
-    let newY = origY + dy;
-    const maxX = window.innerWidth - el.offsetWidth;
-    const maxY = window.innerHeight - el.offsetHeight;
-    newX = Math.min(Math.max(0, newX), maxX);
-    newY = Math.min(Math.max(0, newY), maxY);
-    el.style.left = `${newX}px`;
-    el.style.top = `${newY}px`;
-    el.style.right = "auto";
-    el.style.bottom = "auto";
-    el.style.position = "fixed";
-  });
+      window.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        let newX = origX + dx;
+        let newY = origY + dy;
+        const maxX = window.innerWidth - el.offsetWidth;
+        const maxY = window.innerHeight - el.offsetHeight;
+        newX = Math.min(Math.max(0, newX), maxX);
+        newY = Math.min(Math.max(0, newY), maxY);
+        el.style.left = `${newX}px`;
+        el.style.top = `${newY}px`;
+        el.style.right = "auto";
+        el.style.bottom = "auto";
+        el.style.position = "fixed";
+      });
 
-  window.addEventListener("touchmove", (e) => {
-    if (!isDragging || e.touches.length !== 1) return;
-    const dx = e.touches[0].clientX - startX;
-    const dy = e.touches[0].clientY - startY;
-    let newX = origX + dx;
-    let newY = origY + dy;
-    const maxX = window.innerWidth - el.offsetWidth;
-    const maxY = window.innerHeight - el.offsetHeight;
-    newX = Math.min(Math.max(0, newX), maxX);
-    newY = Math.min(Math.max(0, newY), maxY);
-    el.style.left = `${newX}px`;
-    el.style.top = `${newY}px`;
-    el.style.right = "auto";
-    el.style.bottom = "auto";
-    el.style.position = "fixed";
-    e.preventDefault();
-  }, { passive: false });
+      window.addEventListener("touchmove", (e) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        let newX = origX + dx;
+        let newY = origY + dy;
+        const maxX = window.innerWidth - el.offsetWidth;
+        const maxY = window.innerHeight - el.offsetHeight;
+        newX = Math.min(Math.max(0, newX), maxX);
+        newY = Math.min(Math.max(0, newY), maxY);
+        el.style.left = `${newX}px`;
+        el.style.top = `${newY}px`;
+        el.style.right = "auto";
+        el.style.bottom = "auto";
+        el.style.position = "fixed";
+        e.preventDefault();
+      }, { passive: false });
 
-  window.addEventListener("mouseup", () => {
-    if (isDragging) {
-      isDragging = false;
-      document.body.style.userSelect = "";
-      window.lyricsPlusPopupLastDragged = Date.now();
-      savePopupState(el);
-      setTimeout(() => {
-        window.lyricsPlusPopupIsDragging = false;
-      }, 200);
-    }
-  });
+      window.addEventListener("mouseup", () => {
+        if (isDragging) {
+          isDragging = false;
+          document.body.style.userSelect = "";
+          window.lyricsPlusPopupLastDragged = Date.now();
+          savePopupState(el);
+          setTimeout(() => {
+            window.lyricsPlusPopupIsDragging = false;
+          }, 200);
+        }
+      });
 
-  window.addEventListener("touchend", () => {
-    if (isDragging) {
-      isDragging = false;
-      document.body.style.userSelect = "";
-      window.lyricsPlusPopupLastDragged = Date.now();
-      savePopupState(el);
-      setTimeout(() => {
-        window.lyricsPlusPopupIsDragging = false;
-      }, 200);
-    }
-  });
-})(popup, headerWrapper);
+      window.addEventListener("touchend", () => {
+        if (isDragging) {
+          isDragging = false;
+          document.body.style.userSelect = "";
+          window.lyricsPlusPopupLastDragged = Date.now();
+          savePopupState(el);
+          setTimeout(() => {
+            window.lyricsPlusPopupIsDragging = false;
+          }, 200);
+        }
+      });
+    })(popup, headerWrapper);
 
     // Create a larger invisible hit area
-const resizerHitArea = document.createElement("div");
-Object.assign(resizerHitArea.style, {
-  position: "absolute",
-  right: "0px",
-  bottom: "0px",
-  width: "48px", // much larger for finger touch
-  height: "48px",
-  zIndex: 19, // just below visible resizer
-  background: "transparent",
-  touchAction: "none",
-});
+    const resizerHitArea = document.createElement("div");
+    Object.assign(resizerHitArea.style, {
+      position: "absolute",
+      right: "0px",
+      bottom: "0px",
+      width: "48px", // much larger for finger touch
+      height: "48px",
+      zIndex: 19, // just below visible resizer
+      background: "transparent",
+      touchAction: "none",
+    });
 
-// Create the visual resizer
-const resizer = document.createElement("div");
-Object.assign(resizer.style, {
-  width: "16px",
-  height: "16px",
-  position: "absolute",
-  right: "4px",
-  bottom: "4px",
-  cursor: "nwse-resize",
-  backgroundColor: "rgba(255, 255, 255, 0.1)",
-  borderTop: "1.5px solid rgba(255, 255, 255, 0.15)",
-  borderLeft: "1.5px solid rgba(255, 255, 255, 0.15)",
-  boxSizing: "border-box",
-  zIndex: 20,
-  clipPath: "polygon(100% 0, 0 100%, 100% 100%)"
-});
-    
-popup.appendChild(resizerHitArea);
-popup.appendChild(resizer);
-    
+    // Create the visual resizer
+    const resizer = document.createElement("div");
+    Object.assign(resizer.style, {
+      width: "16px",
+      height: "16px",
+      position: "absolute",
+      right: "4px",
+      bottom: "4px",
+      cursor: "nwse-resize",
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      borderTop: "1.5px solid rgba(255, 255, 255, 0.15)",
+      borderLeft: "1.5px solid rgba(255, 255, 255, 0.15)",
+      boxSizing: "border-box",
+      zIndex: 20,
+      clipPath: "polygon(100% 0, 0 100%, 100% 100%)"
+    });
+
+    popup.appendChild(resizerHitArea);
+    popup.appendChild(resizer);
+
     (function makeResizable(el, handle) {
-  let isResizing = false;
-  let startX, startY;
-  let startWidth, startHeight;
+      let isResizing = false;
+      let startX, startY;
+      let startWidth, startHeight;
 
-  function startResize(e) {
-    e.preventDefault();
-    isResizing = true;
-    window.lyricsPlusPopupIsResizing = true;
-    if (e.type === "mousedown") {
-      startX = e.clientX;
-      startY = e.clientY;
-    } else if (e.type === "touchstart" && e.touches.length === 1) {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    }
-    startWidth = el.offsetWidth;
-    startHeight = el.offsetHeight;
-    document.body.style.userSelect = "none";
-  }
+      function startResize(e) {
+        e.preventDefault();
+        isResizing = true;
+        window.lyricsPlusPopupIsResizing = true;
+        if (e.type === "mousedown") {
+          startX = e.clientX;
+          startY = e.clientY;
+        } else if (e.type === "touchstart" && e.touches.length === 1) {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+        }
+        startWidth = el.offsetWidth;
+        startHeight = el.offsetHeight;
+        document.body.style.userSelect = "none";
+      }
 
-  handle.addEventListener("mousedown", startResize);
-  handle.addEventListener("touchstart", startResize);
+      handle.addEventListener("mousedown", startResize);
+      handle.addEventListener("touchstart", startResize);
 
-  // Also attach to the hit area!
-  resizerHitArea.addEventListener("mousedown", startResize);
-  resizerHitArea.addEventListener("touchstart", startResize);
+      // Also attach to the hit area!
+      resizerHitArea.addEventListener("mousedown", startResize);
+      resizerHitArea.addEventListener("touchstart", startResize);
 
-  window.addEventListener("mousemove", (e) => {
-  if (!isResizing) return;
-  const dx = e.clientX - startX;
-  const dy = e.clientY - startY;
-  let newWidth = startWidth + dx;
-  let newHeight = startHeight + dy;
-    
-  const minWidth = 360; // match your minWidth style
-  const minHeight = 240; // match your minHeight style
-  const maxWidth = window.innerWidth - el.offsetLeft;
-  const maxHeight = window.innerHeight - el.offsetTop;
+      window.addEventListener("mousemove", (e) => {
+        if (!isResizing) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        let newWidth = startWidth + dx;
+        let newHeight = startHeight + dy;
 
-  newWidth = clamp(newWidth, minWidth, maxWidth);
-  newHeight = clamp(newHeight, minHeight, maxHeight);
+        const minWidth = 360; // match your minWidth style
+        const minHeight = 240; // match your minHeight style
+        const maxWidth = window.innerWidth - el.offsetLeft;
+        const maxHeight = window.innerHeight - el.offsetTop;
 
-  el.style.width = newWidth + "px";
-  el.style.height = newHeight + "px";
-});
+        newWidth = clamp(newWidth, minWidth, maxWidth);
+        newHeight = clamp(newHeight, minHeight, maxHeight);
 
-window.addEventListener("touchmove", (e) => {
-  if (!isResizing || e.touches.length !== 1) return;
-  const dx = e.touches[0].clientX - startX;
-  const dy = e.touches[0].clientY - startY;
-  let newWidth = startWidth + dx;
-  let newHeight = startHeight + dy;
-  
-  const minWidth = 360;
-  const minHeight = 240;
-  const maxWidth = window.innerWidth - el.offsetLeft;
-  const maxHeight = window.innerHeight - el.offsetTop;
+        el.style.width = newWidth + "px";
+        el.style.height = newHeight + "px";
+      });
 
-  newWidth = clamp(newWidth, minWidth, maxWidth);
-  newHeight = clamp(newHeight, minHeight, maxHeight);
+      window.addEventListener("touchmove", (e) => {
+        if (!isResizing || e.touches.length !== 1) return;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        let newWidth = startWidth + dx;
+        let newHeight = startHeight + dy;
 
-  el.style.width = newWidth + "px";
-  el.style.height = newHeight + "px";
-  e.preventDefault();
-}, { passive: false });
-      
-  window.addEventListener("mouseup", () => {
-    if (isResizing) {
-      isResizing = false;
-      document.body.style.userSelect = "";
-      savePopupState(el);
-      window.lyricsPlusPopupIsResizing = false;
-    }
-  });
+        const minWidth = 360;
+        const minHeight = 240;
+        const maxWidth = window.innerWidth - el.offsetLeft;
+        const maxHeight = window.innerHeight - el.offsetTop;
 
-  window.addEventListener("touchend", () => {
-    if (isResizing) {
-      isResizing = false;
-      document.body.style.userSelect = "";
-      savePopupState(el);
-      window.lyricsPlusPopupIsResizing = false;
-    }
-  });
-})(popup, resizer);
+        newWidth = clamp(newWidth, minWidth, maxWidth);
+        newHeight = clamp(newHeight, minHeight, maxHeight);
+
+        el.style.width = newWidth + "px";
+        el.style.height = newHeight + "px";
+        e.preventDefault();
+      }, { passive: false });
+
+      window.addEventListener("mouseup", () => {
+        if (isResizing) {
+          isResizing = false;
+          document.body.style.userSelect = "";
+          savePopupState(el);
+          window.lyricsPlusPopupIsResizing = false;
+        }
+      });
+
+      window.addEventListener("touchend", () => {
+        if (isResizing) {
+          isResizing = false;
+          document.body.style.userSelect = "";
+          savePopupState(el);
+          window.lyricsPlusPopupIsResizing = false;
+        }
+      });
+    })(popup, resizer);
 
     observeSpotifyPlayPause(popup);
     observeSpotifyShuffle(popup);
@@ -3482,129 +3535,714 @@ window.addEventListener("touchmove", (e) => {
 
     const info = getCurrentTrackInfo();
     if (info) {
-  currentTrackId = info.id;
-  const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-  if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-  autodetectProviderAndLoad(popup, info);
-}
+      currentTrackId = info.id;
+      const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+      if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+      autodetectProviderAndLoad(popup, info);
+    }
+
+    // --- DYNAMIC PROGRESS BAR: PROGRESS UPDATES AND SEEKING LOGIC ---
+    // This section implements robust detection and seeking for Spotify's progress bar,
+    // supporting both CSS-driven progress bars (using --progress-bar-transform) and
+    // native range inputs, with fallback to visible position/duration text or audio element.
+
+    // No interpolation - we just read directly from Spotify's DOM every 100ms.
+    // If Spotify's DOM updates slowly, we show what Spotify shows. This avoids
+    // any jumps or sync issues from our own interpolation logic.
+
+    /**
+     * findSpotifyRangeInput()
+     * Attempts to find Spotify's native range input for playback progress.
+     * Fallback order:
+     *   1. Hidden numeric input[type=range] with max > 0 (preferred - most accurate)
+     *   2. Visible range inputs with max > 0
+     *   3. Any range input with numeric max/min/step
+     * @returns {HTMLInputElement|null}
+     */
+    function findSpotifyRangeInput() {
+      try {
+        // Collect all range inputs in the document
+        const allRanges = Array.from(document.querySelectorAll('input[type="range"]'));
+
+        // Filter for hidden ranges with max > 0 (preferred - Spotify often uses hidden inputs)
+        const hiddenRanges = allRanges.filter(inp => {
+          const max = Number(inp.max);
+          // Check if hidden: not visible in DOM (hidden-visually class, or offsetParent null)
+          // Use specific class matching to avoid false positives like 'unhidden'
+          const isHidden = inp.offsetParent === null ||
+                           inp.closest('label.hidden-visually') !== null ||
+                           inp.closest('.hidden-visually') !== null ||
+                           inp.closest('[class~="hidden"]') !== null;
+          return isHidden && max > 0;
+        });
+        if (hiddenRanges.length > 0) {
+          // Prefer the one with the largest max value (likely the playback progress)
+          hiddenRanges.sort((a, b) => Number(b.max) - Number(a.max));
+          return hiddenRanges[0];
+        }
+
+        // Fallback: visible range inputs with max > 0
+        const visibleRanges = allRanges.filter(inp => {
+          const max = Number(inp.max);
+          return inp.offsetParent !== null && max > 0;
+        });
+        if (visibleRanges.length > 0) {
+          visibleRanges.sort((a, b) => Number(b.max) - Number(a.max));
+          return visibleRanges[0];
+        }
+
+        // Last resort: any range with valid numeric attributes
+        const anyValid = allRanges.find(inp =>
+          inp.max && !isNaN(Number(inp.max)) && Number(inp.max) > 0 &&
+          inp.step && !isNaN(Number(inp.step))
+        );
+        return anyValid || null;
+      } catch (e) {
+        console.warn('findSpotifyRangeInput error:', e);
+        return null;
+      }
+    }
+
+    /**
+     * readSpotifyProgressBarPercent()
+     * Parses the --progress-bar-transform CSS variable from [data-testid="progress-bar"]
+     * to get the current playback progress as a percentage (0-100).
+     * Falls back to approximating from handle geometry when CSS var is unavailable.
+     * @returns {number|null} Percentage (0-100) or null if unavailable
+     */
+    function readSpotifyProgressBarPercent() {
+      try {
+        const progressBar = document.querySelector('[data-testid="progress-bar"]');
+        if (!progressBar) return null;
+
+        // Try reading the --progress-bar-transform CSS variable
+        const computedStyle = window.getComputedStyle(progressBar);
+        const transformVar = computedStyle.getPropertyValue('--progress-bar-transform');
+        if (transformVar) {
+          // Parse "34.747558241173564%" -> 34.747558241173564
+          // Use precise regex to match valid decimal numbers (including '0', '0.0', '.5', etc.)
+          const match = transformVar.trim().match(/^(\d*\.?\d+)%?$/);
+          if (match) {
+            const pct = parseFloat(match[1]);
+            if (!isNaN(pct) && pct >= 0 && pct <= 100) {
+              return pct;
+            }
+          }
+        }
+
+        // Fallback: approximate from handle position relative to bar width
+        const handle = progressBar.querySelector('[data-testid="progress-bar-handle"]');
+        const barRect = progressBar.getBoundingClientRect();
+        if (handle && barRect.width > 0) {
+          const handleRect = handle.getBoundingClientRect();
+          // Handle center position relative to bar start
+          const handleCenter = handleRect.left + handleRect.width / 2;
+          const barStart = barRect.left;
+          const barWidth = barRect.width;
+          const pct = ((handleCenter - barStart) / barWidth) * 100;
+          if (!isNaN(pct) && pct >= 0 && pct <= 100) {
+            return pct;
+          }
+        }
+
+        return null;
+      } catch (e) {
+        console.warn('readSpotifyProgressBarPercent error:', e);
+        return null;
+      }
+    }
+
+    /**
+     * formatMs(ms)
+     * Converts milliseconds to a human-readable time string (m:ss).
+     * @param {number} ms - Milliseconds
+     * @returns {string} Formatted time string
+     */
+    function formatMs(ms) {
+      if (!ms || isNaN(ms)) return "0:00";
+      const s = Math.floor(ms / 1000);
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${m}:${String(sec).padStart(2, '0')}`;
+    }
+
+    /**
+     * updateProgressUIFromSpotify()
+     * Updates the popup's progressInput, timeNow, timeTotal, and background gradient
+     * from Spotify's playback state.
+     *
+     * No interpolation - we just read directly from Spotify's DOM every 100ms
+     * and display that. This avoids any jumps or sync issues.
+     *
+     * Fallback order for reading position:
+     *   (a) Visible playback-position/playback-duration text (most reliable - matches what user sees)
+     *   (b) Native range input
+     *   (c) CSS-driven progress-bar percent + computed duration from text/trackInfo
+     */
+    function updateProgressUIFromSpotify() {
+      try {
+        let spotifyPosMs = null;
+        let spotifyDurMs = null;
+
+        // --- (a) Try visible playback-position text first (most reliable - matches what user sees) ---
+        const posEl = document.querySelector('[data-testid="playback-position"]');
+        const durEl = document.querySelector('[data-testid="playback-duration"]');
+        if (posEl) {
+          const posMs = timeStringToMs(posEl.textContent);
+          let durMs = 0;
+
+          if (durEl) {
+            const raw = durEl.textContent.trim();
+            if (raw.startsWith('-')) {
+              const remainMs = timeStringToMs(raw);
+              durMs = posMs + remainMs;
+            } else {
+              durMs = timeStringToMs(raw);
+            }
+          }
+
+          // Fallback for duration: try audio.duration
+          if (durMs <= 0) {
+            const audio = document.querySelector('audio');
+            if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+              durMs = audio.duration * 1000;
+            }
+          }
+
+          // Fallback for duration: try getCurrentTrackInfo().duration
+          if (durMs <= 0) {
+            const trackInfo = getCurrentTrackInfo();
+            if (trackInfo && trackInfo.duration > 0) {
+              durMs = trackInfo.duration;
+            }
+          }
+
+          if (durMs > 0) {
+            spotifyPosMs = posMs;
+            spotifyDurMs = durMs;
+          }
+        }
+
+        // --- (b) Fallback: Try native range input ---
+        if (spotifyPosMs === null) {
+          const spotifyRange = findSpotifyRangeInput();
+          if (spotifyRange) {
+            const max = Number(spotifyRange.max) || 0;
+            const val = Number(spotifyRange.value) || 0;
+            if (max > 0) {
+              spotifyPosMs = val;
+              spotifyDurMs = max;
+            }
+          }
+        }
+
+        // --- (c) Fallback: Try CSS-driven progress-bar percent + computed duration ---
+        if (spotifyPosMs === null) {
+          const cssPercent = readSpotifyProgressBarPercent();
+          if (cssPercent !== null) {
+            // Need to determine total duration to compute position
+            let durMs = 0;
+
+            // Try getting duration from visible playback-duration text
+            const durElCss = document.querySelector('[data-testid="playback-duration"]');
+            if (durElCss) {
+              const raw = durElCss.textContent.trim();
+              if (!raw.startsWith('-')) {
+                durMs = timeStringToMs(raw);
+              }
+            }
+
+            // Fallback: try getCurrentTrackInfo().duration
+            if (durMs <= 0) {
+              const trackInfo = getCurrentTrackInfo();
+              if (trackInfo && trackInfo.duration > 0) {
+                durMs = trackInfo.duration;
+              }
+            }
+
+            // Fallback: try audio.duration
+            if (durMs <= 0) {
+              const audio = document.querySelector('audio');
+              if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+                durMs = audio.duration * 1000;
+              }
+            }
+
+            // If remaining time format, compute total from position + remaining
+            if (durMs <= 0 && durElCss) {
+              const raw = durElCss.textContent.trim();
+              if (raw.startsWith('-')) {
+                const posElCss = document.querySelector('[data-testid="playback-position"]');
+                const posMs = posElCss ? timeStringToMs(posElCss.textContent) : 0;
+                const remainMs = timeStringToMs(raw);
+                durMs = posMs + remainMs;
+              }
+            }
+
+            if (durMs > 0) {
+              spotifyPosMs = (cssPercent / 100) * durMs;
+              spotifyDurMs = durMs;
+            }
+          }
+        }
+
+        // If we couldn't get position from any source, show zeros
+        if (spotifyPosMs === null || spotifyDurMs === null || spotifyDurMs <= 0) {
+          progressInput.max = "100";
+          progressInput.value = "0";
+          progressInput.style.background = `linear-gradient(90deg, #1db954 0%, #444 0%)`;
+          timeNow.textContent = "0:00";
+          timeTotal.textContent = "0:00";
+          return;
+        }
+
+        // --- No interpolation: Just display what Spotify reports ---
+        // This is the simplest approach - we show exactly what Spotify's DOM says.
+        // If Spotify updates slowly, our display updates slowly too. But we avoid
+        // any jumps or sync issues from trying to interpolate/predict positions.
+        const displayPosMs = clamp(spotifyPosMs, 0, spotifyDurMs);
+
+        // Update the UI
+        progressInput.max = String(spotifyDurMs);
+        progressInput.value = String(displayPosMs);
+        const pct = (displayPosMs / spotifyDurMs) * 100;
+        progressInput.style.background = `linear-gradient(90deg, #1db954 ${pct}%, #444 ${pct}%)`;
+        timeNow.textContent = formatMs(displayPosMs);
+        timeTotal.textContent = formatMs(spotifyDurMs);
+
+      } catch (e) {
+        console.warn('updateProgressUIFromSpotify error:', e);
+      }
+    }
+
+    /**
+     * seekTo(ms)
+     * Attempts to seek Spotify's playback to the specified position in milliseconds.
+     * Fallback order:
+     *   (a) audio.currentTime - direct audio element control
+     *   (b) Hidden/native range input value + dispatch input/change + pointer events
+     *   (c) Emulate pointer/mouse events on CSS progress-bar handle (last resort)
+     * @param {number} ms - Target position in milliseconds
+     * @returns {boolean} Whether seeking was attempted
+     */
+    function seekTo(ms) {
+      try {
+        // --- (a) Try audio.currentTime first ---
+        const audio = document.querySelector('audio');
+        if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+          try {
+            audio.currentTime = ms / 1000;
+            audio.dispatchEvent(new Event('input', { bubbles: true }));
+            audio.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+          } catch (e) {
+            console.warn('seekTo: Failed to set audio.currentTime', e);
+          }
+        }
+
+        // --- (b) Try hidden/native range input ---
+        const spotifyRange = findSpotifyRangeInput();
+        if (spotifyRange) {
+          try {
+            const max = Number(spotifyRange.max) || 0;
+            if (max > 0) {
+              // Set the value
+              spotifyRange.value = String(clamp(ms, 0, max));
+
+              // Dispatch input and change events
+              spotifyRange.dispatchEvent(new Event('input', { bubbles: true }));
+              spotifyRange.dispatchEvent(new Event('change', { bubbles: true }));
+
+              // Also try pointer events for better compatibility
+              // Note: We omit 'view' property as it can cause errors in Firefox extensions
+              const rangeRect = spotifyRange.getBoundingClientRect();
+              const percentage = clamp(ms, 0, max) / max;
+              const clientX = rangeRect.left + rangeRect.width * percentage;
+              const clientY = rangeRect.top + rangeRect.height / 2;
+
+              try {
+                const pointerDownEvent = new PointerEvent('pointerdown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0, buttons: 1
+                });
+                const pointerUpEvent = new PointerEvent('pointerup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+
+                spotifyRange.dispatchEvent(pointerDownEvent);
+                spotifyRange.dispatchEvent(pointerUpEvent);
+              } catch (pointerErr) {
+                // Pointer events failed, try mouse events instead
+                const mouseDownEvent = new MouseEvent('mousedown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const mouseUpEvent = new MouseEvent('mouseup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                spotifyRange.dispatchEvent(mouseDownEvent);
+                spotifyRange.dispatchEvent(mouseUpEvent);
+              }
+
+              return true;
+            }
+          } catch (e) {
+            console.warn('seekTo: Failed to set range input', e);
+          }
+        }
+
+        // --- (c) Emulate pointer events on CSS progress-bar handle (last resort) ---
+        const progressBar = document.querySelector('[data-testid="progress-bar"]');
+        if (progressBar) {
+          try {
+            const barRect = progressBar.getBoundingClientRect();
+            if (barRect.width > 0) {
+              // Determine duration to calculate percentage
+              let durMs = 0;
+
+              // Try range input max
+              const range = findSpotifyRangeInput();
+              if (range && Number(range.max) > 0) {
+                durMs = Number(range.max);
+              }
+
+              // Fallback: visible text
+              if (durMs <= 0) {
+                const durEl = document.querySelector('[data-testid="playback-duration"]');
+                const posEl = document.querySelector('[data-testid="playback-position"]');
+                if (durEl) {
+                  const raw = durEl.textContent.trim();
+                  if (raw.startsWith('-')) {
+                    const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
+                    const remainMs = timeStringToMs(raw);
+                    durMs = posMs + remainMs;
+                  } else {
+                    durMs = timeStringToMs(raw);
+                  }
+                }
+              }
+
+              // Fallback: track info
+              if (durMs <= 0) {
+                const trackInfo = getCurrentTrackInfo();
+                if (trackInfo && trackInfo.duration > 0) {
+                  durMs = trackInfo.duration;
+                }
+              }
+
+              if (durMs > 0) {
+                const percentage = clamp(ms, 0, durMs) / durMs;
+                const clientX = barRect.left + barRect.width * percentage;
+                const clientY = barRect.top + barRect.height / 2;
+
+                // Try the handle first, then the progress bar
+                const handle = progressBar.querySelector('[data-testid="progress-bar-handle"]');
+                const target = handle || progressBar;
+
+                // Try pointer events first (without 'view' property to avoid Firefox extension issues)
+                try {
+                  const downEvent = new PointerEvent('pointerdown', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 1,
+                    pointerType: 'mouse'
+                  });
+                  const moveEvent = new PointerEvent('pointermove', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 1,
+                    pointerType: 'mouse'
+                  });
+                  const upEvent = new PointerEvent('pointerup', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 0,
+                    pointerType: 'mouse'
+                  });
+
+                  target.dispatchEvent(downEvent);
+                  target.dispatchEvent(moveEvent);
+                  target.dispatchEvent(upEvent);
+                } catch (pointerErr) {
+                  // Pointer events failed, continue to mouse events
+                }
+
+                // Also try mouse events as fallback
+                const mouseDownEvent = new MouseEvent('mousedown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const mouseUpEvent = new MouseEvent('mouseup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const clickEvent = new MouseEvent('click', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+
+                progressBar.dispatchEvent(mouseDownEvent);
+                progressBar.dispatchEvent(mouseUpEvent);
+                progressBar.dispatchEvent(clickEvent);
+
+                return true;
+              }
+            }
+          } catch (e) {
+            console.warn('seekTo: Failed to emulate pointer events on progress bar', e);
+          }
+        }
+
+        return false;
+      } catch (e) {
+        console.warn('seekTo error:', e);
+        return false;
+      }
+    }
+
+    // --- Progress bar watcher for DOM node swaps ---
+    let progressBarWatcherAttached = false;
+    let progressBarWatcherTimeout = null; // Closure variable for debounce timeout
+
+    /**
+     * attachProgressBarWatcher()
+     * Installs a MutationObserver on document.body to detect when Spotify may swap
+     * DOM nodes (e.g., during navigation or track changes) and re-runs updateProgressUIFromSpotify().
+     * The observer is idempotent - calling multiple times only installs one observer.
+     */
+    function attachProgressBarWatcher() {
+      if (progressBarWatcherAttached) return; // Idempotent
+      progressBarWatcherAttached = true;
+
+      try {
+        const observer = new MutationObserver((mutations) => {
+          // Check if any mutation affects progress-related elements
+          let shouldUpdate = false;
+          for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+              // Check added/removed nodes for progress bar elements
+              const relevantSelectors = [
+                '[data-testid="progress-bar"]',
+                '[data-testid="progress-bar-handle"]',
+                '[data-testid="playback-position"]',
+                '[data-testid="playback-duration"]',
+                'input[type="range"]'
+              ];
+
+              const checkNodes = (nodes) => {
+                for (const node of nodes) {
+                  if (node.nodeType !== Node.ELEMENT_NODE) continue;
+                  for (const sel of relevantSelectors) {
+                    if (node.matches && node.matches(sel)) return true;
+                    if (node.querySelector && node.querySelector(sel)) return true;
+                  }
+                }
+                return false;
+              };
+
+              if (checkNodes(mutation.addedNodes) || checkNodes(mutation.removedNodes)) {
+                shouldUpdate = true;
+                break;
+              }
+            } else if (mutation.type === 'attributes') {
+              // Check if style attribute changed on progress bar (CSS var updates)
+              if (mutation.target.matches &&
+                  mutation.target.matches('[data-testid="progress-bar"]') &&
+                  mutation.attributeName === 'style') {
+                shouldUpdate = true;
+                break;
+              }
+            }
+          }
+
+          if (shouldUpdate) {
+            // Debounce updates to avoid excessive calls
+            if (!progressBarWatcherTimeout) {
+              progressBarWatcherTimeout = setTimeout(() => {
+                progressBarWatcherTimeout = null;
+                try {
+                  updateProgressUIFromSpotify();
+                } catch (e) {
+                  console.warn('Progress bar watcher update error:', e);
+                }
+              }, 100);
+            }
+          }
+        });
+
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['style']
+        });
+      } catch (e) {
+        console.warn('attachProgressBarWatcher error:', e);
+        progressBarWatcherAttached = false;
+      }
+    }
+
+    // --- Event handlers for popup progress input ---
+    let userSeeking = false;
+    progressInput.addEventListener('input', (e) => {
+      userSeeking = true;
+      // Show immediate feedback while dragging
+      const val = Number(progressInput.value) || 0;
+      const max = Number(progressInput.max) || 1;
+      const pct = (val / max) * 100;
+      progressInput.style.background = `linear-gradient(90deg, #1db954 ${pct}%, #444 ${pct}%)`;
+      timeNow.textContent = formatMs(val);
+    });
+
+    // Reset userSeeking if user releases mouse outside the element or touch is cancelled
+    const resetSeeking = () => { userSeeking = false; };
+    progressInput.addEventListener('mouseleave', resetSeeking);
+    progressInput.addEventListener('touchcancel', resetSeeking);
+    progressInput.addEventListener('blur', resetSeeking);
+
+    // Commit seek on mouseup/touchend
+    const commitSeek = (e) => {
+      const val = Number(progressInput.value) || 0;
+      userSeeking = false;
+      // Just seek - no interpolation state to manage
+      seekTo(val);
+    };
+    progressInput.addEventListener('change', commitSeek);
+    progressInput.addEventListener('mouseup', commitSeek);
+    progressInput.addEventListener('touchend', commitSeek);
+
+    // --- Start progress bar watcher and interval ---
+    // Wire attachProgressBarWatcher() to run once popup is created
+    attachProgressBarWatcher();
+
+    // Start interval to refresh progress
+    // Using 100ms interval for smooth interpolated updates
+    if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
+    progressInterval = setInterval(() => {
+      // Don't auto-update while user is actively dragging
+      if (document.activeElement === progressInput || userSeeking) return;
+      updateProgressUIFromSpotify();
+    }, 100);
+
     startPollingForTrackChange(popup);
   }
 
- async function updateLyricsContent(popup, info) {
-  if (!info) return;
-  const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-  if (!lyricsContainer) return;
-  currentLyricsContainer = lyricsContainer;
-  currentSyncedLyrics = null;
-  currentUnsyncedLyrics = null;
-  lyricsContainer.textContent = "Loading lyrics...";
-
-  const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
-  const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
-
-  const provider = Providers.getCurrent();
-  const result = await provider.findLyrics(info);
-
-  if (result.error) {
-    lyricsContainer.textContent = result.error;
-    if (downloadBtn) downloadBtn.style.display = "none";
-    if (downloadDropdown) downloadDropdown.style.display = "none";
-    return;
-  }
-
-  let synced = provider.getSynced(result);
-  let unsynced = provider.getUnsynced(result);
-
-  lyricsContainer.innerHTML = "";
-  // Set globals for download
-  currentSyncedLyrics = (synced && synced.length > 0) ? synced : null;
-  currentUnsyncedLyrics = (unsynced && unsynced.length > 0) ? unsynced : null;
-
-  if (currentSyncedLyrics) {
-    isShowingSyncedLyrics = true;
-    currentSyncedLyrics.forEach(({ text }) => {
-      const p = document.createElement("p");
-      p.textContent = text;
-      p.style.margin = "0 0 6px 0";
-      p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-      lyricsContainer.appendChild(p);
-    });
-    highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
-  } else if (currentUnsyncedLyrics) {
-    isShowingSyncedLyrics = false;
-    currentUnsyncedLyrics.forEach(({ text }) => {
-      const p = document.createElement("p");
-      p.textContent = text;
-      p.style.margin = "0 0 6px 0";
-      p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-      lyricsContainer.appendChild(p);
-    });
-    // For unsynced, always allow user scroll
-    lyricsContainer.style.overflowY = "auto";
-    lyricsContainer.style.pointerEvents = "";
-    lyricsContainer.classList.remove('hide-scrollbar');
-    lyricsContainer.style.scrollbarWidth = "";
-    lyricsContainer.style.msOverflowStyle = "";
-  } else {
-    isShowingSyncedLyrics = false;
-    // Always allow user scroll for unsynced or empty
-    lyricsContainer.style.overflowY = "auto";
-    lyricsContainer.style.pointerEvents = "";
-    lyricsContainer.classList.remove('hide-scrollbar');
-    lyricsContainer.style.scrollbarWidth = "";
-    lyricsContainer.style.msOverflowStyle = "";
-    if (!lyricsContainer.textContent.trim()) {
-      lyricsContainer.textContent = `No lyrics found for this track from ${Providers.current}`;
-    }
+  async function updateLyricsContent(popup, info) {
+    if (!info) return;
+    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+    if (!lyricsContainer) return;
+    currentLyricsContainer = lyricsContainer;
     currentSyncedLyrics = null;
     currentUnsyncedLyrics = null;
-  }
+    lyricsContainer.textContent = "Loading lyrics...";
 
-  // Show/hide download button appropriately - only use the variables already declared above!
-  if (downloadBtn) {
-    if (lyricsContainer.querySelectorAll('p').length > 0) {
-      downloadBtn.style.display = "inline-flex";
-    } else {
-      downloadBtn.style.display = "none";
-      if (downloadDropdown) downloadDropdown.style.display = "none";
-    }
-  }
-}
-  // Change priority order of providers
-  async function autodetectProviderAndLoad(popup, info) {
-  const detectionOrder = [
-  { name: "LRCLIB", type: "getSynced" },
-  { name: "Spotify", type: "getSynced" },
-  { name: "KPoe", type: "getSynced" },
-  { name: "Musixmatch", type: "getSynced" },
-  { name: "LRCLIB", type: "getUnsynced" },
-  { name: "Spotify", type: "getUnsynced" },
-  { name: "KPoe", type: "getUnsynced" },
-  { name: "Musixmatch", type: "getUnsynced" },
-  { name: "Genius", type: "getUnsynced" }
-];
-  for (const { name, type } of detectionOrder) {
-    const provider = Providers.map[name];
+    const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
+    const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
+
+    const provider = Providers.getCurrent();
     const result = await provider.findLyrics(info);
-    if (result && !result.error) {
-      let lyrics = provider[type](result);
-      if (lyrics && lyrics.length > 0) {
-        Providers.setCurrent(name);
-        if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-        await updateLyricsContent(popup, info);
-        return;
+
+    if (result.error) {
+      lyricsContainer.textContent = result.error;
+      if (downloadBtn) downloadBtn.style.display = "none";
+      if (downloadDropdown) downloadDropdown.style.display = "none";
+      return;
+    }
+
+    let synced = provider.getSynced(result);
+    let unsynced = provider.getUnsynced(result);
+
+    lyricsContainer.innerHTML = "";
+    // Set globals for download
+    currentSyncedLyrics = (synced && synced.length > 0) ? synced : null;
+    currentUnsyncedLyrics = (unsynced && unsynced.length > 0) ? unsynced : null;
+
+    if (currentSyncedLyrics) {
+      isShowingSyncedLyrics = true;
+      currentSyncedLyrics.forEach(({ text }) => {
+        const p = document.createElement("p");
+        p.textContent = text;
+        p.style.margin = "0 0 6px 0";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        lyricsContainer.appendChild(p);
+      });
+      highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
+    } else if (currentUnsyncedLyrics) {
+      isShowingSyncedLyrics = false;
+      currentUnsyncedLyrics.forEach(({ text }) => {
+        const p = document.createElement("p");
+        p.textContent = text;
+        p.style.margin = "0 0 6px 0";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        lyricsContainer.appendChild(p);
+      });
+      // For unsynced, always allow user scroll
+      lyricsContainer.style.overflowY = "auto";
+      lyricsContainer.style.pointerEvents = "";
+      lyricsContainer.classList.remove('hide-scrollbar');
+      lyricsContainer.style.scrollbarWidth = "";
+      lyricsContainer.style.msOverflowStyle = "";
+    } else {
+      isShowingSyncedLyrics = false;
+      // Always allow user scroll for unsynced or empty
+      lyricsContainer.style.overflowY = "auto";
+      lyricsContainer.style.pointerEvents = "";
+      lyricsContainer.classList.remove('hide-scrollbar');
+      lyricsContainer.style.scrollbarWidth = "";
+      lyricsContainer.style.msOverflowStyle = "";
+      if (!lyricsContainer.textContent.trim()) {
+        lyricsContainer.textContent = `No lyrics found for this track from ${Providers.current}`;
+      }
+      currentSyncedLyrics = null;
+      currentUnsyncedLyrics = null;
+    }
+
+    // Show/hide download button appropriately - only use the variables already declared above!
+    if (downloadBtn) {
+      if (lyricsContainer.querySelectorAll('p').length > 0) {
+        downloadBtn.style.display = "inline-flex";
+      } else {
+        downloadBtn.style.display = "none";
+        if (downloadDropdown) downloadDropdown.style.display = "none";
       }
     }
   }
-  // Unselect any provider
-Providers.current = null;
-if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
 
-const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-if (lyricsContainer) lyricsContainer.textContent = "No lyrics were found for this track from any of the available providers";
-currentSyncedLyrics = null;
-currentLyricsContainer = lyricsContainer;
-}
+  // Change priority order of providers
+  async function autodetectProviderAndLoad(popup, info) {
+    const detectionOrder = [
+      { name: "LRCLIB", type: "getSynced" },
+      { name: "Spotify", type: "getSynced" },
+      { name: "KPoe", type: "getSynced" },
+      { name: "Musixmatch", type: "getSynced" },
+      { name: "LRCLIB", type: "getUnsynced" },
+      { name: "Spotify", type: "getUnsynced" },
+      { name: "KPoe", type: "getUnsynced" },
+      { name: "Musixmatch", type: "getUnsynced" },
+      { name: "Genius", type: "getUnsynced" }
+    ];
+    for (const { name, type } of detectionOrder) {
+      const provider = Providers.map[name];
+      const result = await provider.findLyrics(info);
+      if (result && !result.error) {
+        let lyrics = provider[type](result);
+        if (lyrics && lyrics.length > 0) {
+          Providers.setCurrent(name);
+          if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+          await updateLyricsContent(popup, info);
+          return;
+        }
+      }
+    }
+
+    // Unselect any provider
+    Providers.current = null;
+    if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
+
+    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+    if (lyricsContainer) lyricsContainer.textContent = "No lyrics were found for this track from any of the available providers";
+    currentSyncedLyrics = null;
+    currentLyricsContainer = lyricsContainer;
+  }
 
   function startPollingForTrackChange(popup) {
     if (pollingInterval) clearInterval(pollingInterval);
@@ -3634,7 +4272,6 @@ currentLyricsContainer = lyricsContainer;
     }, 400);
   }
 
-
   function stopPollingForTrackChange() {
     if (pollingInterval) {
       clearInterval(pollingInterval);
@@ -3642,52 +4279,52 @@ currentLyricsContainer = lyricsContainer;
     }
   }
 
-   function addButton(maxRetries = 10) {
-  let attempts = 0;
-  const tryAdd = () => {
-    const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
-    const micBtn = document.querySelector('[data-testid="lyrics-button"]');
-    const targetBtn = nowPlayingViewBtn || micBtn;
-    const controls = targetBtn?.parentElement;
-    if (!controls) {
-      if (attempts < maxRetries) {
-        attempts++;
-        setTimeout(tryAdd, 1000);
-      } else {
-        console.warn("Lyrics+ button: Failed to find controls after max retries.");
-      }
-      return;
-    }
-    if (document.getElementById("lyrics-plus-btn")) return;
-    const btn = document.createElement("button");
-    btn.id = "lyrics-plus-btn";
-    btn.title = "Show Lyrics+";
-    btn.textContent = "Lyrics+";
-    Object.assign(btn.style, {
-      backgroundColor: "#1db954",
-      border: "none",
-      borderRadius: "20px",
-      color: "white",
-      cursor: "pointer",
-      fontWeight: "600",
-      fontSize: "14px",
-      padding: "6px 12px",
-      marginLeft: "8px",
-      userSelect: "none",
-    });
-    btn.onclick = () => {
-      let popup = document.getElementById("lyrics-plus-popup");
-      if (popup) {
-        removePopup();
-        stopPollingForTrackChange();
+  function addButton(maxRetries = 10) {
+    let attempts = 0;
+    const tryAdd = () => {
+      const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
+      const micBtn = document.querySelector('[data-testid="lyrics-button"]');
+      const targetBtn = nowPlayingViewBtn || micBtn;
+      const controls = targetBtn?.parentElement;
+      if (!controls) {
+        if (attempts < maxRetries) {
+          attempts++;
+          setTimeout(tryAdd, 1000);
+        } else {
+          console.warn("Lyrics+ button: Failed to find controls after max retries.");
+        }
         return;
       }
-      createPopup();
+      if (document.getElementById("lyrics-plus-btn")) return;
+      const btn = document.createElement("button");
+      btn.id = "lyrics-plus-btn";
+      btn.title = "Show Lyrics+";
+      btn.textContent = "Lyrics+";
+      Object.assign(btn.style, {
+        backgroundColor: "#1db954",
+        border: "none",
+        borderRadius: "20px",
+        color: "white",
+        cursor: "pointer",
+        fontWeight: "600",
+        fontSize: "14px",
+        padding: "6px 12px",
+        marginLeft: "8px",
+        userSelect: "none",
+      });
+      btn.onclick = () => {
+        let popup = document.getElementById("lyrics-plus-popup");
+        if (popup) {
+          removePopup();
+          stopPollingForTrackChange();
+          return;
+        }
+        createPopup();
+      };
+      controls.insertBefore(btn, targetBtn);
     };
-    controls.insertBefore(btn, targetBtn);
-  };
-  tryAdd();
-}
+    tryAdd();
+  }
 
   const observer = new MutationObserver(() => {
     addButton();
@@ -3725,52 +4362,52 @@ currentLyricsContainer = lyricsContainer;
   loadProportion();
 
   function applyProportionToPopup(popup) {
-  if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion || window.lyricsPlusPopupIsDragging) {
-    return;
+    if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion || window.lyricsPlusPopupIsDragging) {
+      return;
+    }
+    // Skip applying proportion if user has dragged the popup within the last 1.5 seconds
+    if (window.lyricsPlusPopupLastDragged && (Date.now() - window.lyricsPlusPopupLastDragged) < 1500) {
+      return;
+    }
+    if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
+      return;
+    }
+    popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
+    popup.style.height = (window.innerHeight * window.lastProportion.h) + "px";
+    popup.style.left = (window.innerWidth * window.lastProportion.x) + "px";
+    popup.style.top = (window.innerHeight * window.lastProportion.y) + "px";
+    popup.style.right = "auto";
+    popup.style.bottom = "auto";
+    popup.style.position = "fixed";
   }
-  // Skip applying proportion if user has dragged the popup within the last 1.5 seconds
-  if (window.lyricsPlusPopupLastDragged && (Date.now() - window.lyricsPlusPopupLastDragged) < 1500) {
-    return;
-  }
-  if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
-    return;
-  }
-  popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
-  popup.style.height = (window.innerHeight * window.lastProportion.h) + "px";
-  popup.style.left = (window.innerWidth * window.lastProportion.x) + "px";
-  popup.style.top = (window.innerHeight * window.lastProportion.y) + "px";
-  popup.style.right = "auto";
-  popup.style.bottom = "auto";
-  popup.style.position = "fixed";
-}
 
   // Call this after user resizes the popup:
   function observePopupResize() {
-  const popup = document.getElementById("lyrics-plus-popup");
-  if (!popup) return;
-  let isResizing = false;
-  const resizer = Array.from(popup.children).find(el =>
-    el.style && el.style.cursor === "nwse-resize"
-  );
-  if (!resizer) return;
-  resizer.addEventListener("mousedown", () => { isResizing = true; });
-  window.addEventListener("mouseup", () => {
-    if (isResizing) {
-      savePopupState(popup);
-    }
-    isResizing = false;
-  });
-}
+    const popup = document.getElementById("lyrics-plus-popup");
+    if (!popup) return;
+    let isResizing = false;
+    const resizer = Array.from(popup.children).find(el =>
+      el.style && el.style.cursor === "nwse-resize"
+    );
+    if (!resizer) return;
+    resizer.addEventListener("mousedown", () => { isResizing = true; });
+    window.addEventListener("mouseup", () => {
+      if (isResizing) {
+        savePopupState(popup);
+      }
+      isResizing = false;
+    });
+  }
 
   // Listen for popup creation to hook the resizer
   const popupObserver = new MutationObserver(() => {
-  const popup = document.getElementById("lyrics-plus-popup");
-  if (popup) {
-    applyProportionToPopup(popup);
-    observePopupResize();
-  }
-});
-popupObserver.observe(document.body, { childList: true, subtree: true });
+    const popup = document.getElementById("lyrics-plus-popup");
+    if (popup) {
+      applyProportionToPopup(popup);
+      observePopupResize();
+    }
+  });
+  popupObserver.observe(document.body, { childList: true, subtree: true });
 
   // On window resize, apply saved proportion
   window.addEventListener("resize", () => {
@@ -3780,5 +4417,3 @@ popupObserver.observe(document.body, { childList: true, subtree: true });
     }
   });
 })();
-
-
