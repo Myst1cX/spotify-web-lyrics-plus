@@ -13,7 +13,6 @@
 // ==/UserScript==
 
 // MORE URGENT:
-// Fixing KPoe provider (error: response is not provided) - might be on their end, will be observing
 // If Fullscreen --> fullscreen-lyric as default position.
 // Function with example of the two lyricContainers:
 /* function waitForLyrics() {
@@ -4889,3 +4888,4 @@ const Providers = {
     }
   });
 })();
+
