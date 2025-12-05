@@ -451,11 +451,35 @@
     const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
     const artistEl = document.querySelector('[data-testid="context-item-info-subtitles"]');
     const durationEl = document.querySelector('[data-testid="playback-duration"]');
+    const positionEl = document.querySelector('[data-testid="playback-position"]');
     const trackId = getCurrentTrackId();
     if (!titleEl || !artistEl) return null;
     const title = titleEl.textContent.trim();
     const artist = artistEl.textContent.trim();
-    const duration = durationEl ? timeStringToMs(durationEl.textContent) : 0;
+
+    // Calculate duration properly - playback-duration may show remaining time (prefixed with '-')
+    let duration = 0;
+    if (durationEl) {
+      const raw = durationEl.textContent.trim();
+      if (raw.startsWith('-')) {
+        // Remaining time format: add current position + remaining to get total duration
+        const remainMs = timeStringToMs(raw);
+        const posMs = positionEl ? timeStringToMs(positionEl.textContent) : 0;
+        duration = posMs + remainMs;
+      } else {
+        // Direct duration format
+        duration = timeStringToMs(raw);
+      }
+    }
+
+    // Fallback: try audio element duration
+    if (duration <= 0) {
+      const audio = document.querySelector('audio');
+      if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+        duration = audio.duration * 1000;
+      }
+    }
+
     return {
       id: `${title}-${artist}`,
       title,
