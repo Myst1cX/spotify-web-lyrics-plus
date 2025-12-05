@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      10.9
+// @version      10.10
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,7 +13,6 @@
 // ==/UserScript==
 
 // MORE URGENT:
-// Fixing KPoe provider (error: response is not provided) - might be on their end, will be observing
 // If Fullscreen --> fullscreen-lyric as default position.
 // Function with example of the two lyricContainers:
 /* function waitForLyrics() {
@@ -1179,7 +1178,7 @@ const PLAY_WORDS = [
     }
   };
 
-  // --- KPoe ---
+   // --- KPoe ---
   async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false) {
     const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
       ? `&album=${encodeURIComponent(songInfo.album)}`
@@ -1192,6 +1191,7 @@ const PLAY_WORDS = [
       forceReloadParam = `&forceReload=true`;
     }
     const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
+    const response = await fetch(url, fetchOptions);
     if (!response.ok) return null;
     const data = await response.json();
     return data;
@@ -1245,11 +1245,16 @@ const PLAY_WORDS = [
     },
     getUnsynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({ text: line.text }));
+      return body.data.map(line => ({
+        text: line.text
+      }));
     },
     getSynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({ time: Math.round(line.startTime * 1000), text: line.text }));
+      return body.data.map(line => ({
+        time: Math.round(line.startTime * 1000),
+        text: line.text
+      }));
     },
   };
 
@@ -4643,4 +4648,5 @@ const Providers = {
     }
   });
 })();
+
 
