@@ -2724,26 +2724,27 @@ const Providers = {
     });
 
     // --- Chinese Conversion Button (Traditional ⇄ Simplified) ---
-    // Styled like the reference script's toggle button
+    // Styled to match other header buttons
     const chineseConvBtn = document.createElement("button");
     chineseConvBtn.id = "lyrics-plus-chinese-conv-btn";
     chineseConvBtn.textContent = "繁→简"; // Default, will be updated based on detected script
     chineseConvBtn.title = "Convert Chinese script";
     Object.assign(chineseConvBtn.style, {
-      padding: "6px 10px",
+      marginRight: "6px",
+      cursor: "pointer",
+      background: "none",
+      border: "none",
+      color: "white",
       fontSize: "12px",
       fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
-      color: "#fff",
-      background: "rgba(30,30,30,.55)",
-      border: "1px solid rgba(255,255,255,.28)",
-      borderRadius: "8px",
-      cursor: "pointer",
-      backdropFilter: "blur(4px)",
+      padding: "4px 6px",
+      borderRadius: "4px",
       userSelect: "none",
-      marginRight: "6px",
       display: "none", // Hidden by default, shown when Chinese lyrics are present
-      transition: "background 0.2s ease",
+      transition: "background 0.15s ease",
     });
+    chineseConvBtn.onmouseenter = () => { chineseConvBtn.style.background = "#333"; };
+    chineseConvBtn.onmouseleave = () => { chineseConvBtn.style.background = "none"; };
 
     // Helper to update button text based on original script type and conversion state
     // For Traditional lyrics: "繁→简" (convert) / "繁←简" (revert)
