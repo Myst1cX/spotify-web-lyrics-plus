@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      12.0
+// @version      13.5
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -14,9 +14,14 @@
 // ==/UserScript==
 
 
+// RESOLVED (v13) TRADITIONAL TO SIMPLIFIED CHINESE CONVERSION (VIA OPEN.CC)
+// Reference: (https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified/)
+
 // RESOLVED (v12): ADDED A GITHUB LINK TO REPOSITORY (credits to greasyfork user jayxdcode)
 
-// RESOLVED (v11): ADDITION OF SEEKBAR + COLLAPSING THE LYRIC SOURCE TAB GROUP + SETTINGS UI REVAMP 
+// RESOLVED (v12): ADDED A GITHUB LINK TO REPOSITORY (credits to greasyfork user jayxdcode)
+
+// RESOLVED (v11): ADDITION OF SEEKBAR + COLLAPSING THE LYRIC SOURCE TAB GROUP + SETTINGS UI REVAMP
 
 // RESOLVED (v10.9): PLAYBACK BUTTONS' CORRECT REFLECTION OF PAGE ACTION NO LONGER RESTRICTED TO ENGLISH LOCALE:
 // Shuffle button and repeat button icons now clone directly from Spotify's visible DOM elements
@@ -2717,7 +2722,7 @@ const Providers = {
       display: "none", // Hidden by default, shown when Chinese lyrics are present
       transition: "background 0.2s ease",
     });
-    
+
     // Helper to update button text based on conversion state
     // Button only shows for Traditional lyrics, so:
     // - Not converted: "繁→简" (click to convert to Simplified)
@@ -2725,12 +2730,12 @@ const Providers = {
     function updateChineseConvBtnText() {
       const isConverted = isChineseConversionEnabled();
       chineseConvBtn.textContent = isConverted ? "简→繁" : "繁→简";
-      chineseConvBtn.title = isConverted 
-        ? "Revert to Traditional Chinese (原: 繁體)" 
-        : "Convert to Simplified Chinese (原: 繁體)";
+      chineseConvBtn.title = isConverted
+        ? "Revert to Traditional Chinese"
+        : "Convert to Simplified Chinese";
     }
     popup._updateChineseConvBtnText = updateChineseConvBtnText;
-    
+
     chineseConvBtn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -4630,7 +4635,7 @@ const Providers = {
   function rerenderLyrics(popup) {
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
     if (!lyricsContainer) return;
-    
+
     // If no cached lyrics, nothing to re-render
     if (!currentSyncedLyrics && !currentUnsyncedLyrics) return;
 
@@ -4710,7 +4715,7 @@ const Providers = {
     // Check if lyrics contain Chinese characters and detect script type
     const lyrics = synced || unsynced || [];
     const hasChineseLyrics = lyrics.some(line => line.text && Utils.containsHanCharacter(line.text));
-    
+
     // Detect original Chinese script type from the lyrics
     if (hasChineseLyrics) {
       const allLyricsText = lyrics.map(line => line.text || '').join('');
@@ -5020,4 +5025,3 @@ const Providers = {
     }
   });
 })();
-
