@@ -3724,12 +3724,12 @@ const Providers = {
     popup.appendChild(controlsBar);
     popup.appendChild(progressWrapper);
 
-    // In fullscreen mode, append to fullscreen-lyric container or document.body
+    // In fullscreen mode, append to fullscreen-lyric container to stay within the fullscreen stacking context
     // Otherwise, append to main-view-container or document.body
     const fullscreenContainer = getFullscreenLyricElement();
     if (fullscreenContainer) {
-      // In fullscreen mode - append to document.body to ensure visibility
-      document.body.appendChild(popup);
+      // In fullscreen mode - append directly to the fullscreen container
+      fullscreenContainer.appendChild(popup);
     } else {
       const container = document.querySelector('.main-view-container');
       if (container) {
