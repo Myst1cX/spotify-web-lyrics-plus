@@ -12,6 +12,8 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// ONGOING: (v13) TRADITIONAL ⇄ SIMPLIFIED CHINESE CONVERSION VIA OPEN.CC
+// Reference: (https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified/)
 
 // RESOLVED (v12): ADDED A GITHUB LINK TO REPOSITORY (credits to greasyfork user jayxdcode)
 
@@ -4835,4 +4837,5 @@ const Providers = {
     }
   });
 })();
+
 
