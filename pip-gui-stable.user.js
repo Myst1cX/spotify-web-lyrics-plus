@@ -6,6 +6,7 @@
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      genius.com
+// @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/t2cn.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
@@ -225,6 +226,14 @@
     localStorage.setItem('lyricsPlusTranslationLang', lang);
   }
 
+  // --- Chinese Conversion Settings (Traditional to Simplified) ---
+  function isChineseConversionEnabled() {
+    return localStorage.getItem('lyricsPlusChineseConversion') === 'true';
+  }
+  function setChineseConversionEnabled(enabled) {
+    localStorage.setItem('lyricsPlusChineseConversion', enabled ? 'true' : 'false');
+  }
+
   async function translateText(text, targetLang) {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
     try {
@@ -263,11 +272,26 @@
       if (!str) return '';
       return (lower ? str.toLowerCase() : str).replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
     },
-    // (async) Convert Traditional to Simplified using openapi - fallback: identity
-    async toSimplifiedChinese(str) {
-      // This is a stub: since we don't have a real openapi, just return original string.
-      // You can insert API for opencc or similar here if needed.
-      return str;
+    // Convert Traditional Chinese to Simplified Chinese using opencc-js
+    // Falls back to original string if converter is not available
+    toSimplifiedChinese(str) {
+      if (!str) return str;
+      try {
+        // Try different ways to access the OpenCC converter (loaded via @require)
+        if (window.OpenCC?.t2cn) {
+          return window.OpenCC.t2cn(str);
+        } else if (window.t2cn) {
+          return window.t2cn(str);
+        } else if (window.OpenCC?.Converter) {
+          const converter = window.OpenCC.Converter({ from: 't', to: 'cn' });
+          return converter(str);
+        }
+        // Converter not available, return original
+        return str;
+      } catch (e) {
+        console.warn('[Lyrics+] Traditional to Simplified conversion error:', e);
+        return str;
+      }
     },
     parseLocalLyrics(plain) {
       if (!plain) return { unsynced: null, synced: null };
@@ -2656,6 +2680,43 @@ const Providers = {
       lineHeight: "1",
     });
 
+    // --- Chinese Conversion Button (Traditional ⇄ Simplified) ---
+    // Styled like the reference script's toggle button
+    const chineseConvBtn = document.createElement("button");
+    chineseConvBtn.id = "lyrics-plus-chinese-conv-btn";
+    chineseConvBtn.textContent = "繁 / 简";
+    chineseConvBtn.title = "Toggle Traditional / Simplified Chinese";
+    Object.assign(chineseConvBtn.style, {
+      padding: "6px 10px",
+      fontSize: "12px",
+      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+      color: "#fff",
+      background: isChineseConversionEnabled() ? "rgba(80,80,80,.55)" : "rgba(30,30,30,.55)",
+      border: "1px solid rgba(255,255,255,.28)",
+      borderRadius: "8px",
+      cursor: "pointer",
+      backdropFilter: "blur(4px)",
+      userSelect: "none",
+      marginRight: "6px",
+      display: "none", // Hidden by default, shown when Chinese lyrics are present
+      transition: "background 0.2s ease",
+    });
+    chineseConvBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const newState = !isChineseConversionEnabled();
+      setChineseConversionEnabled(newState);
+      // Update button appearance - darker when converted (Simplified mode)
+      chineseConvBtn.style.background = newState ? "rgba(80,80,80,.55)" : "rgba(30,30,30,.55)";
+      // Reload lyrics with new setting
+      const info = getCurrentTrackInfo();
+      if (info) {
+        updateLyricsContent(popup, info);
+      }
+    };
+    // Store reference on popup for access in updateLyricsContent
+    popup._chineseConvBtn = chineseConvBtn;
+
     // --- Download Synced Lyrics Button ---
     const downloadBtnWrapper = document.createElement("div");
     downloadBtnWrapper.style.position = "relative"; // For dropdown positioning
@@ -2844,6 +2905,7 @@ const Providers = {
     buttonGroup.appendChild(downloadBtnWrapper);
     buttonGroup.appendChild(fontSizeSelect);
     buttonGroup.appendChild(btnReset);
+    buttonGroup.appendChild(chineseConvBtn);
     buttonGroup.appendChild(translationToggleBtn);
     buttonGroup.appendChild(offsetToggleBtn);
     buttonGroup.appendChild(closeBtn);
@@ -4548,6 +4610,7 @@ const Providers = {
 
     const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
     const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
+    const chineseConvBtn = popup._chineseConvBtn;
 
     const provider = Providers.getCurrent();
     const result = await provider.findLyrics(info);
@@ -4556,11 +4619,39 @@ const Providers = {
       lyricsContainer.textContent = result.error;
       if (downloadBtn) downloadBtn.style.display = "none";
       if (downloadDropdown) downloadDropdown.style.display = "none";
+      if (chineseConvBtn) chineseConvBtn.style.display = "none";
       return;
     }
 
     let synced = provider.getSynced(result);
     let unsynced = provider.getUnsynced(result);
+
+    // Check if lyrics contain Chinese characters
+    const lyrics = synced || unsynced || [];
+    const hasChineseLyrics = lyrics.some(line => line.text && Utils.containsHanCharacter(line.text));
+
+    // Show/hide Chinese conversion button based on whether Chinese lyrics are present
+    if (chineseConvBtn) {
+      if (hasChineseLyrics) {
+        chineseConvBtn.style.display = "inline-flex";
+        // Update button appearance based on current state (darker = Simplified mode active)
+        const isEnabled = isChineseConversionEnabled();
+        chineseConvBtn.style.background = isEnabled ? "rgba(80,80,80,.55)" : "rgba(30,30,30,.55)";
+      } else {
+        chineseConvBtn.style.display = "none";
+      }
+    }
+
+    // Check if Chinese conversion is enabled
+    const shouldConvertChinese = isChineseConversionEnabled();
+
+    // Helper function to convert text if needed
+    const convertText = (text) => {
+      if (shouldConvertChinese && text && Utils.containsHanCharacter(text)) {
+        return Utils.toSimplifiedChinese(text);
+      }
+      return text;
+    };
 
     lyricsContainer.innerHTML = "";
     // Set globals for download
@@ -4571,7 +4662,7 @@ const Providers = {
       isShowingSyncedLyrics = true;
       currentSyncedLyrics.forEach(({ text }) => {
         const p = document.createElement("p");
-        p.textContent = text;
+        p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         lyricsContainer.appendChild(p);
@@ -4581,7 +4672,7 @@ const Providers = {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text }) => {
         const p = document.createElement("p");
-        p.textContent = text;
+        p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         lyricsContainer.appendChild(p);
