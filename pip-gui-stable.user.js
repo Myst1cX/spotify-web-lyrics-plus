@@ -20,11 +20,11 @@
 const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]') || document.querySelector('[data-testid="fullscreen-lyric"]');
 */
 
-// RESOLVED (v10.9):
-// - Shuffle button and repeat button icons now clone directly from Spotify's visible DOM elements
-// - Language-independent detection using computed color (green = active) and SVG path structure
-// - Shuffle button found by SVG icon patterns instead of aria-label text
-// - Static SVGs are kept as fallbacks when DOM elements are not available
+// RESOLVED (v10.9): PLAYBACK BUTTONS' CORRECT REFLECTION OF PAGE ACTION NO LONGER RESTRICTED TO ENGLISH LOCALE:
+// Shuffle button and repeat button icons now clone directly from Spotify's visible DOM elements
+// Language-independent detection using computed color (green = active) and SVG path structure
+// Shuffle button found by SVG icon patterns instead of aria-label text
+// Static SVGs are kept as fallbacks when DOM elements are not available
 
 
 // WHEN THE TIME IS RIGHT:
@@ -4643,3 +4643,4 @@ const Providers = {
     }
   });
 })();
+
