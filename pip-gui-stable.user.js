@@ -764,10 +764,6 @@ const PLAY_WORDS = [
     return clonedSvg;
   }
 
-  /**
-   * Finds the currently visible Spotify shuffle button.
-   * The shuffle button doesn't have a data-testid, so we find it by looking at the
-   * playback controls and finding a button that isn't one of the known buttons.
   // --- Constants for Spotify green color detection ---
   // Spotify's active button color is approximately rgb(30, 185, 84) = #1db954
   const SPOTIFY_GREEN_MIN_G_VALUE = 100;  // Minimum green channel value for active state
@@ -1016,6 +1012,8 @@ const PLAY_WORDS = [
     // Clone SVG from Spotify's visible button, falling back to static SVGs
     const clonedSvg = cloneSvgFromButton(spotifyShuffleBtn, 16, 16);
 
+    // Use Spotify's locale-specific aria-label when available, with English fallbacks
+    // Fallback labels describe what clicking the button will do (next action)
     if (state === 'off') {
       button.setAttribute("aria-label", spotifyShuffleBtn?.getAttribute('aria-label') || "Enable shuffle");
       button.classList.remove("active");
@@ -1044,6 +1042,8 @@ const PLAY_WORDS = [
     // Clone SVG from Spotify's visible button, falling back to static SVGs
     const clonedSvg = cloneSvgFromButton(spotifyRepeatBtn, 16, 16);
 
+    // Use Spotify's locale-specific aria-label when available, with English fallbacks
+    // Fallback labels describe what clicking the button will do (next action)
     if (state === 'off') {
       button.setAttribute("aria-label", spotifyRepeatBtn?.getAttribute('aria-label') || "Enable repeat");
       button.classList.remove("active");
@@ -1072,6 +1072,7 @@ const PLAY_WORDS = [
     // Clone SVG from Spotify's visible button, falling back to static SVGs
     const clonedSvg = cloneSvgFromButton(spotifyPlayPauseBtn, 16, 16);
 
+    // Use Spotify's locale-specific aria-label when available, with English fallbacks
     if (isPlaying) {
       button.setAttribute("aria-label", spotifyPlayPauseBtn?.getAttribute('aria-label') || "Pause");
       iconWrapper.appendChild(clonedSvg || pauseSmallSVG.cloneNode(true));
