@@ -1,18 +1,20 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable 
 // @namespace    http://tampermonkey.net/
-// @version      14.0
+// @version      14.1
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      genius.com
-// @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/t2cn.js
-// @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/cn2t.js
+// @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (v14.1): FIXED CHINESE CONVERSION - use full.js bundle instead of separate t2cn.js/cn2t.js
+// The separate files were overwriting each other, causing conversion to fail
 
 // RESOLVED (v14.0): KPOE PROVIDER AND LRCLIB PROVIDER FIXED (MAJOR DUB)
 
@@ -71,6 +73,40 @@
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
+
+  // --- Pre-initialized OpenCC converters (created once at startup) ---
+  // Using the full.js bundle, we initialize converters at startup to avoid
+  // the issue of individual t2cn.js and cn2t.js files overwriting each other
+  let openccT2CN = null; // Traditional to Simplified Chinese converter
+  let openccCN2T = null; // Simplified Chinese to Traditional converter
+  let openccInitialized = false; // Flag to prevent duplicate initialization attempts
+
+  // Initialize OpenCC converters with retry mechanism
+  // @require scripts should load before the userscript executes, but we add
+  // a retry mechanism as a safety measure in case of any timing issues
+  function initOpenCCConverters(retries = 3, delay = 100) {
+    if (openccInitialized) return; // Already initialized, don't retry
+    try {
+      if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
+        // The full.js bundle exposes OpenCC.Converter which takes { from, to } options
+        // Supported locales: 'cn' (Simplified), 't' (Traditional Taiwan), 'tw' (Traditional Taiwan with phrases),
+        // 'twp' (Traditional Taiwan with phrases and idioms), 'hk' (Traditional Hong Kong), 'jp' (Japanese Shinjitai)
+        openccT2CN = OpenCC.Converter({ from: 't', to: 'cn' });
+        openccCN2T = OpenCC.Converter({ from: 'cn', to: 't' });
+        openccInitialized = true;
+        console.log('[Lyrics+] OpenCC converters initialized successfully (t↔cn)');
+      } else if (retries > 0) {
+        // OpenCC not available yet, retry after a short delay
+        setTimeout(() => initOpenCCConverters(retries - 1, delay * 2), delay);
+      } else {
+        console.warn('[Lyrics+] OpenCC not available after retries');
+      }
+    } catch (e) {
+      console.warn('[Lyrics+] OpenCC converter initialization error:', e);
+    }
+  }
+  // Attempt initialization immediately
+  initOpenCCConverters();
 
   // --- Forcibly hide NowPlayingView and its button in the playback controls menu ---
 
@@ -296,20 +332,23 @@
       return (lower ? str.toLowerCase() : str).replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
     },
     // Convert Traditional Chinese to Simplified Chinese using opencc-js
-    // Falls back to original string if converter is not available
+    // Uses pre-initialized converter from the full.js bundle
     toSimplifiedChinese(str) {
       if (!str) return str;
       try {
-        // Try different ways to access the OpenCC converter (loaded via @require)
-        if (window.OpenCC?.t2cn) {
-          return window.OpenCC.t2cn(str);
-        } else if (window.t2cn) {
-          return window.t2cn(str);
-        } else if (window.OpenCC?.Converter) {
-          const converter = window.OpenCC.Converter({ from: 't', to: 'cn' });
+        // Use pre-initialized converter (created at startup from full.js bundle)
+        if (openccT2CN) {
+          return openccT2CN(str);
+        }
+        // Fallback: try to create converter on-the-fly if not initialized
+        // Only attempt if not already initialized (prevents race conditions)
+        if (!openccInitialized && typeof OpenCC !== 'undefined' && OpenCC.Converter) {
+          const converter = OpenCC.Converter({ from: 't', to: 'cn' });
+          openccT2CN = converter; // Cache for future use
           return converter(str);
         }
         // Converter not available, return original
+        console.warn('[Lyrics+] T→CN converter not available');
         return str;
       } catch (e) {
         console.warn('[Lyrics+] Traditional to Simplified conversion error:', e);
@@ -317,20 +356,23 @@
       }
     },
     // Convert Simplified Chinese to Traditional Chinese using opencc-js
-    // Falls back to original string if converter is not available
+    // Uses pre-initialized converter from the full.js bundle
     toTraditionalChinese(str) {
       if (!str) return str;
       try {
-        // Try different ways to access the OpenCC converter (loaded via @require)
-        if (window.OpenCC?.cn2t) {
-          return window.OpenCC.cn2t(str);
-        } else if (window.cn2t) {
-          return window.cn2t(str);
-        } else if (window.OpenCC?.Converter) {
-          const converter = window.OpenCC.Converter({ from: 'cn', to: 't' });
+        // Use pre-initialized converter (created at startup from full.js bundle)
+        if (openccCN2T) {
+          return openccCN2T(str);
+        }
+        // Fallback: try to create converter on-the-fly if not initialized
+        // Only attempt if not already initialized (prevents race conditions)
+        if (!openccInitialized && typeof OpenCC !== 'undefined' && OpenCC.Converter) {
+          const converter = OpenCC.Converter({ from: 'cn', to: 't' });
+          openccCN2T = converter; // Cache for future use
           return converter(str);
         }
         // Converter not available, return original
+        console.warn('[Lyrics+] CN→T converter not available');
         return str;
       } catch (e) {
         console.warn('[Lyrics+] Simplified to Traditional conversion error:', e);
