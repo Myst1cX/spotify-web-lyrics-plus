@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Stable
+// @name         Spotify Lyrics+ Stable 
 // @namespace    http://tampermonkey.net/
-// @version      13.6
+// @version      14.0
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (v14.0): KPOE PROVIDER AND LRCLIB PROVIDER FIXED (MAJOR DUB)
 
 // RESOLVED (v13.6) TRADITIONAL ⇄ SIMPLIFIED (BIDIRECTIONAL) CHINESE CONVERSION VIA OPEN.CC
 // Reference: (https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified/)
@@ -451,11 +453,35 @@
     const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
     const artistEl = document.querySelector('[data-testid="context-item-info-subtitles"]');
     const durationEl = document.querySelector('[data-testid="playback-duration"]');
+    const positionEl = document.querySelector('[data-testid="playback-position"]');
     const trackId = getCurrentTrackId();
     if (!titleEl || !artistEl) return null;
     const title = titleEl.textContent.trim();
     const artist = artistEl.textContent.trim();
-    const duration = durationEl ? timeStringToMs(durationEl.textContent) : 0;
+
+    // Calculate duration properly - playback-duration may show remaining time (prefixed with '-')
+    let duration = 0;
+    if (durationEl) {
+      const raw = durationEl.textContent.trim();
+      if (raw.startsWith('-')) {
+        // Remaining time format: add current position + remaining to get total duration
+        const remainMs = timeStringToMs(raw);
+        const posMs = positionEl ? timeStringToMs(positionEl.textContent) : 0;
+        duration = posMs + remainMs;
+      } else {
+        // Direct duration format
+        duration = timeStringToMs(raw);
+      }
+    }
+
+    // Fallback: try audio element duration
+    if (duration <= 0) {
+      const audio = document.querySelector('audio');
+      if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+        duration = audio.duration * 1000;
+      }
+    }
+
     return {
       id: `${title}-${artist}`,
       title,
