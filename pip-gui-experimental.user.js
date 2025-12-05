@@ -813,6 +813,14 @@ function labelMeansPlay(label) {
   };
 
   // --- KPoe ---
+  // Light normalization for KPoe - preserves more characters for better API matching
+  function normalizeForKPoe(str) {
+    if (!str) return "";
+    return str.normalize("NFKC")
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
   async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false) {
     const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
       ? `&album=${encodeURIComponent(songInfo.album)}`
@@ -830,19 +838,43 @@ function labelMeansPlay(label) {
     const data = await response.json();
     return data;
   }
+
   function parseKPoeFormat(data) {
-    if (!Array.isArray(data.lyrics)) return null;
+    // Handle different response structures - check for lyrics array in various locations
+    let lyricsArray = null;
+    if (Array.isArray(data.lyrics)) {
+      lyricsArray = data.lyrics;
+    } else if (Array.isArray(data.lines)) {
+      lyricsArray = data.lines;
+    } else if (Array.isArray(data.lrc)) {
+      lyricsArray = data.lrc;
+    } else if (data.data && Array.isArray(data.data.lyrics)) {
+      lyricsArray = data.data.lyrics;
+    } else if (data.result && Array.isArray(data.result.lyrics)) {
+      lyricsArray = data.result.lyrics;
+    }
+
+    if (!lyricsArray) return null;
+
+    // Handle empty lyrics array
+    if (lyricsArray.length === 0) return null;
+
+    // Safely build metadata with fallback
+    const sourceText = data.metadata?.source || data.source || 'Unknown';
     const metadata = {
-      ...data.metadata,
-      source: `${data.metadata.source} (KPoe)`
+      ...(data.metadata || {}),
+      source: `${sourceText} (KPoe)`
     };
+
     return {
-      type: data.type,
-      data: data.lyrics.map(item => {
-        const startTime = Number(item.time) || 0;
-        const duration = Number(item.duration) || 0;
+      type: data.type || 'synced',
+      data: lyricsArray.map(item => {
+        // Handle different time field names
+        const startTime = Number(item.time) || Number(item.startTime) || Number(item.start) || 0;
+        const duration = Number(item.duration) || Number(item.dur) || 0;
         const endTime = startTime + duration;
-        const parsedSyllabus = (item.syllabus || []).map(syllable => ({
+        const text = item.text || item.line || item.words || '';
+        const parsedSyllabus = (item.syllabus || item.syllables || []).map(syllable => ({
           text: syllable.text || '',
           time: Number(syllable.time) || 0,
           duration: Number(syllable.duration) || 0,
@@ -851,7 +883,7 @@ function labelMeansPlay(label) {
           element: syllable.element || {}
         }));
         return {
-          text: item.text || '',
+          text: text,
           startTime: startTime / 1000,
           duration: duration / 1000,
           endTime: endTime / 1000,
@@ -862,33 +894,59 @@ function labelMeansPlay(label) {
       metadata
     };
   }
+
   const ProviderKPoe = {
     async findLyrics(info) {
       try {
-        const artist = Utils.normalize(info.artist);
-        const title = Utils.normalize(info.title);
-        const album = Utils.normalize(info.album);
+        // Use lighter normalization that preserves more characters
+        const artist = normalizeForKPoe(info.artist);
+        const title = normalizeForKPoe(info.title);
+        const album = normalizeForKPoe(info.album);
         const duration = Math.floor(info.duration / 1000);
-        const songInfo = { artist, title, album, duration };
-        const result = await fetchKPoeLyrics(songInfo);
+
+        // First attempt with light normalization
+        let songInfo = { artist, title, album, duration };
+        let result = await fetchKPoeLyrics(songInfo);
+
+        // If no result, try without album (sometimes album mismatch causes failures)
+        if (!result) {
+          songInfo = { artist, title, album: '', duration };
+          result = await fetchKPoeLyrics(songInfo);
+        }
+
+        // If still no result, try with stripped title (remove feat., remix, etc.)
+        if (!result) {
+          const strippedTitle = Utils.removeExtraInfo(Utils.removeSongFeat(title));
+          if (strippedTitle !== title) {
+            songInfo = { artist, title: strippedTitle, album: '', duration };
+            result = await fetchKPoeLyrics(songInfo);
+          }
+        }
+
         if (!result) return { error: "No lyrics found for this track from KPoe" };
-        return parseKPoeFormat(result);
+
+        const parsed = parseKPoeFormat(result);
+        if (!parsed) return { error: "No lyrics found for this track from KPoe" };
+
+        return parsed;
       } catch (e) {
         return { error: e.message || "KPoe fetch failed" };
       }
     },
     getUnsynced(body) {
-      if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({
-        text: line.text
-      }));
+      if (!body?.data || !Array.isArray(body.data) || body.data.length === 0) return null;
+      const lines = body.data.map(line => ({
+        text: line.text || ''
+      })).filter(line => line.text.trim() !== '');
+      return lines.length > 0 ? lines : null;
     },
     getSynced(body) {
-      if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({
+      if (!body?.data || !Array.isArray(body.data) || body.data.length === 0) return null;
+      const lines = body.data.map(line => ({
         time: Math.round(line.startTime * 1000),
-        text: line.text
-      }));
+        text: line.text || ''
+      })).filter(line => line.text.trim() !== '');
+      return lines.length > 0 ? lines : null;
     },
   };
 
