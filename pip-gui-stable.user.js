@@ -79,11 +79,13 @@
   // the issue of individual t2cn.js and cn2t.js files overwriting each other
   let openccT2CN = null; // Traditional to Simplified Chinese converter
   let openccCN2T = null; // Simplified Chinese to Traditional converter
+  let openccInitialized = false; // Flag to prevent duplicate initialization attempts
 
   // Initialize OpenCC converters with retry mechanism
   // @require scripts should load before the userscript executes, but we add
   // a retry mechanism as a safety measure in case of any timing issues
   function initOpenCCConverters(retries = 3, delay = 100) {
+    if (openccInitialized) return; // Already initialized, don't retry
     try {
       if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
         // The full.js bundle exposes OpenCC.Converter which takes { from, to } options
@@ -91,6 +93,7 @@
         // 'twp' (Traditional Taiwan with phrases and idioms), 'hk' (Traditional Hong Kong), 'jp' (Japanese Shinjitai)
         openccT2CN = OpenCC.Converter({ from: 't', to: 'cn' });
         openccCN2T = OpenCC.Converter({ from: 'cn', to: 't' });
+        openccInitialized = true;
         console.log('[Lyrics+] OpenCC converters initialized successfully (t↔cn)');
       } else if (retries > 0) {
         // OpenCC not available yet, retry after a short delay
@@ -338,7 +341,8 @@
           return openccT2CN(str);
         }
         // Fallback: try to create converter on-the-fly if not initialized
-        if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
+        // Only attempt if not already initialized (prevents race conditions)
+        if (!openccInitialized && typeof OpenCC !== 'undefined' && OpenCC.Converter) {
           const converter = OpenCC.Converter({ from: 't', to: 'cn' });
           openccT2CN = converter; // Cache for future use
           return converter(str);
@@ -361,7 +365,8 @@
           return openccCN2T(str);
         }
         // Fallback: try to create converter on-the-fly if not initialized
-        if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
+        // Only attempt if not already initialized (prevents race conditions)
+        if (!openccInitialized && typeof OpenCC !== 'undefined' && OpenCC.Converter) {
           const converter = OpenCC.Converter({ from: 'cn', to: 't' });
           openccCN2T = converter; // Cache for future use
           return converter(str);
