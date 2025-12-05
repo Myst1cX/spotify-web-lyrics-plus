@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Kpoe (experimental)
+// @name         Spotify Lyrics+ Experimental (improving Kpoe lyric parsing)
 // @namespace    http://tampermonkey.net/
 // @version      11.1
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
