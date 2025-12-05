@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      10.10
+// @version      11.0
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,7 @@
 // ==/UserScript==
 
 // MORE URGENT:
+// Fixing KPoe provider (error: response is not provided) - might be on their end, will be observing
 // If Fullscreen --> fullscreen-lyric as default position.
 // Function with example of the two lyricContainers:
 /* function waitForLyrics() {
@@ -2826,18 +2827,6 @@ const Providers = {
     offsetToggleBtn.style.fontSize = "16px";
     offsetToggleBtn.style.lineHeight = "1";
 
-    // Toggle playback controls bar - use a better icon
-    const playbackToggleBtn = document.createElement("button");
-    playbackToggleBtn.textContent = "🎛️";
-    playbackToggleBtn.title = "Show/hide playback controls";
-    playbackToggleBtn.style.marginRight = "6px";
-    playbackToggleBtn.style.cursor = "pointer";
-    playbackToggleBtn.style.background = "none";
-    playbackToggleBtn.style.border = "none";
-    playbackToggleBtn.style.color = "white";
-    playbackToggleBtn.style.fontSize = "14px";
-    playbackToggleBtn.style.lineHeight = "1";
-
     const titleBar = document.createElement("div");
     titleBar.style.display = "flex";
     titleBar.style.alignItems = "center";
@@ -2852,7 +2841,6 @@ const Providers = {
     buttonGroup.appendChild(fontSizeSelect);
     buttonGroup.appendChild(btnReset);
     buttonGroup.appendChild(translationToggleBtn);
-    buttonGroup.appendChild(playbackToggleBtn);
     buttonGroup.appendChild(offsetToggleBtn);
     buttonGroup.appendChild(closeBtn);
 
@@ -3158,6 +3146,84 @@ const Providers = {
     offsetWrapper.appendChild(offsetLabel);
     offsetWrapper.appendChild(inputStack);
 
+    // Add tabs visibility toggle as a separate settings row
+    const tabsToggleWrapper = document.createElement("div");
+    tabsToggleWrapper.id = "lyrics-plus-tabs-toggle-wrapper";
+    tabsToggleWrapper.style.display = "flex";
+    tabsToggleWrapper.style.alignItems = "center";
+    tabsToggleWrapper.style.justifyContent = "space-between";
+    tabsToggleWrapper.style.padding = "8px 12px";
+    tabsToggleWrapper.style.background = "#121212";
+    tabsToggleWrapper.style.borderBottom = "1px solid #333";
+    tabsToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
+    tabsToggleWrapper.style.overflow = "hidden";
+
+    const tabsToggleLabel = document.createElement("div");
+    tabsToggleLabel.textContent = "Show lyrics source tabs";
+    tabsToggleLabel.style.color = "#fff";
+    tabsToggleLabel.style.fontSize = "15px";
+
+    const tabsToggleCheckbox = document.createElement("input");
+    tabsToggleCheckbox.type = "checkbox";
+    tabsToggleCheckbox.id = "lyrics-plus-tabs-toggle";
+    tabsToggleCheckbox.className = "lyrics-plus-checkbox";
+    tabsToggleCheckbox.style.cursor = "pointer";
+
+    tabsToggleWrapper.appendChild(tabsToggleLabel);
+    tabsToggleWrapper.appendChild(tabsToggleCheckbox);
+
+    // Add seekbar visibility toggle as a separate settings row
+    const seekbarToggleWrapper = document.createElement("div");
+    seekbarToggleWrapper.id = "lyrics-plus-seekbar-toggle-wrapper";
+    seekbarToggleWrapper.style.display = "flex";
+    seekbarToggleWrapper.style.alignItems = "center";
+    seekbarToggleWrapper.style.justifyContent = "space-between";
+    seekbarToggleWrapper.style.padding = "8px 12px";
+    seekbarToggleWrapper.style.background = "#121212";
+    seekbarToggleWrapper.style.borderBottom = "1px solid #333";
+    seekbarToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
+    seekbarToggleWrapper.style.overflow = "hidden";
+
+    const seekbarToggleLabel = document.createElement("div");
+    seekbarToggleLabel.textContent = "Show seekbar";
+    seekbarToggleLabel.style.color = "#fff";
+    seekbarToggleLabel.style.fontSize = "15px";
+
+    const seekbarToggleCheckbox = document.createElement("input");
+    seekbarToggleCheckbox.type = "checkbox";
+    seekbarToggleCheckbox.id = "lyrics-plus-seekbar-toggle-settings";
+    seekbarToggleCheckbox.className = "lyrics-plus-checkbox";
+    seekbarToggleCheckbox.style.cursor = "pointer";
+
+    seekbarToggleWrapper.appendChild(seekbarToggleLabel);
+    seekbarToggleWrapper.appendChild(seekbarToggleCheckbox);
+
+    // Add playback controls visibility toggle as a separate settings row
+    const controlsToggleWrapper = document.createElement("div");
+    controlsToggleWrapper.id = "lyrics-plus-controls-toggle-wrapper";
+    controlsToggleWrapper.style.display = "flex";
+    controlsToggleWrapper.style.alignItems = "center";
+    controlsToggleWrapper.style.justifyContent = "space-between";
+    controlsToggleWrapper.style.padding = "8px 12px";
+    controlsToggleWrapper.style.background = "#121212";
+    controlsToggleWrapper.style.borderBottom = "1px solid #333";
+    controlsToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
+    controlsToggleWrapper.style.overflow = "hidden";
+
+    const controlsToggleLabel = document.createElement("div");
+    controlsToggleLabel.textContent = "Show playback controls";
+    controlsToggleLabel.style.color = "#fff";
+    controlsToggleLabel.style.fontSize = "15px";
+
+    const controlsToggleCheckbox = document.createElement("input");
+    controlsToggleCheckbox.type = "checkbox";
+    controlsToggleCheckbox.id = "lyrics-plus-controls-toggle-settings";
+    controlsToggleCheckbox.className = "lyrics-plus-checkbox";
+    controlsToggleCheckbox.style.cursor = "pointer";
+
+    controlsToggleWrapper.appendChild(controlsToggleLabel);
+    controlsToggleWrapper.appendChild(controlsToggleCheckbox);
+
     // Playback Controls Bar
     const controlsBar = document.createElement("div");
     Object.assign(controlsBar.style, {
@@ -3185,26 +3251,29 @@ const Providers = {
     if (controlsVisible === null) controlsVisible = true;
     else controlsVisible = JSON.parse(controlsVisible);
 
+    let seekbarVisible = localStorage.getItem('lyricsPlusSeekbarVisible');
+    if (seekbarVisible === null) seekbarVisible = true;
+    else seekbarVisible = JSON.parse(seekbarVisible);
+
+    let tabsVisible = localStorage.getItem('lyricsPlusTabsVisible');
+    if (tabsVisible === null) tabsVisible = true;
+    else tabsVisible = JSON.parse(tabsVisible);
+
     const OFFSET_WRAPPER_PADDING = "8px 12px";
 
-    offsetToggleBtn.onclick = () => {
-      offsetVisible = !offsetVisible;
-      localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
-      if (offsetVisible) {
-        offsetWrapper.style.maxHeight = "100px";
-        offsetWrapper.style.pointerEvents = "";
-        offsetWrapper.style.padding = "8px 12px";
+    // Helper functions to apply visibility states (reduces duplication)
+    function applyTabsVisibility(visible) {
+      if (visible) {
+        tabs.style.display = "flex";
+        tabs.style.marginTop = "12px";
       } else {
-        offsetWrapper.style.maxHeight = "0";
-        offsetWrapper.style.pointerEvents = "none";
-        offsetWrapper.style.padding = "0 12px";
+        tabs.style.display = "none";
+        tabs.style.marginTop = "0";
       }
-    };
+    }
 
-    playbackToggleBtn.onclick = () => {
-      controlsVisible = !controlsVisible;
-      localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
-      if (controlsVisible) {
+    function applyControlsVisibility(visible) {
+      if (visible) {
         controlsBar.style.maxHeight = "80px";
         controlsBar.style.opacity = "1";
         controlsBar.style.pointerEvents = "";
@@ -3213,27 +3282,90 @@ const Providers = {
         controlsBar.style.opacity = "0";
         controlsBar.style.pointerEvents = "none";
       }
+    }
+
+    function applyProgressWrapperVisibility(visible) {
+      // Note: This function should only be called after progressWrapper is created
+      if (!progressWrapper) return;
+      if (visible) {
+        progressWrapper.style.maxHeight = "50px";
+        progressWrapper.style.padding = "8px 12px";
+        progressWrapper.style.opacity = "1";
+        progressWrapper.style.pointerEvents = "";
+      } else {
+        progressWrapper.style.maxHeight = "0";
+        progressWrapper.style.padding = "0 12px";
+        progressWrapper.style.opacity = "0";
+        progressWrapper.style.pointerEvents = "none";
+      }
+    }
+
+    function applyOffsetVisibility(visible) {
+      if (visible) {
+        offsetWrapper.style.maxHeight = "200px";
+        offsetWrapper.style.pointerEvents = "";
+        offsetWrapper.style.padding = "8px 12px";
+        tabsToggleWrapper.style.maxHeight = "50px";
+        tabsToggleWrapper.style.pointerEvents = "";
+        tabsToggleWrapper.style.padding = "8px 12px";
+        seekbarToggleWrapper.style.maxHeight = "50px";
+        seekbarToggleWrapper.style.pointerEvents = "";
+        seekbarToggleWrapper.style.padding = "8px 12px";
+        controlsToggleWrapper.style.maxHeight = "50px";
+        controlsToggleWrapper.style.pointerEvents = "";
+        controlsToggleWrapper.style.padding = "8px 12px";
+      } else {
+        offsetWrapper.style.maxHeight = "0";
+        offsetWrapper.style.pointerEvents = "none";
+        offsetWrapper.style.padding = "0 12px";
+        tabsToggleWrapper.style.maxHeight = "0";
+        tabsToggleWrapper.style.pointerEvents = "none";
+        tabsToggleWrapper.style.padding = "0 12px";
+        seekbarToggleWrapper.style.maxHeight = "0";
+        seekbarToggleWrapper.style.pointerEvents = "none";
+        seekbarToggleWrapper.style.padding = "0 12px";
+        controlsToggleWrapper.style.maxHeight = "0";
+        controlsToggleWrapper.style.pointerEvents = "none";
+        controlsToggleWrapper.style.padding = "0 12px";
+      }
+    }
+
+    offsetToggleBtn.onclick = () => {
+      offsetVisible = !offsetVisible;
+      localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
+      applyOffsetVisibility(offsetVisible);
     };
 
-    if (offsetVisible) {
-      offsetWrapper.style.maxHeight = "100px";
-      offsetWrapper.style.pointerEvents = "";
-      offsetWrapper.style.padding = "8px 12px";
-    } else {
-      offsetWrapper.style.maxHeight = "0";
-      offsetWrapper.style.pointerEvents = "none";
-      offsetWrapper.style.padding = "0 12px";
-    }
+    // Seekbar checkbox change handler (in settings)
+    seekbarToggleCheckbox.onchange = () => {
+      seekbarVisible = seekbarToggleCheckbox.checked;
+      localStorage.setItem('lyricsPlusSeekbarVisible', JSON.stringify(seekbarVisible));
+      applyProgressWrapperVisibility(seekbarVisible);
+    };
 
-    if (controlsVisible) {
-      controlsBar.style.maxHeight = "80px";
-      controlsBar.style.opacity = "1";
-      controlsBar.style.pointerEvents = "";
-    } else {
-      controlsBar.style.maxHeight = "0";
-      controlsBar.style.opacity = "0";
-      controlsBar.style.pointerEvents = "none";
-    }
+    // Playback controls checkbox change handler (in settings)
+    controlsToggleCheckbox.onchange = () => {
+      controlsVisible = controlsToggleCheckbox.checked;
+      localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
+      applyControlsVisibility(controlsVisible);
+    };
+
+    // Apply initial visibility states
+    applyOffsetVisibility(offsetVisible);
+    applyControlsVisibility(controlsVisible);
+    applyTabsVisibility(tabsVisible);
+
+    // Initialize checkboxes state
+    seekbarToggleCheckbox.checked = seekbarVisible;
+    controlsToggleCheckbox.checked = controlsVisible;
+
+    // Initialize and handle tabs toggle checkbox in settings
+    tabsToggleCheckbox.checked = tabsVisible;
+    tabsToggleCheckbox.onchange = () => {
+      tabsVisible = tabsToggleCheckbox.checked;
+      localStorage.setItem('lyricsPlusTabsVisible', JSON.stringify(tabsVisible));
+      applyTabsVisibility(tabsVisible);
+    };
 
     // Create Spotify-style control buttons
     function createSpotifyControlButton(type, ariaLabel, onClick) {
@@ -3452,6 +3584,7 @@ const Providers = {
 
     // Add a realtime progress bar element (dynamic progress bar)
     const progressWrapper = document.createElement("div");
+    progressWrapper.id = "lyrics-plus-progress-wrapper";
     progressWrapper.style.display = "flex";
     progressWrapper.style.alignItems = "center";
     progressWrapper.style.gap = "8px";
@@ -3459,6 +3592,8 @@ const Providers = {
     progressWrapper.style.borderTop = "1px solid #222";
     progressWrapper.style.background = "#111";
     progressWrapper.style.boxSizing = "border-box";
+    progressWrapper.style.transition = "max-height 0.3s, padding 0.3s, opacity 0.3s";
+    progressWrapper.style.overflow = "hidden";
 
     const timeNow = document.createElement("div");
     timeNow.id = "lyrics-plus-time-now";
@@ -3507,6 +3642,48 @@ const Providers = {
     `;
     document.head.appendChild(thumbStyle);
 
+    // Custom dark mode checkbox styles
+    const checkboxStyle = document.createElement("style");
+    checkboxStyle.textContent = `
+      .lyrics-plus-checkbox {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border: 2px solid #555;
+        border-radius: 4px;
+        background: #282828;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s ease;
+      }
+      .lyrics-plus-checkbox:hover {
+        border-color: #888;
+        background: #333;
+      }
+      .lyrics-plus-checkbox:checked {
+        background: #1db954;
+        border-color: #1db954;
+      }
+      .lyrics-plus-checkbox:checked::after {
+        content: '';
+        position: absolute;
+        left: 5px;
+        top: 2px;
+        width: 4px;
+        height: 8px;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+      .lyrics-plus-checkbox:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.3);
+      }
+    `;
+    document.head.appendChild(checkboxStyle);
+
     const timeTotal = document.createElement("div");
     timeTotal.id = "lyrics-plus-time-total";
     timeTotal.textContent = "0:00";
@@ -3519,12 +3696,18 @@ const Providers = {
     progressWrapper.appendChild(progressInput);
     progressWrapper.appendChild(timeTotal);
 
+    // Apply initial visibility state for progressWrapper (must be after progressWrapper is created)
+    applyProgressWrapperVisibility(seekbarVisible);
+
     popup.appendChild(headerWrapper);
-    popup.appendChild(offsetWrapper);
     popup.appendChild(translatorWrapper);
+    popup.appendChild(tabsToggleWrapper);
+    popup.appendChild(seekbarToggleWrapper);
+    popup.appendChild(controlsToggleWrapper);
+    popup.appendChild(offsetWrapper);
     popup.appendChild(lyricsContainer);
-    popup.appendChild(progressWrapper);
     popup.appendChild(controlsBar);
+    popup.appendChild(progressWrapper);
 
     const container = document.querySelector('.main-view-container');
     if (container) {
@@ -4648,5 +4831,3 @@ const Providers = {
     }
   });
 })();
-
-
