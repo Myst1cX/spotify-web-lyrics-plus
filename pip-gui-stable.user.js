@@ -3202,6 +3202,49 @@ const Providers = {
 
     const OFFSET_WRAPPER_PADDING = "8px 12px";
 
+    // Helper functions to apply visibility states (reduces duplication)
+    function applyTabsVisibility(visible) {
+      if (visible) {
+        tabs.style.maxHeight = "50px";
+        tabs.style.marginTop = "12px";
+        tabs.style.opacity = "1";
+        tabs.style.pointerEvents = "";
+      } else {
+        tabs.style.maxHeight = "0";
+        tabs.style.marginTop = "0";
+        tabs.style.opacity = "0";
+        tabs.style.pointerEvents = "none";
+      }
+    }
+
+    function applyControlsVisibility(visible) {
+      if (visible) {
+        controlsBar.style.maxHeight = "80px";
+        controlsBar.style.opacity = "1";
+        controlsBar.style.pointerEvents = "";
+      } else {
+        controlsBar.style.maxHeight = "0";
+        controlsBar.style.opacity = "0";
+        controlsBar.style.pointerEvents = "none";
+      }
+    }
+
+    function applyProgressWrapperVisibility(visible) {
+      // Note: This function should only be called after progressWrapper is created
+      if (!progressWrapper) return;
+      if (visible) {
+        progressWrapper.style.maxHeight = "50px";
+        progressWrapper.style.padding = "8px 12px";
+        progressWrapper.style.opacity = "1";
+        progressWrapper.style.pointerEvents = "";
+      } else {
+        progressWrapper.style.maxHeight = "0";
+        progressWrapper.style.padding = "0 12px";
+        progressWrapper.style.opacity = "0";
+        progressWrapper.style.pointerEvents = "none";
+      }
+    }
+
     offsetToggleBtn.onclick = () => {
       offsetVisible = !offsetVisible;
       localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
@@ -3219,39 +3262,14 @@ const Providers = {
     tabsToggleBtn.onclick = () => {
       tabsVisible = !tabsVisible;
       localStorage.setItem('lyricsPlusTabsVisible', JSON.stringify(tabsVisible));
-      if (tabsVisible) {
-        tabs.style.maxHeight = "50px";
-        tabs.style.marginTop = "12px";
-        tabs.style.opacity = "1";
-        tabs.style.pointerEvents = "";
-      } else {
-        tabs.style.maxHeight = "0";
-        tabs.style.marginTop = "0";
-        tabs.style.opacity = "0";
-        tabs.style.pointerEvents = "none";
-      }
+      applyTabsVisibility(tabsVisible);
     };
 
     playbackToggleBtn.onclick = () => {
       controlsVisible = !controlsVisible;
       localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
-      if (controlsVisible) {
-        controlsBar.style.maxHeight = "80px";
-        controlsBar.style.opacity = "1";
-        controlsBar.style.pointerEvents = "";
-        progressWrapper.style.maxHeight = "50px";
-        progressWrapper.style.padding = "8px 12px";
-        progressWrapper.style.opacity = "1";
-        progressWrapper.style.pointerEvents = "";
-      } else {
-        controlsBar.style.maxHeight = "0";
-        controlsBar.style.opacity = "0";
-        controlsBar.style.pointerEvents = "none";
-        progressWrapper.style.maxHeight = "0";
-        progressWrapper.style.padding = "0 12px";
-        progressWrapper.style.opacity = "0";
-        progressWrapper.style.pointerEvents = "none";
-      }
+      applyControlsVisibility(controlsVisible);
+      applyProgressWrapperVisibility(controlsVisible);
     };
 
     if (offsetVisible) {
@@ -3264,27 +3282,11 @@ const Providers = {
       offsetWrapper.style.padding = "0 12px";
     }
 
-    if (controlsVisible) {
-      controlsBar.style.maxHeight = "80px";
-      controlsBar.style.opacity = "1";
-      controlsBar.style.pointerEvents = "";
-    } else {
-      controlsBar.style.maxHeight = "0";
-      controlsBar.style.opacity = "0";
-      controlsBar.style.pointerEvents = "none";
-    }
+    // Apply initial visibility for controlsBar (progressWrapper handled later after creation)
+    applyControlsVisibility(controlsVisible);
 
-    if (tabsVisible) {
-      tabs.style.maxHeight = "50px";
-      tabs.style.marginTop = "12px";
-      tabs.style.opacity = "1";
-      tabs.style.pointerEvents = "";
-    } else {
-      tabs.style.maxHeight = "0";
-      tabs.style.marginTop = "0";
-      tabs.style.opacity = "0";
-      tabs.style.pointerEvents = "none";
-    }
+    // Apply initial visibility for tabs
+    applyTabsVisibility(tabsVisible);
 
     // Create Spotify-style control buttons
     function createSpotifyControlButton(type, ariaLabel, onClick) {
@@ -3574,17 +3576,7 @@ const Providers = {
     progressWrapper.appendChild(timeTotal);
 
     // Apply initial visibility state for progressWrapper (must be after progressWrapper is created)
-    if (controlsVisible) {
-      progressWrapper.style.maxHeight = "50px";
-      progressWrapper.style.padding = "8px 12px";
-      progressWrapper.style.opacity = "1";
-      progressWrapper.style.pointerEvents = "";
-    } else {
-      progressWrapper.style.maxHeight = "0";
-      progressWrapper.style.padding = "0 12px";
-      progressWrapper.style.opacity = "0";
-      progressWrapper.style.pointerEvents = "none";
-    }
+    applyProgressWrapperVisibility(controlsVisible);
 
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
