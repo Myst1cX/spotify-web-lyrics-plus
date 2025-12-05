@@ -2856,6 +2856,7 @@ const Providers = {
 
     // Seekbar toggle option with checkbox
     const seekbarOption = document.createElement("label");
+    seekbarOption.htmlFor = "lyrics-plus-seekbar-toggle";
     Object.assign(seekbarOption.style, {
       background: "#121212",
       color: "#fff",
@@ -2875,10 +2876,8 @@ const Providers = {
     const seekbarCheckbox = document.createElement("input");
     seekbarCheckbox.type = "checkbox";
     seekbarCheckbox.id = "lyrics-plus-seekbar-toggle";
-    seekbarCheckbox.style.width = "16px";
-    seekbarCheckbox.style.height = "16px";
+    seekbarCheckbox.className = "lyrics-plus-checkbox";
     seekbarCheckbox.style.cursor = "pointer";
-    seekbarCheckbox.style.accentColor = "#1db954";
 
     const seekbarLabel = document.createElement("span");
     seekbarLabel.textContent = "Seekbar";
@@ -2888,6 +2887,7 @@ const Providers = {
 
     // Playback controls toggle option with checkbox
     const controlsOption = document.createElement("label");
+    controlsOption.htmlFor = "lyrics-plus-controls-toggle";
     Object.assign(controlsOption.style, {
       background: "#121212",
       color: "#fff",
@@ -2907,10 +2907,8 @@ const Providers = {
     const controlsCheckbox = document.createElement("input");
     controlsCheckbox.type = "checkbox";
     controlsCheckbox.id = "lyrics-plus-controls-toggle";
-    controlsCheckbox.style.width = "16px";
-    controlsCheckbox.style.height = "16px";
+    controlsCheckbox.className = "lyrics-plus-checkbox";
     controlsCheckbox.style.cursor = "pointer";
-    controlsCheckbox.style.accentColor = "#1db954";
 
     const controlsLabel = document.createElement("span");
     controlsLabel.textContent = "Playback Controls";
@@ -3263,10 +3261,8 @@ const Providers = {
     const tabsToggleCheckbox = document.createElement("input");
     tabsToggleCheckbox.type = "checkbox";
     tabsToggleCheckbox.id = "lyrics-plus-tabs-toggle";
-    tabsToggleCheckbox.style.width = "18px";
-    tabsToggleCheckbox.style.height = "18px";
+    tabsToggleCheckbox.className = "lyrics-plus-checkbox";
     tabsToggleCheckbox.style.cursor = "pointer";
-    tabsToggleCheckbox.style.accentColor = "#1db954";
 
     tabsToggleWrapper.appendChild(tabsToggleLabel);
     tabsToggleWrapper.appendChild(tabsToggleCheckbox);
@@ -3699,6 +3695,48 @@ const Providers = {
       }
     `;
     document.head.appendChild(thumbStyle);
+
+    // Custom dark mode checkbox styles
+    const checkboxStyle = document.createElement("style");
+    checkboxStyle.textContent = `
+      .lyrics-plus-checkbox {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border: 2px solid #555;
+        border-radius: 4px;
+        background: #282828;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s ease;
+      }
+      .lyrics-plus-checkbox:hover {
+        border-color: #888;
+        background: #333;
+      }
+      .lyrics-plus-checkbox:checked {
+        background: #1db954;
+        border-color: #1db954;
+      }
+      .lyrics-plus-checkbox:checked::after {
+        content: '';
+        position: absolute;
+        left: 5px;
+        top: 2px;
+        width: 4px;
+        height: 8px;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+      .lyrics-plus-checkbox:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.3);
+      }
+    `;
+    document.head.appendChild(checkboxStyle);
 
     const timeTotal = document.createElement("div");
     timeTotal.id = "lyrics-plus-time-total";
