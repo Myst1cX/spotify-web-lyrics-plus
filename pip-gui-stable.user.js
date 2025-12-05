@@ -2821,10 +2821,10 @@ const Providers = {
     offsetToggleBtn.style.fontSize = "16px";
     offsetToggleBtn.style.lineHeight = "1";
 
-    // Toggle playback controls bar - use a better icon
+    // Toggle playback controls bar (including seekbar) - use a better icon
     const playbackToggleBtn = document.createElement("button");
     playbackToggleBtn.textContent = "🎛️";
-    playbackToggleBtn.title = "Show/hide playback controls";
+    playbackToggleBtn.title = "Show/hide playback controls and seekbar";
     playbackToggleBtn.style.marginRight = "6px";
     playbackToggleBtn.style.cursor = "pointer";
     playbackToggleBtn.style.background = "none";
@@ -2832,6 +2832,18 @@ const Providers = {
     playbackToggleBtn.style.color = "white";
     playbackToggleBtn.style.fontSize = "14px";
     playbackToggleBtn.style.lineHeight = "1";
+
+    // Toggle tabs (LRC source names) bar
+    const tabsToggleBtn = document.createElement("button");
+    tabsToggleBtn.textContent = "📑";
+    tabsToggleBtn.title = "Show/hide lyrics source tabs";
+    tabsToggleBtn.style.marginRight = "6px";
+    tabsToggleBtn.style.cursor = "pointer";
+    tabsToggleBtn.style.background = "none";
+    tabsToggleBtn.style.border = "none";
+    tabsToggleBtn.style.color = "white";
+    tabsToggleBtn.style.fontSize = "14px";
+    tabsToggleBtn.style.lineHeight = "1";
 
     const titleBar = document.createElement("div");
     titleBar.style.display = "flex";
@@ -2847,6 +2859,7 @@ const Providers = {
     buttonGroup.appendChild(fontSizeSelect);
     buttonGroup.appendChild(btnReset);
     buttonGroup.appendChild(translationToggleBtn);
+    buttonGroup.appendChild(tabsToggleBtn);
     buttonGroup.appendChild(playbackToggleBtn);
     buttonGroup.appendChild(offsetToggleBtn);
     buttonGroup.appendChild(closeBtn);
@@ -2856,9 +2869,12 @@ const Providers = {
 
     // Tabs container
     const tabs = document.createElement("div");
+    tabs.id = "lyrics-plus-tabs";
     tabs.style.display = "flex";
     tabs.style.marginTop = "12px";
     tabs.style.gap = "8px";
+    tabs.style.transition = "max-height 0.3s, padding 0.3s, opacity 0.3s, margin 0.3s";
+    tabs.style.overflow = "hidden";
 
     // --- PATCH: Separate single-click and double-click handlers for provider tabs ---
     let providerClickTimer = null;
@@ -3180,6 +3196,10 @@ const Providers = {
     if (controlsVisible === null) controlsVisible = true;
     else controlsVisible = JSON.parse(controlsVisible);
 
+    let tabsVisible = localStorage.getItem('lyricsPlusTabsVisible');
+    if (tabsVisible === null) tabsVisible = true;
+    else tabsVisible = JSON.parse(tabsVisible);
+
     const OFFSET_WRAPPER_PADDING = "8px 12px";
 
     offsetToggleBtn.onclick = () => {
@@ -3196,6 +3216,22 @@ const Providers = {
       }
     };
 
+    tabsToggleBtn.onclick = () => {
+      tabsVisible = !tabsVisible;
+      localStorage.setItem('lyricsPlusTabsVisible', JSON.stringify(tabsVisible));
+      if (tabsVisible) {
+        tabs.style.maxHeight = "50px";
+        tabs.style.marginTop = "12px";
+        tabs.style.opacity = "1";
+        tabs.style.pointerEvents = "";
+      } else {
+        tabs.style.maxHeight = "0";
+        tabs.style.marginTop = "0";
+        tabs.style.opacity = "0";
+        tabs.style.pointerEvents = "none";
+      }
+    };
+
     playbackToggleBtn.onclick = () => {
       controlsVisible = !controlsVisible;
       localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
@@ -3203,10 +3239,18 @@ const Providers = {
         controlsBar.style.maxHeight = "80px";
         controlsBar.style.opacity = "1";
         controlsBar.style.pointerEvents = "";
+        progressWrapper.style.maxHeight = "50px";
+        progressWrapper.style.padding = "8px 12px";
+        progressWrapper.style.opacity = "1";
+        progressWrapper.style.pointerEvents = "";
       } else {
         controlsBar.style.maxHeight = "0";
         controlsBar.style.opacity = "0";
         controlsBar.style.pointerEvents = "none";
+        progressWrapper.style.maxHeight = "0";
+        progressWrapper.style.padding = "0 12px";
+        progressWrapper.style.opacity = "0";
+        progressWrapper.style.pointerEvents = "none";
       }
     };
 
@@ -3228,6 +3272,18 @@ const Providers = {
       controlsBar.style.maxHeight = "0";
       controlsBar.style.opacity = "0";
       controlsBar.style.pointerEvents = "none";
+    }
+
+    if (tabsVisible) {
+      tabs.style.maxHeight = "50px";
+      tabs.style.marginTop = "12px";
+      tabs.style.opacity = "1";
+      tabs.style.pointerEvents = "";
+    } else {
+      tabs.style.maxHeight = "0";
+      tabs.style.marginTop = "0";
+      tabs.style.opacity = "0";
+      tabs.style.pointerEvents = "none";
     }
 
     // Create Spotify-style control buttons
@@ -3447,13 +3503,16 @@ const Providers = {
 
     // Add a realtime progress bar element (dynamic progress bar)
     const progressWrapper = document.createElement("div");
+    progressWrapper.id = "lyrics-plus-progress-wrapper";
     progressWrapper.style.display = "flex";
     progressWrapper.style.alignItems = "center";
     progressWrapper.style.gap = "8px";
     progressWrapper.style.padding = "8px 12px";
-    progressWrapper.style.borderTop = "1px solid #222";
+    progressWrapper.style.borderTop = "1px solid #333";
     progressWrapper.style.background = "#111";
     progressWrapper.style.boxSizing = "border-box";
+    progressWrapper.style.transition = "max-height 0.3s, padding 0.3s, opacity 0.3s";
+    progressWrapper.style.overflow = "hidden";
 
     const timeNow = document.createElement("div");
     timeNow.id = "lyrics-plus-time-now";
@@ -3513,6 +3572,19 @@ const Providers = {
     progressWrapper.appendChild(timeNow);
     progressWrapper.appendChild(progressInput);
     progressWrapper.appendChild(timeTotal);
+
+    // Apply initial visibility state for progressWrapper (must be after progressWrapper is created)
+    if (controlsVisible) {
+      progressWrapper.style.maxHeight = "50px";
+      progressWrapper.style.padding = "8px 12px";
+      progressWrapper.style.opacity = "1";
+      progressWrapper.style.pointerEvents = "";
+    } else {
+      progressWrapper.style.maxHeight = "0";
+      progressWrapper.style.padding = "0 12px";
+      progressWrapper.style.opacity = "0";
+      progressWrapper.style.pointerEvents = "none";
+    }
 
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
