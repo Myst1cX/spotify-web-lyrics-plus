@@ -3249,10 +3249,8 @@ const Providers = {
       }
     }
 
-    offsetToggleBtn.onclick = () => {
-      offsetVisible = !offsetVisible;
-      localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
-      if (offsetVisible) {
+    function applyOffsetVisibility(visible) {
+      if (visible) {
         offsetWrapper.style.maxHeight = "100px";
         offsetWrapper.style.pointerEvents = "";
         offsetWrapper.style.padding = "8px 12px";
@@ -3261,6 +3259,12 @@ const Providers = {
         offsetWrapper.style.pointerEvents = "none";
         offsetWrapper.style.padding = "0 12px";
       }
+    }
+
+    offsetToggleBtn.onclick = () => {
+      offsetVisible = !offsetVisible;
+      localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
+      applyOffsetVisibility(offsetVisible);
       // Also toggle tabs visibility together with offset (settings button controls both)
       tabsVisible = offsetVisible;
       localStorage.setItem('lyricsPlusTabsVisible', JSON.stringify(tabsVisible));
@@ -3279,20 +3283,9 @@ const Providers = {
       applyControlsVisibility(controlsVisible);
     };
 
-    if (offsetVisible) {
-      offsetWrapper.style.maxHeight = "100px";
-      offsetWrapper.style.pointerEvents = "";
-      offsetWrapper.style.padding = "8px 12px";
-    } else {
-      offsetWrapper.style.maxHeight = "0";
-      offsetWrapper.style.pointerEvents = "none";
-      offsetWrapper.style.padding = "0 12px";
-    }
-
-    // Apply initial visibility for controlsBar (progressWrapper handled later after creation)
+    // Apply initial visibility states
+    applyOffsetVisibility(offsetVisible);
     applyControlsVisibility(controlsVisible);
-
-    // Apply initial visibility for tabs
     applyTabsVisibility(tabsVisible);
 
     // Create Spotify-style control buttons
