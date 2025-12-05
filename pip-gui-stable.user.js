@@ -2809,10 +2809,10 @@ const Providers = {
       }
     };
 
-    // Toggle offset section and tabs (settings button)
+    // Toggle offset section
     const offsetToggleBtn = document.createElement("button");
     offsetToggleBtn.textContent = "⚙️";
-    offsetToggleBtn.title = "Show/hide settings (timing offset & lyrics source tabs)";
+    offsetToggleBtn.title = "Show/hide timing offset";
     offsetToggleBtn.style.marginRight = "6px";
     offsetToggleBtn.style.cursor = "pointer";
     offsetToggleBtn.style.background = "none";
@@ -2821,10 +2821,13 @@ const Providers = {
     offsetToggleBtn.style.fontSize = "16px";
     offsetToggleBtn.style.lineHeight = "1";
 
-    // Toggle playback controls bar - use a better icon
+    // Toggle playback controls bar - use a better icon (with dropdown menu)
+    const playbackToggleBtnWrapper = document.createElement("div");
+    playbackToggleBtnWrapper.style.position = "relative";
+
     const playbackToggleBtn = document.createElement("button");
     playbackToggleBtn.textContent = "🎛️";
-    playbackToggleBtn.title = "Show/hide playback controls";
+    playbackToggleBtn.title = "Show/hide playback controls & seekbar";
     playbackToggleBtn.style.marginRight = "6px";
     playbackToggleBtn.style.cursor = "pointer";
     playbackToggleBtn.style.background = "none";
@@ -2833,17 +2836,66 @@ const Providers = {
     playbackToggleBtn.style.fontSize = "14px";
     playbackToggleBtn.style.lineHeight = "1";
 
-    // Toggle seekbar (progress bar)
-    const seekbarToggleBtn = document.createElement("button");
-    seekbarToggleBtn.textContent = "⏱️";
-    seekbarToggleBtn.title = "Show/hide seekbar";
-    seekbarToggleBtn.style.marginRight = "6px";
-    seekbarToggleBtn.style.cursor = "pointer";
-    seekbarToggleBtn.style.background = "none";
-    seekbarToggleBtn.style.border = "none";
-    seekbarToggleBtn.style.color = "white";
-    seekbarToggleBtn.style.fontSize = "14px";
-    seekbarToggleBtn.style.lineHeight = "1";
+    // Dropdown menu for playback toggle options
+    const playbackDropdown = document.createElement("div");
+    playbackDropdown.id = "lyrics-plus-playback-dropdown";
+    Object.assign(playbackDropdown.style, {
+      position: "absolute",
+      top: "110%",
+      right: "0",
+      minWidth: "140px",
+      backgroundColor: "#121212",
+      border: "1px solid #444",
+      borderRadius: "8px",
+      boxShadow: "0 2px 12px #0009",
+      zIndex: 99999,
+      display: "none",
+      flexDirection: "column",
+      padding: "4px 4px"
+    });
+
+    // Seekbar toggle option
+    const seekbarOption = document.createElement("button");
+    seekbarOption.textContent = "Seekbar";
+    Object.assign(seekbarOption.style, {
+      background: "#121212",
+      color: "#fff",
+      border: "none",
+      padding: "8px 10px",
+      cursor: "pointer",
+      textAlign: "left",
+      fontSize: "14px",
+      borderRadius: "5px",
+      display: "flex",
+      alignItems: "center",
+      gap: "8px"
+    });
+    seekbarOption.onmouseenter = () => { seekbarOption.style.background = "#333"; };
+    seekbarOption.onmouseleave = () => { seekbarOption.style.background = "#121212"; };
+
+    // Playback controls toggle option
+    const controlsOption = document.createElement("button");
+    controlsOption.textContent = "Playback Controls";
+    Object.assign(controlsOption.style, {
+      background: "#121212",
+      color: "#fff",
+      border: "none",
+      padding: "8px 10px",
+      cursor: "pointer",
+      textAlign: "left",
+      fontSize: "14px",
+      borderRadius: "5px",
+      display: "flex",
+      alignItems: "center",
+      gap: "8px"
+    });
+    controlsOption.onmouseenter = () => { controlsOption.style.background = "#333"; };
+    controlsOption.onmouseleave = () => { controlsOption.style.background = "#121212"; };
+
+    playbackDropdown.appendChild(seekbarOption);
+    playbackDropdown.appendChild(controlsOption);
+    playbackToggleBtnWrapper.appendChild(playbackToggleBtn);
+    playbackToggleBtnWrapper.appendChild(playbackDropdown);
 
     const titleBar = document.createElement("div");
     titleBar.style.display = "flex";
@@ -2859,8 +2911,7 @@ const Providers = {
     buttonGroup.appendChild(fontSizeSelect);
     buttonGroup.appendChild(btnReset);
     buttonGroup.appendChild(translationToggleBtn);
-    buttonGroup.appendChild(seekbarToggleBtn);
-    buttonGroup.appendChild(playbackToggleBtn);
+    buttonGroup.appendChild(playbackToggleBtnWrapper);
     buttonGroup.appendChild(offsetToggleBtn);
     buttonGroup.appendChild(closeBtn);
 
@@ -2869,12 +2920,9 @@ const Providers = {
 
     // Tabs container
     const tabs = document.createElement("div");
-    tabs.id = "lyrics-plus-tabs";
     tabs.style.display = "flex";
     tabs.style.marginTop = "12px";
     tabs.style.gap = "8px";
-    tabs.style.transition = "max-height 0.3s, padding 0.3s, opacity 0.3s, margin 0.3s";
-    tabs.style.overflow = "hidden";
 
     // --- PATCH: Separate single-click and double-click handlers for provider tabs ---
     let providerClickTimer = null;
@@ -3169,6 +3217,31 @@ const Providers = {
     offsetWrapper.appendChild(offsetLabel);
     offsetWrapper.appendChild(inputStack);
 
+    // Add tabs visibility toggle inside settings
+    const tabsToggleRow = document.createElement("div");
+    tabsToggleRow.style.display = "flex";
+    tabsToggleRow.style.alignItems = "center";
+    tabsToggleRow.style.justifyContent = "space-between";
+    tabsToggleRow.style.marginTop = "12px";
+    tabsToggleRow.style.width = "100%";
+
+    const tabsToggleLabel = document.createElement("div");
+    tabsToggleLabel.textContent = "Show lyrics source tabs";
+    tabsToggleLabel.style.color = "#fff";
+    tabsToggleLabel.style.fontSize = "15px";
+
+    const tabsToggleCheckbox = document.createElement("input");
+    tabsToggleCheckbox.type = "checkbox";
+    tabsToggleCheckbox.id = "lyrics-plus-tabs-toggle";
+    tabsToggleCheckbox.style.width = "18px";
+    tabsToggleCheckbox.style.height = "18px";
+    tabsToggleCheckbox.style.cursor = "pointer";
+    tabsToggleCheckbox.style.accentColor = "#1db954";
+
+    tabsToggleRow.appendChild(tabsToggleLabel);
+    tabsToggleRow.appendChild(tabsToggleCheckbox);
+    offsetWrapper.appendChild(tabsToggleRow);
+
     // Playback Controls Bar
     const controlsBar = document.createElement("div");
     Object.assign(controlsBar.style, {
@@ -3209,15 +3282,11 @@ const Providers = {
     // Helper functions to apply visibility states (reduces duplication)
     function applyTabsVisibility(visible) {
       if (visible) {
-        tabs.style.maxHeight = "50px";
+        tabs.style.display = "flex";
         tabs.style.marginTop = "12px";
-        tabs.style.opacity = "1";
-        tabs.style.pointerEvents = "";
       } else {
-        tabs.style.maxHeight = "0";
+        tabs.style.display = "none";
         tabs.style.marginTop = "0";
-        tabs.style.opacity = "0";
-        tabs.style.pointerEvents = "none";
       }
     }
 
@@ -3251,7 +3320,7 @@ const Providers = {
 
     function applyOffsetVisibility(visible) {
       if (visible) {
-        offsetWrapper.style.maxHeight = "100px";
+        offsetWrapper.style.maxHeight = "200px";
         offsetWrapper.style.pointerEvents = "";
         offsetWrapper.style.padding = "8px 12px";
       } else {
@@ -3261,32 +3330,65 @@ const Providers = {
       }
     }
 
+    // Update checkbox states in dropdown menus
+    function updateSeekbarOptionState() {
+      seekbarOption.textContent = (seekbarVisible ? "✓ " : "   ") + "Seekbar";
+    }
+    function updateControlsOptionState() {
+      controlsOption.textContent = (controlsVisible ? "✓ " : "   ") + "Playback Controls";
+    }
+
     offsetToggleBtn.onclick = () => {
       offsetVisible = !offsetVisible;
       localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
       applyOffsetVisibility(offsetVisible);
-      // Also toggle tabs visibility together with offset (settings button controls both)
-      tabsVisible = offsetVisible;
-      localStorage.setItem('lyricsPlusTabsVisible', JSON.stringify(tabsVisible));
-      applyTabsVisibility(tabsVisible);
     };
 
-    seekbarToggleBtn.onclick = () => {
+    // Show dropdown on playback button click
+    playbackToggleBtn.onclick = (e) => {
+      e.stopPropagation();
+      updateSeekbarOptionState();
+      updateControlsOptionState();
+      playbackDropdown.style.display = playbackDropdown.style.display === "flex" ? "none" : "flex";
+    };
+
+    // Hide dropdown when clicking outside
+    document.addEventListener("mousedown", (e) => {
+      if (!playbackToggleBtnWrapper.contains(e.target)) {
+        playbackDropdown.style.display = "none";
+      }
+    });
+
+    // Seekbar toggle from dropdown
+    seekbarOption.onclick = (e) => {
+      e.stopPropagation();
       seekbarVisible = !seekbarVisible;
       localStorage.setItem('lyricsPlusSeekbarVisible', JSON.stringify(seekbarVisible));
       applyProgressWrapperVisibility(seekbarVisible);
+      updateSeekbarOptionState();
     };
 
-    playbackToggleBtn.onclick = () => {
+    // Playback controls toggle from dropdown
+    controlsOption.onclick = (e) => {
+      e.stopPropagation();
       controlsVisible = !controlsVisible;
       localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
       applyControlsVisibility(controlsVisible);
+      updateControlsOptionState();
     };
 
     // Apply initial visibility states
     applyOffsetVisibility(offsetVisible);
     applyControlsVisibility(controlsVisible);
     applyTabsVisibility(tabsVisible);
+
+    // Initialize and handle tabs toggle checkbox in settings
+    tabsToggleCheckbox.checked = tabsVisible;
+    tabsToggleCheckbox.onchange = () => {
+      tabsVisible = tabsToggleCheckbox.checked;
+      localStorage.setItem('lyricsPlusTabsVisible', JSON.stringify(tabsVisible));
+      applyTabsVisibility(tabsVisible);
+    };
 
     // Create Spotify-style control buttons
     function createSpotifyControlButton(type, ariaLabel, onClick) {
@@ -3510,7 +3612,7 @@ const Providers = {
     progressWrapper.style.alignItems = "center";
     progressWrapper.style.gap = "8px";
     progressWrapper.style.padding = "8px 12px";
-    progressWrapper.style.borderTop = "1px solid #333";
+    progressWrapper.style.borderTop = "1px solid #222";
     progressWrapper.style.background = "#111";
     progressWrapper.style.boxSizing = "border-box";
     progressWrapper.style.transition = "max-height 0.3s, padding 0.3s, opacity 0.3s";
