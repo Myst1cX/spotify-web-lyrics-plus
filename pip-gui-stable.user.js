@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      11.0
+// @version      11.1
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,15 +12,11 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// MORE URGENT:
-// If Fullscreen mode is pressed: document.querySelector('[data-testid="fullscreen-mode-button"]'); 
-// --> set fullscreen-lyric container document.querySelector('[data-testid="fullscreen-lyric"]');
-// --> as default position of lyrics+ ui
-// Function with example of the two lyricContainers:
-/* function waitForLyrics() {
-const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]') || 
-document.querySelector('[data-testid="fullscreen-lyric"]');
-*/
+// RESOLVED (v11.1): FULLSCREEN MODE SUPPORT FOR LYRICS+ UI DEFAULT POSITION:
+// When Spotify is in fullscreen mode (fullscreen-lyric container is visible),
+// the "Restore Default Position" button now uses the fullscreen-lyric container
+// as the reference for positioning the Lyrics+ popup.
+// isSpotifyFullscreen() detects fullscreen mode by checking for the fullscreen-lyric element.
 
 // RESOLVED (v10.9): PLAYBACK BUTTONS' CORRECT REFLECTION OF PAGE ACTION NO LONGER RESTRICTED TO ENGLISH LOCALE:
 // Shuffle button and repeat button icons now clone directly from Spotify's visible DOM elements
@@ -2351,7 +2347,24 @@ const Providers = {
     const popup = document.createElement("div");
     popup.id = "lyrics-plus-popup";
 
+    // Check if Spotify is currently in fullscreen mode by detecting fullscreen-lyric container
+    // Returns the fullscreen-lyric element if in fullscreen mode, null otherwise
+    function getFullscreenLyricElement() {
+      const fullscreenLyric = document.querySelector('[data-testid="fullscreen-lyric"]');
+      if (fullscreenLyric !== null && fullscreenLyric.offsetParent !== null) {
+        return fullscreenLyric;
+      }
+      return null;
+    }
+
     function getSpotifyLyricsContainerRect() {
+      // When in fullscreen mode, use the fullscreen-lyric container as the reference
+      const fullscreenEl = getFullscreenLyricElement();
+      if (fullscreenEl && fullscreenEl.getBoundingClientRect) {
+        return fullscreenEl.getBoundingClientRect();
+      }
+
+      // Otherwise, fall back to main-view-container (normal mode)
       const el = document.querySelector('.main-view-container');
       if (!el || !el.getBoundingClientRect) {
         return null;
