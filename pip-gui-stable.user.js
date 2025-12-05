@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      10.8
+// @version      10.9
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -14,16 +14,17 @@
 
 // MORE URGENT:
 // Fixing KPoe provider (error: response is not provided) - might be on their end, will be observing
-// Currently shuffle button and repeat button (and its icon state changes) will only be reflected correctly if Spotify locale is set to English language..
-// I would have to manually add the buttons' aria label names in other languages.. Soon.
-// Idea: FORCE ENGLISH LOCALE (might help) --> https://open.spotify.com/?locale=en (note: if u refresh page it gets overriden)
 // If Fullscreen --> fullscreen-lyric as default position.
 // Function with example of the two lyricContainers:
 /* function waitForLyrics() {
 const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]') || document.querySelector('[data-testid="fullscreen-lyric"]');
 */
-// When playing a single, the shuffle and repeat buttons are disabled by default, i haven't added those styles yet to my popup's player controls
-// for shuffle and repeat buttons.. Song example: (https://open.spotify.com/track/5lehoWkVPujeOAwb8BO0uK?si=fb660aa566f54082)
+
+// RESOLVED (v10.9):
+// - Shuffle button and repeat button icons now clone directly from Spotify's visible DOM elements
+// - Language-independent detection using computed color (green = active) and SVG path structure
+// - Shuffle button found by SVG icon patterns instead of aria-label text
+// - Static SVGs are kept as fallbacks when DOM elements are not available
 
 
 // WHEN THE TIME IS RIGHT:
@@ -736,109 +737,371 @@ const PLAY_WORDS = [
     return PLAY_WORDS.some(word => label.includes(word));
   }
 
-  // --- Global Button Update Functions ---
-  function getShuffleState() {
-    // Robustly detect shuffle state using aria-label and button classes
-    const shuffleButtons = Array.from(document.querySelectorAll('button[aria-label]'));
-    for (const btn of shuffleButtons) {
-      const ariaLabel = btn.getAttribute('aria-label') || "";
-      if (btn.offsetParent === null) continue;
-      // Use regex to match regardless of playlist/queue name
-      if (/^Enable Shuffle/i.test(ariaLabel) && !/Smart/i.test(ariaLabel)) {
-        return 'off';
+  // --- Helper functions to clone SVG icons from Spotify's visible DOM buttons ---
+  // This approach uses the actual visible elements from Spotify's DOM instead of maintaining custom SVG definitions
+  // Benefits: Language-independent, automatically syncs with Spotify's UI updates, and shows exact icons Spotify uses
+
+  /**
+   * Clones an SVG element from a button, adjusts its size, and returns it.
+   * @param {HTMLElement} sourceButton - The Spotify button to clone the SVG from
+   * @param {number} width - Target width for the cloned SVG (default 16)
+   * @param {number} height - Target height for the cloned SVG (default 16)
+   * @returns {SVGElement|null} Cloned and resized SVG, or null if not found
+   */
+  function cloneSvgFromButton(sourceButton, width = 16, height = 16) {
+    if (!sourceButton) return null;
+    const svg = sourceButton.querySelector('svg');
+    if (!svg) return null;
+
+    const clonedSvg = svg.cloneNode(true);
+    // Normalize size for consistent display in our popup
+    clonedSvg.setAttribute('width', String(width));
+    clonedSvg.setAttribute('height', String(height));
+    clonedSvg.style.setProperty('--encore-icon-width', `${width}px`);
+    clonedSvg.style.setProperty('--encore-icon-height', `${height}px`);
+    return clonedSvg;
+  }
+
+  // --- Constants for Spotify green color detection ---
+  // Spotify's active button color is approximately rgb(30, 185, 84) = #1db954
+  const SPOTIFY_GREEN_MIN_G_VALUE = 100;  // Minimum green channel value for active state
+  const SPOTIFY_GREEN_RATIO_THRESHOLD = 1.5;  // Green must be this many times greater than R and B
+
+  /**
+   * Checks if an SVG has shuffle-icon-like structure.
+   * Shuffle icons have 2 paths with diagonal arrow patterns.
+   * @param {SVGElement} svg - The SVG element to check
+   * @returns {boolean} True if the SVG appears to be a shuffle icon
+   */
+  function isShuffleSvg(svg) {
+    if (!svg) return false;
+    const paths = svg.querySelectorAll('path');
+    // Shuffle icon typically has 2 paths (regular) or 3+ paths (smart shuffle)
+    if (paths.length < 2) return false;
+
+    // Check if viewBox is 16x16 (standard for these icons)
+    const viewBox = svg.getAttribute('viewBox');
+    if (viewBox && viewBox.includes('16 16')) {
+      return true;
+    }
+
+    // Fallback: check total path data length - shuffle icons are moderately complex
+    const totalPathLength = Array.from(paths)
+      .map(p => (p.getAttribute('d') || '').length)
+      .reduce((a, b) => a + b, 0);
+    // Shuffle icon paths are typically 200-800 characters total
+    return totalPathLength > 150 && totalPathLength < 1000;
+  }
+
+  /**
+   * Parses an RGB color string and checks if it represents Spotify green.
+   * @param {string} colorStr - CSS color string (e.g., "rgb(30, 185, 84)")
+   * @returns {boolean} True if the color is Spotify green
+   */
+  function isSpotifyGreenColor(colorStr) {
+    if (!colorStr) return false;
+    const rgbMatch = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (!rgbMatch) return false;
+    const [, r, g, b] = rgbMatch.map(Number);
+    // Spotify green has high G value relative to R and B
+    return g > SPOTIFY_GREEN_MIN_G_VALUE &&
+           g > r * SPOTIFY_GREEN_RATIO_THRESHOLD &&
+           g > b * SPOTIFY_GREEN_RATIO_THRESHOLD;
+  }
+
+  /**
+   * Finds the currently visible Spotify shuffle button.
+   * The shuffle button doesn't have a data-testid, so we find it by looking at the
+   * playback controls and finding a button with shuffle-like SVG structure.
+   * @returns {HTMLElement|null} The visible shuffle button or null
+   */
+  function findSpotifyShuffleButton() {
+    // Known playback control buttons by data-testid
+    const knownTestIds = [
+      'control-button-skip-back',
+      'control-button-playpause',
+      'control-button-skip-forward',
+      'control-button-repeat'
+    ];
+
+    /**
+     * Checks if a button is a shuffle button candidate.
+     * @param {HTMLElement} btn - Button to check
+     * @returns {boolean} True if button appears to be shuffle button
+     */
+    function isShuffleButtonCandidate(btn) {
+      if (btn.offsetParent === null) return false; // Skip invisible buttons
+      const testId = btn.getAttribute('data-testid');
+      if (knownTestIds.includes(testId)) return false;
+      const svg = btn.querySelector('svg');
+      return isShuffleSvg(svg);
+    }
+
+    // Look for buttons in the playback controls area
+    const playPauseBtn = document.querySelector('[data-testid="control-button-playpause"]');
+    if (playPauseBtn) {
+      // Get the parent container of playback controls
+      const controlsContainer = playPauseBtn.closest('[class*="player-controls"]') ||
+                                 playPauseBtn.parentElement?.parentElement;
+      if (controlsContainer) {
+        const buttons = controlsContainer.querySelectorAll('button');
+        for (const btn of buttons) {
+          if (isShuffleButtonCandidate(btn)) {
+            return btn;
+          }
+        }
       }
-      if (/^Enable Smart Shuffle/i.test(ariaLabel)) {
-        return 'on';
+    }
+
+    // Fallback: search all buttons
+    const allButtons = document.querySelectorAll('button');
+    for (const btn of allButtons) {
+      if (isShuffleButtonCandidate(btn)) {
+        return btn;
       }
-      if (/^Disable Shuffle/i.test(ariaLabel)) {
-        // Smart Shuffle ON (Spotify uses special icon/class for this)
+    }
+
+    return null;
+  }
+
+  /**
+   * Finds the currently visible Spotify repeat button.
+   * @returns {HTMLElement|null} The visible repeat button or null
+   */
+  function findSpotifyRepeatButton() {
+    return document.querySelector('[data-testid="control-button-repeat"]');
+  }
+
+  /**
+   * Finds the currently visible Spotify play/pause button.
+   * @returns {HTMLElement|null} The visible play/pause button or null
+   */
+  function findSpotifyPlayPauseButton() {
+    return document.querySelector('[data-testid="control-button-playpause"]');
+  }
+
+  /**
+   * Finds the currently visible Spotify previous button.
+   * @returns {HTMLElement|null} The visible previous button or null
+   */
+  function findSpotifyPreviousButton() {
+    return document.querySelector('[data-testid="control-button-skip-back"]');
+  }
+
+  /**
+   * Finds the currently visible Spotify next button.
+   * @returns {HTMLElement|null} The visible next button or null
+   */
+  function findSpotifyNextButton() {
+    return document.querySelector('[data-testid="control-button-skip-forward"]');
+  }
+
+  /**
+   * Checks if an element or its SVG child has Spotify green color.
+   * @param {HTMLElement} element - Element to check
+   * @returns {boolean} True if element appears to be in active (green) state
+   */
+  function isElementSpotifyGreen(element) {
+    if (!element) return false;
+
+    // Check the element's computed color
+    const computedStyle = window.getComputedStyle(element);
+    if (isSpotifyGreenColor(computedStyle.color)) {
+      return true;
+    }
+
+    // Check SVG fill/color
+    const svg = element.querySelector('svg');
+    if (svg) {
+      const svgStyle = window.getComputedStyle(svg);
+      if (isSpotifyGreenColor(svgStyle.fill) || isSpotifyGreenColor(svgStyle.color)) {
+        return true;
+      }
+    }
+
+    // Check icon wrapper span
+    const iconSpan = element.querySelector('span svg');
+    if (iconSpan) {
+      const spanStyle = window.getComputedStyle(iconSpan);
+      if (isSpotifyGreenColor(spanStyle.fill) || isSpotifyGreenColor(spanStyle.color)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Detects shuffle state based on visual indicators (language-independent).
+   * Uses computed color to determine active state and SVG path count to detect smart shuffle.
+   * @param {HTMLElement} shuffleBtn - The Spotify shuffle button
+   * @returns {'off'|'on'|'smart'} The shuffle state
+   */
+  function getShuffleStateFromButton(shuffleBtn) {
+    if (!shuffleBtn) return 'off';
+
+    // Use computed color to detect active state
+    const isActive = isElementSpotifyGreen(shuffleBtn);
+
+    if (!isActive) {
+      return 'off';
+    }
+
+    // Distinguish between regular shuffle and smart shuffle by checking SVG structure
+    // Smart shuffle icon has more path elements (includes star/sparkle elements)
+    const svg = shuffleBtn.querySelector('svg');
+    if (svg) {
+      const paths = svg.querySelectorAll('path');
+      // Smart shuffle typically has 3 paths (star + two arrow parts)
+      // Regular shuffle has 2 paths
+      if (paths.length >= 3) {
         return 'smart';
       }
     }
+
+    return 'on';
+  }
+
+  /**
+   * Detects repeat state based on button attributes (language-independent).
+   * Uses aria-checked attribute which is consistent across languages.
+   * @param {HTMLElement} repeatBtn - The Spotify repeat button
+   * @returns {'off'|'all'|'one'} The repeat state
+   */
+  function getRepeatStateFromButton(repeatBtn) {
+    if (!repeatBtn) return 'off';
+
+    const ariaChecked = repeatBtn.getAttribute('aria-checked');
+
+    // aria-checked states: 'false' = off, 'true' = all, 'mixed' = one
+    if (ariaChecked === 'false') {
+      return 'off';
+    }
+    if (ariaChecked === 'true') {
+      return 'all';
+    }
+    if (ariaChecked === 'mixed') {
+      return 'one';
+    }
+
     return 'off';
+  }
+
+  // --- Global Button Update Functions ---
+  function getShuffleState() {
+    // Use the new button-based detection (language-independent)
+    const shuffleBtn = findSpotifyShuffleButton();
+    return getShuffleStateFromButton(shuffleBtn);
   }
 
   function getRepeatState() {
-    // Robustly detect repeat state using aria-label and aria-checked
-    const repeatButton = document.querySelector('[data-testid="control-button-repeat"]');
-    if (!repeatButton) return 'off';
-
-    const ariaLabel = repeatButton.getAttribute('aria-label') || '';
-    const ariaChecked = repeatButton.getAttribute('aria-checked');
-    // Use regex to ignore possible playlist/queue name suffixes
-    if (/^Enable repeat/i.test(ariaLabel) && ariaChecked === 'false') {
-      return 'off';
-    }
-    if (/^Enable repeat one/i.test(ariaLabel) && ariaChecked === 'true') {
-      return 'all';
-    }
-    if (/^Disable repeat/i.test(ariaLabel) && ariaChecked === 'mixed') {
-      return 'one';
-    }
-    return 'off';
+    // Use the new button-based detection (language-independent)
+    const repeatBtn = findSpotifyRepeatButton();
+    return getRepeatStateFromButton(repeatBtn);
   }
 
   function updateShuffleButton(button, iconWrapper) {
-    const state = getShuffleState();
+    const spotifyShuffleBtn = findSpotifyShuffleButton();
+    const state = getShuffleStateFromButton(spotifyShuffleBtn);
 
     // Clear existing icon
     iconWrapper.innerHTML = "";
 
+    // Clone SVG from Spotify's visible button, falling back to static SVGs
+    const clonedSvg = cloneSvgFromButton(spotifyShuffleBtn, 16, 16);
+
+    // Use Spotify's locale-specific aria-label when available, with English fallbacks
+    // Fallback labels describe what clicking the button will do (next action)
     if (state === 'off') {
-      button.setAttribute("aria-label", "Enable shuffle");
+      button.setAttribute("aria-label", spotifyShuffleBtn?.getAttribute('aria-label') || "Enable shuffle");
       button.classList.remove("active");
       button.style.color = "rgba(255, 255, 255, 0.7)";
-      iconWrapper.appendChild(shuffleOffSVG.cloneNode(true));
+      iconWrapper.appendChild(clonedSvg || shuffleOffSVG.cloneNode(true));
     } else if (state === 'on') {
-      button.setAttribute("aria-label", "Enable smart shuffle");
+      button.setAttribute("aria-label", spotifyShuffleBtn?.getAttribute('aria-label') || "Enable smart shuffle");
       button.classList.add("active");
       button.style.color = "#1db954";
-      iconWrapper.appendChild(shuffleOffSVG.cloneNode(true));
+      iconWrapper.appendChild(clonedSvg || shuffleOffSVG.cloneNode(true));
     } else if (state === 'smart') {
-      button.setAttribute("aria-label", "Disable shuffle");
+      button.setAttribute("aria-label", spotifyShuffleBtn?.getAttribute('aria-label') || "Disable shuffle");
       button.classList.add("active");
       button.style.color = "#1db954";
-      iconWrapper.appendChild(shuffleSmartSVG.cloneNode(true));
+      iconWrapper.appendChild(clonedSvg || shuffleSmartSVG.cloneNode(true));
     }
   }
 
   function updateRepeatButton(button, iconWrapper) {
-    const state = getRepeatState();
+    const spotifyRepeatBtn = findSpotifyRepeatButton();
+    const state = getRepeatStateFromButton(spotifyRepeatBtn);
 
-     // Clear existing icon
+    // Clear existing icon
     iconWrapper.innerHTML = "";
 
+    // Clone SVG from Spotify's visible button, falling back to static SVGs
+    const clonedSvg = cloneSvgFromButton(spotifyRepeatBtn, 16, 16);
+
+    // Use Spotify's locale-specific aria-label when available, with English fallbacks
+    // Fallback labels describe what clicking the button will do (next action)
     if (state === 'off') {
-      button.setAttribute("aria-label", "Enable repeat");
+      button.setAttribute("aria-label", spotifyRepeatBtn?.getAttribute('aria-label') || "Enable repeat");
       button.classList.remove("active");
       button.style.color = "rgba(255, 255, 255, 0.7)";
-      iconWrapper.appendChild(repeatOffSVG.cloneNode(true));
+      iconWrapper.appendChild(clonedSvg || repeatOffSVG.cloneNode(true));
     } else if (state === 'all') {
-      button.setAttribute("aria-label", "Enable repeat one");
+      button.setAttribute("aria-label", spotifyRepeatBtn?.getAttribute('aria-label') || "Enable repeat one");
       button.classList.add("active");
       button.style.color = "#1db954";
-      iconWrapper.appendChild(repeatOffSVG.cloneNode(true));
+      iconWrapper.appendChild(clonedSvg || repeatOffSVG.cloneNode(true));
     } else if (state === 'one') {
-      button.setAttribute("aria-label", "Disable repeat");
+      button.setAttribute("aria-label", spotifyRepeatBtn?.getAttribute('aria-label') || "Disable repeat");
       button.classList.add("active");
       button.style.color = "#1db954";
-      iconWrapper.appendChild(repeatOneSVG.cloneNode(true));
+      iconWrapper.appendChild(clonedSvg || repeatOneSVG.cloneNode(true));
     }
   }
 
   function updatePlayPauseButton(button, iconWrapper) {
     const isPlaying = isSpotifyPlaying();
+    const spotifyPlayPauseBtn = findSpotifyPlayPauseButton();
 
-     // Clear existing icon
+    // Clear existing icon
     iconWrapper.innerHTML = "";
 
+    // Clone SVG from Spotify's visible button, falling back to static SVGs
+    const clonedSvg = cloneSvgFromButton(spotifyPlayPauseBtn, 16, 16);
+
+    // Use Spotify's locale-specific aria-label when available, with English fallbacks
     if (isPlaying) {
-      button.setAttribute("aria-label", "Pause");
-      iconWrapper.appendChild(pauseSmallSVG.cloneNode(true));
+      button.setAttribute("aria-label", spotifyPlayPauseBtn?.getAttribute('aria-label') || "Pause");
+      iconWrapper.appendChild(clonedSvg || pauseSmallSVG.cloneNode(true));
     } else {
-      button.setAttribute("aria-label", "Play");
-      iconWrapper.appendChild(playSmallSVG.cloneNode(true));
+      button.setAttribute("aria-label", spotifyPlayPauseBtn?.getAttribute('aria-label') || "Play");
+      iconWrapper.appendChild(clonedSvg || playSmallSVG.cloneNode(true));
     }
+  }
+
+  /**
+   * Updates the previous button icon from Spotify's DOM.
+   * @param {HTMLElement} iconWrapper - The icon wrapper element to update
+   */
+  function updatePreviousButtonIcon(iconWrapper) {
+    const spotifyPrevBtn = findSpotifyPreviousButton();
+    iconWrapper.innerHTML = "";
+
+    const clonedSvg = cloneSvgFromButton(spotifyPrevBtn, 16, 16);
+    iconWrapper.appendChild(clonedSvg || previousSVG.cloneNode(true));
+  }
+
+  /**
+   * Updates the next button icon from Spotify's DOM.
+   * @param {HTMLElement} iconWrapper - The icon wrapper element to update
+   */
+  function updateNextButtonIcon(iconWrapper) {
+    const spotifyNextBtn = findSpotifyNextButton();
+    iconWrapper.innerHTML = "";
+
+    const clonedSvg = cloneSvgFromButton(spotifyNextBtn, 16, 16);
+    iconWrapper.appendChild(clonedSvg || nextSVG.cloneNode(true));
   }
 
   // --- Update play/pause button state ---
@@ -2021,11 +2284,8 @@ const Providers = {
     if (!popup || !popup._shuffleBtn) return;
     if (popup._shuffleObserver) popup._shuffleObserver.disconnect();
 
-    // Always observe the actual shuffle button itself
-    const shuffleBtn = Array.from(document.querySelectorAll('button[aria-label]')).find(btn => {
-      const label = btn.getAttribute('aria-label') || '';
-      return /^Enable Shuffle|^Enable Smart Shuffle|^Disable Shuffle/i.test(label);
-    });
+    // Use the new language-independent function to find the shuffle button
+    const shuffleBtn = findSpotifyShuffleButton();
     if (!shuffleBtn) return;
 
     const observer = new MutationObserver(() => {
@@ -2041,7 +2301,8 @@ const Providers = {
     if (!popup || !popup._repeatBtn) return;
     if (popup._repeatObserver) popup._repeatObserver.disconnect();
 
-    let repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+    // Use the new language-independent function to find the repeat button
+    const repeatBtn = findSpotifyRepeatButton();
     if (!repeatBtn) return;
 
     const observer = new MutationObserver(() => {
@@ -2057,8 +2318,8 @@ const Providers = {
     if (!popup || !popup._playPauseBtn) return;
     if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
 
-    let spBtn = document.querySelector('[data-testid="control-button-playpause"]');
-    if (!spBtn) spBtn = document.querySelector('[aria-label]');
+    // Use the new language-independent function to find the play/pause button
+    const spBtn = findSpotifyPlayPauseButton();
     if (!spBtn) return;
     const observer = new MutationObserver(() => {
       if (popup._playPauseBtn) {
@@ -3099,63 +3360,17 @@ const Providers = {
     }
 
     function sendSpotifyCommand(command) {
-      // List of selectors per command, covering desktop and mobile
-      const selectors = {
-        playpause: [
-          '[aria-label="Play"]',
-          '[aria-label="Pause"]',
-          '[data-testid="control-button-playpause"]',
-          '[data-testid="mobile-play-button"]',
-          '[data-testid="mobile-pause-button"]'
-        ],
-        next: [
-          '[aria-label="Next"]',
-          '[data-testid="control-button-skip-forward"]',
-          '[data-testid="mobile-next-button"]'
-        ],
-        previous: [
-          '[aria-label="Previous"]',
-          '[data-testid="control-button-skip-back"]',
-          '[data-testid="mobile-prev-button"]'
-        ],
-        repeat: [
-          '[aria-label="Enable repeat"]',
-          '[aria-label="Enable repeat one"]',
-          '[aria-label="Disable repeat"]',
-          '[data-testid="control-button-repeat"]'
-        ]
+      // Map commands to their language-independent finder functions
+      const buttonFinders = {
+        shuffle: findSpotifyShuffleButton,
+        playpause: findSpotifyPlayPauseButton,
+        next: findSpotifyNextButton,
+        previous: findSpotifyPreviousButton,
+        repeat: findSpotifyRepeatButton
       };
 
-      let btn = null;
-
-      if (command === "shuffle") {
-        // Always re-query the DOM for the currently visible shuffle button
-        btn = Array.from(document.querySelectorAll('button[aria-label]')).find(button => {
-          if (button.offsetParent === null) return false;
-          const ariaLabel = button.getAttribute('aria-label');
-          if (!ariaLabel) return false;
-          const lower = ariaLabel.toLowerCase();
-          return lower.includes('enable shuffle') ||
-                 lower.includes('enable smart shuffle') ||
-                 lower.includes('disable shuffle');
-        });
-      } else if (command === "playpause") {
-        // Prefer specific selectors for playpause
-        btn = document.querySelector('[data-testid="control-button-playpause"]')
-           || document.querySelector('[aria-label="Play"]')
-           || document.querySelector('[aria-label="Pause"]');
-        // Only fallback if ALL of the above fail:
-        if (!btn) {
-          btn = Array.from(document.querySelectorAll("button"))
-            .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
-        }
-      } else {
-        // For other commands, use selectors
-        for (const sel of selectors[command] || []) {
-          btn = document.querySelector(sel);
-          if (btn && btn.offsetParent !== null) break;
-        }
-      }
+      const findButton = buttonFinders[command];
+      const btn = findButton ? findButton() : null;
 
       if (btn) {
         btn.click();
@@ -3185,7 +3400,8 @@ const Providers = {
       "Previous",
       () => sendSpotifyCommand("previous")
     );
-    prevIconWrapper.appendChild(previousSVG.cloneNode(true));
+    // Use DOM-cloned icon from Spotify's visible button
+    updatePreviousButtonIcon(prevIconWrapper);
 
     const { button: btnPlayPause, iconWrapper: playIconWrapper } = createPlayPauseButton(
       () => {
@@ -3199,7 +3415,8 @@ const Providers = {
       "Next",
       () => sendSpotifyCommand("next")
     );
-    nextIconWrapper.appendChild(nextSVG.cloneNode(true));
+    // Use DOM-cloned icon from Spotify's visible button
+    updateNextButtonIcon(nextIconWrapper);
 
     const { button: btnRepeat, iconWrapper: repeatIconWrapper } = createSpotifyControlButton(
       "repeat",
@@ -3210,7 +3427,7 @@ const Providers = {
       }
     );
 
-    // Initialize button states
+    // Initialize button states using DOM-cloned icons from Spotify's visible buttons
     updateShuffleButton(btnShuffle, shuffleIconWrapper);
     updatePlayPauseButton(btnPlayPause, playIconWrapper);
     updateRepeatButton(btnRepeat, repeatIconWrapper);
@@ -3219,6 +3436,8 @@ const Providers = {
     popup._shuffleBtn = { button: btnShuffle, iconWrapper: shuffleIconWrapper };
     popup._playPauseBtn = { button: btnPlayPause, iconWrapper: playIconWrapper };
     popup._repeatBtn = { button: btnRepeat, iconWrapper: repeatIconWrapper };
+    popup._prevBtn = { iconWrapper: prevIconWrapper };
+    popup._nextBtn = { iconWrapper: nextIconWrapper };
 
     controlsBar.appendChild(btnShuffle);
     controlsBar.appendChild(btnPrevious);
@@ -4256,7 +4475,7 @@ const Providers = {
         autodetectProviderAndLoad(popup, info);
       }
 
-      // Update all button states
+      // Update all button states using DOM-cloned icons from Spotify's visible buttons
       if (popup && popup._playPauseBtn) {
         updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
       }
@@ -4268,6 +4487,13 @@ const Providers = {
         observeSpotifyPlayPause(popup);
         observeSpotifyShuffle(popup);
         observeSpotifyRepeat(popup);
+      }
+      // Update prev/next button icons from Spotify's DOM
+      if (popup && popup._prevBtn) {
+        updatePreviousButtonIcon(popup._prevBtn.iconWrapper);
+      }
+      if (popup && popup._nextBtn) {
+        updateNextButtonIcon(popup._nextBtn.iconWrapper);
       }
     }, 400);
   }
