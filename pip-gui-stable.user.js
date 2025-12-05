@@ -24,7 +24,8 @@ const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]
 
 // RESOLVED (v10.9):
 // - Shuffle button and repeat button icons now clone directly from Spotify's visible DOM elements
-// - This is language-independent and automatically syncs with Spotify's UI updates
+// - Language-independent detection using computed color (green = active) and SVG path structure
+// - Shuffle button found by SVG icon patterns instead of aria-label text
 // - Static SVGs are kept as fallbacks when DOM elements are not available
 
 
@@ -765,19 +766,107 @@ const PLAY_WORDS = [
 
   /**
    * Finds the currently visible Spotify shuffle button.
-   * Shuffle button doesn't have a data-testid, so we search by aria-label patterns.
+   * The shuffle button doesn't have a data-testid, so we find it by looking at the
+   * playback controls and finding a button that isn't one of the known buttons.
+  // --- Constants for Spotify green color detection ---
+  // Spotify's active button color is approximately rgb(30, 185, 84) = #1db954
+  const SPOTIFY_GREEN_MIN_G_VALUE = 100;  // Minimum green channel value for active state
+  const SPOTIFY_GREEN_RATIO_THRESHOLD = 1.5;  // Green must be this many times greater than R and B
+
+  /**
+   * Checks if an SVG has shuffle-icon-like structure.
+   * Shuffle icons have 2 paths with diagonal arrow patterns.
+   * @param {SVGElement} svg - The SVG element to check
+   * @returns {boolean} True if the SVG appears to be a shuffle icon
+   */
+  function isShuffleSvg(svg) {
+    if (!svg) return false;
+    const paths = svg.querySelectorAll('path');
+    // Shuffle icon typically has 2 paths (regular) or 3+ paths (smart shuffle)
+    if (paths.length < 2) return false;
+
+    // Check if viewBox is 16x16 (standard for these icons)
+    const viewBox = svg.getAttribute('viewBox');
+    if (viewBox && viewBox.includes('16 16')) {
+      return true;
+    }
+
+    // Fallback: check total path data length - shuffle icons are moderately complex
+    const totalPathLength = Array.from(paths)
+      .map(p => (p.getAttribute('d') || '').length)
+      .reduce((a, b) => a + b, 0);
+    // Shuffle icon paths are typically 200-800 characters total
+    return totalPathLength > 150 && totalPathLength < 1000;
+  }
+
+  /**
+   * Parses an RGB color string and checks if it represents Spotify green.
+   * @param {string} colorStr - CSS color string (e.g., "rgb(30, 185, 84)")
+   * @returns {boolean} True if the color is Spotify green
+   */
+  function isSpotifyGreenColor(colorStr) {
+    if (!colorStr) return false;
+    const rgbMatch = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (!rgbMatch) return false;
+    const [, r, g, b] = rgbMatch.map(Number);
+    // Spotify green has high G value relative to R and B
+    return g > SPOTIFY_GREEN_MIN_G_VALUE &&
+           g > r * SPOTIFY_GREEN_RATIO_THRESHOLD &&
+           g > b * SPOTIFY_GREEN_RATIO_THRESHOLD;
+  }
+
+  /**
+   * Finds the currently visible Spotify shuffle button.
+   * The shuffle button doesn't have a data-testid, so we find it by looking at the
+   * playback controls and finding a button with shuffle-like SVG structure.
    * @returns {HTMLElement|null} The visible shuffle button or null
    */
   function findSpotifyShuffleButton() {
-    // Shuffle button is identified by aria-label containing "shuffle" (case-insensitive)
-    const buttons = Array.from(document.querySelectorAll('button[aria-label]'));
-    for (const btn of buttons) {
-      if (btn.offsetParent === null) continue; // Skip invisible buttons
-      const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
-      if (ariaLabel.includes('shuffle')) {
+    // Known playback control buttons by data-testid
+    const knownTestIds = [
+      'control-button-skip-back',
+      'control-button-playpause',
+      'control-button-skip-forward',
+      'control-button-repeat'
+    ];
+
+    /**
+     * Checks if a button is a shuffle button candidate.
+     * @param {HTMLElement} btn - Button to check
+     * @returns {boolean} True if button appears to be shuffle button
+     */
+    function isShuffleButtonCandidate(btn) {
+      if (btn.offsetParent === null) return false; // Skip invisible buttons
+      const testId = btn.getAttribute('data-testid');
+      if (knownTestIds.includes(testId)) return false;
+      const svg = btn.querySelector('svg');
+      return isShuffleSvg(svg);
+    }
+
+    // Look for buttons in the playback controls area
+    const playPauseBtn = document.querySelector('[data-testid="control-button-playpause"]');
+    if (playPauseBtn) {
+      // Get the parent container of playback controls
+      const controlsContainer = playPauseBtn.closest('[class*="player-controls"]') ||
+                                 playPauseBtn.parentElement?.parentElement;
+      if (controlsContainer) {
+        const buttons = controlsContainer.querySelectorAll('button');
+        for (const btn of buttons) {
+          if (isShuffleButtonCandidate(btn)) {
+            return btn;
+          }
+        }
+      }
+    }
+
+    // Fallback: search all buttons
+    const allButtons = document.querySelectorAll('button');
+    for (const btn of allButtons) {
+      if (isShuffleButtonCandidate(btn)) {
         return btn;
       }
     }
+
     return null;
   }
 
@@ -814,33 +903,64 @@ const PLAY_WORDS = [
   }
 
   /**
-   * Detects shuffle state based on button classes (language-independent).
-   * Active state is indicated by specific CSS classes on the button.
+   * Checks if an element or its SVG child has Spotify green color.
+   * @param {HTMLElement} element - Element to check
+   * @returns {boolean} True if element appears to be in active (green) state
+   */
+  function isElementSpotifyGreen(element) {
+    if (!element) return false;
+
+    // Check the element's computed color
+    const computedStyle = window.getComputedStyle(element);
+    if (isSpotifyGreenColor(computedStyle.color)) {
+      return true;
+    }
+
+    // Check SVG fill/color
+    const svg = element.querySelector('svg');
+    if (svg) {
+      const svgStyle = window.getComputedStyle(svg);
+      if (isSpotifyGreenColor(svgStyle.fill) || isSpotifyGreenColor(svgStyle.color)) {
+        return true;
+      }
+    }
+
+    // Check icon wrapper span
+    const iconSpan = element.querySelector('span svg');
+    if (iconSpan) {
+      const spanStyle = window.getComputedStyle(iconSpan);
+      if (isSpotifyGreenColor(spanStyle.fill) || isSpotifyGreenColor(spanStyle.color)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Detects shuffle state based on visual indicators (language-independent).
+   * Uses computed color to determine active state and SVG path count to detect smart shuffle.
    * @param {HTMLElement} shuffleBtn - The Spotify shuffle button
    * @returns {'off'|'on'|'smart'} The shuffle state
    */
   function getShuffleStateFromButton(shuffleBtn) {
     if (!shuffleBtn) return 'off';
 
-    // Check if button has active indicator class (green dot indicator)
-    // Spotify uses classes like 'E1ikFpkPVaoLplbQdrTP' or similar for active state
-    const classList = shuffleBtn.className || '';
-    const isActive = classList.includes('E1ikFpkPVaoLplbQdrTP') ||
-                     classList.includes('vW9NFcNIj8useE43Vx9G') ||
-                     shuffleBtn.classList.contains('active');
+    // Use computed color to detect active state
+    const isActive = isElementSpotifyGreen(shuffleBtn);
 
     if (!isActive) {
       return 'off';
     }
 
-    // Check SVG path to distinguish between regular shuffle and smart shuffle
-    // Smart shuffle has a distinctive star-like path
+    // Distinguish between regular shuffle and smart shuffle by checking SVG structure
+    // Smart shuffle icon has more path elements (includes star/sparkle elements)
     const svg = shuffleBtn.querySelector('svg');
     if (svg) {
       const paths = svg.querySelectorAll('path');
-      const pathData = Array.from(paths).map(p => p.getAttribute('d') || '').join('');
-      // Smart shuffle icon contains this distinctive pattern (star sparkle)
-      if (pathData.includes('M4.502 0') || pathData.includes('.637.637')) {
+      // Smart shuffle typically has 3 paths (star + two arrow parts)
+      // Regular shuffle has 2 paths
+      if (paths.length >= 3) {
         return 'smart';
       }
     }
@@ -850,6 +970,7 @@ const PLAY_WORDS = [
 
   /**
    * Detects repeat state based on button attributes (language-independent).
+   * Uses aria-checked attribute which is consistent across languages.
    * @param {HTMLElement} repeatBtn - The Spotify repeat button
    * @returns {'off'|'all'|'one'} The repeat state
    */
