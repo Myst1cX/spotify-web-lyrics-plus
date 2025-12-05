@@ -2743,7 +2743,7 @@ const Providers = {
       display: "none", // Hidden by default, shown when Chinese lyrics are present
       transition: "background 0.15s ease",
     });
-    chineseConvBtn.onmouseenter = () => { chineseConvBtn.style.background = "#333"; };
+    chineseConvBtn.onmouseenter = () => { chineseConvBtn.style.background = "#222"; };
     chineseConvBtn.onmouseleave = () => { chineseConvBtn.style.background = "none"; };
 
     // Helper to update button text based on original script type and conversion state
