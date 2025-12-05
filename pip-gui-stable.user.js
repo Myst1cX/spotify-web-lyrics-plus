@@ -7,6 +7,7 @@
 // @grant        GM_xmlhttpRequest
 // @connect      genius.com
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/t2cn.js
+// @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/cn2t.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
@@ -311,6 +312,27 @@
         return str;
       } catch (e) {
         console.warn('[Lyrics+] Traditional to Simplified conversion error:', e);
+        return str;
+      }
+    },
+    // Convert Simplified Chinese to Traditional Chinese using opencc-js
+    // Falls back to original string if converter is not available
+    toTraditionalChinese(str) {
+      if (!str) return str;
+      try {
+        // Try different ways to access the OpenCC converter (loaded via @require)
+        if (window.OpenCC?.cn2t) {
+          return window.OpenCC.cn2t(str);
+        } else if (window.cn2t) {
+          return window.cn2t(str);
+        } else if (window.OpenCC?.Converter) {
+          const converter = window.OpenCC.Converter({ from: 'cn', to: 't' });
+          return converter(str);
+        }
+        // Converter not available, return original
+        return str;
+      } catch (e) {
+        console.warn('[Lyrics+] Simplified to Traditional conversion error:', e);
         return str;
       }
     },
@@ -2723,16 +2745,23 @@ const Providers = {
       transition: "background 0.2s ease",
     });
 
-    // Helper to update button text based on conversion state
-    // Button only shows for Traditional lyrics, so:
-    // - Not converted: "繁→简" (click to convert to Simplified)
-    // - Converted: "繁←简" (click to revert to Traditional)
+    // Helper to update button text based on original script type and conversion state
+    // For Traditional lyrics: "繁→简" (convert) / "繁←简" (revert)
+    // For Simplified lyrics: "简→繁" (convert) / "简←繁" (revert)
     function updateChineseConvBtnText() {
       const isConverted = isChineseConversionEnabled();
-      chineseConvBtn.textContent = isConverted ? "繁←简" : "繁→简";
-      chineseConvBtn.title = isConverted
-        ? "Revert to Traditional Chinese"
-        : "Convert to Simplified Chinese";
+      if (originalChineseScriptType === 'traditional') {
+        chineseConvBtn.textContent = isConverted ? "繁←简" : "繁→简";
+        chineseConvBtn.title = isConverted
+          ? "Revert to Traditional Chinese (原: 繁體)"
+          : "Convert to Simplified Chinese (原: 繁體)";
+      } else {
+        // Simplified lyrics
+        chineseConvBtn.textContent = isConverted ? "简←繁" : "简→繁";
+        chineseConvBtn.title = isConverted
+          ? "Revert to Simplified Chinese (原: 简体)"
+          : "Convert to Traditional Chinese (原: 简体)";
+      }
     }
     popup._updateChineseConvBtnText = updateChineseConvBtnText;
 
@@ -4647,10 +4676,14 @@ const Providers = {
       popup._updateChineseConvBtnText();
     }
 
-    // Helper function to convert text if needed
+    // Helper function to convert text if needed (bidirectional)
     const convertText = (text) => {
       if (shouldConvertChinese && text && Utils.containsHanCharacter(text)) {
-        return Utils.toSimplifiedChinese(text);
+        if (originalChineseScriptType === 'traditional') {
+          return Utils.toSimplifiedChinese(text);
+        } else {
+          return Utils.toTraditionalChinese(text);
+        }
       }
       return text;
     };
@@ -4724,10 +4757,10 @@ const Providers = {
       originalChineseScriptType = null;
     }
 
-    // Show/hide Chinese conversion button - only for Traditional Chinese lyrics
-    // (We only have T→S conversion via opencc-js t2cn)
+    // Show/hide Chinese conversion button - for both Traditional and Simplified Chinese lyrics
+    // Now supports bidirectional conversion via opencc-js (t2cn and cn2t)
     if (chineseConvBtn) {
-      if (hasChineseLyrics && originalChineseScriptType === 'traditional') {
+      if (hasChineseLyrics && originalChineseScriptType) {
         chineseConvBtn.style.display = "inline-flex";
         // Update button text to show conversion direction
         if (popup._updateChineseConvBtnText) {
@@ -4741,10 +4774,14 @@ const Providers = {
     // Check if Chinese conversion is enabled
     const shouldConvertChinese = isChineseConversionEnabled();
 
-    // Helper function to convert text if needed
+    // Helper function to convert text if needed (bidirectional)
     const convertText = (text) => {
       if (shouldConvertChinese && text && Utils.containsHanCharacter(text)) {
-        return Utils.toSimplifiedChinese(text);
+        if (originalChineseScriptType === 'traditional') {
+          return Utils.toSimplifiedChinese(text);
+        } else {
+          return Utils.toTraditionalChinese(text);
+        }
       }
       return text;
     };
