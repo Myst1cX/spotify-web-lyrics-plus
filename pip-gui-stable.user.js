@@ -92,18 +92,14 @@
         openccT2CN = OpenCC.Converter({ from: 't', to: 'cn' });
         openccCN2T = OpenCC.Converter({ from: 'cn', to: 't' });
         console.log('[Lyrics+] OpenCC converters initialized successfully (t↔cn)');
-        return true;
       } else if (retries > 0) {
         // OpenCC not available yet, retry after a short delay
         setTimeout(() => initOpenCCConverters(retries - 1, delay * 2), delay);
-        return false;
       } else {
         console.warn('[Lyrics+] OpenCC not available after retries');
-        return false;
       }
     } catch (e) {
       console.warn('[Lyrics+] OpenCC converter initialization error:', e);
-      return false;
     }
   }
   // Attempt initialization immediately
@@ -343,8 +339,9 @@
         }
         // Fallback: try to create converter on-the-fly if not initialized
         if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
-          openccT2CN = OpenCC.Converter({ from: 't', to: 'cn' });
-          return openccT2CN(str);
+          const converter = OpenCC.Converter({ from: 't', to: 'cn' });
+          openccT2CN = converter; // Cache for future use
+          return converter(str);
         }
         // Converter not available, return original
         console.warn('[Lyrics+] T→CN converter not available');
@@ -365,8 +362,9 @@
         }
         // Fallback: try to create converter on-the-fly if not initialized
         if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
-          openccCN2T = OpenCC.Converter({ from: 'cn', to: 't' });
-          return openccCN2T(str);
+          const converter = OpenCC.Converter({ from: 'cn', to: 't' });
+          openccCN2T = converter; // Cache for future use
+          return converter(str);
         }
         // Converter not available, return original
         console.warn('[Lyrics+] CN→T converter not available');
