@@ -3332,10 +3332,26 @@ const Providers = {
 
     // Update checkbox states in dropdown menus
     function updateSeekbarOptionState() {
-      seekbarOption.textContent = (seekbarVisible ? "✓ " : "   ") + "Seekbar";
+      seekbarOption.innerHTML = "";
+      const checkSpan = document.createElement("span");
+      checkSpan.style.width = "16px";
+      checkSpan.style.display = "inline-block";
+      checkSpan.textContent = seekbarVisible ? "✓" : "";
+      const labelSpan = document.createElement("span");
+      labelSpan.textContent = "Seekbar";
+      seekbarOption.appendChild(checkSpan);
+      seekbarOption.appendChild(labelSpan);
     }
     function updateControlsOptionState() {
-      controlsOption.textContent = (controlsVisible ? "✓ " : "   ") + "Playback Controls";
+      controlsOption.innerHTML = "";
+      const checkSpan = document.createElement("span");
+      checkSpan.style.width = "16px";
+      checkSpan.style.display = "inline-block";
+      checkSpan.textContent = controlsVisible ? "✓" : "";
+      const labelSpan = document.createElement("span");
+      labelSpan.textContent = "Playback Controls";
+      controlsOption.appendChild(checkSpan);
+      controlsOption.appendChild(labelSpan);
     }
 
     offsetToggleBtn.onclick = () => {
