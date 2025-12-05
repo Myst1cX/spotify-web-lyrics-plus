@@ -12,15 +12,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// MORE URGENT:
-// If Fullscreen mode is pressed: document.querySelector('[data-testid="fullscreen-mode-button"]'); 
-// --> set fullscreen-lyric container document.querySelector('[data-testid="fullscreen-lyric"]');
-// --> as default position of lyrics+ ui
-// Function with example of the two lyricContainers:
-/* function waitForLyrics() {
-const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]') || 
-document.querySelector('[data-testid="fullscreen-lyric"]');
-*/
+// RESOLVED (v11): ADDITION OF SEEKBAR + COLLAPSING THE LYRIC SOURCE TAB GROUP + SETTINGS UI REVAMP 
 
 // RESOLVED (v10.9): PLAYBACK BUTTONS' CORRECT REFLECTION OF PAGE ACTION NO LONGER RESTRICTED TO ENGLISH LOCALE:
 // Shuffle button and repeat button icons now clone directly from Spotify's visible DOM elements
@@ -4833,4 +4825,5 @@ const Providers = {
     }
   });
 })();
+
 
