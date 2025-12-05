@@ -3362,63 +3362,17 @@ const Providers = {
     }
 
     function sendSpotifyCommand(command) {
-      // List of selectors per command, covering desktop and mobile
-      const selectors = {
-        playpause: [
-          '[aria-label="Play"]',
-          '[aria-label="Pause"]',
-          '[data-testid="control-button-playpause"]',
-          '[data-testid="mobile-play-button"]',
-          '[data-testid="mobile-pause-button"]'
-        ],
-        next: [
-          '[aria-label="Next"]',
-          '[data-testid="control-button-skip-forward"]',
-          '[data-testid="mobile-next-button"]'
-        ],
-        previous: [
-          '[aria-label="Previous"]',
-          '[data-testid="control-button-skip-back"]',
-          '[data-testid="mobile-prev-button"]'
-        ],
-        repeat: [
-          '[aria-label="Enable repeat"]',
-          '[aria-label="Enable repeat one"]',
-          '[aria-label="Disable repeat"]',
-          '[data-testid="control-button-repeat"]'
-        ]
+      // Map commands to their language-independent finder functions
+      const buttonFinders = {
+        shuffle: findSpotifyShuffleButton,
+        playpause: findSpotifyPlayPauseButton,
+        next: findSpotifyNextButton,
+        previous: findSpotifyPreviousButton,
+        repeat: findSpotifyRepeatButton
       };
 
-      let btn = null;
-
-      if (command === "shuffle") {
-        // Always re-query the DOM for the currently visible shuffle button
-        btn = Array.from(document.querySelectorAll('button[aria-label]')).find(button => {
-          if (button.offsetParent === null) return false;
-          const ariaLabel = button.getAttribute('aria-label');
-          if (!ariaLabel) return false;
-          const lower = ariaLabel.toLowerCase();
-          return lower.includes('enable shuffle') ||
-                 lower.includes('enable smart shuffle') ||
-                 lower.includes('disable shuffle');
-        });
-      } else if (command === "playpause") {
-        // Prefer specific selectors for playpause
-        btn = document.querySelector('[data-testid="control-button-playpause"]')
-           || document.querySelector('[aria-label="Play"]')
-           || document.querySelector('[aria-label="Pause"]');
-        // Only fallback if ALL of the above fail:
-        if (!btn) {
-          btn = Array.from(document.querySelectorAll("button"))
-            .find(b => /play|pause/i.test(b.textContent) && b.offsetParent !== null);
-        }
-      } else {
-        // For other commands, use selectors
-        for (const sel of selectors[command] || []) {
-          btn = document.querySelector(sel);
-          if (btn && btn.offsetParent !== null) break;
-        }
-      }
+      const findButton = buttonFinders[command];
+      const btn = findButton ? findButton() : null;
 
       if (btn) {
         btn.click();
