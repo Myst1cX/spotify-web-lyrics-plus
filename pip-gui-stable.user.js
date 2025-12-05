@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      13.0
+// @version      13.5
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,12 +13,13 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (v13) TRADITIONAL ⇄ SIMPLIFIED CHINESE CONVERSION VIA OPEN.CC
-// Reference and Credit: greasyfork user holsoma 
-// (https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified/)
 
-// RESOLVED (v12): ADDED A GITHUB LINK TO REPOSITORY
-// Reference and Credit: greasyfork user jayxdcode
+// RESOLVED (v13) TRADITIONAL TO SIMPLIFIED CHINESE CONVERSION (VIA OPEN.CC)
+// Reference: (https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified/)
+
+// RESOLVED (v12): ADDED A GITHUB LINK TO REPOSITORY (credits to greasyfork user jayxdcode)
+
+// RESOLVED (v12): ADDED A GITHUB LINK TO REPOSITORY (credits to greasyfork user jayxdcode)
 
 // RESOLVED (v11): ADDITION OF SEEKBAR + COLLAPSING THE LYRIC SOURCE TAB GROUP + SETTINGS UI REVAMP
 
@@ -67,6 +68,7 @@
   let translationPresent = false;
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
+  let originalChineseScriptType = null; // 'traditional', 'simplified', or null
 
   // --- Forcibly hide NowPlayingView and its button in the playback controls menu ---
 
@@ -271,6 +273,21 @@
     },
     containsHanCharacter(str) {
       return /[\u4e00-\u9fa5]/.test(str);
+    },
+    // Detect if text contains Traditional Chinese characters
+    // Uses common Traditional-only characters that don't appear in Simplified
+    containsTraditionalChinese(str) {
+      if (!str) return false;
+      // Key Traditional Chinese characters that differ from Simplified
+      // Focused on common words: 學國語說開關電視書報讀寫買賣銀錢頭腦體驗識詞義務歷經濟發農業場運動會議題問數據圖館點餐廳飯團壞邊選擇結構營設計資訊處網絡線環準備錄製廣視頻審劇編導項認話與當給獲則讓適將種機構僅個為們來過術藝醫療臺灣鐘錶愛戀聯繫電話見機飛機觀眾聽衆紙張幫幣
+      const traditionalOnlyPattern = /[學國說開關電視書報讀寫買賣銀錢頭腦體驗識詞義務歷經濟發農場運會議題問數據圖館點餐廳飯團壞邊選擇結構營設計資訊處網絡線環準備錄製廣視頻審劇編導認話與當給獲則讓適將種機構僅個為們來過術藝醫療臺灣鐘錶愛戀聯繫見飛觀眾聽衆紙張幫幣黨門員業務無對長時間東動變這種請總樂進車輸師聯絡齊遠親識優斷飛複雜專項態難標創財組織級導處論統區]/;
+      return traditionalOnlyPattern.test(str);
+    },
+    // Detect the Chinese script type of a text
+    // Returns 'traditional', 'simplified', or null if no Chinese
+    detectChineseScriptType(str) {
+      if (!str || !this.containsHanCharacter(str)) return null;
+      return this.containsTraditionalChinese(str) ? 'traditional' : 'simplified';
     },
     capitalize(str, lower = false) {
       if (!str) return '';
@@ -2688,8 +2705,8 @@ const Providers = {
     // Styled like the reference script's toggle button
     const chineseConvBtn = document.createElement("button");
     chineseConvBtn.id = "lyrics-plus-chinese-conv-btn";
-    chineseConvBtn.textContent = "繁 / 简";
-    chineseConvBtn.title = "Toggle Traditional / Simplified Chinese";
+    chineseConvBtn.textContent = "繁→简"; // Default, will be updated based on detected script
+    chineseConvBtn.title = "Convert Chinese script";
     Object.assign(chineseConvBtn.style, {
       padding: "6px 10px",
       fontSize: "12px",
@@ -2705,11 +2722,27 @@ const Providers = {
       display: "none", // Hidden by default, shown when Chinese lyrics are present
       transition: "background 0.2s ease",
     });
+
+    // Helper to update button text based on conversion state
+    // Button only shows for Traditional lyrics, so:
+    // - Not converted: "繁→简" (click to convert to Simplified)
+    // - Converted: "简→繁" (click to revert to Traditional)
+    function updateChineseConvBtnText() {
+      const isConverted = isChineseConversionEnabled();
+      chineseConvBtn.textContent = isConverted ? "简→繁" : "繁→简";
+      chineseConvBtn.title = isConverted
+        ? "Revert to Traditional Chinese"
+        : "Convert to Simplified Chinese";
+    }
+    popup._updateChineseConvBtnText = updateChineseConvBtnText;
+
     chineseConvBtn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
       const newState = !isChineseConversionEnabled();
       setChineseConversionEnabled(newState);
+      // Update button text to show new conversion direction
+      updateChineseConvBtnText();
       // Re-render cached lyrics with new conversion setting (no provider reload)
       rerenderLyrics(popup);
     };
@@ -4679,17 +4712,30 @@ const Providers = {
     let synced = provider.getSynced(result);
     let unsynced = provider.getUnsynced(result);
 
-    // Check if lyrics contain Chinese characters
+    // Check if lyrics contain Chinese characters and detect script type
     const lyrics = synced || unsynced || [];
     const hasChineseLyrics = lyrics.some(line => line.text && Utils.containsHanCharacter(line.text));
 
-    // Show/hide Chinese conversion button based on whether Chinese lyrics are present
+    // Detect original Chinese script type from the lyrics
+    if (hasChineseLyrics) {
+      const allLyricsText = lyrics.map(line => line.text || '').join('');
+      originalChineseScriptType = Utils.detectChineseScriptType(allLyricsText);
+    } else {
+      originalChineseScriptType = null;
+    }
+
+    // Show/hide Chinese conversion button - only for Traditional Chinese lyrics
+    // (We only have T→S conversion via opencc-js t2cn)
     if (chineseConvBtn) {
-      if (hasChineseLyrics) {
+      if (hasChineseLyrics && originalChineseScriptType === 'traditional') {
         chineseConvBtn.style.display = "inline-flex";
-        // Update button appearance based on current state (darker = Simplified mode active)
+        // Update button appearance based on current state (darker = conversion active)
         const isEnabled = isChineseConversionEnabled();
         chineseConvBtn.style.background = isEnabled ? "rgba(80,80,80,.55)" : "rgba(30,30,30,.55)";
+        // Update button text to show conversion direction
+        if (popup._updateChineseConvBtnText) {
+          popup._updateChineseConvBtnText();
+        }
       } else {
         chineseConvBtn.style.display = "none";
       }
