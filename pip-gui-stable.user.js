@@ -2854,9 +2854,8 @@ const Providers = {
       padding: "4px 4px"
     });
 
-    // Seekbar toggle option
-    const seekbarOption = document.createElement("button");
-    seekbarOption.textContent = "Seekbar";
+    // Seekbar toggle option with checkbox
+    const seekbarOption = document.createElement("label");
     Object.assign(seekbarOption.style, {
       background: "#121212",
       color: "#fff",
@@ -2873,9 +2872,22 @@ const Providers = {
     seekbarOption.onmouseenter = () => { seekbarOption.style.background = "#333"; };
     seekbarOption.onmouseleave = () => { seekbarOption.style.background = "#121212"; };
 
-    // Playback controls toggle option
-    const controlsOption = document.createElement("button");
-    controlsOption.textContent = "Playback Controls";
+    const seekbarCheckbox = document.createElement("input");
+    seekbarCheckbox.type = "checkbox";
+    seekbarCheckbox.id = "lyrics-plus-seekbar-toggle";
+    seekbarCheckbox.style.width = "16px";
+    seekbarCheckbox.style.height = "16px";
+    seekbarCheckbox.style.cursor = "pointer";
+    seekbarCheckbox.style.accentColor = "#1db954";
+
+    const seekbarLabel = document.createElement("span");
+    seekbarLabel.textContent = "Seekbar";
+
+    seekbarOption.appendChild(seekbarCheckbox);
+    seekbarOption.appendChild(seekbarLabel);
+
+    // Playback controls toggle option with checkbox
+    const controlsOption = document.createElement("label");
     Object.assign(controlsOption.style, {
       background: "#121212",
       color: "#fff",
@@ -2891,6 +2903,20 @@ const Providers = {
     });
     controlsOption.onmouseenter = () => { controlsOption.style.background = "#333"; };
     controlsOption.onmouseleave = () => { controlsOption.style.background = "#121212"; };
+
+    const controlsCheckbox = document.createElement("input");
+    controlsCheckbox.type = "checkbox";
+    controlsCheckbox.id = "lyrics-plus-controls-toggle";
+    controlsCheckbox.style.width = "16px";
+    controlsCheckbox.style.height = "16px";
+    controlsCheckbox.style.cursor = "pointer";
+    controlsCheckbox.style.accentColor = "#1db954";
+
+    const controlsLabel = document.createElement("span");
+    controlsLabel.textContent = "Playback Controls";
+
+    controlsOption.appendChild(controlsCheckbox);
+    controlsOption.appendChild(controlsLabel);
 
     playbackDropdown.appendChild(seekbarOption);
     playbackDropdown.appendChild(controlsOption);
@@ -3217,13 +3243,17 @@ const Providers = {
     offsetWrapper.appendChild(offsetLabel);
     offsetWrapper.appendChild(inputStack);
 
-    // Add tabs visibility toggle inside settings
-    const tabsToggleRow = document.createElement("div");
-    tabsToggleRow.style.display = "flex";
-    tabsToggleRow.style.alignItems = "center";
-    tabsToggleRow.style.justifyContent = "space-between";
-    tabsToggleRow.style.marginTop = "12px";
-    tabsToggleRow.style.width = "100%";
+    // Add tabs visibility toggle as a separate settings row
+    const tabsToggleWrapper = document.createElement("div");
+    tabsToggleWrapper.id = "lyrics-plus-tabs-toggle-wrapper";
+    tabsToggleWrapper.style.display = "flex";
+    tabsToggleWrapper.style.alignItems = "center";
+    tabsToggleWrapper.style.justifyContent = "space-between";
+    tabsToggleWrapper.style.padding = "8px 12px";
+    tabsToggleWrapper.style.background = "#121212";
+    tabsToggleWrapper.style.borderBottom = "1px solid #333";
+    tabsToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
+    tabsToggleWrapper.style.overflow = "hidden";
 
     const tabsToggleLabel = document.createElement("div");
     tabsToggleLabel.textContent = "Show lyrics source tabs";
@@ -3238,9 +3268,8 @@ const Providers = {
     tabsToggleCheckbox.style.cursor = "pointer";
     tabsToggleCheckbox.style.accentColor = "#1db954";
 
-    tabsToggleRow.appendChild(tabsToggleLabel);
-    tabsToggleRow.appendChild(tabsToggleCheckbox);
-    offsetWrapper.appendChild(tabsToggleRow);
+    tabsToggleWrapper.appendChild(tabsToggleLabel);
+    tabsToggleWrapper.appendChild(tabsToggleCheckbox);
 
     // Playback Controls Bar
     const controlsBar = document.createElement("div");
@@ -3323,35 +3352,25 @@ const Providers = {
         offsetWrapper.style.maxHeight = "200px";
         offsetWrapper.style.pointerEvents = "";
         offsetWrapper.style.padding = "8px 12px";
+        tabsToggleWrapper.style.maxHeight = "50px";
+        tabsToggleWrapper.style.pointerEvents = "";
+        tabsToggleWrapper.style.padding = "8px 12px";
       } else {
         offsetWrapper.style.maxHeight = "0";
         offsetWrapper.style.pointerEvents = "none";
         offsetWrapper.style.padding = "0 12px";
+        tabsToggleWrapper.style.maxHeight = "0";
+        tabsToggleWrapper.style.pointerEvents = "none";
+        tabsToggleWrapper.style.padding = "0 12px";
       }
     }
 
     // Update checkbox states in dropdown menus
-    function updateSeekbarOptionState() {
-      seekbarOption.innerHTML = "";
-      const checkSpan = document.createElement("span");
-      checkSpan.style.width = "16px";
-      checkSpan.style.display = "inline-block";
-      checkSpan.textContent = seekbarVisible ? "✓" : "";
-      const labelSpan = document.createElement("span");
-      labelSpan.textContent = "Seekbar";
-      seekbarOption.appendChild(checkSpan);
-      seekbarOption.appendChild(labelSpan);
+    function updateSeekbarCheckboxState() {
+      seekbarCheckbox.checked = seekbarVisible;
     }
-    function updateControlsOptionState() {
-      controlsOption.innerHTML = "";
-      const checkSpan = document.createElement("span");
-      checkSpan.style.width = "16px";
-      checkSpan.style.display = "inline-block";
-      checkSpan.textContent = controlsVisible ? "✓" : "";
-      const labelSpan = document.createElement("span");
-      labelSpan.textContent = "Playback Controls";
-      controlsOption.appendChild(checkSpan);
-      controlsOption.appendChild(labelSpan);
+    function updateControlsCheckboxState() {
+      controlsCheckbox.checked = controlsVisible;
     }
 
     offsetToggleBtn.onclick = () => {
@@ -3363,8 +3382,8 @@ const Providers = {
     // Show dropdown on playback button click
     playbackToggleBtn.onclick = (e) => {
       e.stopPropagation();
-      updateSeekbarOptionState();
-      updateControlsOptionState();
+      updateSeekbarCheckboxState();
+      updateControlsCheckboxState();
       playbackDropdown.style.display = playbackDropdown.style.display === "flex" ? "none" : "flex";
     };
 
@@ -3375,28 +3394,28 @@ const Providers = {
       }
     });
 
-    // Seekbar toggle from dropdown
-    seekbarOption.onclick = (e) => {
-      e.stopPropagation();
-      seekbarVisible = !seekbarVisible;
+    // Seekbar checkbox change handler
+    seekbarCheckbox.onchange = () => {
+      seekbarVisible = seekbarCheckbox.checked;
       localStorage.setItem('lyricsPlusSeekbarVisible', JSON.stringify(seekbarVisible));
       applyProgressWrapperVisibility(seekbarVisible);
-      updateSeekbarOptionState();
     };
 
-    // Playback controls toggle from dropdown
-    controlsOption.onclick = (e) => {
-      e.stopPropagation();
-      controlsVisible = !controlsVisible;
+    // Playback controls checkbox change handler
+    controlsCheckbox.onchange = () => {
+      controlsVisible = controlsCheckbox.checked;
       localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
       applyControlsVisibility(controlsVisible);
-      updateControlsOptionState();
     };
 
     // Apply initial visibility states
     applyOffsetVisibility(offsetVisible);
     applyControlsVisibility(controlsVisible);
     applyTabsVisibility(tabsVisible);
+
+    // Initialize checkboxes state
+    seekbarCheckbox.checked = seekbarVisible;
+    controlsCheckbox.checked = controlsVisible;
 
     // Initialize and handle tabs toggle checkbox in settings
     tabsToggleCheckbox.checked = tabsVisible;
@@ -3697,8 +3716,9 @@ const Providers = {
     applyProgressWrapperVisibility(seekbarVisible);
 
     popup.appendChild(headerWrapper);
-    popup.appendChild(offsetWrapper);
     popup.appendChild(translatorWrapper);
+    popup.appendChild(tabsToggleWrapper);
+    popup.appendChild(offsetWrapper);
     popup.appendChild(lyricsContainer);
     popup.appendChild(progressWrapper);
     popup.appendChild(controlsBar);
