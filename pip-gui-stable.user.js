@@ -80,7 +80,10 @@
   let openccT2CN = null; // Traditional to Simplified Chinese converter
   let openccCN2T = null; // Simplified Chinese to Traditional converter
 
-  (function initOpenCCConverters() {
+  // Initialize OpenCC converters with retry mechanism
+  // @require scripts should load before the userscript executes, but we add
+  // a retry mechanism as a safety measure in case of any timing issues
+  function initOpenCCConverters(retries = 3, delay = 100) {
     try {
       if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
         // The full.js bundle exposes OpenCC.Converter which takes { from, to } options
@@ -89,13 +92,22 @@
         openccT2CN = OpenCC.Converter({ from: 't', to: 'cn' });
         openccCN2T = OpenCC.Converter({ from: 'cn', to: 't' });
         console.log('[Lyrics+] OpenCC converters initialized successfully (t↔cn)');
+        return true;
+      } else if (retries > 0) {
+        // OpenCC not available yet, retry after a short delay
+        setTimeout(() => initOpenCCConverters(retries - 1, delay * 2), delay);
+        return false;
       } else {
-        console.warn('[Lyrics+] OpenCC not available at initialization time');
+        console.warn('[Lyrics+] OpenCC not available after retries');
+        return false;
       }
     } catch (e) {
       console.warn('[Lyrics+] OpenCC converter initialization error:', e);
+      return false;
     }
-  })();
+  }
+  // Attempt initialization immediately
+  initOpenCCConverters();
 
   // --- Forcibly hide NowPlayingView and its button in the playback controls menu ---
 
