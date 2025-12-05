@@ -3724,11 +3724,19 @@ const Providers = {
     popup.appendChild(controlsBar);
     popup.appendChild(progressWrapper);
 
-    const container = document.querySelector('.main-view-container');
-    if (container) {
-      container.appendChild(popup);
-    } else {
+    // In fullscreen mode, append to fullscreen-lyric container or document.body
+    // Otherwise, append to main-view-container or document.body
+    const fullscreenContainer = getFullscreenLyricElement();
+    if (fullscreenContainer) {
+      // In fullscreen mode - append to document.body to ensure visibility
       document.body.appendChild(popup);
+    } else {
+      const container = document.querySelector('.main-view-container');
+      if (container) {
+        container.appendChild(popup);
+      } else {
+        document.body.appendChild(popup);
+      }
     }
 
     function savePopupState(el) {
