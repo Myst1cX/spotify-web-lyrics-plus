@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Stable
+// @name         Spotify Lyrics+ Stable 
 // @namespace    http://tampermonkey.net/
-// @version      13.5
+// @version      14.0
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -14,7 +14,7 @@
 // ==/UserScript==
 
 
-// RESOLVED (v13) TRADITIONAL TO SIMPLIFIED CHINESE CONVERSION (VIA OPEN.CC)
+// RESOLVED (v14) TRADITIONAL TO SIMPLIFIED CHINESE CONVERSION (VIA OPEN.CC)
 // Reference: (https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified/)
 
 // RESOLVED (v12): ADDED A GITHUB LINK TO REPOSITORY (credits to greasyfork user jayxdcode)
@@ -2712,7 +2712,7 @@ const Providers = {
       fontSize: "12px",
       fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
       color: "#fff",
-      background: isChineseConversionEnabled() ? "rgba(80,80,80,.55)" : "rgba(30,30,30,.55)",
+      background: "rgba(30,30,30,.55)",
       border: "1px solid rgba(255,255,255,.28)",
       borderRadius: "8px",
       cursor: "pointer",
@@ -2726,10 +2726,10 @@ const Providers = {
     // Helper to update button text based on conversion state
     // Button only shows for Traditional lyrics, so:
     // - Not converted: "繁→简" (click to convert to Simplified)
-    // - Converted: "简→繁" (click to revert to Traditional)
+    // - Converted: "繁←简" (click to revert to Traditional)
     function updateChineseConvBtnText() {
       const isConverted = isChineseConversionEnabled();
-      chineseConvBtn.textContent = isConverted ? "简→繁" : "繁→简";
+      chineseConvBtn.textContent = isConverted ? "繁←简" : "繁→简";
       chineseConvBtn.title = isConverted
         ? "Revert to Traditional Chinese"
         : "Convert to Simplified Chinese";
@@ -4642,9 +4642,9 @@ const Providers = {
     const chineseConvBtn = popup._chineseConvBtn;
     const shouldConvertChinese = isChineseConversionEnabled();
 
-    // Update button appearance
-    if (chineseConvBtn) {
-      chineseConvBtn.style.background = shouldConvertChinese ? "rgba(80,80,80,.55)" : "rgba(30,30,30,.55)";
+    // Update button text based on conversion state
+    if (chineseConvBtn && popup._updateChineseConvBtnText) {
+      popup._updateChineseConvBtnText();
     }
 
     // Helper function to convert text if needed
@@ -4729,9 +4729,6 @@ const Providers = {
     if (chineseConvBtn) {
       if (hasChineseLyrics && originalChineseScriptType === 'traditional') {
         chineseConvBtn.style.display = "inline-flex";
-        // Update button appearance based on current state (darker = conversion active)
-        const isEnabled = isChineseConversionEnabled();
-        chineseConvBtn.style.background = isEnabled ? "rgba(80,80,80,.55)" : "rgba(30,30,30,.55)";
         // Update button text to show conversion direction
         if (popup._updateChineseConvBtnText) {
           popup._updateChineseConvBtnText();
