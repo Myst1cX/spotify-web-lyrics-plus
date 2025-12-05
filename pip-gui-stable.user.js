@@ -13,11 +13,13 @@
 // ==/UserScript==
 
 // MORE URGENT:
-// Fixing KPoe provider (error: response is not provided) - might be on their end, will be observing
-// If Fullscreen --> fullscreen-lyric as default position.
+// If Fullscreen mode is pressed: document.querySelector('[data-testid="fullscreen-mode-button"]'); 
+// --> set fullscreen-lyric container document.querySelector('[data-testid="fullscreen-lyric"]');
+// --> as default position of lyrics+ ui
 // Function with example of the two lyricContainers:
 /* function waitForLyrics() {
-const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]') || document.querySelector('[data-testid="fullscreen-lyric"]');
+const lyricsContainer = document.querySelector('[data-testid="lyrics-container"]') || 
+document.querySelector('[data-testid="fullscreen-lyric"]');
 */
 
 // RESOLVED (v10.9): PLAYBACK BUTTONS' CORRECT REFLECTION OF PAGE ACTION NO LONGER RESTRICTED TO ENGLISH LOCALE:
@@ -4831,3 +4833,4 @@ const Providers = {
     }
   });
 })();
+
