@@ -2706,13 +2706,8 @@ const Providers = {
       e.stopPropagation();
       const newState = !isChineseConversionEnabled();
       setChineseConversionEnabled(newState);
-      // Update button appearance - darker when converted (Simplified mode)
-      chineseConvBtn.style.background = newState ? "rgba(80,80,80,.55)" : "rgba(30,30,30,.55)";
-      // Reload lyrics with new setting
-      const info = getCurrentTrackInfo();
-      if (info) {
-        updateLyricsContent(popup, info);
-      }
+      // Re-render cached lyrics with new conversion setting (no provider reload)
+      rerenderLyrics(popup);
     };
     // Store reference on popup for access in updateLyricsContent
     popup._chineseConvBtn = chineseConvBtn;
@@ -4597,6 +4592,60 @@ const Providers = {
     }, 100);
 
     startPollingForTrackChange(popup);
+  }
+
+  // Re-render cached lyrics without fetching from provider (used for Chinese conversion toggle)
+  function rerenderLyrics(popup) {
+    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+    if (!lyricsContainer) return;
+    
+    // If no cached lyrics, nothing to re-render
+    if (!currentSyncedLyrics && !currentUnsyncedLyrics) return;
+
+    const chineseConvBtn = popup._chineseConvBtn;
+    const shouldConvertChinese = isChineseConversionEnabled();
+
+    // Update button appearance
+    if (chineseConvBtn) {
+      chineseConvBtn.style.background = shouldConvertChinese ? "rgba(80,80,80,.55)" : "rgba(30,30,30,.55)";
+    }
+
+    // Helper function to convert text if needed
+    const convertText = (text) => {
+      if (shouldConvertChinese && text && Utils.containsHanCharacter(text)) {
+        return Utils.toSimplifiedChinese(text);
+      }
+      return text;
+    };
+
+    lyricsContainer.innerHTML = "";
+
+    if (currentSyncedLyrics) {
+      isShowingSyncedLyrics = true;
+      currentSyncedLyrics.forEach(({ text }) => {
+        const p = document.createElement("p");
+        p.textContent = convertText(text);
+        p.style.margin = "0 0 6px 0";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        lyricsContainer.appendChild(p);
+      });
+      highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
+    } else if (currentUnsyncedLyrics) {
+      isShowingSyncedLyrics = false;
+      currentUnsyncedLyrics.forEach(({ text }) => {
+        const p = document.createElement("p");
+        p.textContent = convertText(text);
+        p.style.margin = "0 0 6px 0";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        lyricsContainer.appendChild(p);
+      });
+      // For unsynced, always allow user scroll
+      lyricsContainer.style.overflowY = "auto";
+      lyricsContainer.style.pointerEvents = "";
+      lyricsContainer.classList.remove('hide-scrollbar');
+      lyricsContainer.style.scrollbarWidth = "";
+      lyricsContainer.style.msOverflowStyle = "";
+    }
   }
 
   async function updateLyricsContent(popup, info) {
