@@ -2809,10 +2809,10 @@ const Providers = {
       }
     };
 
-    // Toggle offset section
+    // Toggle offset section and tabs (settings button)
     const offsetToggleBtn = document.createElement("button");
     offsetToggleBtn.textContent = "⚙️";
-    offsetToggleBtn.title = "Show/hide timing offset";
+    offsetToggleBtn.title = "Show/hide settings (timing offset & lyrics source tabs)";
     offsetToggleBtn.style.marginRight = "6px";
     offsetToggleBtn.style.cursor = "pointer";
     offsetToggleBtn.style.background = "none";
@@ -2821,10 +2821,10 @@ const Providers = {
     offsetToggleBtn.style.fontSize = "16px";
     offsetToggleBtn.style.lineHeight = "1";
 
-    // Toggle playback controls bar (including seekbar) - use a better icon
+    // Toggle playback controls bar - use a better icon
     const playbackToggleBtn = document.createElement("button");
     playbackToggleBtn.textContent = "🎛️";
-    playbackToggleBtn.title = "Show/hide playback controls and seekbar";
+    playbackToggleBtn.title = "Show/hide playback controls";
     playbackToggleBtn.style.marginRight = "6px";
     playbackToggleBtn.style.cursor = "pointer";
     playbackToggleBtn.style.background = "none";
@@ -2833,17 +2833,17 @@ const Providers = {
     playbackToggleBtn.style.fontSize = "14px";
     playbackToggleBtn.style.lineHeight = "1";
 
-    // Toggle tabs (LRC source names) bar
-    const tabsToggleBtn = document.createElement("button");
-    tabsToggleBtn.textContent = "📑";
-    tabsToggleBtn.title = "Show/hide lyrics source tabs";
-    tabsToggleBtn.style.marginRight = "6px";
-    tabsToggleBtn.style.cursor = "pointer";
-    tabsToggleBtn.style.background = "none";
-    tabsToggleBtn.style.border = "none";
-    tabsToggleBtn.style.color = "white";
-    tabsToggleBtn.style.fontSize = "14px";
-    tabsToggleBtn.style.lineHeight = "1";
+    // Toggle seekbar (progress bar)
+    const seekbarToggleBtn = document.createElement("button");
+    seekbarToggleBtn.textContent = "⏱️";
+    seekbarToggleBtn.title = "Show/hide seekbar";
+    seekbarToggleBtn.style.marginRight = "6px";
+    seekbarToggleBtn.style.cursor = "pointer";
+    seekbarToggleBtn.style.background = "none";
+    seekbarToggleBtn.style.border = "none";
+    seekbarToggleBtn.style.color = "white";
+    seekbarToggleBtn.style.fontSize = "14px";
+    seekbarToggleBtn.style.lineHeight = "1";
 
     const titleBar = document.createElement("div");
     titleBar.style.display = "flex";
@@ -2859,7 +2859,7 @@ const Providers = {
     buttonGroup.appendChild(fontSizeSelect);
     buttonGroup.appendChild(btnReset);
     buttonGroup.appendChild(translationToggleBtn);
-    buttonGroup.appendChild(tabsToggleBtn);
+    buttonGroup.appendChild(seekbarToggleBtn);
     buttonGroup.appendChild(playbackToggleBtn);
     buttonGroup.appendChild(offsetToggleBtn);
     buttonGroup.appendChild(closeBtn);
@@ -3196,6 +3196,10 @@ const Providers = {
     if (controlsVisible === null) controlsVisible = true;
     else controlsVisible = JSON.parse(controlsVisible);
 
+    let seekbarVisible = localStorage.getItem('lyricsPlusSeekbarVisible');
+    if (seekbarVisible === null) seekbarVisible = true;
+    else seekbarVisible = JSON.parse(seekbarVisible);
+
     let tabsVisible = localStorage.getItem('lyricsPlusTabsVisible');
     if (tabsVisible === null) tabsVisible = true;
     else tabsVisible = JSON.parse(tabsVisible);
@@ -3257,19 +3261,22 @@ const Providers = {
         offsetWrapper.style.pointerEvents = "none";
         offsetWrapper.style.padding = "0 12px";
       }
-    };
-
-    tabsToggleBtn.onclick = () => {
-      tabsVisible = !tabsVisible;
+      // Also toggle tabs visibility together with offset (settings button controls both)
+      tabsVisible = offsetVisible;
       localStorage.setItem('lyricsPlusTabsVisible', JSON.stringify(tabsVisible));
       applyTabsVisibility(tabsVisible);
+    };
+
+    seekbarToggleBtn.onclick = () => {
+      seekbarVisible = !seekbarVisible;
+      localStorage.setItem('lyricsPlusSeekbarVisible', JSON.stringify(seekbarVisible));
+      applyProgressWrapperVisibility(seekbarVisible);
     };
 
     playbackToggleBtn.onclick = () => {
       controlsVisible = !controlsVisible;
       localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
       applyControlsVisibility(controlsVisible);
-      applyProgressWrapperVisibility(controlsVisible);
     };
 
     if (offsetVisible) {
@@ -3576,7 +3583,7 @@ const Providers = {
     progressWrapper.appendChild(timeTotal);
 
     // Apply initial visibility state for progressWrapper (must be after progressWrapper is created)
-    applyProgressWrapperVisibility(controlsVisible);
+    applyProgressWrapperVisibility(seekbarVisible);
 
     popup.appendChild(headerWrapper);
     popup.appendChild(offsetWrapper);
