@@ -329,14 +329,13 @@
           return 'simplified'; // Default assumption
         }
         
-        // Sample first 200 characters for performance (lyrics detection doesn't need full text)
-        const sample = str.substring(0, 200);
+        // Use full text for accurate detection (no sampling)
+        // This ensures all characters are checked for proper script type identification
+        const asSimplified = openccT2CN(str);
+        const asTraditional = openccCN2T(str);
         
-        const asSimplified = openccT2CN(sample);
-        const asTraditional = openccCN2T(sample);
-        
-        const changedToSimplified = asSimplified !== sample;
-        const changedToTraditional = asTraditional !== sample;
+        const changedToSimplified = asSimplified !== str;
+        const changedToTraditional = asTraditional !== str;
         
         // If converting T→CN changes text but CN→T doesn't, it's Traditional
         if (changedToSimplified && !changedToTraditional) {
@@ -348,7 +347,7 @@
         }
         // If both change it, use length comparison (Traditional usually has fewer chars after T→CN)
         else if (changedToSimplified && changedToTraditional) {
-          return asSimplified.length < sample.length ? 'traditional' : 'simplified';
+          return asSimplified.length < str.length ? 'traditional' : 'simplified';
         }
         // If neither changes, characters are common to both - assume simplified
         else {
