@@ -4793,6 +4793,9 @@ const Providers = {
       return text;
     };
 
+    // Reset translation state when re-rendering lyrics
+    translationPresent = false;
+    lastTranslatedLang = null;
     lyricsContainer.innerHTML = "";
 
     if (currentSyncedLyrics) {
@@ -4834,6 +4837,9 @@ const Providers = {
     currentLyricsContainer = lyricsContainer;
     currentSyncedLyrics = null;
     currentUnsyncedLyrics = null;
+    // Reset translation state when loading new lyrics
+    translationPresent = false;
+    lastTranslatedLang = null;
     lyricsContainer.textContent = "Loading lyrics...";
 
     const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
@@ -4990,6 +4996,9 @@ const Providers = {
     if (lyricsContainer) lyricsContainer.textContent = "No lyrics were found for this track from any of the available providers";
     currentSyncedLyrics = null;
     currentLyricsContainer = lyricsContainer;
+    // Reset translation state when no lyrics are found
+    translationPresent = false;
+    lastTranslatedLang = null;
   }
 
   function startPollingForTrackChange(popup) {
