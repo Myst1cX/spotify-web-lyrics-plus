@@ -2281,7 +2281,7 @@ const ProviderGenius = {
       6. Under Response Headers, locate the authorization request header.<br>
       7. If there isn't one, try a different spclient domain.<br>
       8. Right-click on the content of the authorization request header and select Copy value.<br>
-      9. Paste the token below and press Save.<br>
+      9. Paste the token below. Delete the word "Bearer" at the beginning and press Save.<br>
       <span style="color:#e57373;"><b>WARNING:</b> Keep your token private! Do not share it with others.</span>
     </div>
   `;
@@ -5170,4 +5170,5 @@ const Providers = {
     }
   });
 })();
+
 
