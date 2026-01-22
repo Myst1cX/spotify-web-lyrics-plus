@@ -141,7 +141,8 @@
 
 > 1. **Lyrics from** [LRCLIB](https://lrclib.net/), [KPoe](https://github.com/ibratabian17/KPoe), [Genius](https://genius.com/), [Musixmatch](https://musixmatch.com/)
 > 2. **Live Translation from** [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
-> 3. **Powered by** [Spotify](https://open.spotify.com/).
+> 3. **Traditional ⇄ Simplified (BIDIRECTIONAL) Chinese Conversion via open.cc from** [Spotify Lyrics: Trad ⇄ Simplified](https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified)
+> 4. **Powered by** [Spotify](https://open.spotify.com/).
 
 ## License
 
