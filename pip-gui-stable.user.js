@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable 
 // @namespace    http://tampermonkey.net/
-// @version      14.1
+// @version      14.2
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,10 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (v14.2): IMPROVED CHINESE SCRIPT DETECTION - Use OpenCC conversion-based detection instead of regex pattern
+// The new approach leverages OpenCC's comprehensive 10,000+ character dictionary for accurate script type identification
+// Replaces manual regex pattern with conversion comparison logic (if T→CN changes text, it's Traditional; if CN→T changes text, it's Simplified)
 
 // RESOLVED (v14.1): FIXED CHINESE CONVERSION - use full.js bundle instead of separate t2cn.js/cn2t.js
 // The separate files were overwriting each other, causing conversion to fail
@@ -312,20 +316,51 @@
     containsHanCharacter(str) {
       return /[\u4e00-\u9fa5]/.test(str);
     },
-    // Detect if text contains Traditional Chinese characters
-    // Uses common Traditional-only characters that don't appear in Simplified
-    containsTraditionalChinese(str) {
-      if (!str) return false;
-      // Key Traditional Chinese characters that differ from Simplified
-      // Focused on common words: 學國語說開關電視書報讀寫買賣銀錢頭腦體驗識詞義務歷經濟發農業場運動會議題問數據圖館點餐廳飯團壞邊選擇結構營設計資訊處網絡線環準備錄製廣視頻審劇編導項認話與當給獲則讓適將種機構僅個為們來過術藝醫療臺灣鐘錶愛戀聯繫電話見機飛機觀眾聽衆紙張幫幣
-      const traditionalOnlyPattern = /[學國說開關電視書報讀寫買賣銀錢頭腦體驗識詞義務歷經濟發農場運會議題問數據圖館點餐廳飯團壞邊選擇結構營設計資訊處網絡線環準備錄製廣視頻審劇編導認話與當給獲則讓適將種機構僅個為們來過術藝醫療臺灣鐘錶愛戀聯繫見飛觀眾聽衆紙張幫幣黨門員業務無對長時間東動變這種請總樂進車輸師聯絡齊遠親識優斷飛複雜專項態難標創財組織級導處論統區]/;
-      return traditionalOnlyPattern.test(str);
-    },
-    // Detect the Chinese script type of a text
+    // Detect the Chinese script type using OpenCC converters
+    // Uses conversion behavior to determine script type - more reliable than character lists
     // Returns 'traditional', 'simplified', or null if no Chinese
     detectChineseScriptType(str) {
       if (!str || !this.containsHanCharacter(str)) return null;
-      return this.containsTraditionalChinese(str) ? 'traditional' : 'simplified';
+
+      // Use OpenCC converters to detect script type via conversion comparison
+      // If T→CN conversion changes the text, it's Traditional Chinese
+      // If CN→T conversion changes the text, it's Simplified Chinese
+      // This approach leverages OpenCC's comprehensive character mappings
+      try {
+        if (!openccT2CN || !openccCN2T) {
+          // Fallback if converters aren't initialized
+          console.warn('[Lyrics+] OpenCC converters not initialized for detection');
+          return 'simplified'; // Default assumption
+        }
+
+        // Use full text for accurate detection (no sampling)
+        // This ensures all characters are checked for proper script type identification
+        const asSimplified = openccT2CN(str);
+        const asTraditional = openccCN2T(str);
+
+        const changedToSimplified = asSimplified !== str;
+        const changedToTraditional = asTraditional !== str;
+
+        // If converting T→CN changes text but CN→T doesn't, it's Traditional
+        if (changedToSimplified && !changedToTraditional) {
+          return 'traditional';
+        }
+        // If converting CN→T changes text but T→CN doesn't, it's Simplified
+        else if (changedToTraditional && !changedToSimplified) {
+          return 'simplified';
+        }
+        // If both change it, use length comparison (Traditional usually has fewer chars after T→CN)
+        else if (changedToSimplified && changedToTraditional) {
+          return asSimplified.length < str.length ? 'traditional' : 'simplified';
+        }
+        // If neither changes, characters are common to both - assume simplified
+        else {
+          return 'simplified';
+        }
+      } catch (e) {
+        console.warn('[Lyrics+] Script type detection error:', e);
+        return 'simplified'; // Default assumption on error
+      }
     },
     capitalize(str, lower = false) {
       if (!str) return '';
