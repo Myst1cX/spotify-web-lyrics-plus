@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      14.2
+// @version      14.3
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,8 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (v14.3): GRAYISH GRADIENT STLYLING NOW ALSO APPLIED TO UNSYNCED LYRICS (more friendly to the eyes)
+
 // RESOLVED (v14.2): IMPROVED CHINESE SCRIPT DETECTION - Use OpenCC conversion-based detection instead of regex pattern
 // The new approach leverages OpenCC's comprehensive 10,000+ character dictionary for accurate script type identification
 // Replaces manual regex pattern with conversion comparison logic (if T→CN changes text, it's Traditional; if CN→T changes text, it's Simplified)
@@ -22,10 +24,8 @@
 
 // RESOLVED (v14.0): KPOE PROVIDER AND LRCLIB PROVIDER FIXED (MAJOR DUB)
 
-// RESOLVED (v13.6) TRADITIONAL ⇄ SIMPLIFIED (BIDIRECTIONAL) CHINESE CONVERSION VIA OPEN.CC
+// RESOLVED (v13.6) ADDITION OF TRADITIONAL ⇄ SIMPLIFIED (BIDIRECTIONAL) CHINESE CONVERSION VIA OPEN.CC
 // Reference: (https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified/)
-
-// RESOLVED (v12): ADDED A GITHUB LINK TO REPOSITORY (credits to greasyfork user jayxdcode)
 
 // RESOLVED (v12): ADDED A GITHUB LINK TO REPOSITORY (credits to greasyfork user jayxdcode)
 
@@ -4810,6 +4810,10 @@ const Providers = {
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        p.style.color = "white";
+        p.style.fontWeight = "400";
+        p.style.filter = "blur(0.7px)";
+        p.style.opacity = "0.8";
         lyricsContainer.appendChild(p);
       });
       // For unsynced, always allow user scroll
@@ -4911,6 +4915,10 @@ const Providers = {
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        p.style.color = "white";
+        p.style.fontWeight = "400";
+        p.style.filter = "blur(0.7px)";
+        p.style.opacity = "0.8";
         lyricsContainer.appendChild(p);
       });
       // For unsynced, always allow user scroll
@@ -5162,3 +5170,4 @@ const Providers = {
     }
   });
 })();
+
