@@ -4810,6 +4810,10 @@ const Providers = {
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        p.style.color = "white";
+        p.style.fontWeight = "400";
+        p.style.filter = "blur(0.7px)";
+        p.style.opacity = "0.8";
         lyricsContainer.appendChild(p);
       });
       // For unsynced, always allow user scroll
@@ -4911,6 +4915,10 @@ const Providers = {
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        p.style.color = "white";
+        p.style.fontWeight = "400";
+        p.style.filter = "blur(0.7px)";
+        p.style.opacity = "0.8";
         lyricsContainer.appendChild(p);
       });
       // For unsynced, always allow user scroll
