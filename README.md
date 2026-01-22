@@ -16,7 +16,7 @@
 > Reset button to restore default popup position/size.
 >
 > **LYRICS DOWNLOAD**<br>
-> Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt).
+> Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability.
 > 
 > **LIVE TRANSLATION**  
 > 🌐 Instantly translate any lyrics (line-by-line, 70+ languages).  
