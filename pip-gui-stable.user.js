@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      14.3
+// @version      14.4
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (14.4): UPDATED THE TUTORIAL INSIDE THE SPOTIFY MODAL
 
 // RESOLVED (v14.3): GRAYISH GRADIENT STLYLING NOW ALSO APPLIED TO UNSYNCED LYRICS (more friendly to the eyes)
 
@@ -5170,5 +5172,6 @@ const Providers = {
     }
   });
 })();
+
 
 
