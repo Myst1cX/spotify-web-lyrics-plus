@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      14.4
+// @version      14.5
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (14.5): FIXED TRANSLATION STATE NOT RELOADING ON LYRICS RESET AND LYRICS DISAPPEARANCE BUG AFTER AN ALREADY SUCCESSFULL FETCH
 
 // RESOLVED (14.4): UPDATED THE TUTORIAL INSIDE THE SPOTIFY MODAL
 
@@ -4793,6 +4795,9 @@ const Providers = {
       return text;
     };
 
+    // Reset translation state when re-rendering lyrics
+    translationPresent = false;
+    lastTranslatedLang = null;
     lyricsContainer.innerHTML = "";
 
     if (currentSyncedLyrics) {
@@ -4834,6 +4839,9 @@ const Providers = {
     currentLyricsContainer = lyricsContainer;
     currentSyncedLyrics = null;
     currentUnsyncedLyrics = null;
+    // Reset translation state when loading new lyrics
+    translationPresent = false;
+    lastTranslatedLang = null;
     lyricsContainer.textContent = "Loading lyrics...";
 
     const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
@@ -4990,6 +4998,9 @@ const Providers = {
     if (lyricsContainer) lyricsContainer.textContent = "No lyrics were found for this track from any of the available providers";
     currentSyncedLyrics = null;
     currentLyricsContainer = lyricsContainer;
+    // Reset translation state when no lyrics are found
+    translationPresent = false;
+    lastTranslatedLang = null;
   }
 
   function startPollingForTrackChange(popup) {
@@ -5172,6 +5183,5 @@ const Providers = {
     }
   });
 })();
-
 
 
