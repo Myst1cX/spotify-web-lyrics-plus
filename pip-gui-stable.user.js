@@ -330,7 +330,9 @@
         if (!openccT2CN || !openccCN2T) {
           // Fallback if converters aren't initialized
           console.warn('[Lyrics+] OpenCC converters not initialized for detection');
-          return 'simplified'; // Default assumption
+          // Default to 'simplified' as it's more commonly encountered in digital content
+          // and safer for web contexts where Simplified Chinese is the primary standard
+          return 'simplified';
         }
 
         // Use full text for accurate detection (no sampling)
@@ -349,17 +351,23 @@
         else if (changedToTraditional && !changedToSimplified) {
           return 'simplified';
         }
-        // If both change it, use length comparison (Traditional usually has fewer chars after T→CN)
+        // If both conversions change the text (rare case with mixed or ambiguous text):
+        // Traditional text typically becomes shorter when converted to Simplified (T→CN)
+        // because Traditional often uses more complex characters that simplify down.
+        // If the converted-to-simplified version is shorter than original, the original was likely Traditional.
         else if (changedToSimplified && changedToTraditional) {
           return asSimplified.length < str.length ? 'traditional' : 'simplified';
         }
-        // If neither changes, characters are common to both - assume simplified
+        // If neither conversion changes the text, characters are common to both scripts
+        // Default to 'simplified' as it's the more common digital standard
         else {
           return 'simplified';
         }
       } catch (e) {
         console.warn('[Lyrics+] Script type detection error:', e);
-        return 'simplified'; // Default assumption on error
+        // Default to 'simplified' on error as it's the more common digital standard
+        // and safer for web contexts where Simplified Chinese is primary
+        return 'simplified';
       }
     },
     capitalize(str, lower = false) {
