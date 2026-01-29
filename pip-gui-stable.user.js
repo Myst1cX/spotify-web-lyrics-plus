@@ -127,7 +127,10 @@
       Collapsing the `.zjCIcN96KsMfWwRo` parent container to zero width is sufficient to hide the entire NowPlayingView panel.
       The container is forced to `width: 0`, `min-width: 0`, `max-width: 0`, and `flex-basis: 0` so that it collapses entirely,
       allowing the rest of the UI to expand and fill the area, eliminating the black gap.
-      The NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching.
+      
+      IMPORTANT: The NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching.
+      Elements like `a[data-testid="context-link"]` used by getCurrentTrackId() can still be queried even when the parent is collapsed with CSS.
+      CSS hiding (width: 0, display: none, etc.) does NOT remove elements from the DOM, so querySelector() continues to work normally.
 
   */
 
@@ -5033,9 +5036,12 @@ const Providers = {
   function addButton(maxRetries = 10) {
     let attempts = 0;
     const tryAdd = () => {
-      const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
+      // Note: The old [data-testid="control-button-npv"] no longer exists in Spotify's DOM.
+      // We now try to find the NPV container (.zjCIcN96KsMfWwRo) or fallback to other control buttons.
+      const nowPlayingContainer = document.querySelector('.zjCIcN96KsMfWwRo');
       const micBtn = document.querySelector('[data-testid="lyrics-button"]');
-      const targetBtn = nowPlayingViewBtn || micBtn;
+      const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
+      const targetBtn = nowPlayingContainer || micBtn || repeatBtn;
       const controls = targetBtn?.parentElement;
       if (!controls) {
         if (attempts < maxRetries) {
