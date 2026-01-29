@@ -130,7 +130,7 @@
       
       IMPORTANT: The NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching.
       Elements like `a[data-testid="context-link"]` used by getCurrentTrackId() can still be queried even when the parent is collapsed with CSS.
-      CSS hiding (width: 0, display: none, etc.) does NOT remove elements from the DOM, so querySelector() continues to work normally.
+      CSS hiding with width: 0 and overflow: hidden does NOT remove elements from the DOM, so querySelector() continues to work normally.
 
   */
 
@@ -5037,11 +5037,11 @@ const Providers = {
     let attempts = 0;
     const tryAdd = () => {
       // Note: The old [data-testid="control-button-npv"] no longer exists in Spotify's DOM.
-      // We now try to find the NPV container (.zjCIcN96KsMfWwRo) or fallback to other control buttons.
-      const nowPlayingContainer = document.querySelector('.zjCIcN96KsMfWwRo');
-      const micBtn = document.querySelector('[data-testid="lyrics-button"]');
+      // We now use stable control buttons that are always present in the playback controls.
       const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
-      const targetBtn = nowPlayingContainer || micBtn || repeatBtn;
+      const micBtn = document.querySelector('[data-testid="lyrics-button"]');
+      const skipForwardBtn = document.querySelector('[data-testid="control-button-skip-forward"]');
+      const targetBtn = repeatBtn || micBtn || skipForwardBtn;
       const controls = targetBtn?.parentElement;
       if (!controls) {
         if (attempts < maxRetries) {
