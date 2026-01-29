@@ -127,6 +127,7 @@
       Collapsing the `.zjCIcN96KsMfWwRo` parent container to zero width is sufficient to hide the entire NowPlayingView panel.
       The container is forced to `width: 0`, `min-width: 0`, `max-width: 0`, and `flex-basis: 0` so that it collapses entirely,
       allowing the rest of the UI to expand and fill the area, eliminating the black gap.
+      The NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching.
 
   */
 
