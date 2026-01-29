@@ -124,12 +124,9 @@
       occupy, without leaving a black area present. Crucially, it keeps the NowPlayingView and its DOM structure present and accessible to JavaScript (so scripts can still read
       track info), but makes it invisible and non-interactive to the user.
 
-      The `.NowPlayingView` element is made invisible by setting `opacity: 0` and `pointer-events: none`, but remains in the DOM for selector access.
-      It is positioned absolutely and given a negative z-index, so it does not participate in the normal document flow or block other content.
-      Its flex value is set to `0 0 0%` to ensure it does not reserve any space in the parent flex container.
-      The immediate parents (`.a_fKt7xvd8od_kEb` and `.zjCIcN96KsMfWwRo`) are forced to `width: 0`, `min-width: 0`,
-      `max-width: 0`, and `flex-basis: 0` so that they collapse entirely, allowing the rest of the UI to expand and fill the area, eliminating the black gap.
-      The "Show Now Playing view" button (`.wJiY1vDfuci2a4db`) and the old NPV button in the playback controls (`[data-testid=control-button-npv]`) are hidden from the UI.
+      Collapsing the `.zjCIcN96KsMfWwRo` parent container to zero width is sufficient to hide the entire NowPlayingView panel.
+      The container is forced to `width: 0`, `min-width: 0`, `max-width: 0`, and `flex-basis: 0` so that it collapses entirely,
+      allowing the rest of the UI to expand and fill the area, eliminating the black gap.
 
   */
 
@@ -138,29 +135,12 @@
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-          .NowPlayingView {
-              position: absolute !important;
-              left: 0; top: 0;
-              width: 100% !important;
-              height: 100% !important;
-              opacity: 0 !important;
-              pointer-events: none !important;
-              z-index: -1 !important;
-              flex: 0 0 0% !important;
-          }
-          .a_fKt7xvd8od_kEb,
           .zjCIcN96KsMfWwRo {
               width: 0 !important;
               min-width: 0 !important;
               max-width: 0 !important;
               flex-basis: 0 !important;
               overflow: hidden !important;
-          }
-          .wJiY1vDfuci2a4db {
-              display: none !important;
-          }
-          [data-testid=control-button-npv] {
-              display: none !important;
           }
       `;
     document.head.appendChild(style);
