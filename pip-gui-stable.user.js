@@ -127,10 +127,7 @@
       Collapsing the `.zjCIcN96KsMfWwRo` parent container to zero width is sufficient to hide the entire NowPlayingView panel.
       The container is forced to `width: 0`, `min-width: 0`, `max-width: 0`, and `flex-basis: 0` so that it collapses entirely,
       allowing the rest of the UI to expand and fill the area, eliminating the black gap.
-      
-      IMPORTANT: The NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching.
-      Elements like `a[data-testid="context-link"]` used by getCurrentTrackId() can still be queried even when the parent is collapsed with CSS.
-      CSS hiding with width: 0 and overflow: hidden does NOT remove elements from the DOM, so querySelector() continues to work normally.
+      The NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching (ProviderSpotify needs it).
 
   */
 
@@ -139,6 +136,9 @@
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
+          /* I kept the parent of .zjCIcN96KsMfWwRo, just in case */
+          .a_fKt7xvd8od_kEb,
+          /* The NowPlayingView panel, which includes the new side NPV button */
           .zjCIcN96KsMfWwRo {
               width: 0 !important;
               min-width: 0 !important;
@@ -146,6 +146,13 @@
               flex-basis: 0 !important;
               overflow: hidden !important;
           }
+
+          /* The side NPV button (not needed because it's already hidden by .zjCIcN96KsMfWwRo) */
+          /*
+          .wJiY1vDfuci2a4db {
+              display: none !important;
+          }
+          */
       `;
     document.head.appendChild(style);
   }
