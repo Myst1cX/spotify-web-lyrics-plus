@@ -5037,11 +5037,13 @@ const Providers = {
     let attempts = 0;
     const tryAdd = () => {
       // Note: The old [data-testid="control-button-npv"] no longer exists in Spotify's DOM.
-      // We now use stable control buttons that are always present in the playback controls.
+      // The new NPV "Show" button is inside .wJiY1vDfuci2a4db container with aria-label="Mostrar la vista Sonando"
+      // We use stable control buttons that are always present in the playback controls.
+      const newNpvBtn = document.querySelector('.wJiY1vDfuci2a4db button');
       const repeatBtn = document.querySelector('[data-testid="control-button-repeat"]');
       const micBtn = document.querySelector('[data-testid="lyrics-button"]');
       const skipForwardBtn = document.querySelector('[data-testid="control-button-skip-forward"]');
-      const targetBtn = repeatBtn || micBtn || skipForwardBtn;
+      const targetBtn = newNpvBtn || repeatBtn || micBtn || skipForwardBtn;
       const controls = targetBtn?.parentElement;
       if (!controls) {
         if (attempts < maxRetries) {
