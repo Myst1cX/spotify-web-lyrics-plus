@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    http://tampermonkey.net/
-// @version      14.5
+// @version      14.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,9 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+
+// RESOLVED (14.6): UPDATED THE LOGIC FOR HIDNG THE NOWPLAYING VIEW PANEL
+//
 // RESOLVED (14.5): FIXED TRANSLATION STATE NOT RELOADING ON LYRICS RESET AND LYRICS DISAPPEARANCE BUG AFTER AN ALREADY SUCCESSFULL FETCH
 
 // RESOLVED (14.4): UPDATED THE TUTORIAL INSIDE THE SPOTIFY MODAL
@@ -116,21 +119,10 @@
   // Attempt initialization immediately
   initOpenCCConverters();
 
-  // --- Forcibly hide NowPlayingView and its button in the playback controls menu ---
-
-  /*
-  --- To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
-      This CSS method hides the NowPlayingView from the user interface in a way that allows the rest of the Spotify home UI to seamlessly fill the space it would otherwise
-      occupy, without leaving a black area present. Crucially, it keeps the NowPlayingView and its DOM structure present and accessible to JavaScript (so scripts can still read
-      track info), but makes it invisible and non-interactive to the user.
-
-      The `.NowPlayingView` element is made invisible by setting `opacity: 0` and `pointer-events: none`, but remains in the DOM for selector access.
-      It is positioned absolutely and given a negative z-index, so it does not participate in the normal document flow or block other content.
-      Its flex value is set to `0 0 0%` to ensure it does not reserve any space in the parent flex container.
-      The immediate parent (currently `.oXO9_yYs6JyOwkBn8E4a` was found by inspecting the black area parent of old method) is forced to `width: 0`, `min-width: 0`,
-      `max-width: 0`, and `flex-basis: 0` so that it collapses entirely, allowing the rest of the UI to expand and fill the area, eliminating the black gap.
-      The NPV button in the playback controls (`[data-testid=control-button-npv]`) is simply hidden from the UI.
-
+  /* NowPlayingView logic: Collapsing the `.zjCIcN96KsMfWwRo` parent container to zero width is sufficient to hide the entire NowPlayingView panel.
+      The container is forced to `width: 0`, `min-width: 0`, `max-width: 0`, and `flex-basis: 0` so that it collapses entirely,
+      allowing the rest of the UI to expand and fill the area, eliminating the black gap.
+      The NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching (ProviderSpotify needs it).
   */
 
   const styleId = 'lyricsplus-hide-npv-style';
@@ -138,29 +130,71 @@
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-          .NowPlayingView {
-              position: absolute !important;
-              left: 0; top: 0;
-              width: 100% !important;
-              height: 100% !important;
-              opacity: 0 !important;
-              pointer-events: none !important;
-              z-index: -1 !important;
-              flex: 0 0 0% !important;
-          }
-          .oXO9_yYs6JyOwkBn8E4a {
+          .a_fKt7xvd8od_kEb, /* I kept the parent of .zjCIcN96KsMfWwRo, just in case */
+          .zjCIcN96KsMfWwRo { /* The NowPlayingView panel, which includes the new side NPV button */
               width: 0 !important;
               min-width: 0 !important;
               max-width: 0 !important;
               flex-basis: 0 !important;
               overflow: hidden !important;
           }
-          [data-testid=control-button-npv] {
+
+          /*  --- The side NPV button (not needed because it's already hidden by .zjCIcN96KsMfWwRo)
+
+          .wJiY1vDfuci2a4db {
               display: none !important;
           }
+
+          */
+
       `;
     document.head.appendChild(style);
   }
+
+
+  /*
+  --- Old NowPlayingView logic: Forcibly hide NowPlayingView and its button in the playback controls menu
+  --- To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
+      This CSS method hides the NowPlayingView from the user interface in a way that allows the rest of the Spotify home UI to seamlessly fill the space it would otherwise
+      occupy, without leaving a black area present. Crucially, it keeps the NowPlayingView and its DOM structure present and accessible to JavaScript (so scripts can still read
+      track info), but makes it invisible and non-interactive to the user.
+  --- The `.NowPlayingView` element is made invisible by setting `opacity: 0` and `pointer-events: none`, but remains in the DOM for selector access.
+      It is positioned absolutely and given a negative z-index, so it does not participate in the normal document flow or block other content.
+      Its flex value is set to `0 0 0%` to ensure it does not reserve any space in the parent flex container.
+      The immediate parents (`.a_fKt7xvd8od_kEb` and `.zjCIcN96KsMfWwRo`) are forced to `width: 0`, `min-width: 0`,
+      `max-width: 0`, and `flex-basis: 0` so that they collapse entirely, allowing the rest of the UI to expand and fill the area, eliminating the black gap.
+      The "Show Now Playing view" button (`.wJiY1vDfuci2a4db`) and the old NPV button in the playback controls (`[data-testid=control-button-npv]`) are hidden from the UI.
+
+      const styleId = 'lyricsplus-hide-npv-style';
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+              .NowPlayingView {
+                  position: absolute !important;
+                  left: 0; top: 0;
+                  width: 100% !important;
+                  height: 100% !important;
+                  opacity: 0 !important;
+                  pointer-events: none !important;
+                  z-index: -1 !important;
+                  flex: 0 0 0% !important;
+              }
+              .oXO9_yYs6JyOwkBn8E4a {
+                  width: 0 !important;
+                  min-width: 0 !important;
+                  max-width: 0 !important;
+                  flex-basis: 0 !important;
+                  overflow: hidden !important;
+              }
+              [data-testid=control-button-npv] {
+                  display: none !important;
+              }
+          `;
+        document.head.appendChild(style);
+      }
+
+  */
 
   /*
   --- Old NowPlayingView logic: To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
@@ -182,7 +216,7 @@
                   display: none !important;
               }
           `;
-          document.head.appendChild(style);
+        document.head.appendChild(style);
       }
 
   */
@@ -5048,9 +5082,11 @@ const Providers = {
   function addButton(maxRetries = 10) {
     let attempts = 0;
     const tryAdd = () => {
-      const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
+      // const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
+      // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
       const micBtn = document.querySelector('[data-testid="lyrics-button"]');
-      const targetBtn = nowPlayingViewBtn || micBtn;
+      const targetBtn = micBtn; // previously: nowPlayingViewBtn || micBtn;
+      // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
       const controls = targetBtn?.parentElement;
       if (!controls) {
         if (attempts < maxRetries) {
@@ -5183,5 +5219,3 @@ const Providers = {
     }
   });
 })();
-
-
