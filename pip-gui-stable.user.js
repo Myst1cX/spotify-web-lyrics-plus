@@ -336,10 +336,15 @@
   const Utils = {
     normalize(str) {
       if (!str) return "";
-      // Remove full-width/half-width, accents, etc.
-      return str.normalize("NFKC")
-        .replace(/[’‘“”–]/g, "'")
+      // Unicode normalization: first decompose to NFD to separate diacritics,
+      // then remove combining marks for better cross-language matching
+      // This helps KPoe and other providers match songs regardless of diacritics
+      // e.g., "Ștefan" and "Stefan" will both become "Stefan"
+      return str.normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks
+        .normalize("NFKC") // Re-compose to standard form
         .replace(/[\u2018-\u201F]/g, "'")
+        .replace(/[""–]/g, "'")
         .replace(/[\u3000-\u303F]/g, "")
         .replace(/[^\w\s\-\.&!']/g, '')
         .replace(/\s{2,}/g, ' ')
