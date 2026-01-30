@@ -1816,7 +1816,20 @@ async function fetchGeniusLyrics(info) {
 }
 
   function normalize(str) {
-    return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
+    // Universal Unicode normalization using NFD (Canonical Decomposition)
+    // This automatically handles diacritical characters from most European languages:
+    // - Romanian: Ș→S, ș→s, Ț→T, ț→t, Ă→A, ă→a, Â→A, â→a, Î→I, î→i
+    // - French: é→e, è→e, ê→e, ç→c
+    // - German: ä→a, ö→o, ü→u
+    // - Spanish: ñ→n, á→a, é→e, í→i, ó→o, ú→u
+    // - And many more...
+    // NFD decomposes characters into base + combining marks (e.g., "é" → "e" + "´")
+    // Then we remove the combining diacritical marks (U+0300-U+036F range)
+    return str
+      .normalize('NFD')              // Decompose characters
+      .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks
+      .toLowerCase()
+      .replace(/[^a-z0-9]/gi, '');
   }
 
   function normalizeArtists(artist) {
