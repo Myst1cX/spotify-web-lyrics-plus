@@ -1825,23 +1825,7 @@ async function fetchGeniusLyrics(info) {
 }
 
   function normalize(str) {
-    // First, handle Romanian and other special characters that don't have simple ASCII equivalents
-    // This is done before lowercasing to handle both upper and lowercase variants
-    const charMap = {
-      'Ș': 'S', 'ș': 's',  // Romanian S with comma below
-      'Ț': 'T', 'ț': 't',  // Romanian T with comma below
-      'Ă': 'A', 'ă': 'a',  // Romanian A with breve
-      'Â': 'A', 'â': 'a',  // Romanian/French A with circumflex
-      'Î': 'I', 'î': 'i',  // Romanian/French I with circumflex
-    };
-    
-    let result = str;
-    for (const [from, to] of Object.entries(charMap)) {
-      result = result.replace(new RegExp(from, 'g'), to);
-    }
-    
-    // Then apply standard normalization: lowercase and remove non-alphanumeric
-    return result.toLowerCase().replace(/[^a-z0-9]/gi, '');
+    return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
   }
 
   function normalizeArtists(artist) {
