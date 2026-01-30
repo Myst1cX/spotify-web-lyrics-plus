@@ -1816,7 +1816,13 @@ async function fetchGeniusLyrics(info) {
 }
 
   function normalize(str) {
-    return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
+    if (!str) return "";
+    // Use NFKC normalization like KPoe does, preserving Unicode characters
+    // This keeps characters like Ș, ă, ț intact instead of stripping them
+    // Allows better fuzzy matching: "Ștefan" → "ștefan" not "tefan"
+    return str.normalize("NFKC")
+      .toLowerCase()
+      .replace(/\s+/g, ''); // Just remove spaces for comparison
   }
 
   function normalizeArtists(artist) {
@@ -1836,14 +1842,36 @@ async function fetchGeniusLyrics(info) {
   }
   
   /**
+   * Check if two strings are similar enough, accounting for diacritic variations
+   * e.g., "stefan" should match "ștefan", "vara" should match "vară"
+   * @param {string} strA - First string (normalized)
+   * @param {string} strB - Second string (normalized)
+   * @returns {boolean} True if strings are similar enough
+   */
+  function stringsAreSimilar(strA, strB) {
+    if (strA === strB) return true;
+    if (!strA || !strB) return false;
+    
+    // Try stripping common diacritics from both for comparison
+    const stripDiacritics = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, '');
+    const strippedA = stripDiacritics(strA);
+    const strippedB = stripDiacritics(strB);
+    
+    return strippedA === strippedB;
+  }
+  
+  /**
    * Check if one artist name contains another (fuzzy matching).
    * Helps match "Swisher" with "Swisher ROU" even if normalization missed something.
+   * Also handles diacritic variations like "Stefan" vs "Ștefan"
    * @param {string} artistA - First artist name (normalized)
    * @param {string} artistB - Second artist name (normalized)
    * @returns {boolean} True if names overlap significantly
    */
   function artistNameContains(artistA, artistB) {
     if (artistA === artistB) return true;
+    // Check if similar (handles diacritics)
+    if (stringsAreSimilar(artistA, artistB)) return true;
     // Minimum 3 chars to avoid false matches on very short names
     if (artistA.length < 3 || artistB.length < 3) return false;
     // Require 70% overlap to prevent false positives like "Art" matching "Artist"
@@ -2069,10 +2097,10 @@ async function fetchGeniusLyrics(info) {
             continue;
           }
 
-          // Title scoring with better substring validation to prevent false positives
+          // Title scoring with better substring validation and diacritic handling
           let titleScore = 0;
-          if (resultTitleNorm === targetTitleNorm) {
-            // Perfect title match
+          if (resultTitleNorm === targetTitleNorm || stringsAreSimilar(resultTitleNorm, targetTitleNorm)) {
+            // Perfect title match (exact or similar with diacritics)
             titleScore = SCORE_TITLE_PERFECT;
           } else if (resultTitleNorm.includes(targetTitleNorm) || targetTitleNorm.includes(resultTitleNorm)) {
             // Substring match - validate it's significant
