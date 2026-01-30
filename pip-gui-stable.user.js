@@ -5113,17 +5113,35 @@ const Providers = {
 
   // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info) {
+    // DETECTION ORDER: Providers are checked sequentially in this order.
+    // CRITICAL: Genius is checked LAST (position 9 of 9)
+    // 
+    // PROBLEM SCENARIO (before fix):
+    // 1. Check LRCLIB synced -> no lyrics
+    // 2. Check Spotify synced -> no lyrics  
+    // 3. Check KPoe synced -> CRASHES with unexpected error (e.g., network timeout, malformed data)
+    // 4. Loop breaks immediately due to unhandled error
+    // 5. Providers 4-9 (including Genius) NEVER GET CHECKED
+    // 6. User sees "No lyrics found" even though Genius has them!
+    // 7. Manual click works because it directly calls Genius, bypassing this loop
+    //
+    // SOLUTION (current fix):
+    // - Wrap each provider check in try-catch
+    // - If provider crashes, log error and continue to next provider
+    // - ALL 9 providers always get attempted
+    // - Genius will be checked regardless of earlier failures
     const detectionOrder = [
-      { name: "LRCLIB", type: "getSynced" },
-      { name: "Spotify", type: "getSynced" },
-      { name: "KPoe", type: "getSynced" },
-      { name: "Musixmatch", type: "getSynced" },
-      { name: "LRCLIB", type: "getUnsynced" },
-      { name: "Spotify", type: "getUnsynced" },
-      { name: "KPoe", type: "getUnsynced" },
-      { name: "Musixmatch", type: "getUnsynced" },
-      { name: "Genius", type: "getUnsynced" }
+      { name: "LRCLIB", type: "getSynced" },      // Provider 1
+      { name: "Spotify", type: "getSynced" },     // Provider 2
+      { name: "KPoe", type: "getSynced" },        // Provider 3
+      { name: "Musixmatch", type: "getSynced" },  // Provider 4
+      { name: "LRCLIB", type: "getUnsynced" },    // Provider 5
+      { name: "Spotify", type: "getUnsynced" },   // Provider 6
+      { name: "KPoe", type: "getUnsynced" },      // Provider 7
+      { name: "Musixmatch", type: "getUnsynced" },// Provider 8
+      { name: "Genius", type: "getUnsynced" }     // Provider 9 - LAST!
     ];
+    
     for (const { name, type } of detectionOrder) {
       try {
         const provider = Providers.map[name];
@@ -5138,7 +5156,9 @@ const Providers = {
           }
         }
       } catch (error) {
-        // Log error but continue to next provider to ensure all providers are tried
+        // CRITICAL FIX: Catch any errors from this provider and continue to next one
+        // Without this try-catch, ANY error would break the loop and skip remaining providers
+        // This ensures Genius (last in line) always gets a chance to be checked
         console.warn(`[Lyrics+] Error checking ${name} provider:`, error);
       }
     }
