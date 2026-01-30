@@ -1816,7 +1816,15 @@ async function fetchGeniusLyrics(info) {
 }
 
   function normalize(str) {
-    return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
+    // Unicode normalization: decompose characters (NFD) to separate base chars from diacritics
+    // Then remove combining diacritical marks (U+0300 to U+036F)
+    // This ensures "Ștefan" and "Stefan" both normalize to "stefan"
+    // Also handles Romanian ă, â, î, ș, ț and other diacritics universally
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/gi, '');
   }
 
   function normalizeArtists(artist) {
