@@ -1816,18 +1816,84 @@ async function fetchGeniusLyrics(info) {
 }
 
   function normalize(str) {
-    // Universal Unicode normalization using NFD (Canonical Decomposition)
-    // This automatically handles diacritical characters from most European languages:
-    // - Romanian: Ș→S, ș→s, Ț→T, ț→t, Ă→A, ă→a, Â→A, â→a, Î→I, î→i
-    // - French: é→e, è→e, ê→e, ç→c
-    // - German: ä→a, ö→o, ü→u
-    // - Spanish: ñ→n, á→a, é→e, í→i, ó→o, ú→u
-    // - And many more...
-    // NFD decomposes characters into base + combining marks (e.g., "é" → "e" + "´")
-    // Then we remove the combining diacritical marks (U+0300-U+036F range)
-    return str
-      .normalize('NFD')              // Decompose characters
-      .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks
+    // Hybrid approach: explicit transliteration map + NFD fallback
+    // This ensures maximum browser compatibility and handles edge cases
+    
+    // Explicit transliteration map for common European diacritical characters
+    // This works even in older browsers and handles characters that don't decompose well
+    const transliterationMap = {
+      // Romanian (the reported problem cases)
+      'Ș': 'S', 'ș': 's', 'Ş': 'S', 'ş': 's',  // S with comma below/cedilla
+      'Ț': 'T', 'ț': 't', 'Ţ': 'T', 'ţ': 't',  // T with comma below/cedilla
+      'Ă': 'A', 'ă': 'a',  // A with breve
+      'Â': 'A', 'â': 'a',  // A with circumflex
+      'Î': 'I', 'î': 'i',  // I with circumflex
+      // French
+      'À': 'A', 'à': 'a', 'Á': 'A', 'á': 'a',
+      'É': 'E', 'é': 'e', 'È': 'E', 'è': 'e', 'Ê': 'E', 'ê': 'e', 'Ë': 'E', 'ë': 'e',
+      'Ï': 'I', 'ï': 'i',
+      'Ô': 'O', 'ô': 'o', 'Ö': 'O', 'ö': 'o',
+      'Ù': 'U', 'ù': 'u', 'Û': 'U', 'û': 'u', 'Ü': 'U', 'ü': 'u',
+      'Ç': 'C', 'ç': 'c',
+      // German
+      'Ä': 'A', 'ä': 'a',
+      'ß': 'ss',
+      // Spanish
+      'Í': 'I', 'í': 'i',
+      'Ó': 'O', 'ó': 'o',
+      'Ú': 'U', 'ú': 'u',
+      'Ñ': 'N', 'ñ': 'n',
+      // Nordic
+      'Å': 'A', 'å': 'a',
+      'Ø': 'O', 'ø': 'o',
+      'Æ': 'AE', 'æ': 'ae',
+      // Polish
+      'Ł': 'L', 'ł': 'l',
+      'Ą': 'A', 'ą': 'a',
+      'Ć': 'C', 'ć': 'c',
+      'Ę': 'E', 'ę': 'e',
+      'Ń': 'N', 'ń': 'n',
+      'Ś': 'S', 'ś': 's',
+      'Ź': 'Z', 'ź': 'z',
+      'Ż': 'Z', 'ż': 'z',
+      // Czech/Slovak
+      'Č': 'C', 'č': 'c',
+      'Ď': 'D', 'ď': 'd',
+      'Ě': 'E', 'ě': 'e',
+      'Ň': 'N', 'ň': 'n',
+      'Ř': 'R', 'ř': 'r',
+      'Š': 'S', 'š': 's',
+      'Ť': 'T', 'ť': 't',
+      'Ů': 'U', 'ů': 'u',
+      'Ý': 'Y', 'ý': 'y',
+      'Ž': 'Z', 'ž': 'z',
+      // Other
+      'Œ': 'OE', 'œ': 'oe',
+      'Đ': 'D', 'đ': 'd',
+      'Ð': 'D', 'ð': 'd',
+      'Þ': 'Th', 'þ': 'th',
+    };
+    
+    // Apply explicit transliterations first
+    let result = str;
+    for (const [from, to] of Object.entries(transliterationMap)) {
+      result = result.replace(new RegExp(from, 'g'), to);
+    }
+    
+    // Apply NFD normalization as fallback for any remaining diacritics
+    // This catches characters not in our explicit map
+    if (typeof result.normalize === 'function') {
+      try {
+        result = result
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+      } catch (e) {
+        // Gracefully ignore if normalize() fails
+      }
+    }
+    
+    // Final cleanup: lowercase and remove non-alphanumeric
+    return result
       .toLowerCase()
       .replace(/[^a-z0-9]/gi, '');
   }
