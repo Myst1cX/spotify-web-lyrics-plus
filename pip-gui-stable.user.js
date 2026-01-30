@@ -2019,6 +2019,14 @@ async function fetchGeniusLyrics(info) {
         const hits = searchJson?.response?.sections?.flatMap(s => s.hits) || [];
         const songHits = hits.filter(h => h.type === "song");
 
+        console.log(`[Genius] Search query: "${query}"`);
+        console.log(`[Genius] Found ${songHits.length} song results`);
+        
+        // Log first few results for debugging
+        if (songHits.length > 0) {
+          console.log("[Genius] First result:", songHits[0].result?.primary_artist?.name, "-", songHits[0].result?.title);
+        }
+
         for (const hit of songHits) {
           const result = hit.result;
         }
@@ -2026,6 +2034,9 @@ async function fetchGeniusLyrics(info) {
         const targetArtists = new Set(normalizeArtists(info.artist));
         const targetTitleNorm = normalize(Utils.removeExtraInfo(info.title));
         const targetHasVersion = hasVersionKeywords(info.title);
+        
+        console.log(`[Genius] Target: ${info.artist} - ${info.title}`);
+        console.log(`[Genius] Target normalized: [${Array.from(targetArtists).join(", ")}] - ${targetTitleNorm}`);
         
         // Dynamic threshold based on artist count (calculated once, used consistently)
         // Single artist: need strong match (≥8) to prevent false positives
@@ -2132,13 +2143,17 @@ async function fetchGeniusLyrics(info) {
           // Calculate final score with weighted components
           let score = artistScore + titleScore;
           
+          console.log(`[Genius]   Scores: artist=${artistScore}, title=${titleScore}, total=${score}, threshold=${matchThreshold}`);
+          
           // Apply penalty for poor matches (no title overlap at all)
           if (!resultTitleNorm.includes(targetTitleNorm) && !targetTitleNorm.includes(resultTitleNorm)) {
             score -= PENALTY_NO_TITLE_OVERLAP;
+            console.log(`[Genius]   Applied no-overlap penalty, new score: ${score}`);
           }
 
           // Check if this result meets the threshold and is better than current best
           if (score > bestScore && score >= matchThreshold && (!targetHasVersion || resultHasVersion)) {
+            console.log(`[Genius]   ✓ New best match! Score: ${score}`);
             bestScore = score;
             song = result;
           } else if (
@@ -2146,21 +2161,27 @@ async function fetchGeniusLyrics(info) {
             score >= matchThreshold - 1 && // Slightly lower threshold for fallback
             (!resultHasVersion || !targetHasVersion)
           ) {
+            console.log(`[Genius]   ~ Fallback candidate. Score: ${score}`);
             fallbackScore = score;
             fallbackSong = result;
+          } else {
+            console.log(`[Genius]   ✗ Rejected. Score too low or version mismatch.`);
           }
         }
 
         if (!song && fallbackSong) {
+          console.log(`[Genius] Using fallback song`);
           song = fallbackSong;
           bestScore = fallbackScore;
         }
 
         // Final check: ensure we have a song that meets the minimum threshold
         if (bestScore < matchThreshold || !song?.url) {
+          console.log(`[Genius] No match found for this page (bestScore: ${bestScore})`);
           continue;
         }
 
+        console.log(`[Genius] ✓✓✓ Match found! ${song.primary_artist?.name} - ${song.title} (score: ${bestScore})`);
 
         const htmlRes = await new Promise((resolve, reject) => {
           GM_xmlhttpRequest({
