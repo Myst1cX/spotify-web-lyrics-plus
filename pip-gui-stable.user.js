@@ -13,7 +13,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (14.9): FIXED THE GENIUS PROVIDER BEING SKIPPED IF UNHANDLED EXCEPTION OCCURRED IN KPOE
+// RESOLVED (14.9): FIXED THE ISSUE WHERE ANY ERROR FROM A PROVIDER WOULD SKIP THE REMAINING PROVIDERS AND BREAK THE LYRIC FETCHING LOOP
 
 // RESOLVED (14.8): FIXED FALSE POSITIVE CAUSING GENIUS TO NOT LOAD LYRICS 
 // Genius provider was incorrectly flagging legitimate song lyrics as translation pages when artist names contained a "fan" substring
@@ -5423,6 +5423,7 @@ const Providers = {
     }
   });
 })();
+
 
 
 
