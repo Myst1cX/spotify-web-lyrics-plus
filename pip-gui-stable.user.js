@@ -1821,13 +1821,54 @@ async function fetchGeniusLyrics(info) {
   function normalizeArtists(artist) {
     return artist
       .toLowerCase()
-      // Remove parenthetical additions like (ROU), (USA), etc. before splitting
-      // This fixes matching for artists like "Swisher (ROU)" vs "Swisher"
-      .replace(/\s*\([^)]*\)/g, '')
+      // Universal normalization: remove all types of additions/metadata
+      // Handles: (ROU), [UK], {Producer}, etc.
+      .replace(/\s*[\(\[\{][^\)\]\}]*[\)\]\}]/g, '')
+      // Remove common suffixes that don't help matching
+      .replace(/\s*(?:& the [a-z]+|and friends?|& co\.?)$/gi, '')
+      // Normalize "The" prefix for better matching
+      .replace(/^the\s+/i, '')
       .split(/,|&|feat|ft|and|\band\b/gi)
       .map(s => s.trim())
       .filter(Boolean)
       .map(normalize);
+  }
+  
+  // Check if one artist name contains another (fuzzy matching)
+  // Helps match "Swisher" with "Swisher ROU" even if normalization missed something
+  function artistNameContains(artistA, artistB) {
+    if (artistA === artistB) return true;
+    if (artistA.length < 3 || artistB.length < 3) return false; // Avoid false matches on very short names
+    // Check if one is substring of the other, with significant overlap
+    if (artistA.includes(artistB) && artistB.length >= artistA.length * 0.6) return true;
+    if (artistB.includes(artistA) && artistA.length >= artistB.length * 0.6) return true;
+    return false;
+  }
+  
+  // Calculate artist overlap with fuzzy matching support
+  function calculateArtistOverlap(targetArtists, resultArtists) {
+    let exactMatches = 0;
+    let fuzzyMatches = 0;
+    
+    for (const target of targetArtists) {
+      let matched = false;
+      // First try exact match
+      if (resultArtists.has(target)) {
+        exactMatches++;
+        matched = true;
+      } else {
+        // Try fuzzy match (substring matching)
+        for (const result of resultArtists) {
+          if (artistNameContains(target, result)) {
+            fuzzyMatches++;
+            matched = true;
+            break;
+          }
+        }
+      }
+    }
+    
+    return { exactMatches, fuzzyMatches, totalMatches: exactMatches + fuzzyMatches };
   }
 
   function extractFeaturedArtistsFromTitle(title) {
@@ -1944,79 +1985,94 @@ async function fetchGeniusLyrics(info) {
           const resultTitleNorm = normalize(Utils.removeExtraInfo(result.title || ''));
           const resultHasVersion = hasVersionKeywords(result.title || '');
 
-          // Artist overlap count
-          let artistOverlapCount = 0;
-          for (const a of targetArtists) {
-            if (resultArtists.has(a)) artistOverlapCount++;
-          }
+          // Use enhanced fuzzy artist matching
+          const overlap = calculateArtistOverlap(targetArtists, resultArtists);
           const totalArtists = targetArtists.size;
+          const artistOverlapCount = overlap.totalMatches;
+          const exactMatchCount = overlap.exactMatches;
+          const fuzzyMatchCount = overlap.fuzzyMatches;
           const missingArtists = totalArtists - artistOverlapCount;
 
+          // Dynamic artist scoring based on match quality and artist count
           let artistScore = 0;
           if (artistOverlapCount === 0) {
-            artistScore = 0; // no artist overlap, reject later
+            artistScore = 0; // no artist overlap, reject
           } else if (artistOverlapCount === totalArtists) {
-            artistScore = 8; // perfect match
+            // Perfect match - all artists found
+            artistScore = 10;
+            // Bonus for exact matches vs fuzzy
+            if (exactMatchCount === totalArtists) artistScore += 2;
           } else if (artistOverlapCount >= totalArtists - 1) {
-            artistScore = 7; // almost perfect
+            // Almost perfect (missing only 1 artist)
+            artistScore = 8;
+            if (exactMatchCount >= totalArtists - 1) artistScore += 1;
           } else if (artistOverlapCount >= 1) {
-            // Partial match, soften penalty for missing artists due to incomplete metadata
-            artistScore = 5 + artistOverlapCount; // partial boost
-            artistScore -= missingArtists * 0.5;
+            // Partial match - score based on percentage matched
+            const matchRatio = artistOverlapCount / totalArtists;
+            artistScore = 4 + (matchRatio * 4); // Scale 4-8 based on ratio
+            // Bonus for exact matches
+            artistScore += exactMatchCount * 0.5;
+            // Reduced penalty for missing artists (metadata may be incomplete)
+            artistScore -= missingArtists * 0.3;
           }
 
-          for (const fa of featured) {
-            if (targetArtists.has(fa) && !resultArtists.has(fa)) {
-              artistScore += 1;
-            }
-          }
-
+          // Minimum artist threshold - must have at least some artist match
           if (artistScore < 3) {
             continue;
           }
 
-          // Title scoring
+          // Title scoring with better substring validation
           let titleScore = 0;
           if (resultTitleNorm === targetTitleNorm) {
-            titleScore = 6;
+            // Perfect title match
+            titleScore = 7;
           } else if (resultTitleNorm.includes(targetTitleNorm) || targetTitleNorm.includes(resultTitleNorm)) {
-            titleScore = 4;
+            // Substring match - validate it's significant
+            const shorter = resultTitleNorm.length < targetTitleNorm.length ? resultTitleNorm : targetTitleNorm;
+            const longer = resultTitleNorm.length >= targetTitleNorm.length ? resultTitleNorm : targetTitleNorm;
+            const overlapRatio = shorter.length / longer.length;
+            
+            // Penalize short titles that might be common words
+            if (shorter.length < 5) {
+              titleScore = 2; // Low score for very short matches
+            } else if (overlapRatio >= 0.7) {
+              titleScore = 5; // Good overlap
+            } else {
+              titleScore = 3; // Partial overlap
+            }
           } else {
-            titleScore = 1;
+            titleScore = 1; // No overlap
           }
 
           // Version keywords adjustment
           if (targetHasVersion) {
-            if (resultHasVersion) titleScore += 2;
-            else titleScore -= 2;
+            if (resultHasVersion) titleScore += 1;
+            else titleScore -= 1;
           } else {
-            if (!resultHasVersion) titleScore += 2;
-            else titleScore -= 2;
+            if (!resultHasVersion) titleScore += 1;
+            else titleScore -= 1;
           }
 
+          // Calculate final score with weighted components
           let score = artistScore + titleScore;
-          let penaltyLog = [];
-
-          if (!resultTitleNorm.includes(targetTitleNorm)) {
-            score -= 3;
-            penaltyLog.push("-3 title not fully overlapping");
+          
+          // Apply penalties for poor matches
+          if (!resultTitleNorm.includes(targetTitleNorm) && !targetTitleNorm.includes(resultTitleNorm)) {
+            score -= 2; // Penalty for no title overlap at all
           }
 
-          if (artistOverlapCount === 0) {
-            score -= 5;
-            penaltyLog.push("-5 no artist overlap");
-          }
+          // Dynamic threshold based on match quality
+          // For single artist songs: need strong match (score >= 8)
+          // For multi-artist: more lenient (score >= 6) since metadata may be incomplete
+          const dynamicThreshold = totalArtists === 1 ? 8 : 6;
 
-          if (penaltyLog.length) {
-          }
-
-          if (score > bestScore && (!targetHasVersion || resultHasVersion)) {
+          if (score > bestScore && score >= dynamicThreshold && (!targetHasVersion || resultHasVersion)) {
             bestScore = score;
             song = result;
           } else if (
             score > fallbackScore &&
-            (!resultHasVersion || !targetHasVersion) &&
-            score >= 6
+            score >= dynamicThreshold - 1 && // Slightly lower threshold for fallback
+            (!resultHasVersion || !targetHasVersion)
           ) {
             fallbackScore = score;
             fallbackSong = result;
@@ -2028,7 +2084,9 @@ async function fetchGeniusLyrics(info) {
           bestScore = fallbackScore;
         }
 
-        if (bestScore < 6 || !song?.url) {
+        // Use dynamic threshold for final check
+        const finalThreshold = targetArtists.size === 1 ? 8 : 6;
+        if (bestScore < finalThreshold || !song?.url) {
           continue;
         }
 
