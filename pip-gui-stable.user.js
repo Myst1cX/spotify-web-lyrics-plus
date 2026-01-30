@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
-// @namespace    http://tampermonkey.net/
+// @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @version      14.8
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
@@ -5415,4 +5415,5 @@ const Providers = {
     }
   });
 })();
+
 
