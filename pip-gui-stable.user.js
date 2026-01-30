@@ -2146,7 +2146,11 @@ async function fetchGeniusLyrics(info) {
           console.log(`[Genius]   Scores: artist=${artistScore}, title=${titleScore}, total=${score}, threshold=${matchThreshold}`);
           
           // Apply penalty for poor matches (no title overlap at all)
-          if (!resultTitleNorm.includes(targetTitleNorm) && !targetTitleNorm.includes(resultTitleNorm)) {
+          // Use stringsAreSimilar to handle diacritics in overlap check
+          const hasOverlap = resultTitleNorm.includes(targetTitleNorm) || 
+                           targetTitleNorm.includes(resultTitleNorm) ||
+                           stringsAreSimilar(resultTitleNorm, targetTitleNorm);
+          if (!hasOverlap) {
             score -= PENALTY_NO_TITLE_OVERLAP;
             console.log(`[Genius]   Applied no-overlap penalty, new score: ${score}`);
           }
