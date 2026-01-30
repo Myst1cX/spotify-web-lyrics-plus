@@ -5140,7 +5140,6 @@ const Providers = {
       } catch (error) {
         // Log error but continue to next provider to ensure all providers are tried
         console.warn(`[Lyrics+] Error checking ${name} provider:`, error);
-        continue;
       }
     }
 
