@@ -14,7 +14,7 @@
 // ==/UserScript==
 
 // RESOLVED (14.8): FIXED FALSE POSITIVE CAUSING GENIUS TO NOT LOAD LYRICS 
-// Genius provider was incorrectly flagging legitimate songs as translation pages when artist names contained a "fan" substring
+// Genius provider was incorrectly flagging legitimate song lyrics as translation pages when artist names contained a "fan" substring
 // e.g., "Ștefan Costea" matched the translation keyword "fan".
 
 // RESOLVED (14.7): IMPROVED GENIUS LYRICS PROVIDER 
@@ -5415,3 +5415,4 @@ const Providers = {
     }
   });
 })();
+
