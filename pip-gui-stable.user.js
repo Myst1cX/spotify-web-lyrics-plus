@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      14.8
+// @version      14.9
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (14.9): FIXED THE GENIUS PROVIDER BEING SKIPPED IF UNHANDLED EXCEPTION OCCURRED IN KPOE
 
 // RESOLVED (14.8): FIXED FALSE POSITIVE CAUSING GENIUS TO NOT LOAD LYRICS 
 // Genius provider was incorrectly flagging legitimate song lyrics as translation pages when artist names contained a "fan" substring
@@ -5207,16 +5209,22 @@ const Providers = {
       { name: "Genius", type: "getUnsynced" }
     ];
     for (const { name, type } of detectionOrder) {
-      const provider = Providers.map[name];
-      const result = await provider.findLyrics(info);
-      if (result && !result.error) {
-        let lyrics = provider[type](result);
-        if (lyrics && lyrics.length > 0) {
-          Providers.setCurrent(name);
-          if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-          await updateLyricsContent(popup, info);
-          return;
+      try {
+        const provider = Providers.map[name];
+        const result = await provider.findLyrics(info);
+        if (result && !result.error) {
+          let lyrics = provider[type](result);
+          if (lyrics && lyrics.length > 0) {
+            Providers.setCurrent(name);
+            if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+            await updateLyricsContent(popup, info);
+            return;
+          }
         }
+      } catch (error) {
+        // If a provider fails for any reason, continue looking for lyrics in other providers 
+        // Without this try-catch, an error would skip the remaining providers and stop the loop.
+        console.warn(`[Lyrics+] Error checking ${name} provider:`, error);
       }
     }
 
@@ -5415,5 +5423,6 @@ const Providers = {
     }
   });
 })();
+
 
 
