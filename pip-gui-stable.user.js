@@ -2000,9 +2000,9 @@ async function fetchGeniusLyrics(info) {
         const targetHasVersion = hasVersionKeywords(info.title);
         
         // Dynamic threshold based on artist count (calculated once, used consistently)
-        // Single artist: need strong match (≥8) to prevent false positives
-        // Multi-artist: more lenient (≥6) since metadata may be incomplete
-        const matchThreshold = targetArtists.size === 1 ? 8 : 6;
+        // Single artist: need strong match (≥7) to prevent false positives
+        // Multi-artist: more lenient (≥5) since metadata may be incomplete
+        const matchThreshold = targetArtists.size === 1 ? 7 : 5;
 
         let bestScore = -Infinity;
         let fallbackScore = -Infinity;
