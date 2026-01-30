@@ -336,15 +336,10 @@
   const Utils = {
     normalize(str) {
       if (!str) return "";
-      // Unicode normalization: first decompose to NFD to separate diacritics,
-      // then remove combining marks for better cross-language matching
-      // This helps KPoe and other providers match songs regardless of diacritics
-      // e.g., "Ștefan" and "Stefan" will both become "Stefan"
-      return str.normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks
-        .normalize("NFKC") // Re-compose to standard form
+      // Remove full-width/half-width, accents, etc.
+      return str.normalize("NFKC")
+        .replace(/[’‘“”–]/g, "'")
         .replace(/[\u2018-\u201F]/g, "'")
-        .replace(/[""–]/g, "'")
         .replace(/[\u3000-\u303F]/g, "")
         .replace(/[^\w\s\-\.&!']/g, '')
         .replace(/\s{2,}/g, ' ')
@@ -1821,15 +1816,7 @@ async function fetchGeniusLyrics(info) {
 }
 
   function normalize(str) {
-    // Unicode normalization: decompose characters (NFD) to separate base chars from diacritics
-    // Then remove combining diacritical marks (U+0300 to U+036F)
-    // This ensures "Ștefan" and "Stefan" both normalize to "stefan"
-    // Also handles Romanian ă, â, î, ș, ț and other diacritics universally
-    return str
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '');
+    return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
   }
 
   function normalizeArtists(artist) {
