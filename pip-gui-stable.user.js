@@ -1825,7 +1825,23 @@ async function fetchGeniusLyrics(info) {
 }
 
   function normalize(str) {
-    return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
+    // First, handle Romanian and other special characters that don't have simple ASCII equivalents
+    // This is done before lowercasing to handle both upper and lowercase variants
+    const charMap = {
+      'Ș': 'S', 'ș': 's',  // Romanian S with comma below
+      'Ț': 'T', 'ț': 't',  // Romanian T with comma below
+      'Ă': 'A', 'ă': 'a',  // Romanian A with breve
+      'Â': 'A', 'â': 'a',  // Romanian/French A with circumflex
+      'Î': 'I', 'î': 'i',  // Romanian/French I with circumflex
+    };
+    
+    let result = str;
+    for (const [from, to] of Object.entries(charMap)) {
+      result = result.replace(new RegExp(from, 'g'), to);
+    }
+    
+    // Then apply standard normalization: lowercase and remove non-alphanumeric
+    return result.toLowerCase().replace(/[^a-z0-9]/gi, '');
   }
 
   function normalizeArtists(artist) {
@@ -1936,10 +1952,12 @@ async function fetchGeniusLyrics(info) {
     "translation", "übersetzung", "перевод", "çeviri", "traducción", "traduções", "traduction",
     "traductions", "traduzione", "traducciones-al-espanol", "fordítás", "fordítások", "tumaczenie",
     "tłumaczenie", "polskie tłumaczenie", "magyar fordítás", "turkce çeviri", "russian translations",
-    "deutsche übersetzung", "genius users", "fan", "fans", "official translation", "genius russian translations",
+    "deutsche übersetzung", "genius users", "official translation", "genius russian translations",
     "genius deutsche übersetzungen", "genius türkçe çeviriler", "polskie tłumaczenia genius",
     "genius magyar fordítások", "genius traducciones al espanol", "genius traduzioni italiane",
     "genius traductions françaises", "genius turkce ceviriler",
+    // Fan/fans in context (not bare "fan" which matches "Stefan")
+    "genius fan", "genius fans", "fan translation", "fans translation",
   ];
   function containsTranslationKeyword(s) {
     if (!s) return false;
