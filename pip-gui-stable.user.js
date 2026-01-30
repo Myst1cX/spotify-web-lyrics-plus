@@ -2000,9 +2000,9 @@ async function fetchGeniusLyrics(info) {
         const targetHasVersion = hasVersionKeywords(info.title);
         
         // Dynamic threshold based on artist count (calculated once, used consistently)
-        // Single artist: need strong match (≥7) to prevent false positives
-        // Multi-artist: more lenient (≥5) since metadata may be incomplete
-        const matchThreshold = targetArtists.size === 1 ? 7 : 5;
+        // Single artist: need strong match (≥8) to prevent false positives
+        // Multi-artist: more lenient (≥6) since metadata may be incomplete
+        const matchThreshold = targetArtists.size === 1 ? 8 : 6;
 
         let bestScore = -Infinity;
         let fallbackScore = -Infinity;
@@ -5125,16 +5125,22 @@ const Providers = {
       { name: "Genius", type: "getUnsynced" }
     ];
     for (const { name, type } of detectionOrder) {
-      const provider = Providers.map[name];
-      const result = await provider.findLyrics(info);
-      if (result && !result.error) {
-        let lyrics = provider[type](result);
-        if (lyrics && lyrics.length > 0) {
-          Providers.setCurrent(name);
-          if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-          await updateLyricsContent(popup, info);
-          return;
+      try {
+        const provider = Providers.map[name];
+        const result = await provider.findLyrics(info);
+        if (result && !result.error) {
+          let lyrics = provider[type](result);
+          if (lyrics && lyrics.length > 0) {
+            Providers.setCurrent(name);
+            if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+            await updateLyricsContent(popup, info);
+            return;
+          }
         }
+      } catch (error) {
+        // Log error but continue to next provider to ensure all providers are tried
+        console.warn(`[Lyrics+] Error checking ${name} provider:`, error);
+        continue;
       }
     }
 
