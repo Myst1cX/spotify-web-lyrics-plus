@@ -1821,6 +1821,9 @@ async function fetchGeniusLyrics(info) {
   function normalizeArtists(artist) {
     return artist
       .toLowerCase()
+      // Remove parenthetical additions like (ROU), (USA), etc. before splitting
+      // This fixes matching for artists like "Swisher (ROU)" vs "Swisher"
+      .replace(/\s*\([^)]*\)/g, '')
       .split(/,|&|feat|ft|and|\band\b/gi)
       .map(s => s.trim())
       .filter(Boolean)
@@ -1927,7 +1930,17 @@ async function fetchGeniusLyrics(info) {
 
           const primary = normalizeArtists(result.primary_artist?.name || '');
           const featured = extractFeaturedArtistsFromTitle(result.title || '');
-          const resultArtists = new Set([...primary, ...featured]);
+          
+          // Also extract artists from Genius metadata arrays if available
+          // This helps match songs where featured/producer artists are in the Spotify credits
+          const featuredFromAPI = (result.featured_artists || [])
+            .map(a => a.name)
+            .flatMap(name => normalizeArtists(name));
+          const producersFromAPI = (result.producer_artists || [])
+            .map(a => a.name)
+            .flatMap(name => normalizeArtists(name));
+          
+          const resultArtists = new Set([...primary, ...featured, ...featuredFromAPI, ...producersFromAPI]);
           const resultTitleNorm = normalize(Utils.removeExtraInfo(result.title || ''));
           const resultHasVersion = hasVersionKeywords(result.title || '');
 
