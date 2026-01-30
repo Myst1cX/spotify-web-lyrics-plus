@@ -1791,6 +1791,14 @@ return data;
 
   // --- Genius ---
 async function fetchGeniusLyrics(info) {
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("[Genius Debug] Starting lyrics search");
+  console.log("[Genius Debug] Input info:", {
+    artist: info.artist,
+    title: info.title,
+    album: info.album,
+    duration: info.duration
+  });
 
   const titles = new Set([
     info.title,
@@ -1798,6 +1806,7 @@ async function fetchGeniusLyrics(info) {
     Utils.removeSongFeat(info.title),
     Utils.removeSongFeat(Utils.removeExtraInfo(info.title)),
   ]);
+  console.log("[Genius Debug] Title variants to try:", Array.from(titles));
 
   function generateNthIndices(start = 1, step = 4, max = 25) {
     const arr = [];
@@ -1816,86 +1825,7 @@ async function fetchGeniusLyrics(info) {
 }
 
   function normalize(str) {
-    // Hybrid approach: explicit transliteration map + NFD fallback
-    // This ensures maximum browser compatibility and handles edge cases
-    
-    // Explicit transliteration map for common European diacritical characters
-    // This works even in older browsers and handles characters that don't decompose well
-    const transliterationMap = {
-      // Romanian (the reported problem cases)
-      'Ș': 'S', 'ș': 's', 'Ş': 'S', 'ş': 's',  // S with comma below/cedilla
-      'Ț': 'T', 'ț': 't', 'Ţ': 'T', 'ţ': 't',  // T with comma below/cedilla
-      'Ă': 'A', 'ă': 'a',  // A with breve
-      'Â': 'A', 'â': 'a',  // A with circumflex
-      'Î': 'I', 'î': 'i',  // I with circumflex
-      // French
-      'À': 'A', 'à': 'a', 'Á': 'A', 'á': 'a',
-      'É': 'E', 'é': 'e', 'È': 'E', 'è': 'e', 'Ê': 'E', 'ê': 'e', 'Ë': 'E', 'ë': 'e',
-      'Ï': 'I', 'ï': 'i',
-      'Ô': 'O', 'ô': 'o', 'Ö': 'O', 'ö': 'o',
-      'Ù': 'U', 'ù': 'u', 'Û': 'U', 'û': 'u', 'Ü': 'U', 'ü': 'u',
-      'Ç': 'C', 'ç': 'c',
-      // German
-      'Ä': 'A', 'ä': 'a',
-      'ß': 'ss',
-      // Spanish
-      'Í': 'I', 'í': 'i',
-      'Ó': 'O', 'ó': 'o',
-      'Ú': 'U', 'ú': 'u',
-      'Ñ': 'N', 'ñ': 'n',
-      // Nordic
-      'Å': 'A', 'å': 'a',
-      'Ø': 'O', 'ø': 'o',
-      'Æ': 'AE', 'æ': 'ae',
-      // Polish
-      'Ł': 'L', 'ł': 'l',
-      'Ą': 'A', 'ą': 'a',
-      'Ć': 'C', 'ć': 'c',
-      'Ę': 'E', 'ę': 'e',
-      'Ń': 'N', 'ń': 'n',
-      'Ś': 'S', 'ś': 's',
-      'Ź': 'Z', 'ź': 'z',
-      'Ż': 'Z', 'ż': 'z',
-      // Czech/Slovak
-      'Č': 'C', 'č': 'c',
-      'Ď': 'D', 'ď': 'd',
-      'Ě': 'E', 'ě': 'e',
-      'Ň': 'N', 'ň': 'n',
-      'Ř': 'R', 'ř': 'r',
-      'Š': 'S', 'š': 's',
-      'Ť': 'T', 'ť': 't',
-      'Ů': 'U', 'ů': 'u',
-      'Ý': 'Y', 'ý': 'y',
-      'Ž': 'Z', 'ž': 'z',
-      // Other
-      'Œ': 'OE', 'œ': 'oe',
-      'Đ': 'D', 'đ': 'd',
-      'Ð': 'D', 'ð': 'd',
-      'Þ': 'Th', 'þ': 'th',
-    };
-    
-    // Apply explicit transliterations first
-    let result = str;
-    for (const [from, to] of Object.entries(transliterationMap)) {
-      result = result.replace(new RegExp(from, 'g'), to);
-    }
-    
-    // Apply NFD normalization as fallback for any remaining diacritics
-    // This catches characters not in our explicit map
-    if (typeof result.normalize === 'function') {
-      try {
-        result = result
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '');
-      } catch (e) {
-        // Gracefully ignore if normalize() fails
-      }
-    }
-    
-    // Final cleanup: lowercase and remove non-alphanumeric
-    return result
-      .toLowerCase()
-      .replace(/[^a-z0-9]/gi, '');
+    return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
   }
 
   function normalizeArtists(artist) {
@@ -2045,10 +1975,13 @@ async function fetchGeniusLyrics(info) {
 
   for (const title of titles) {
     const cleanTitle = cleanQuery(title);
+    console.log(`[Genius Debug] Trying title variant: "${title}" → cleaned: "${cleanTitle}"`);
 
     for (let page = 1; page <= maxPages; page++) {
       const query = encodeURIComponent(`${info.artist} ${cleanTitle}`);
       const searchUrl = `https://genius.com/api/search/multi?per_page=5&page=${page}&q=${query}`;
+      console.log(`[Genius Debug] Page ${page}: Searching with query: "${info.artist} ${cleanTitle}"`);
+      console.log(`[Genius Debug] URL: ${searchUrl}`);
 
       try {
         const searchRes = await new Promise((resolve, reject) => {
@@ -2069,6 +2002,16 @@ async function fetchGeniusLyrics(info) {
         const searchJson = JSON.parse(searchRes.responseText);
         const hits = searchJson?.response?.sections?.flatMap(s => s.hits) || [];
         const songHits = hits.filter(h => h.type === "song");
+        
+        console.log(`[Genius Debug] Page ${page}: Received ${songHits.length} song results`);
+        songHits.forEach((hit, idx) => {
+          const result = hit.result;
+          console.log(`[Genius Debug]   Result ${idx + 1}:`, {
+            title: result.title,
+            artist: result.primary_artist?.name,
+            url: result.url
+          });
+        });
 
         for (const hit of songHits) {
           const result = hit.result;
@@ -2078,10 +2021,20 @@ async function fetchGeniusLyrics(info) {
         const targetTitleNorm = normalize(Utils.removeExtraInfo(info.title));
         const targetHasVersion = hasVersionKeywords(info.title);
         
+        console.log("[Genius Debug] Target (Spotify) normalization:", {
+          originalArtist: info.artist,
+          normalizedArtists: Array.from(targetArtists),
+          originalTitle: info.title,
+          cleanedTitle: Utils.removeExtraInfo(info.title),
+          normalizedTitle: targetTitleNorm,
+          hasVersionKeywords: targetHasVersion
+        });
+        
         // Dynamic threshold based on artist count (calculated once, used consistently)
         // Single artist: need strong match (≥8) to prevent false positives
         // Multi-artist: more lenient (≥6) since metadata may be incomplete
         const matchThreshold = targetArtists.size === 1 ? 8 : 6;
+        console.log(`[Genius Debug] Match threshold for ${targetArtists.size} artist(s): ${matchThreshold}`);
 
         let bestScore = -Infinity;
         let fallbackScore = -Infinity;
@@ -2091,7 +2044,10 @@ async function fetchGeniusLyrics(info) {
         for (const hit of songHits) {
           const result = hit.result;
           // Only consider original (non-translation) Genius lyrics pages
-          if (isTranslationPage(result) || !isSimpleOriginalUrl(result.url)) continue;
+          if (isTranslationPage(result) || !isSimpleOriginalUrl(result.url)) {
+            console.log(`[Genius Debug]     ⊗ Skipping "${result.title}" - translation page or non-simple URL`);
+            continue;
+          }
 
           const primary = normalizeArtists(result.primary_artist?.name || '');
           const featured = extractFeaturedArtistsFromTitle(result.title || '');
@@ -2109,9 +2065,28 @@ async function fetchGeniusLyrics(info) {
           const resultTitleNorm = normalize(Utils.removeExtraInfo(result.title || ''));
           const resultHasVersion = hasVersionKeywords(result.title || '');
 
+          console.log(`[Genius Debug]     Candidate: "${result.title}" by ${result.primary_artist?.name}`);
+          console.log(`[Genius Debug]       Genius normalization:`, {
+            originalArtist: result.primary_artist?.name,
+            normalizedArtists: Array.from(resultArtists),
+            originalTitle: result.title,
+            cleanedTitle: Utils.removeExtraInfo(result.title),
+            normalizedTitle: resultTitleNorm,
+            hasVersionKeywords: resultHasVersion
+          });
+
           // Use enhanced fuzzy artist matching
           const overlap = calculateArtistOverlap(targetArtists, resultArtists);
           const totalArtists = targetArtists.size;
+          
+          console.log(`[Genius Debug]       Artist matching:`, {
+            targetArtists: Array.from(targetArtists),
+            resultArtists: Array.from(resultArtists),
+            exactMatches: overlap.exactMatches,
+            fuzzyMatches: overlap.fuzzyMatches,
+            totalMatches: overlap.totalMatches,
+            totalArtists: totalArtists
+          });
           
           // Guard against empty artist set (should not happen in practice)
           if (totalArtists === 0) continue;
@@ -2143,8 +2118,11 @@ async function fetchGeniusLyrics(info) {
             artistScore -= missingArtists * PENALTY_MISSING_ARTIST;
           }
 
+          console.log(`[Genius Debug]       Artist score: ${artistScore} (threshold: ${SCORE_MIN_ARTIST_THRESHOLD})`);
+
           // Minimum artist threshold - must have at least some artist match
           if (artistScore < SCORE_MIN_ARTIST_THRESHOLD) {
+            console.log(`[Genius Debug]       ⊗ Rejected: artist score below threshold`);
             continue;
           }
 
@@ -2180,6 +2158,13 @@ async function fetchGeniusLyrics(info) {
             else titleScore -= SCORE_VERSION_ADJUSTMENT;
           }
 
+          console.log(`[Genius Debug]       Title comparison:`, {
+            targetNorm: targetTitleNorm,
+            resultNorm: resultTitleNorm,
+            exactMatch: resultTitleNorm === targetTitleNorm,
+            titleScore: titleScore
+          });
+
           // Calculate final score with weighted components
           let score = artistScore + titleScore;
           
@@ -2188,8 +2173,12 @@ async function fetchGeniusLyrics(info) {
             score -= PENALTY_NO_TITLE_OVERLAP;
           }
 
+          console.log(`[Genius Debug]       Final score: ${score} (artistScore: ${artistScore} + titleScore: ${titleScore})`);
+          console.log(`[Genius Debug]       Threshold: ${matchThreshold}, Current best: ${bestScore}`);
+
           // Check if this result meets the threshold and is better than current best
           if (score > bestScore && score >= matchThreshold && (!targetHasVersion || resultHasVersion)) {
+            console.log(`[Genius Debug]       ✓ NEW BEST MATCH!`);
             bestScore = score;
             song = result;
           } else if (
@@ -2197,20 +2186,28 @@ async function fetchGeniusLyrics(info) {
             score >= matchThreshold - 1 && // Slightly lower threshold for fallback
             (!resultHasVersion || !targetHasVersion)
           ) {
+            console.log(`[Genius Debug]       ✓ New fallback candidate`);
             fallbackScore = score;
             fallbackSong = result;
+          } else {
+            console.log(`[Genius Debug]       ⊗ Not selected (score too low or version mismatch)`);
           }
         }
 
         if (!song && fallbackSong) {
+          console.log(`[Genius Debug]   Using fallback song: "${fallbackSong.title}"`);
           song = fallbackSong;
           bestScore = fallbackScore;
         }
 
         // Final check: ensure we have a song that meets the minimum threshold
         if (bestScore < matchThreshold || !song?.url) {
+          console.log(`[Genius Debug]   No suitable match found on page ${page} (bestScore: ${bestScore}, threshold: ${matchThreshold})`);
           continue;
         }
+
+        console.log(`[Genius Debug] ✓✓✓ SELECTED: "${song.title}" by ${song.primary_artist?.name}`);
+        console.log(`[Genius Debug] Fetching lyrics from: ${song.url}`);
 
 
         const htmlRes = await new Promise((resolve, reject) => {
@@ -2325,12 +2322,14 @@ async function fetchGeniusLyrics(info) {
         return { plainLyrics: lyrics };
 
       } catch (e) {
-        console.error("[Genius] Fetch or parse error:", e);
+        console.error("[Genius Debug] Fetch or parse error:", e);
         continue;
       }
     }
   }
 
+  console.log("[Genius Debug] ✗✗✗ No lyrics found after trying all title variants and pages");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   return { error: "Lyrics not found on Genius" };
 }
 
