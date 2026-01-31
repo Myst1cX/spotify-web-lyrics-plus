@@ -208,6 +208,71 @@
   window.lyricsPlusPopupIsDragging = false;
 
   // ------------------------
+  // Resource Management & Cleanup System
+  // ------------------------
+  // Centralized tracking of all observers, listeners, and timers for proper cleanup
+  const ResourceManager = {
+    observers: [],
+    windowListeners: [],
+    
+    // Register a MutationObserver, IntersectionObserver, or ResizeObserver
+    registerObserver(observer, description) {
+      this.observers.push({ observer, description });
+      DEBUG.debug('ResourceManager', `Registered observer: ${description}`);
+      return observer;
+    },
+    
+    // Register a window event listener
+    registerWindowListener(eventType, handler, description) {
+      this.windowListeners.push({ eventType, handler, description });
+      window.addEventListener(eventType, handler);
+      DEBUG.debug('ResourceManager', `Registered window listener: ${eventType} (${description})`);
+    },
+    
+    // Cleanup all registered resources
+    cleanup() {
+      DEBUG.info('ResourceManager', `Cleaning up ${this.observers.length} observers and ${this.windowListeners.length} window listeners`);
+      
+      // Disconnect all observers
+      this.observers.forEach(({ observer, description }) => {
+        try {
+          observer.disconnect();
+          DEBUG.debug('ResourceManager', `Disconnected observer: ${description}`);
+        } catch (e) {
+          DEBUG.error('ResourceManager', `Failed to disconnect observer ${description}:`, e);
+        }
+      });
+      this.observers = [];
+      
+      // Remove all window listeners
+      this.windowListeners.forEach(({ eventType, handler, description }) => {
+        try {
+          window.removeEventListener(eventType, handler);
+          DEBUG.debug('ResourceManager', `Removed window listener: ${eventType} (${description})`);
+        } catch (e) {
+          DEBUG.error('ResourceManager', `Failed to remove listener ${description}:`, e);
+        }
+      });
+      this.windowListeners = [];
+    },
+    
+    // Cleanup specific observer
+    cleanupObserver(observer) {
+      const index = this.observers.findIndex(item => item.observer === observer);
+      if (index !== -1) {
+        const { description } = this.observers[index];
+        try {
+          observer.disconnect();
+          this.observers.splice(index, 1);
+          DEBUG.debug('ResourceManager', `Cleaned up observer: ${description}`);
+        } catch (e) {
+          DEBUG.error('ResourceManager', `Failed to cleanup observer ${description}:`, e);
+        }
+      }
+    }
+  };
+
+  // ------------------------
   // Pre-initialized OpenCC converters (created once at startup)
   // ------------------------
   // Using the full.js bundle, we initialize converters at startup to avoid
@@ -2684,6 +2749,7 @@ const Providers = {
   function removePopup() {
     DEBUG.ui.popupRemoved();
     
+    // Clear all intervals
     if (highlightTimer) {
       clearInterval(highlightTimer);
       highlightTimer = null;
@@ -2694,27 +2760,54 @@ const Providers = {
       pollingInterval = null;
       DEBUG.debug('Cleanup', 'pollingInterval cleared');
     }
-    if (progressInterval) { // Stop progress updates when removing popup (dynamic progress bar)
+    if (progressInterval) {
       clearInterval(progressInterval);
       progressInterval = null;
       DEBUG.debug('Cleanup', 'progressInterval cleared');
     }
+    
+    // Clean up popup-specific observers
     const existing = document.getElementById("lyrics-plus-popup");
     if (existing) {
+      // Disconnect all popup-attached observers
       if (existing._playPauseObserver) {
-        existing._playPauseObserver.disconnect();
-        DEBUG.debug('Cleanup', 'playPauseObserver disconnected');
+        ResourceManager.cleanupObserver(existing._playPauseObserver);
+        existing._playPauseObserver = null;
       }
-      existing._playPauseObserver = null;
+      if (existing._shuffleObserver) {
+        ResourceManager.cleanupObserver(existing._shuffleObserver);
+        existing._shuffleObserver = null;
+      }
+      if (existing._repeatObserver) {
+        ResourceManager.cleanupObserver(existing._repeatObserver);
+        existing._repeatObserver = null;
+      }
+      
+      // Remove window mouseup handler for resize
+      if (existing._resizeMouseupHandler) {
+        window.removeEventListener("mouseup", existing._resizeMouseupHandler);
+        DEBUG.debug('Cleanup', 'Removed mouseup handler for resize');
+        existing._resizeMouseupHandler = null;
+      }
+      
+      // Clear popup references
       existing._playPauseBtn = null;
+      existing._shuffleBtn = null;
+      existing._repeatBtn = null;
+      existing._prevBtn = null;
+      existing._nextBtn = null;
+      existing._lyricsTabs = null;
+      
       existing.remove();
-      DEBUG.debug('Cleanup', 'Popup element removed from DOM');
+      DEBUG.debug('Cleanup', 'Popup element and all observers removed from DOM');
     }
   }
 
   function observeSpotifyShuffle(popup) {
     if (!popup || !popup._shuffleBtn) return;
-    if (popup._shuffleObserver) popup._shuffleObserver.disconnect();
+    if (popup._shuffleObserver) {
+      ResourceManager.cleanupObserver(popup._shuffleObserver);
+    }
 
     // Use the new language-independent function to find the shuffle button
     const shuffleBtn = findSpotifyShuffleButton();
@@ -2726,12 +2819,14 @@ const Providers = {
       setTimeout(() => observeSpotifyShuffle(popup), 0);
     });
     observer.observe(shuffleBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
-    popup._shuffleObserver = observer;
+    popup._shuffleObserver = ResourceManager.registerObserver(observer, 'Shuffle button state');
   }
 
   function observeSpotifyRepeat(popup) {
     if (!popup || !popup._repeatBtn) return;
-    if (popup._repeatObserver) popup._repeatObserver.disconnect();
+    if (popup._repeatObserver) {
+      ResourceManager.cleanupObserver(popup._repeatObserver);
+    }
 
     // Use the new language-independent function to find the repeat button
     const repeatBtn = findSpotifyRepeatButton();
@@ -2743,12 +2838,14 @@ const Providers = {
       setTimeout(() => observeSpotifyRepeat(popup), 0);
     });
     observer.observe(repeatBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style', 'aria-checked'] });
-    popup._repeatObserver = observer;
+    popup._repeatObserver = ResourceManager.registerObserver(observer, 'Repeat button state');
   }
 
   function observeSpotifyPlayPause(popup) {
     if (!popup || !popup._playPauseBtn) return;
-    if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
+    if (popup._playPauseObserver) {
+      ResourceManager.cleanupObserver(popup._playPauseObserver);
+    }
 
     // Use the new language-independent function to find the play/pause button
     const spBtn = findSpotifyPlayPauseButton();
@@ -2759,7 +2856,7 @@ const Providers = {
       }
     });
     observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
-    popup._playPauseObserver = observer;
+    popup._playPauseObserver = ResourceManager.registerObserver(observer, 'Play/pause button state');
   }
 
   function createPopup() {
@@ -5394,10 +5491,12 @@ const Providers = {
     tryAdd();
   }
 
-  const observer = new MutationObserver(() => {
+  // Global observer to inject Lyrics+ button when DOM changes
+  const buttonInjectionObserver = new MutationObserver(() => {
     addButton();
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  ResourceManager.registerObserver(buttonInjectionObserver, 'Global button injection (document.body)');
+  buttonInjectionObserver.observe(document.body, { childList: true, subtree: true });
 
   function init() {
     addButton();
@@ -5408,6 +5507,7 @@ const Providers = {
     const pageObserver = new MutationObserver(() => {
       addButton();
     });
+    ResourceManager.registerObserver(pageObserver, 'Page observer (appRoot)');
     pageObserver.observe(appRoot, { childList: true, subtree: true });
   }
 
@@ -5456,13 +5556,21 @@ const Providers = {
       el.style && el.style.cursor === "nwse-resize"
     );
     if (!resizer) return;
-    resizer.addEventListener("mousedown", () => { isResizing = true; });
-    window.addEventListener("mouseup", () => {
+    
+    const mousedownHandler = () => { isResizing = true; };
+    const mouseupHandler = () => {
       if (isResizing) {
         savePopupState(popup);
       }
       isResizing = false;
-    });
+    };
+    
+    resizer.addEventListener("mousedown", mousedownHandler);
+    // Store handler on popup for cleanup
+    popup._resizeMouseupHandler = mouseupHandler;
+    window.addEventListener("mouseup", mouseupHandler);
+    
+    DEBUG.debug('PopupResize', 'Resize handlers attached');
   }
 
   // Listen for popup creation to hook the resizer
@@ -5473,15 +5581,17 @@ const Providers = {
       observePopupResize();
     }
   });
+  ResourceManager.registerObserver(popupResizeObserver, 'Popup resize observer');
   popupResizeObserver.observe(document.body, { childList: true, subtree: true });
 
   // On window resize, apply saved proportion
-  window.addEventListener("resize", () => {
+  const windowResizeHandler = () => {
     const popup = document.getElementById("lyrics-plus-popup");
     if (popup) {
       applyProportionToPopup(popup);
     }
-  });
+  };
+  ResourceManager.registerWindowListener("resize", windowResizeHandler, 'Popup proportion on window resize');
 
   init();
 })();
