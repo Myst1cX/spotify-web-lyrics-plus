@@ -2871,6 +2871,9 @@ const Providers = {
     DEBUG.ui.popupCreated();
     removePopup();
 
+    // Clear current provider so no provider is highlighted while searching for lyrics
+    Providers.current = null;
+
     // Load saved state from localStorage
     const savedState = localStorage.getItem('lyricsPlusPopupState');
     let pos = null;
