@@ -109,6 +109,99 @@
     BUTTON_ADD_MAX_RETRIES: 10,       // Max retries for button injection
   };
 
+  // ------------------------
+  // Debug Logging Infrastructure
+  // ------------------------
+  const DEBUG = {
+    enabled: true, // Set to false to disable all debug logging
+    
+    // Log levels with prefixes
+    error: (context, ...args) => {
+      if (DEBUG.enabled) console.error(`[Lyrics+ ERROR] [${context}]`, ...args);
+    },
+    warn: (context, ...args) => {
+      if (DEBUG.enabled) console.warn(`[Lyrics+ WARN] [${context}]`, ...args);
+    },
+    info: (context, ...args) => {
+      if (DEBUG.enabled) console.info(`[Lyrics+ INFO] [${context}]`, ...args);
+    },
+    debug: (context, ...args) => {
+      if (DEBUG.enabled) console.debug(`[Lyrics+ DEBUG] [${context}]`, ...args);
+    },
+    
+    // Specialized logging helpers
+    provider: {
+      start: (providerName, operation, trackInfo) => {
+        DEBUG.debug('Provider', `Starting ${operation} for ${providerName}:`, {
+          track: trackInfo.title,
+          artist: trackInfo.artist,
+          album: trackInfo.album
+        });
+      },
+      success: (providerName, operation, lyricsType, lineCount) => {
+        DEBUG.info('Provider', `✓ ${providerName} ${operation} succeeded:`, {
+          type: lyricsType,
+          lines: lineCount
+        });
+      },
+      failure: (providerName, operation, error) => {
+        DEBUG.warn('Provider', `✗ ${providerName} ${operation} failed:`, error);
+      },
+      timing: (providerName, operation, durationMs) => {
+        DEBUG.debug('Provider', `⏱ ${providerName} ${operation} took ${durationMs}ms`);
+      }
+    },
+    
+    dom: {
+      notFound: (selector, context) => {
+        DEBUG.warn('DOM', `Element not found: ${selector}`, context ? `Context: ${context}` : '');
+      },
+      found: (selector, element) => {
+        DEBUG.debug('DOM', `Element found: ${selector}`, element);
+      },
+      query: (selector, count) => {
+        DEBUG.debug('DOM', `Query "${selector}" returned ${count} elements`);
+      }
+    },
+    
+    track: {
+      changed: (oldId, newId, trackInfo) => {
+        DEBUG.info('Track', `Track changed: ${oldId || 'none'} → ${newId}`, trackInfo);
+      },
+      detected: (trackInfo) => {
+        DEBUG.debug('Track', 'Track info detected:', trackInfo);
+      }
+    },
+    
+    ui: {
+      popupCreated: () => {
+        DEBUG.info('UI', 'Popup created');
+      },
+      popupRemoved: () => {
+        DEBUG.info('UI', 'Popup removed');
+      },
+      buttonClick: (buttonName) => {
+        DEBUG.debug('UI', `Button clicked: ${buttonName}`);
+      },
+      stateChange: (stateName, value) => {
+        DEBUG.debug('UI', `State change: ${stateName} = ${value}`);
+      }
+    },
+    
+    perf: {
+      start: (operation) => {
+        const startTime = performance.now();
+        return {
+          end: () => {
+            const duration = performance.now() - startTime;
+            DEBUG.debug('Performance', `${operation} took ${duration.toFixed(2)}ms`);
+            return duration;
+          }
+        };
+      }
+    }
+  };
+
   // Global flags for popup state management (shared with resize observer in setupPopupAutoResize)
   window.lyricsPlusPopupIgnoreProportion = false;
   window.lastProportion = { w: null, h: null };
@@ -128,6 +221,9 @@
   // a retry mechanism as a safety measure in case of any timing issues
   function initOpenCCConverters(retries = LIMITS.OPENCC_MAX_RETRIES, delay = TIMING.OPENCC_RETRY_DELAY_MS) {
     if (openccInitialized) return; // Already initialized, don't retry
+    
+    DEBUG.debug('OpenCC', `Initialization attempt (${LIMITS.OPENCC_MAX_RETRIES - retries + 1}/${LIMITS.OPENCC_MAX_RETRIES})`);
+    
     try {
       if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
         // The full.js bundle exposes OpenCC.Converter which takes { from, to } options
@@ -136,15 +232,16 @@
         openccT2CN = OpenCC.Converter({ from: 't', to: 'cn' });
         openccCN2T = OpenCC.Converter({ from: 'cn', to: 't' });
         openccInitialized = true;
-        console.log('[Lyrics+] OpenCC converters initialized successfully (t↔cn)');
+        DEBUG.info('OpenCC', 'Converters initialized successfully (t↔cn)');
       } else if (retries > 0) {
         // OpenCC not available yet, retry after a short delay
+        DEBUG.debug('OpenCC', `Not available yet, retrying in ${delay}ms (${retries} retries left)`);
         setTimeout(() => initOpenCCConverters(retries - 1, delay * 2), delay);
       } else {
-        console.warn('[Lyrics+] OpenCC not available after retries');
+        DEBUG.warn('OpenCC', 'Not available after all retries');
       }
     } catch (e) {
-      console.warn('[Lyrics+] OpenCC converter initialization error:', e);
+      DEBUG.error('OpenCC', 'Initialization error:', e);
     }
   }
   // Attempt initialization immediately
@@ -239,7 +336,7 @@
       const data = await response.json();
       return data[0][0][0];
     } catch (error) {
-      console.error('Translation failed:', error);
+      DEBUG.error('Translation', 'Failed to translate text:', error);
       return '[Translation Error]';
     }
   }
@@ -279,7 +376,7 @@
       try {
         if (!openccT2CN || !openccCN2T) {
           // Fallback if converters aren't initialized
-          console.warn('[Lyrics+] OpenCC converters not initialized for detection');
+          DEBUG.warn('OpenCC', 'Converters not initialized for script detection');
           return 'simplified'; // Default assumption
         }
 
@@ -308,7 +405,7 @@
           return 'simplified';
         }
       } catch (e) {
-        console.warn('[Lyrics+] Script type detection error:', e);
+        DEBUG.warn('OpenCC', 'Script type detection error:', e);
         return 'simplified'; // Default assumption on error
       }
     },
@@ -333,10 +430,10 @@
           return converter(str);
         }
         // Converter not available, return original
-        console.warn('[Lyrics+] T→CN converter not available');
+        DEBUG.warn('OpenCC', 'T→CN converter not available');
         return str;
       } catch (e) {
-        console.warn('[Lyrics+] Traditional to Simplified conversion error:', e);
+        DEBUG.error('OpenCC', 'Traditional to Simplified conversion error:', e);
         return str;
       }
     },
@@ -357,10 +454,10 @@
           return converter(str);
         }
         // Converter not available, return original
-        console.warn('[Lyrics+] CN→T converter not available');
+        DEBUG.warn('OpenCC', 'CN→T converter not available');
         return str;
       } catch (e) {
-        console.warn('[Lyrics+] Simplified to Traditional conversion error:', e);
+        DEBUG.error('OpenCC', 'Simplified to Traditional conversion error:', e);
         return str;
       }
     },
@@ -471,8 +568,12 @@
     if (contextLink) {
       const href = contextLink.getAttribute('href');
       const match = decodeURIComponent(href).match(/spotify:track:([a-zA-Z0-9]{22})/);
-      if (match) return match[1];
+      if (match) {
+        DEBUG.debug('Track', `Track ID extracted: ${match[1]}`);
+        return match[1];
+      }
     }
+    DEBUG.dom.notFound('a[data-testid="context-link"]...', 'getCurrentTrackId');
     return null;
   }
 
@@ -482,7 +583,12 @@
     const durationEl = document.querySelector('[data-testid="playback-duration"]');
     const positionEl = document.querySelector('[data-testid="playback-position"]');
     const trackId = getCurrentTrackId();
-    if (!titleEl || !artistEl) return null;
+    
+    if (!titleEl || !artistEl) {
+      DEBUG.dom.notFound(!titleEl ? 'context-item-info-title' : 'context-item-info-subtitles', 'getCurrentTrackInfo');
+      return null;
+    }
+    
     const title = titleEl.textContent.trim();
     const artist = artistEl.textContent.trim();
 
@@ -506,10 +612,11 @@
       const audio = document.querySelector('audio');
       if (audio && !isNaN(audio.duration) && audio.duration > 0) {
         duration = audio.duration * 1000;
+        DEBUG.debug('Track', 'Duration obtained from audio element');
       }
     }
 
-    return {
+    const trackInfo = {
       id: `${title}-${artist}`,
       title,
       artist,
@@ -518,6 +625,9 @@
       uri: "",
       trackId
     };
+    
+    DEBUG.track.detected(trackInfo);
+    return trackInfo;
   }
 
   function timeStringToMs(str) {
@@ -1260,7 +1370,7 @@ const PLAY_WORDS = [
     });
 
     if (!response.ok) {
-      console.warn(`LRCLIB request failed with status ${response.status}`);
+      DEBUG.warn('LRCLIB', `Request failed with status ${response.status}`);
       return null;
     }
 
@@ -2572,24 +2682,33 @@ const Providers = {
   // ------------------------
 
   function removePopup() {
+    DEBUG.ui.popupRemoved();
+    
     if (highlightTimer) {
       clearInterval(highlightTimer);
       highlightTimer = null;
+      DEBUG.debug('Cleanup', 'highlightTimer cleared');
     }
     if (pollingInterval) {
       clearInterval(pollingInterval);
       pollingInterval = null;
+      DEBUG.debug('Cleanup', 'pollingInterval cleared');
     }
     if (progressInterval) { // Stop progress updates when removing popup (dynamic progress bar)
       clearInterval(progressInterval);
       progressInterval = null;
+      DEBUG.debug('Cleanup', 'progressInterval cleared');
     }
     const existing = document.getElementById("lyrics-plus-popup");
     if (existing) {
-      if (existing._playPauseObserver) existing._playPauseObserver.disconnect();
+      if (existing._playPauseObserver) {
+        existing._playPauseObserver.disconnect();
+        DEBUG.debug('Cleanup', 'playPauseObserver disconnected');
+      }
       existing._playPauseObserver = null;
       existing._playPauseBtn = null;
       existing.remove();
+      DEBUG.debug('Cleanup', 'Popup element removed from DOM');
     }
   }
 
@@ -2644,13 +2763,20 @@ const Providers = {
   }
 
   function createPopup() {
+    DEBUG.ui.popupCreated();
     removePopup();
 
     // Load saved state from localStorage
     const savedState = localStorage.getItem('lyricsPlusPopupState');
     let pos = null;
     if (savedState) {
-      try { pos = JSON.parse(savedState); } catch { pos = null; }
+      try { 
+        pos = JSON.parse(savedState);
+        DEBUG.debug('UI', 'Loaded saved popup state', pos);
+      } catch { 
+        pos = null;
+        DEBUG.warn('UI', 'Failed to parse saved popup state');
+      }
     }
 
     const popup = document.createElement("div");
@@ -5102,6 +5228,9 @@ const Providers = {
 
   // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info) {
+    DEBUG.info('Autodetect', 'Starting provider autodetection', info);
+    const startTime = performance.now();
+    
     const detectionOrder = [
       { name: "LRCLIB", type: "getSynced" },
       { name: "Spotify", type: "getSynced" },
@@ -5113,23 +5242,42 @@ const Providers = {
       { name: "Musixmatch", type: "getUnsynced" },
       { name: "Genius", type: "getUnsynced" }
     ];
+    
     for (const { name, type } of detectionOrder) {
       try {
+        const providerStartTime = performance.now();
+        DEBUG.provider.start(name, type, info);
+        
         const provider = Providers.map[name];
         const result = await provider.findLyrics(info);
+        
+        const providerDuration = performance.now() - providerStartTime;
+        
         if (result && !result.error) {
           let lyrics = provider[type](result);
           if (lyrics && lyrics.length > 0) {
+            DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
+            DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
+            
             Providers.setCurrent(name);
             if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
             await updateLyricsContent(popup, info);
+            
+            const totalDuration = performance.now() - startTime;
+            DEBUG.info('Autodetect', `Completed successfully in ${totalDuration.toFixed(2)}ms using ${name}`);
             return;
+          } else {
+            DEBUG.debug('Provider', `${name} ${type} returned empty lyrics`);
           }
+        } else {
+          DEBUG.provider.failure(name, type, result?.error || 'No result');
         }
+        
+        DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
       } catch (error) {
         // If a provider fails for any reason, continue looking for lyrics in other providers 
         // Without this try-catch, an error would skip the remaining providers and stop the loop.
-        console.warn(`[Lyrics+] Error checking ${name} provider:`, error);
+        DEBUG.provider.failure(name, type, error);
       }
     }
 
@@ -5144,6 +5292,9 @@ const Providers = {
     // Reset translation state when no lyrics are found
     translationPresent = false;
     lastTranslatedLang = null;
+    
+    const totalDuration = performance.now() - startTime;
+    DEBUG.warn('Autodetect', `No lyrics found after checking all providers (${totalDuration.toFixed(2)}ms)`);
   }
 
   function startPollingForTrackChange(popup) {
@@ -5152,6 +5303,7 @@ const Providers = {
       const info = getCurrentTrackInfo();
       if (!info) return;
       if (info.id !== currentTrackId) {
+        DEBUG.track.changed(currentTrackId, info.id, info);
         currentTrackId = info.id;
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
@@ -5200,17 +5352,22 @@ const Providers = {
       if (!controls) {
         if (attempts < maxRetries) {
           attempts++;
+          DEBUG.debug('Button', `Injection attempt ${attempts}/${maxRetries} - controls not found, retrying...`);
           setTimeout(tryAdd, TIMING.BUTTON_ADD_RETRY_MS);
         } else {
-          console.warn("Lyrics+ button: Failed to find controls after max retries.");
+          DEBUG.error('Button', `Failed to inject Lyrics+ button after ${maxRetries} attempts`);
         }
         return;
       }
-      if (document.getElementById("lyrics-plus-btn")) return;
+      if (document.getElementById("lyrics-plus-btn")) {
+        DEBUG.debug('Button', 'Lyrics+ button already exists, skipping injection');
+        return;
+      }
       const btn = document.createElement("button");
       btn.id = "lyrics-plus-btn";
       btn.title = "Show Lyrics+";
       btn.textContent = "Lyrics+";
+      DEBUG.info('Button', 'Lyrics+ button injected successfully');
       Object.assign(btn.style, {
         backgroundColor: "#1db954",
         border: "none",
