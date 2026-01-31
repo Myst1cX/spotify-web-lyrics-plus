@@ -3979,16 +3979,14 @@ const Providers = {
       const pEls = Array.from(lyricsContainer.querySelectorAll('p[data-transliteration-text]'));
       pEls.forEach((p) => {
         const transliterationText = p.getAttribute('data-transliteration-text');
-        if (transliterationText) {
-          const transliterationDiv = document.createElement('div');
-          transliterationDiv.textContent = transliterationText;
-          transliterationDiv.style.color = '#999'; // Slightly lighter gray than translation
-          transliterationDiv.style.fontSize = '0.9em'; // Slightly smaller
-          transliterationDiv.setAttribute('data-transliteration', 'true');
-          // Insert after lyric line (before translation if present, or at end if not)
-          const nextSibling = p.nextSibling;
-          p.parentNode.insertBefore(transliterationDiv, nextSibling);
-        }
+        const transliterationDiv = document.createElement('div');
+        transliterationDiv.textContent = transliterationText;
+        transliterationDiv.style.color = '#999'; // Slightly lighter gray than translation
+        transliterationDiv.style.fontSize = '0.9em'; // Slightly smaller
+        transliterationDiv.setAttribute('data-transliteration', 'true');
+        // Insert after lyric line (before translation if present, or at end if not)
+        const nextSibling = p.nextSibling;
+        p.parentNode.insertBefore(transliterationDiv, nextSibling);
       });
       transliterationPresent = true;
     }
@@ -5670,7 +5668,6 @@ const Providers = {
     // Show transliteration if enabled and data is available
     if (transliterationEnabled && hasTransliterationData) {
       showTransliterationInPopup();
-      const transliterationBtn = popup._transliterationToggleBtn;
       if (transliterationBtn) {
         transliterationBtn.title = "Hide transliteration";
       }
@@ -5818,7 +5815,6 @@ const Providers = {
     // Show transliteration if enabled and data is available
     if (transliterationEnabled && hasTransliterationData) {
       showTransliterationInPopup();
-      const transliterationBtn = popup._transliterationToggleBtn;
       if (transliterationBtn) {
         transliterationBtn.title = "Hide transliteration";
       }
