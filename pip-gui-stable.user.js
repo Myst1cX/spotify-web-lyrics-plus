@@ -1911,7 +1911,15 @@ async function fetchGeniusLyrics(info) {
 }
 
   function normalize(str) {
-    return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
+    // Use NFD (Canonical Decomposition) to decompose diacritics into base + combining marks
+    // Then remove the combining marks (Unicode range \u0300-\u036f)
+    // This converts: ă→a, é→e, ñ→n, ö→o, etc.
+    // Finally, remove all remaining non-alphanumeric characters
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks
+      .replace(/[^a-z0-9]/gi, '');
   }
 
   function normalizeArtists(artist) {
