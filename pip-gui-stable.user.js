@@ -14,12 +14,12 @@
 // ==/UserScript==
 
 // RESOLVED (15.0): CODE QUALITY & BUG FIX RELEASE
-// Duplicate IIFE patterns merged into a single scope
+// Duplicate IIFE patterns merged into a single scope (fixed the Reference Error in console)
 // Improved code mantainability and reduced bloat
 // Added comprehensive DEBUG system with 4 levels (ERROR, WARN, INFO, DEBUG)
 // Added specialized loggers: provider, dom, track, ui, perf
 // Performance timing for all provider operations
-// Memory leak fixes: ResourceManager for observer/listener cleanup
+// Memory leak fixes: added a ResourceManager for observer/listener cleanup
 // Fixed Genius provider failing to match songs with accented characters
 // • Updated normalize() function to use NFD (Unicode Normalization Form Decomposed)
 // • Now converts diacritics to base forms: ă→a, é→e, ñ→n, ö→o, etc.
@@ -67,16 +67,10 @@
 // Shuffle button found by SVG icon patterns instead of aria-label text
 // Static SVGs are kept as fallbacks when DOM elements are not available
 
-
 // WHEN THE TIME IS RIGHT:
-// Add tiny invisible barrier that prevents top lrc from touching the adjust offset container (while the container is toggled visible)
-// Fix upper corners of popup, make em at same proportion fold as spotify's library view.
 // Improve google translation, currently only translates line by line (tho it outputs all lines instantly, line by line causes lack of content awareness = lower quality translation)
-// Lol spotify ad getting detected as track in console. Maybe do something to block them. Also refresh Spotifuck userscript adblock method. : Object { id: "Spotify-Advertisement", title: "Spotify", artist: "Advertisement", album: "", duration: 26000, uri: "", trackId: null }
-/* fix ReferenceError: savePopupState is not defined 25 sandbox eval code:3678:7
-   observePopupResize moz-extension://1b8e1133-2f8b-4475-936e-fe6a40022769/ Spotify Lyrics+ Stable.user.js#347:3678
-- basically just combine whole script under function use strict IIFE instead of keeping 2 iife's which separates code unnecessarily
-*/
+// Lol spotify ad getting detected as track in console. Maybe do something to block them. Also refresh Spotifuck userscript adblock method.
+// • Object { id: "Spotify-Advertisement", title: "Spotify", artist: "Advertisement", album: "", duration: 26000, uri: "", trackId: null }
 
 // CONSIDER CONVERTING TO BROWSER EXTENSION:
 // Converting the userscript into a browser extension would unlock two things:
@@ -5850,4 +5844,5 @@ const Providers = {
 
   init();
 })();
+
 
