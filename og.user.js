@@ -859,6 +859,14 @@
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+          
+          // Reset transliteration line if present
+          const nextEl = p.nextElementSibling;
+          if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
+            nextEl.style.color = "#9a9a9a";
+            nextEl.style.filter = "blur(0.7px)";
+            nextEl.style.opacity = "0.8";
+          }
         });
         return;
       }
@@ -870,6 +878,14 @@
           p.style.opacity = "1";
           p.style.transform = "scale(1.10)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+          
+          // Highlight transliteration line with lighter green if present
+          const nextEl = p.nextElementSibling;
+          if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
+            nextEl.style.color = "#4db56a";  // Lighter green for transliteration
+            nextEl.style.filter = "none";
+            nextEl.style.opacity = "0.9";
+          }
         } else {
           p.style.color = "white";
           p.style.fontWeight = "400";
@@ -877,6 +893,14 @@
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+          
+          // Reset transliteration line if present
+          const nextEl = p.nextElementSibling;
+          if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
+            nextEl.style.color = "#9a9a9a";
+            nextEl.style.filter = "blur(0.7px)";
+            nextEl.style.opacity = "0.8";
+          }
         }
       });
 
@@ -3989,9 +4013,12 @@ const Providers = {
         const transliterationText = p.getAttribute('data-transliteration-text');
         const transliterationDiv = document.createElement('div');
         transliterationDiv.textContent = transliterationText;
-        // Use #999 (lighter than translation's 'gray' #808080) to subtly distinguish transliteration
-        transliterationDiv.style.color = '#999';
-        transliterationDiv.style.fontSize = '0.9em'; // Slightly smaller
+        // Use #9a9a9a (lighter gray than translation) for better distinction
+        transliterationDiv.style.color = '#9a9a9a';
+        transliterationDiv.style.fontSize = '0.85em'; // Slightly smaller
+        transliterationDiv.style.marginTop = '2px';
+        transliterationDiv.style.marginBottom = '8px';
+        transliterationDiv.style.transition = "color 0.15s, filter 0.13s, opacity 0.13s";
         transliterationDiv.setAttribute('data-transliteration', 'true');
         // Insert after lyric line (before translation if present, or at end if not)
         const nextSibling = p.nextSibling;
