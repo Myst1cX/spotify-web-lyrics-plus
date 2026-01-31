@@ -1,0 +1,74 @@
+KPoe Edge Cases for Transliteration Feature
+=============================================
+
+Edge Case 1: Empty or Whitespace-Only Transliteration
+------------------------------------------------------
+Some KPoe lyrics may have transliteration objects but with empty or whitespace-only text:
+{
+  "text": "♪",
+  "transliteration": {
+    "text": "",
+    "lang": "zh-Latn-pinyin"
+  }
+}
+
+Or:
+{
+  "text": "La la la",
+  "transliteration": {
+    "text": "   ",
+    "lang": "zh-Latn-pinyin"
+  }
+}
+
+Current Issue:
+- The code at line 1811 and 1848 uses: `line.transliteration?.text || null`
+- This doesn't filter empty strings or whitespace-only strings
+- Empty transliteration text gets attached as `data-transliteration-text=""`
+- When displayed, this creates an empty div below the lyric line
+
+Edge Case 2: Musical Note Symbols (♪, ♫)
+-----------------------------------------
+Instrumental sections often use musical note symbols:
+{
+  "text": "♪",
+  "transliteration": null
+}
+
+Current Issue:
+- Musical notes should not display transliteration even if data exists
+- The code should skip transliteration for lines that are just musical notes
+
+Edge Case 3: Transliteration with Only Whitespace After Trim
+------------------------------------------------------------
+Some API responses might have transliteration that becomes empty after trimming:
+{
+  "text": "Some lyrics",
+  "transliteration": {
+    "text": "  \n\t  ",
+    "lang": "zh-Latn-pinyin"
+  }
+}
+
+Proposed Fix:
+-------------
+1. In getSynced() and getUnsynced() methods, filter transliteration text:
+   - Check if transliteration.text exists
+   - Trim whitespace
+   - Return null if empty after trimming
+
+2. In showTransliterationInPopup(), skip musical note lines:
+   - Don't show transliteration for lines containing only ♪, ♫, or whitespace
+
+Example Fixed Code:
+```javascript
+// In getSynced/getUnsynced:
+transliteration: (line.transliteration?.text?.trim() || null)
+
+// Or more robust:
+const translitText = line.transliteration?.text?.trim();
+return {
+  ...
+  transliteration: (translitText && translitText.length > 0) ? translitText : null
+};
+```
