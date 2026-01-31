@@ -54,6 +54,7 @@ Spotify Lyrics+ Stable.user.js:2346:13
 [Musixmatch Debug] Lyrics response status: 200 Spotify Lyrics+ Stable.user.js:2404:13
 [Musixmatch Debug] ✗ No lyrics found in any format Spotify Lyrics+ Stable.user.js:2419:13
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1960:13
+// hi my code analyst! note how below kpoe is conducting what seems to be a blank search??? this is from script provider autodetection.
 [KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1961:13
 [KPoe Debug] Input info: 
 Object { artist: "", title: "", album: "", duration: 300, sourceOrder: "none", forceReload: false }
@@ -62,7 +63,6 @@ Spotify Lyrics+ Stable.user.js:1962:13
 [KPoe Debug] Response status: 400 Spotify Lyrics+ Stable.user.js:1988:15
 [KPoe Debug] ✗ Request failed: 400 Spotify Lyrics+ Stable.user.js:1998:19
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1960:13
-// hi my code analyst! note how below kpoe is conducting what seems to be a blank search??? this is from script provider autodetection.
 [KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1961:13
 [KPoe Debug] Input info: 
 Object { artist: "", title: "", album: "", duration: 300, sourceOrder: "none", forceReload: false }
