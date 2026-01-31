@@ -5658,7 +5658,7 @@ const Providers = {
     startPollingForTrackChange(popup);
   }
 
-  // Re-render cached lyrics without fetching from provider (used for Chinese conversion toggle)
+  // Re-render cached lyrics without fetching from provider (used for Chinese conversion toggle and lyric type switching)
   function rerenderLyrics(popup) {
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
     if (!lyricsContainer) return;
@@ -5693,11 +5693,35 @@ const Providers = {
 
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
-      currentSyncedLyrics.forEach(({ text }) => {
+      
+      // Determine rendering mode once for all lines (same logic as updateLyricsContent)
+      const userWantsWordMode = kpoeLyricTypePreference === 'word';
+      const userWantsLineMode = kpoeLyricTypePreference === 'line';
+      
+      currentSyncedLyrics.forEach((line) => {
         const p = document.createElement("p");
-        p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        
+        // Determine if we should render word-by-word for this line
+        const hasWordData = line.syllabus && line.syllabus.length > 0 && line.isWordType;
+        const shouldRenderWords = hasWordData && !userWantsLineMode && (userWantsWordMode || kpoeLyricTypePreference === 'auto');
+        
+        if (shouldRenderWords) {
+          // Render as word spans for word-by-word highlighting
+          line.syllabus.forEach((word, idx) => {
+            const span = document.createElement("span");
+            span.textContent = convertText(word.text || '');
+            span.dataset.time = word.time; // Store word timing
+            span.dataset.duration = word.duration;
+            span.style.transition = "color 0.1s, font-weight 0.1s";
+            p.appendChild(span);
+          });
+        } else {
+          // Regular line-level rendering
+          p.textContent = convertText(line.text);
+        }
+        
         lyricsContainer.appendChild(p);
       });
       highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
