@@ -1706,6 +1706,9 @@ const PLAY_WORDS = [
       if (!body?.data || !Array.isArray(body.data)) return null;
       
       const isWordType = body.type === "Word";
+      if (isWordType) {
+        console.log("[KPoe Debug] Processing Word type unsynced lyrics");
+      }
       
       return body.data.map(line => {
         let text = line.text;
@@ -1722,6 +1725,10 @@ const PLAY_WORDS = [
             }
             return syllableText;
           }).join('').trim();
+          
+          if (isWordType) {
+            console.log(`[KPoe Debug] Reconstructed unsynced line from ${line.syllabus.length} syllables: "${text}"`);
+          }
         }
         
         return {
