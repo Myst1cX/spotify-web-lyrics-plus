@@ -802,6 +802,10 @@
       clearInterval(highlightTimer);
       highlightTimer = null;
     }
+    
+    // Check if we have word-level timing data (KPoe Word type)
+    const hasWordTiming = lyrics.some(line => line.syllabus && line.syllabus.length > 0 && line.isWordType);
+    
     highlightTimer = setInterval(() => {
       // Skip all style/size changes while popup is being resized
       if (window.lyricsPlusPopupIsResizing) return;
@@ -835,11 +839,14 @@
       if (!posEl) return;
       const curPosMs = timeStringToMs(posEl.textContent);
       const anticipatedMs = curPosMs + getAnticipationOffset();
+      
+      // Find active line
       let activeIndex = -1;
       for (let i = 0; i < lyrics.length; i++) {
         if (anticipatedMs >= (lyrics[i].time ?? lyrics[i].startTime)) activeIndex = i;
         else break;
       }
+      
       if (activeIndex === -1) {
         pElements.forEach(p => {
           p.style.color = "white";
@@ -848,9 +855,18 @@
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+          
+          // Reset all word spans if present
+          const spans = p.querySelectorAll('span[data-time]');
+          spans.forEach(span => {
+            span.style.color = "inherit";
+            span.style.fontWeight = "inherit";
+          });
         });
         return;
       }
+      
+      // Apply line-level styles
       pElements.forEach((p, idx) => {
         if (idx === activeIndex) {
           p.style.color = "#1db954";
@@ -859,6 +875,35 @@
           p.style.opacity = "1";
           p.style.transform = "scale(1.10)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+          
+          // Word-level highlighting for active line
+          if (hasWordTiming && lyrics[idx].syllabus && lyrics[idx].syllabus.length > 0) {
+            const spans = p.querySelectorAll('span[data-time]');
+            let activeWordIndex = -1;
+            
+            // Find active word within this line
+            for (let i = 0; i < spans.length; i++) {
+              const wordTime = parseInt(spans[i].dataset.time);
+              if (anticipatedMs >= wordTime) {
+                activeWordIndex = i;
+              } else {
+                break;
+              }
+            }
+            
+            // Highlight words progressively (karaoke style)
+            spans.forEach((span, wordIdx) => {
+              if (wordIdx <= activeWordIndex) {
+                // Completed/current words - bright green
+                span.style.color = "#1ed760";
+                span.style.fontWeight = "700";
+              } else {
+                // Upcoming words - inherit dimmer line color
+                span.style.color = "rgba(255, 255, 255, 0.5)";
+                span.style.fontWeight = "400";
+              }
+            });
+          }
         } else {
           p.style.color = "white";
           p.style.fontWeight = "400";
@@ -866,6 +911,13 @@
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+          
+          // Reset all word spans for inactive lines
+          const spans = p.querySelectorAll('span[data-time]');
+          spans.forEach(span => {
+            span.style.color = "inherit";
+            span.style.fontWeight = "inherit";
+          });
         }
       });
 
@@ -1730,10 +1782,19 @@ const PLAY_WORDS = [
           }
         }
         
-        return {
+        // Include syllabus data for word-by-word highlighting
+        const result = {
           time: Math.round(line.startTime * 1000),
           text: text || ''
         };
+        
+        // Include syllabus data if available (for word-by-word highlighting)
+        if (line.syllabus && line.syllabus.length > 0) {
+          result.syllabus = line.syllabus;
+          result.isWordType = true;
+        }
+        
+        return result;
       }).filter(line => line.text.trim() !== ''); // Filter out any empty lines
     },
   };
@@ -5568,11 +5629,27 @@ const Providers = {
 
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
-      currentSyncedLyrics.forEach(({ text }) => {
+      currentSyncedLyrics.forEach((line) => {
         const p = document.createElement("p");
-        p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        
+        // Check if this line has word-level timing data (KPoe Word type)
+        if (line.syllabus && line.syllabus.length > 0 && line.isWordType) {
+          // Render as word spans for word-by-word highlighting
+          line.syllabus.forEach((word, idx) => {
+            const span = document.createElement("span");
+            span.textContent = convertText(word.text || '');
+            span.dataset.time = word.time; // Store word timing
+            span.dataset.duration = word.duration;
+            span.style.transition = "color 0.1s, font-weight 0.1s";
+            p.appendChild(span);
+          });
+        } else {
+          // Regular line-level rendering
+          p.textContent = convertText(line.text);
+        }
+        
         lyricsContainer.appendChild(p);
       });
       highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
