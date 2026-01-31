@@ -1793,6 +1793,10 @@ const PLAY_WORDS = [
         }
         
         if (!result) return { error: "Track not found in KPoe database or no lyrics available" };
+        
+        // Note: KPoe API returns a single response with one type (Word or Line)
+        // Word type includes BOTH line.text and line.syllabus, so we have both representations
+        // No need to make additional requests - the switcher works with the single response
         return parseKPoeFormat(result);
       } catch (e) {
         return { error: e.message || "KPoe request failed - network error or service unavailable" };
@@ -5807,6 +5811,10 @@ const Providers = {
 
     // Show/hide lyric type switcher - only show when multiple types are available
     // Button should only appear when we have BOTH line and word data to switch between
+    // Important: KPoe Word type responses include BOTH representations:
+    //   - line.text: for line-by-line rendering
+    //   - line.syllabus: for word-by-word rendering
+    // So a single Word type response gives us both rendering options!
     let hasMultipleLyricTypes = false;
     if (lyricTypeBtn) {
       const isKPoeWordType = Providers.current === "KPoe" && 
