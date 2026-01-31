@@ -879,12 +879,12 @@
           p.style.transform = "scale(1.10)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
           
-          // Highlight transliteration line with lighter green if present
+          // Highlight transliteration line with same green as highlighted lyric
           const nextEl = p.nextElementSibling;
           if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
-            nextEl.style.color = "#4db56a";  // Lighter green for transliteration
+            nextEl.style.color = "#1db954";  // Same green as highlighted lyric
             nextEl.style.filter = "none";
-            nextEl.style.opacity = "0.9";
+            nextEl.style.opacity = "1";
           }
         } else {
           p.style.color = "white";
