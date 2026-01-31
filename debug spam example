@@ -1,0 +1,1417 @@
+Content-Security-Policy warnings 4
+Bad pattern: missing "/" for path in http://* - moz-extension://1b8e1133-2f8b-4475-936e-fe6a40022769/Always%20Remember%20Me.user.js#2
+Bad pattern: missing "/" for path in https://* - moz-extension://1b8e1133-2f8b-4475-936e-fe6a40022769/Always%20Remember%20Me.user.js#2 injected.js:1:8404
+Unable to check top-level optout: Permission denied to access property "document" on cross-origin object content.js:534:17
+Ignoring unsupported entryTypes: longtask. recaptcha__en.js:189:179
+unreachable code after return statement anchor:26928:25
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+Source map error: Error: URL constructor:  is not a valid URL.
+Stack in the worker:resolveSourceMapURL@resource://devtools/client/shared/source-map-loader/utils/fetchSourceMap.js:56:22
+getOriginalURLs@resource://devtools/client/shared/source-map-loader/source-map.js:75:24
+workerHandler/</<@resource://devtools/client/shared/worker-utils.js:115:52
+workerHandler/<@resource://devtools/client/shared/worker-utils.js:113:13
+
+Resource URL: wasm:https://open-exp.spotifycdn.com/cdn/build/web-player/web-player.f1b563be.js%20line%201%20%3E%20WebAssembly.Module:1c7f7a7edbc2543e
+Source Map URL: null
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 2Vvb9PCb8Sg6nwjvzb0Kwo Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Lipsa Ta-Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", album: "", duration: 196000, uri: "", trackId: "2Vvb9PCb8Sg6nwjvzb0Kwo" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Cleanup] highlightTimer cleared Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Cleanup] pollingInterval cleared Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Cleanup] progressInterval cleared Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Cleanup] Removed mouseup handler for resize Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Cleanup] Popup element and all observers removed from DOM Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection 12 Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [UI] Loaded saved popup state 
+Object { left: 345, top: 64, width: 792.2000122070312, height: 568.7999877929688 }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Provider] Starting getSynced for LRCLIB: 
+Object { track: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "" }
+Spotify Lyrics+ Stable.user.js:528:34
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1853:11
+[LRCLIB Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1854:11
+[LRCLIB Debug] Input info: 
+Object { artist: "Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", album: "", duration: 122000 }
+Spotify Lyrics+ Stable.user.js:1855:11
+[LRCLIB Debug] Searching WITH album parameter Spotify Lyrics+ Stable.user.js:1861:11
+[LRCLIB Debug] Including duration: 122 seconds Spotify Lyrics+ Stable.user.js:1880:13
+[LRCLIB Debug] Request URL: https://lrclib.net/api/get?artist_name=Lithe%2C%20Don%20Toliver&track_name=Cannonball%20(feat.%20Don%20Toliver)&duration=122 Spotify Lyrics+ Stable.user.js:1884:11
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+Right Click: No Table Found content.js:19:17
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+Will-change memory consumption is too high. Budget limit is the document surface area multiplied by 3 (369198 px). Occurrences of will-change over the budget will be ignored. open.spotify.com
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+Source map error: Error: URL constructor:  is not a valid URL.
+Stack in the worker:resolveSourceMapURL@resource://devtools/client/shared/source-map-loader/utils/fetchSourceMap.js:56:22
+getOriginalURLs@resource://devtools/client/shared/source-map-loader/source-map.js:75:24
+workerHandler/</<@resource://devtools/client/shared/worker-utils.js:115:52
+workerHandler/<@resource://devtools/client/shared/worker-utils.js:113:13
+
+Resource URL: wasm:https://open-exp.spotifycdn.com/cdn/build/web-player/web-player.f1b563be.js%20line%201%20%3E%20WebAssembly.Module:1c7f7a7edbc2543e
+Source Map URL: null
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[LRCLIB Debug] Response status: 200 OK Spotify Lyrics+ Stable.user.js:1894:13
+[LRCLIB Debug] Response data: 
+Object { hasPlainLyrics: true, hasSyncedLyrics: true, isInstrumental: false, duration: 122.616 }
+Spotify Lyrics+ Stable.user.js:1908:13
+[LRCLIB Debug] ✓ Lyrics found! Type: Synced Spotify Lyrics+ Stable.user.js:1918:15
+[Lyrics+ DEBUG] [Provider] ⏱ LRCLIB getSynced took 6047.00ms Spotify Lyrics+ Stable.user.js:528:34
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1853:11
+[LRCLIB Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1854:11
+[LRCLIB Debug] Input info: 
+Object { artist: "Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", album: "", duration: 122000 }
+Spotify Lyrics+ Stable.user.js:1855:11
+[LRCLIB Debug] Searching WITH album parameter Spotify Lyrics+ Stable.user.js:1861:11
+[LRCLIB Debug] Including duration: 122 seconds Spotify Lyrics+ Stable.user.js:1880:13
+[LRCLIB Debug] Request URL: https://lrclib.net/api/get?artist_name=Lithe%2C%20Don%20Toliver&track_name=Cannonball%20(feat.%20Don%20Toliver)&duration=122 Spotify Lyrics+ Stable.user.js:1884:11
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track ID extracted: 1FArbfTMXgDECU9zG3iY1X Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Track] Track info detected: 
+Object { id: "Cannonball (feat. Don Toliver)-Lithe, Don Toliver", title: "Cannonball (feat. Don Toliver)", artist: "Lithe, Don Toliver", album: "", duration: 122000, uri: "", trackId: "1FArbfTMXgDECU9zG3iY1X" }
+Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Play/pause button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Shuffle button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Cleaned up observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [ResourceManager] Registered observer: Repeat button state Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
+[LRCLIB Debug] Response status: 200 OK Spotify Lyrics+ Stable.user.js:1894:13
+[LRCLIB Debug] Response data: 
+Object { hasPlainLyrics: true, hasSyncedLyrics: true, isInstrumental: false, duration: 122.616 }
+Spotify Lyrics+ Stable.user.js:1908:13
+[LRCLIB Debug] ✓ Lyrics found! Type: Synced Spotify Lyrics+ Stable.user.js:1918:15
+[Lyrics+ DEBUG] [Button] Lyrics+ button already exists, skipping injection Spotify Lyrics+ Stable.user.js:528:34
+[Lyrics+ DEBUG] [PopupResize] Resize handlers attached Spotify Lyrics+ Stable.user.js:528:34
