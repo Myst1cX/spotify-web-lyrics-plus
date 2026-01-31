@@ -108,7 +108,7 @@
   // Constants & Configuration
   // ------------------------
   const TIMING = {
-    HIGHLIGHT_INTERVAL_MS: 30,        // How often to update synced lyrics highlighting (30ms = ~33 updates/sec for fast rap)
+    HIGHLIGHT_INTERVAL_MS: 16,        // How often to update synced lyrics highlighting (16ms = ~60 updates/sec = 60fps for instant word highlighting)
     POLLING_INTERVAL_MS: 400,         // How often to check for track changes
     OPENCC_RETRY_DELAY_MS: 100,       // Initial delay for OpenCC initialization retries
     BUTTON_ADD_RETRY_MS: 1000,        // Delay between button injection attempts
@@ -809,11 +809,15 @@
     // This is computed once when lyrics load, not every interval tick
     const hasWordTiming = lyrics.some(line => line.syllabus && line.syllabus.length > 0 && line.isWordType);
     
+    // PERFORMANCE OPTIMIZATION: Cache DOM elements and previous states
+    const posEl = document.querySelector('[data-testid="playback-position"]');
+    let previousActiveIndex = -1;
+    let previousWordStates = new Map(); // Track which words are already highlighted
+    
     highlightTimer = setInterval(() => {
       // Skip all style/size changes while popup is being resized
       if (window.lyricsPlusPopupIsResizing) return;
 
-      const posEl = document.querySelector('[data-testid="playback-position"]');
       const isPlaying = isSpotifyPlaying();
 
       if (isShowingSyncedLyrics) {
@@ -870,52 +874,73 @@
             span.style.fontWeight = "inherit";
           });
         });
+        previousActiveIndex = -1;
+        previousWordStates.clear();
         return;
       }
       
-      // Apply line-level styles
-      pElements.forEach((p, idx) => {
-        if (idx === activeIndex) {
-          p.style.color = "#1db954";
-          p.style.fontWeight = "700";
-          p.style.filter = "none";
-          p.style.opacity = "1";
-          p.style.transform = "scale(1.10)";
-          p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-        } else {
-          p.style.color = "white";
-          p.style.fontWeight = "400";
-          p.style.filter = "blur(0.7px)";
-          p.style.opacity = "0.8";
-          p.style.transform = "scale(1.0)";
-          p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+      // OPTIMIZATION: Only update line styles if active line changed
+      if (activeIndex !== previousActiveIndex) {
+        // Apply line-level styles
+        pElements.forEach((p, idx) => {
+          if (idx === activeIndex) {
+            p.style.color = "#1db954";
+            p.style.fontWeight = "700";
+            p.style.filter = "none";
+            p.style.opacity = "1";
+            p.style.transform = "scale(1.10)";
+            p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+          } else {
+            p.style.color = "white";
+            p.style.fontWeight = "400";
+            p.style.filter = "blur(0.7px)";
+            p.style.opacity = "0.8";
+            p.style.transform = "scale(1.0)";
+            p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+          }
+        });
+        
+        // Only scroll when active line actually changes
+        const activeP = pElements[activeIndex];
+        if (activeP && isPlaying) {
+          activeP.scrollIntoView({ behavior: "smooth", block: "center" });
         }
         
-        // Word-level highlighting - independent of line active state
-        // Highlight words based purely on their individual timestamps
-        if (hasWordTiming && lyrics[idx].syllabus && lyrics[idx].syllabus.length > 0) {
-          const spans = p.querySelectorAll('span[data-time]');
-          
-          // Highlight each word based on its own timestamp
-          spans.forEach((span) => {
-            const wordTime = parseInt(span.dataset.time);
-            if (wordTimingMs >= wordTime) {
-              // Word has been spoken - highlight it
-              span.style.color = "#1ed760";
-              span.style.fontWeight = "700";
-            } else {
-              // Word not yet spoken - dimmed
-              span.style.color = "rgba(255, 255, 255, 0.7)";
-              span.style.fontWeight = "400";
-            }
-          });
-        }
-      });
-
-      // Always auto-center while playing (do NOT auto-center when stopped)
-      const activeP = pElements[activeIndex];
-      if (activeP && isPlaying) {
-        activeP.scrollIntoView({ behavior: "smooth", block: "center" });
+        previousActiveIndex = activeIndex;
+      }
+      
+      // Word-level highlighting - ALWAYS update (independent of line active state)
+      // Highlight words based purely on their individual timestamps
+      if (hasWordTiming) {
+        pElements.forEach((p, idx) => {
+          if (lyrics[idx].syllabus && lyrics[idx].syllabus.length > 0) {
+            const spans = p.querySelectorAll('span[data-time]');
+            
+            // Highlight each word based on its own timestamp
+            spans.forEach((span) => {
+              const wordTime = parseInt(span.dataset.time);
+              const wordKey = `${idx}-${wordTime}`; // Unique key for this word
+              const shouldBeHighlighted = wordTimingMs >= wordTime;
+              const currentState = previousWordStates.get(wordKey);
+              
+              // OPTIMIZATION: Only update if state changed
+              if (currentState !== shouldBeHighlighted) {
+                if (shouldBeHighlighted) {
+                  // Word has been spoken - highlight it (NO TRANSITION for instant change)
+                  span.style.color = "#1ed760";
+                  span.style.fontWeight = "700";
+                  span.style.transition = "none"; // Instant color change for words
+                } else {
+                  // Word not yet spoken - dimmed
+                  span.style.color = "rgba(255, 255, 255, 0.7)";
+                  span.style.fontWeight = "400";
+                  span.style.transition = "none"; // Instant color change for words
+                }
+                previousWordStates.set(wordKey, shouldBeHighlighted);
+              }
+            });
+          }
+        });
       }
     }, TIMING.HIGHLIGHT_INTERVAL_MS);
   }
