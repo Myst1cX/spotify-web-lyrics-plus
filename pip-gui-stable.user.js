@@ -5709,6 +5709,7 @@ const Providers = {
         
         if (shouldRenderWords) {
           // Render as word spans for word-by-word highlighting
+          // Note: syllabus includes spaces as separate entries, so no additional spacing needed
           line.syllabus.forEach((word, idx) => {
             const span = document.createElement("span");
             span.textContent = convertText(word.text || '');
