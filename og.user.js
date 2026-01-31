@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      15.1
+// @version      15.2
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,9 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (15.2): ADDED TRANSLITERATION BUTTON AND FUNCTIONS
+// Only shows up on KPoe provider, when the scraped lyrics contain transliteration
 
 // RESOLVED (15.1): FIXED THE KPOE PROVIDER (I HOPE)
 
@@ -3617,7 +3620,7 @@ const Providers = {
 
     // --- Transliteration Toggle Button ---
     const transliterationToggleBtn = document.createElement("button");
-    transliterationToggleBtn.textContent = "🔤";
+    transliterationToggleBtn.textContent = "🔡";
     transliterationToggleBtn.title = "Show transliteration";
     Object.assign(transliterationToggleBtn.style, {
       marginRight: "6px",
