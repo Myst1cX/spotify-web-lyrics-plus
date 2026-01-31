@@ -21,9 +21,9 @@
 // Performance timing for all provider operations
 // Memory leak fixes: ResourceManager for observer/listener cleanup
 // Fixed Genius provider failing to match songs with accented characters
-// Updated normalize() function to use NFD (Unicode Normalization Form Decomposed)
-// Now converts diacritics to base forms: ă→a, é→e, ñ→n, ö→o, etc.
-// Works for Romanian, Spanish, French, German, Portuguese, and all Latin-script languages
+// • Updated normalize() function to use NFD (Unicode Normalization Form Decomposed)
+// • Now converts diacritics to base forms: ă→a, é→e, ñ→n, ö→o, etc.
+// • Should work for Romanian, Spanish, French, German, Portuguese, and all Latin-script languages
 // Fixed stale provider highlighting when reopening lyrics popup
 // Fixed thick separator lines (2-5px) caused by collapsed wrapper borders stacking
 // Fixed Musixmatch/LRCLIB returning "♪ Instrumental ♪" as synced lyrics
@@ -5850,3 +5850,4 @@ const Providers = {
 
   init();
 })();
+
