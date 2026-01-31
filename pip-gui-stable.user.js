@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      15.3
+// @version      15.3.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -41,11 +41,11 @@
 
 // RESOLVED (14.9): FIXED THE ISSUE WHERE ANY ERROR FROM A PROVIDER WOULD SKIP THE REMAINING PROVIDERS AND BREAK THE LYRIC FETCHING LOOP
 
-// RESOLVED (14.8): FIXED FALSE POSITIVE CAUSING GENIUS TO NOT LOAD LYRICS 
+// RESOLVED (14.8): FIXED FALSE POSITIVE CAUSING GENIUS TO NOT LOAD LYRICS
 // Genius provider was incorrectly flagging legitimate song lyrics as translation pages when artist names contained a "fan" substring
 // e.g., "Ștefan Costea" matched the translation keyword "fan".
 
-// RESOLVED (14.7): IMPROVED GENIUS LYRICS PROVIDER 
+// RESOLVED (14.7): IMPROVED GENIUS LYRICS PROVIDER
 
 // RESOLVED (14.6): UPDATED THE LOGIC FOR HIDNG THE NOWPLAYING VIEW PANEL
 
@@ -143,7 +143,7 @@
   // ------------------------
   const DEBUG = {
     enabled: false, // Set to false to disable all debug logging
-    
+
     // Log levels with prefixes
     error: (context, ...args) => {
       if (DEBUG.enabled) console.error(`[Lyrics+ ERROR] [${context}]`, ...args);
@@ -157,7 +157,7 @@
     debug: (context, ...args) => {
       if (DEBUG.enabled) console.debug(`[Lyrics+ DEBUG] [${context}]`, ...args);
     },
-    
+
     // Specialized logging helpers
     provider: {
       start: (providerName, operation, trackInfo) => {
@@ -180,7 +180,7 @@
         DEBUG.debug('Provider', `⏱ ${providerName} ${operation} took ${durationMs}ms`);
       }
     },
-    
+
     dom: {
       notFound: (selector, context) => {
         DEBUG.warn('DOM', `Element not found: ${selector}`, context ? `Context: ${context}` : '');
@@ -192,7 +192,7 @@
         DEBUG.debug('DOM', `Query "${selector}" returned ${count} elements`);
       }
     },
-    
+
     track: {
       changed: (oldId, newId, trackInfo) => {
         DEBUG.info('Track', `Track changed: ${oldId || 'none'} → ${newId}`, trackInfo);
@@ -201,7 +201,7 @@
         DEBUG.debug('Track', 'Track info detected:', trackInfo);
       }
     },
-    
+
     ui: {
       popupCreated: () => {
         DEBUG.info('UI', 'Popup created');
@@ -216,7 +216,7 @@
         DEBUG.debug('UI', `State change: ${stateName} = ${value}`);
       }
     },
-    
+
     perf: {
       start: (operation) => {
         const startTime = performance.now();
@@ -243,25 +243,25 @@
   const ResourceManager = {
     observers: [],
     windowListeners: [],
-    
+
     // Register a MutationObserver, IntersectionObserver, or ResizeObserver
     registerObserver(observer, description) {
       this.observers.push({ observer, description });
       DEBUG.debug('ResourceManager', `Registered observer: ${description}`);
       return observer;
     },
-    
+
     // Register a window event listener
     registerWindowListener(eventType, handler, description) {
       this.windowListeners.push({ eventType, handler, description });
       window.addEventListener(eventType, handler);
       DEBUG.debug('ResourceManager', `Registered window listener: ${eventType} (${description})`);
     },
-    
+
     // Cleanup all registered resources
     cleanup() {
       DEBUG.info('ResourceManager', `Cleaning up ${this.observers.length} observers and ${this.windowListeners.length} window listeners`);
-      
+
       // Disconnect all observers
       this.observers.forEach(({ observer, description }) => {
         try {
@@ -272,7 +272,7 @@
         }
       });
       this.observers = [];
-      
+
       // Remove all window listeners
       this.windowListeners.forEach(({ eventType, handler, description }) => {
         try {
@@ -284,7 +284,7 @@
       });
       this.windowListeners = [];
     },
-    
+
     // Cleanup specific observer
     cleanupObserver(observer) {
       const index = this.observers.findIndex(item => item.observer === observer);
@@ -315,9 +315,9 @@
   // a retry mechanism as a safety measure in case of any timing issues
   function initOpenCCConverters(retries = LIMITS.OPENCC_MAX_RETRIES, delay = TIMING.OPENCC_RETRY_DELAY_MS) {
     if (openccInitialized) return; // Already initialized, don't retry
-    
+
     DEBUG.debug('OpenCC', `Initialization attempt (${LIMITS.OPENCC_MAX_RETRIES - retries + 1}/${LIMITS.OPENCC_MAX_RETRIES})`);
-    
+
     try {
       if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
         // The full.js bundle exposes OpenCC.Converter which takes { from, to } options
@@ -374,7 +374,7 @@
   }
 
 
-  /*  
+  /*
   --- NOTE: Keeping the old version here as backup incase Spotify reverts the new NPV update.
 
   --- Forcibly hide NowPlayingView and its button in the playback controls menu
@@ -719,12 +719,12 @@
     const durationEl = document.querySelector('[data-testid="playback-duration"]');
     const positionEl = document.querySelector('[data-testid="playback-position"]');
     const trackId = getCurrentTrackId();
-    
+
     if (!titleEl || !artistEl) {
       DEBUG.dom.notFound(!titleEl ? 'context-item-info-title' : 'context-item-info-subtitles', 'getCurrentTrackInfo');
       return null;
     }
-    
+
     const title = titleEl.textContent.trim();
     const artist = artistEl.textContent.trim();
 
@@ -761,7 +761,7 @@
       uri: "",
       trackId
     };
-    
+
     DEBUG.track.detected(trackInfo);
     return trackInfo;
   }
@@ -867,7 +867,7 @@
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-          
+
           // Reset transliteration line if present
           const nextEl = p.nextElementSibling;
           if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
@@ -887,7 +887,7 @@
           p.style.opacity = "1";
           p.style.transform = "scale(1.10)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-          
+
           // Highlight transliteration line with same green as highlighted lyric
           const nextEl = p.nextElementSibling;
           if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
@@ -903,7 +903,7 @@
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-          
+
           // Reset transliteration line if present
           const nextEl = p.nextElementSibling;
           if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
@@ -1516,7 +1516,7 @@ const PLAY_WORDS = [
     duration: songInfo.duration
   });
   console.log(`[LRCLIB Debug] Searching ${tryWithoutAlbum ? 'WITHOUT' : 'WITH'} album parameter`);
-  
+
   const params = [
     `artist_name=${encodeURIComponent(songInfo.artist)}`,
     `track_name=${encodeURIComponent(songInfo.title)}`
@@ -1620,7 +1620,7 @@ const PLAY_WORDS = [
       sourceOrder: sourceOrder || 'none',
       forceReload: forceReload
     });
-    
+
     const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
       ? `&album=${encodeURIComponent(songInfo.album)}`
       : '';
@@ -1632,14 +1632,14 @@ const PLAY_WORDS = [
       forceReloadParam = `&forceReload=true`;
       console.log("[KPoe Debug] Force reload enabled (bypassing cache)");
     }
-    
+
     const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
     console.log("[KPoe Debug] Request URL:", url);
-    
+
     try {
       const response = await fetch(url, fetchOptions);
       console.log(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
-      
+
       // Check if response is ok before parsing
       if (!response.ok) {
         if (response.status === 404) {
@@ -1653,7 +1653,7 @@ const PLAY_WORDS = [
         }
         return null;
       }
-      
+
       // Only parse response on successful status
       const data = await response.json();
       console.log("[KPoe Debug] Response data:", {
@@ -1662,12 +1662,12 @@ const PLAY_WORDS = [
         lyricsCount: data?.lyrics?.length || 0,
         source: data?.metadata?.source
       });
-      
+
       if (data && data.lyrics && data.lyrics.length > 0) {
         console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
         return data;
       }
-      
+
       console.log("[KPoe Debug] ✗ No lyrics in response");
       return null;
     } catch (e) {
@@ -1716,61 +1716,61 @@ const PLAY_WORDS = [
         // 5 attempts with different data normalization strategies
         // Line-by-line lyrics are preferred over word-by-word, so check all attempts
         const duration = Math.floor(info.duration / 1000);
-        
+
         const attempts = [
-          { 
-            normalizeArtist: false, 
-            normalizeTitle: false, 
-            includeAlbum: true, 
-            description: "Raw data with album" 
+          {
+            normalizeArtist: false,
+            normalizeTitle: false,
+            includeAlbum: true,
+            description: "Raw data with album"
           },
-          { 
-            normalizeArtist: false, 
-            normalizeTitle: false, 
-            includeAlbum: false, 
-            description: "Raw data without album (sometimes album metadata is wrong)" 
+          {
+            normalizeArtist: false,
+            normalizeTitle: false,
+            includeAlbum: false,
+            description: "Raw data without album (sometimes album metadata is wrong)"
           },
-          { 
-            normalizeArtist: true, 
-            normalizeTitle: false, 
-            includeAlbum: false, 
-            description: "Normalized artist, raw title" 
+          {
+            normalizeArtist: true,
+            normalizeTitle: false,
+            includeAlbum: false,
+            description: "Normalized artist, raw title"
           },
-          { 
-            normalizeArtist: false, 
-            normalizeTitle: true, 
-            includeAlbum: false, 
-            description: "Raw artist, normalized title" 
+          {
+            normalizeArtist: false,
+            normalizeTitle: true,
+            includeAlbum: false,
+            description: "Raw artist, normalized title"
           },
-          { 
-            normalizeArtist: true, 
-            normalizeTitle: true, 
-            includeAlbum: false, 
-            description: "Fully normalized data" 
+          {
+            normalizeArtist: true,
+            normalizeTitle: true,
+            includeAlbum: false,
+            description: "Fully normalized data"
           }
         ];
-        
+
         let bestResult = null;
         let bestResultType = null;
-        
+
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
           console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
           console.log(`[KPoe Debug] Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
-          
+
           let songInfo = {
             artist: attempt.normalizeArtist ? Utils.normalize(info.artist) : (info.artist || ""),
             title: attempt.normalizeTitle ? Utils.normalize(info.title) : (info.title || ""),
             album: attempt.includeAlbum ? (info.album || "") : "",
             duration
           };
-          
+
           // No sourceOrder parameter - let API search all sources
           let result = await fetchKPoeLyrics(songInfo);
-          
+
           if (result && result.lyrics && result.lyrics.length > 0) {
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
-            
+
             // Keep track of the best result (prefer Line over Word)
             if (!bestResult) {
               // First successful result
@@ -1785,7 +1785,7 @@ const PLAY_WORDS = [
             } else {
               console.log(`[KPoe Debug] Keeping previous result (current: ${bestResultType}, new: ${result.type})`);
             }
-            
+
             // If we found Line type, we can stop early since that's the best
             if (bestResultType === "Line") {
               console.log(`[KPoe Debug] ✓ Found Line type lyrics, stopping search`);
@@ -1793,12 +1793,12 @@ const PLAY_WORDS = [
             }
           }
         }
-        
+
         if (bestResult) {
           console.log(`[KPoe Debug] ✓ Returning best result: ${bestResultType} type`);
           return parseKPoeFormat(bestResult);
         }
-        
+
         console.log("[KPoe Debug] ✗ All 5 attempts failed");
         return { error: "Track not found in KPoe database or no lyrics available" };
       } catch (e) {
@@ -1807,15 +1807,15 @@ const PLAY_WORDS = [
     },
     getUnsynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
-      
+
       const isWordType = body.type === "Word";
       if (isWordType) {
         console.log("[KPoe Debug] Processing Word type unsynced lyrics");
       }
-      
+
       return body.data.map(line => {
         let text = line.text;
-        
+
         // For Word type, line.text might be empty - reconstruct from syllabus
         if ((!text || text.trim() === '') && line.syllabus && Array.isArray(line.syllabus)) {
           // Join syllables with intelligent spacing for word boundaries
@@ -1828,12 +1828,12 @@ const PLAY_WORDS = [
             }
             return syllableText;
           }).join('').trim();
-          
+
           if (isWordType) {
             console.log(`[KPoe Debug] Reconstructed unsynced line from ${line.syllabus.length} syllables: "${text}"`);
           }
         }
-        
+
         return {
           text: text || '',
           transliteration: line.transliteration?.text || null
@@ -1842,16 +1842,16 @@ const PLAY_WORDS = [
     },
     getSynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
-      
+
       // Handle both Line-synced and Word-synced lyrics
       const isWordType = body.type === "Word";
       if (isWordType) {
         console.log("[KPoe Debug] Converting Word type lyrics to line-synced format");
       }
-      
+
       return body.data.map(line => {
         let text = line.text;
-        
+
         // For Word type, line.text might be empty - reconstruct from syllabus
         if ((!text || text.trim() === '') && line.syllabus && Array.isArray(line.syllabus)) {
           // Join syllables with intelligent spacing for word boundaries
@@ -1864,12 +1864,12 @@ const PLAY_WORDS = [
             }
             return syllableText;
           }).join('').trim();
-          
+
           if (isWordType) {
             console.log(`[KPoe Debug] Reconstructed line from ${line.syllabus.length} syllables: "${text}"`);
           }
         }
-        
+
         return {
           time: Math.round(line.startTime * 1000),
           text: text || '',
@@ -2093,7 +2093,7 @@ async function fetchMusixmatchLyrics(songInfo) {
     artist: songInfo.artist,
     title: songInfo.title
   });
-  
+
   const token = localStorage.getItem("lyricsPlusMusixmatchToken");
   if (!token) {
     console.log("[Musixmatch Debug] ✗ No token found - user needs to configure");
@@ -2108,7 +2108,7 @@ async function fetchMusixmatchLyrics(songInfo) {
       `format=json&usertoken=${encodeURIComponent(token)}&app_id=web-desktop-app-v1.0`;
   console.log("[Musixmatch Debug] Step 1: Fetching track info");
   console.log("[Musixmatch Debug] Track URL:", trackUrl.replace(token, '***TOKEN***'));
-  
+
   try {
     const trackResponse = await fetch(trackUrl, {
       headers: {
@@ -2117,9 +2117,9 @@ async function fetchMusixmatchLyrics(songInfo) {
       },
       cache: 'no-store',
     });
-    
+
     console.log(`[Musixmatch Debug] Track response status: ${trackResponse.status}`);
-    
+
     if (!trackResponse.ok) {
       if (trackResponse.status === 401) {
         console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid");
@@ -2131,15 +2131,15 @@ async function fetchMusixmatchLyrics(songInfo) {
       console.log(`[Musixmatch Debug] ✗ Track request failed: ${trackResponse.status}`);
       return { error: `Track lookup failed (HTTP ${trackResponse.status})` };
     }
-    
+
     const trackBody = await trackResponse.json();
     const track = trackBody?.message?.body?.track;
-    
+
     if (!track) {
       console.log("[Musixmatch Debug] ✗ No track data in response");
       return { error: "Track not found in Musixmatch database" };
     }
-    
+
     console.log("[Musixmatch Debug] ✓ Track found:", {
       trackId: track.track_id,
       trackName: track.track_name,
@@ -2157,7 +2157,7 @@ async function fetchMusixmatchLyrics(songInfo) {
     const subtitleUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.subtitles.get?` +
         `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`;
     console.log("[Musixmatch Debug] Step 2: Fetching synced lyrics (subtitles)");
-    
+
     const subtitleResponse = await fetch(subtitleUrl, {
       headers: {
         'user-agent': navigator.userAgent,
@@ -2165,9 +2165,9 @@ async function fetchMusixmatchLyrics(songInfo) {
       },
       cache: 'no-store',
     });
-    
+
     console.log(`[Musixmatch Debug] Subtitle response status: ${subtitleResponse.status}`);
-    
+
     if (subtitleResponse.ok) {
       const subtitleBody = await subtitleResponse.json();
       const subtitleList = subtitleBody?.message?.body?.subtitle_list;
@@ -2189,7 +2189,7 @@ async function fetchMusixmatchLyrics(songInfo) {
     const lyricsUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.lyrics.get?` +
         `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`;
     console.log("[Musixmatch Debug] Step 3: Fetching unsynced lyrics (fallback)");
-    
+
     const lyricsResponse = await fetch(lyricsUrl, {
       headers: {
         'user-agent': navigator.userAgent,
@@ -2197,14 +2197,14 @@ async function fetchMusixmatchLyrics(songInfo) {
       },
       cache: 'no-store',
     });
-    
+
     console.log(`[Musixmatch Debug] Lyrics response status: ${lyricsResponse.status}`);
-    
+
     if (!lyricsResponse.ok) {
       console.log(`[Musixmatch Debug] ✗ Lyrics request failed: ${lyricsResponse.status}`);
       return { error: `Lyrics fetch failed (HTTP ${lyricsResponse.status})` };
     }
-    
+
     const lyricsBody = await lyricsResponse.json();
     const unsyncedRaw = lyricsBody?.message?.body?.lyrics?.lyrics_body;
     if (unsyncedRaw) {
@@ -2325,7 +2325,7 @@ async function fetchGeniusLyrics(info) {
       .filter(Boolean)
       .map(normalize);
   }
-  
+
   /**
    * Check if one artist name contains another (fuzzy matching).
    * Helps match "Swisher" with "Swisher ROU" even if normalization missed something.
@@ -2347,7 +2347,7 @@ async function fetchGeniusLyrics(info) {
     }
     return false;
   }
-  
+
   /**
    * Calculate artist overlap with fuzzy matching support.
    * Tracks both exact and fuzzy matches to weight them differently in scoring.
@@ -2359,7 +2359,7 @@ async function fetchGeniusLyrics(info) {
     let exactMatches = 0;
     let fuzzyMatches = 0;
     const matchedResults = new Set(); // Track to avoid double-counting
-    
+
     for (const target of targetArtists) {
       // First try exact match
       if (resultArtists.has(target)) {
@@ -2376,7 +2376,7 @@ async function fetchGeniusLyrics(info) {
         }
       }
     }
-    
+
     return { exactMatches, fuzzyMatches, totalMatches: exactMatches + fuzzyMatches };
   }
 
@@ -2401,7 +2401,7 @@ async function fetchGeniusLyrics(info) {
   const SCORE_EXACT_MATCH_BONUS = 0.5;   // Small bonus per exact match in partial scenarios
   const PENALTY_MISSING_ARTIST = 0.3;    // Reduced penalty since Genius metadata may be incomplete
   const SCORE_MIN_ARTIST_THRESHOLD = 3;  // Minimum score to continue evaluation
-  
+
   // Scoring constants for title matching
   const SCORE_TITLE_PERFECT = 7;         // Exact title match
   const SCORE_TITLE_GOOD_OVERLAP = 5;    // Good substring overlap (≥70%)
@@ -2484,7 +2484,7 @@ async function fetchGeniusLyrics(info) {
         const searchJson = JSON.parse(searchRes.responseText);
         const hits = searchJson?.response?.sections?.flatMap(s => s.hits) || [];
         const songHits = hits.filter(h => h.type === "song");
-        
+
         console.log(`[Genius Debug] Page ${page}: Received ${songHits.length} song results`);
         songHits.forEach((hit, idx) => {
           const result = hit.result;
@@ -2502,7 +2502,7 @@ async function fetchGeniusLyrics(info) {
         const targetArtists = new Set(normalizeArtists(info.artist));
         const targetTitleNorm = normalize(Utils.removeExtraInfo(info.title));
         const targetHasVersion = hasVersionKeywords(info.title);
-        
+
         console.log("[Genius Debug] Target (Spotify) normalization:", {
           originalArtist: info.artist,
           normalizedArtists: Array.from(targetArtists),
@@ -2511,7 +2511,7 @@ async function fetchGeniusLyrics(info) {
           normalizedTitle: targetTitleNorm,
           hasVersionKeywords: targetHasVersion
         });
-        
+
         // Dynamic threshold based on artist count (calculated once, used consistently)
         // Single artist: need strong match (≥8) to prevent false positives
         // Multi-artist: more lenient (≥6) since metadata may be incomplete
@@ -2533,7 +2533,7 @@ async function fetchGeniusLyrics(info) {
 
           const primary = normalizeArtists(result.primary_artist?.name || '');
           const featured = extractFeaturedArtistsFromTitle(result.title || '');
-          
+
           // Also extract artists from Genius metadata arrays if available
           // This helps match songs where featured/producer artists are in the Spotify credits
           const featuredFromAPI = (result.featured_artists || [])
@@ -2542,7 +2542,7 @@ async function fetchGeniusLyrics(info) {
           const producersFromAPI = (result.producer_artists || [])
             .map(a => a.name)
             .flatMap(name => normalizeArtists(name));
-          
+
           const resultArtists = new Set([...primary, ...featured, ...featuredFromAPI, ...producersFromAPI]);
           const resultTitleNorm = normalize(Utils.removeExtraInfo(result.title || ''));
           const resultHasVersion = hasVersionKeywords(result.title || '');
@@ -2560,7 +2560,7 @@ async function fetchGeniusLyrics(info) {
           // Use enhanced fuzzy artist matching
           const overlap = calculateArtistOverlap(targetArtists, resultArtists);
           const totalArtists = targetArtists.size;
-          
+
           console.log(`[Genius Debug]       Artist matching:`, {
             targetArtists: Array.from(targetArtists),
             resultArtists: Array.from(resultArtists),
@@ -2569,10 +2569,10 @@ async function fetchGeniusLyrics(info) {
             totalMatches: overlap.totalMatches,
             totalArtists: totalArtists
           });
-          
+
           // Guard against empty artist set (should not happen in practice)
           if (totalArtists === 0) continue;
-          
+
           const artistOverlapCount = overlap.totalMatches;
           const exactMatchCount = overlap.exactMatches;
 
@@ -2618,7 +2618,7 @@ async function fetchGeniusLyrics(info) {
             const shorter = resultTitleNorm.length < targetTitleNorm.length ? resultTitleNorm : targetTitleNorm;
             const longer = resultTitleNorm.length >= targetTitleNorm.length ? resultTitleNorm : targetTitleNorm;
             const overlapRatio = shorter.length / longer.length;
-            
+
             // Penalize short titles that might be common words ("Yesterday" vs "Yesterday's Dream")
             if (shorter.length < MIN_TITLE_LENGTH) {
               titleScore = SCORE_TITLE_SHORT;
@@ -2649,7 +2649,7 @@ async function fetchGeniusLyrics(info) {
 
           // Calculate final score with weighted components
           let score = artistScore + titleScore;
-          
+
           // Apply penalty for poor matches (no title overlap at all)
           if (!resultTitleNorm.includes(targetTitleNorm) && !targetTitleNorm.includes(resultTitleNorm)) {
             score -= PENALTY_NO_TITLE_OVERLAP;
@@ -3051,7 +3051,7 @@ const ProviderSpotify = {
       title: info.title,
       artist: info.artist
     });
-    
+
     const token = localStorage.getItem("lyricsPlusSpotifyToken");
 
     if (!token) {
@@ -3123,7 +3123,7 @@ const ProviderSpotify = {
         console.log("[Spotify Debug] ✗ No lyric lines in API response");
         return { error: "Track not found or no lyrics available from Spotify" };
       }
-      
+
       console.log(`[Spotify Debug] ✓ Lyrics found! Type: ${data.lyrics.syncType}, Lines: ${data.lyrics.lines.length}, Language: ${data.lyrics.language || 'unknown'}`);
       return data.lyrics;
     } catch (e) {
@@ -3172,7 +3172,7 @@ const Providers = {
 
   function removePopup() {
     DEBUG.ui.popupRemoved();
-    
+
     // Clear all intervals
     if (highlightTimer) {
       clearInterval(highlightTimer);
@@ -3189,7 +3189,7 @@ const Providers = {
       progressInterval = null;
       DEBUG.debug('Cleanup', 'progressInterval cleared');
     }
-    
+
     // Clean up popup-specific observers
     const existing = document.getElementById("lyrics-plus-popup");
     if (existing) {
@@ -3206,14 +3206,14 @@ const Providers = {
         ResourceManager.cleanupObserver(existing._repeatObserver);
         existing._repeatObserver = null;
       }
-      
+
       // Remove window mouseup handler for resize
       if (existing._resizeMouseupHandler) {
         window.removeEventListener("mouseup", existing._resizeMouseupHandler);
         DEBUG.debug('Cleanup', 'Removed mouseup handler for resize');
         existing._resizeMouseupHandler = null;
       }
-      
+
       // Clear popup references
       existing._playPauseBtn = null;
       existing._shuffleBtn = null;
@@ -3221,7 +3221,7 @@ const Providers = {
       existing._prevBtn = null;
       existing._nextBtn = null;
       existing._lyricsTabs = null;
-      
+
       existing.remove();
       DEBUG.debug('Cleanup', 'Popup element and all observers removed from DOM');
     }
@@ -3294,10 +3294,10 @@ const Providers = {
     const savedState = localStorage.getItem('lyricsPlusPopupState');
     let pos = null;
     if (savedState) {
-      try { 
+      try {
         pos = JSON.parse(savedState);
         DEBUG.debug('UI', 'Loaded saved popup state', pos);
-      } catch { 
+      } catch {
         pos = null;
         DEBUG.warn('UI', 'Failed to parse saved popup state');
       }
@@ -3656,7 +3656,7 @@ const Providers = {
       background: "none",
       border: "none",
       color: "white",
-      fontSize: "12px",
+      fontSize: "16px",
       fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
       padding: "4px 6px",
       borderRadius: "4px",
@@ -3668,18 +3668,18 @@ const Providers = {
     chineseConvBtn.onmouseleave = () => { chineseConvBtn.style.background = "none"; };
 
     // Helper to update button text based on original script type and conversion state
-    // For Traditional lyrics: "繁→简" (convert) / "繁←简" (revert)
-    // For Simplified lyrics: "简→繁" (convert) / "简←繁" (revert)
+    // For Traditional lyrics (繁): "繁→简" (convert) / "繁←简" (revert)
+    // For Simplified lyrics (简): "简→繁" (convert) / "简←繁" (revert)
     function updateChineseConvBtnText() {
       const isConverted = isChineseConversionEnabled();
       if (originalChineseScriptType === 'traditional') {
-        chineseConvBtn.textContent = isConverted ? "繁←简" : "繁→简";
+        chineseConvBtn.textContent = isConverted ? "简" : "繁";
         chineseConvBtn.title = isConverted
           ? "Revert to Traditional Chinese"
           : "Convert to Simplified Chinese";
       } else {
         // Simplified lyrics
-        chineseConvBtn.textContent = isConverted ? "简←繁" : "简→繁";
+        chineseConvBtn.textContent = isConverted ? "繁" : "简";
         chineseConvBtn.title = isConverted
           ? "Revert to Simplified Chinese"
           : "Convert to Traditional Chinese";
@@ -4016,17 +4016,17 @@ const Providers = {
         translationDiv.textContent = translatedText;
         translationDiv.style.color = 'gray';
         translationDiv.setAttribute('data-translated', 'true');
-        
+
         // Find correct insertion point: after transliteration if it exists, otherwise after lyric
         let insertionPoint = p.nextSibling;
-        
+
         // Check if next sibling is a transliteration div
-        if (insertionPoint && insertionPoint.nodeType === 1 && 
+        if (insertionPoint && insertionPoint.nodeType === 1 &&
             insertionPoint.getAttribute('data-transliteration') === 'true') {
           // Transliteration exists - insert translation AFTER it
           insertionPoint = insertionPoint.nextSibling;
         }
-        
+
         p.parentNode.insertBefore(translationDiv, insertionPoint);
       }));
       lastTranslatedLang = targetLang;
@@ -4055,13 +4055,13 @@ const Providers = {
         transliterationDiv.style.marginBottom = '8px';
         transliterationDiv.style.transition = "color 0.15s, filter 0.13s, opacity 0.13s";
         transliterationDiv.setAttribute('data-transliteration', 'true');
-        
+
         // Always insert transliteration immediately after lyric line
         // If translation exists, insert before it; otherwise after lyric
         let insertionPoint = p.nextSibling;
-        
+
         // Check if the next sibling is a translation div
-        if (insertionPoint && insertionPoint.nodeType === 1 && 
+        if (insertionPoint && insertionPoint.nodeType === 1 &&
             insertionPoint.getAttribute('data-translated') === 'true') {
           // Translation exists - insert transliteration before it
           p.parentNode.insertBefore(transliterationDiv, insertionPoint);
@@ -4094,11 +4094,13 @@ const Providers = {
       translatorWrapper.style.pointerEvents = "";
       translatorWrapper.style.padding = "8px 12px";
       translatorWrapper.style.borderBottom = "1px solid #333";
+      translationToggleBtn.title = "Hide translation controls";
     } else {
       translatorWrapper.style.maxHeight = "0";
       translatorWrapper.style.pointerEvents = "none";
       translatorWrapper.style.padding = "0 12px";
       translatorWrapper.style.borderBottom = "none";
+      translationToggleBtn.title = "Show translation controls";
     }
     translatorWrapper.appendChild(translationControls);
 
@@ -4110,11 +4112,13 @@ const Providers = {
         translatorWrapper.style.pointerEvents = "";
         translatorWrapper.style.padding = "8px 12px";
         translatorWrapper.style.borderBottom = "1px solid #333";
+        translationToggleBtn.title = "Hide translation controls";
       } else {
         translatorWrapper.style.maxHeight = "0";
         translatorWrapper.style.pointerEvents = "none";
         translatorWrapper.style.padding = "0 12px";
         translatorWrapper.style.borderBottom = "none";
+        translationToggleBtn.title = "Show translation controls";
       }
     };
 
@@ -4474,6 +4478,7 @@ const Providers = {
       offsetVisible = !offsetVisible;
       localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
       applyOffsetVisibility(offsetVisible);
+      offsetToggleBtn.title = offsetVisible ? "Hide timing offset" : "Show timing offset";
     };
 
     // Seekbar checkbox change handler (in settings)
@@ -4496,6 +4501,9 @@ const Providers = {
     applyOffsetVisibility(offsetVisible);
     applyControlsVisibility(controlsVisible);
     applyTabsVisibility(tabsVisible);
+    
+    // Set initial button titles based on visibility states
+    offsetToggleBtn.title = offsetVisible ? "Hide timing offset" : "Show timing offset";
 
     // Initialize checkboxes state
     seekbarToggleCheckbox.checked = seekbarVisible;
@@ -5947,7 +5955,7 @@ const Providers = {
   async function autodetectProviderAndLoad(popup, info) {
     DEBUG.info('Autodetect', 'Starting provider autodetection', info);
     const startTime = performance.now();
-    
+
     const detectionOrder = [
       { name: "LRCLIB", type: "getSynced" },
       { name: "Spotify", type: "getSynced" },
@@ -5959,27 +5967,27 @@ const Providers = {
       { name: "Musixmatch", type: "getUnsynced" },
       { name: "Genius", type: "getUnsynced" }
     ];
-    
+
     for (const { name, type } of detectionOrder) {
       try {
         const providerStartTime = performance.now();
         DEBUG.provider.start(name, type, info);
-        
+
         const provider = Providers.map[name];
         const result = await provider.findLyrics(info);
-        
+
         const providerDuration = performance.now() - providerStartTime;
-        
+
         if (result && !result.error) {
           let lyrics = provider[type](result);
           if (lyrics && lyrics.length > 0) {
             DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
             DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
-            
+
             Providers.setCurrent(name);
             if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
             await updateLyricsContent(popup, info);
-            
+
             const totalDuration = performance.now() - startTime;
             DEBUG.info('Autodetect', `Completed successfully in ${totalDuration.toFixed(2)}ms using ${name}`);
             return;
@@ -5989,10 +5997,10 @@ const Providers = {
         } else {
           DEBUG.provider.failure(name, type, result?.error || 'No result');
         }
-        
+
         DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
       } catch (error) {
-        // If a provider fails for any reason, continue looking for lyrics in other providers 
+        // If a provider fails for any reason, continue looking for lyrics in other providers
         // Without this try-catch, an error would skip the remaining providers and stop the loop.
         DEBUG.provider.failure(name, type, error);
       }
@@ -6010,7 +6018,7 @@ const Providers = {
     translationPresent = false;
     transliterationPresent = false;
     lastTranslatedLang = null;
-    
+
     const totalDuration = performance.now() - startTime;
     DEBUG.warn('Autodetect', `No lyrics found after checking all providers (${totalDuration.toFixed(2)}ms)`);
   }
@@ -6177,7 +6185,7 @@ const Providers = {
       el.style && el.style.cursor === "nwse-resize"
     );
     if (!resizer) return;
-    
+
     const mousedownHandler = () => { isResizing = true; };
     const mouseupHandler = () => {
       if (isResizing) {
@@ -6185,12 +6193,12 @@ const Providers = {
       }
       isResizing = false;
     };
-    
+
     resizer.addEventListener("mousedown", mousedownHandler);
     // Store handler on popup for cleanup
     popup._resizeMouseupHandler = mouseupHandler;
     window.addEventListener("mouseup", mouseupHandler);
-    
+
     DEBUG.debug('PopupResize', 'Resize handlers attached');
   }
 
