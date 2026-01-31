@@ -3045,3 +3045,72 @@
 }
 
 //later tried again and it worked fine; response 200, api looked the same and gave synced lyrics to me. could it be some kind of rate limit is that plausible?
+
+// example 2: in this case in normalized version the strange character is not replaced with equivalent (LO$ER=LO♡ER=LOSERLOVER)
+
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2107:19
+[KPoe Debug] Attempt 1/5: Raw data with album Spotify Lyrics+ Stable.user.js:2108:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1956:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1957:13
+[KPoe Debug] Input info: 
+Object { artist: "TOMORROW X TOGETHER", title: "LO$ER=LO♡ER", album: "", duration: 199, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1958:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=LO%24ER%3DLO%E2%99%A1ER&artist=TOMORROW%20X%20TOGETHER&duration=199 Spotify Lyrics+ Stable.user.js:1980:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:1984:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: false, lyricsType: undefined, lyricsCount: 0, source: undefined }
+Spotify Lyrics+ Stable.user.js:1991:17
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2010:19
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2107:19
+[KPoe Debug] Attempt 2/5: Raw data without album (sometimes album metadata is wrong) Spotify Lyrics+ Stable.user.js:2108:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1956:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1957:13
+[KPoe Debug] Input info: 
+Object { artist: "TOMORROW X TOGETHER", title: "LO$ER=LO♡ER", album: "", duration: 199, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1958:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=LO%24ER%3DLO%E2%99%A1ER&artist=TOMORROW%20X%20TOGETHER&duration=199 Spotify Lyrics+ Stable.user.js:1980:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:1984:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: false, lyricsType: undefined, lyricsCount: 0, source: undefined }
+Spotify Lyrics+ Stable.user.js:1991:17
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2010:19
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2107:19
+[KPoe Debug] Attempt 3/5: Normalized artist, raw title Spotify Lyrics+ Stable.user.js:2108:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1956:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1957:13
+[KPoe Debug] Input info: 
+Object { artist: "TOMORROW X TOGETHER", title: "LO$ER=LO♡ER", album: "", duration: 199, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1958:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=LO%24ER%3DLO%E2%99%A1ER&artist=TOMORROW%20X%20TOGETHER&duration=199 Spotify Lyrics+ Stable.user.js:1980:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:1984:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: false, lyricsType: undefined, lyricsCount: 0, source: undefined }
+Spotify Lyrics+ Stable.user.js:1991:17
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2010:19
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2107:19
+[KPoe Debug] Attempt 4/5: Raw artist, normalized title Spotify Lyrics+ Stable.user.js:2108:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1956:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1957:13
+[KPoe Debug] Input info: 
+Object { artist: "TOMORROW X TOGETHER", title: "LOERLOER", album: "", duration: 199, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1958:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=LOERLOER&artist=TOMORROW%20X%20TOGETHER&duration=199 Spotify Lyrics+ Stable.user.js:1980:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:1984:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: false, lyricsType: undefined, lyricsCount: 0, source: undefined }
+Spotify Lyrics+ Stable.user.js:1991:17
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2010:19
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2107:19
+[KPoe Debug] Attempt 5/5: Fully normalized data Spotify Lyrics+ Stable.user.js:2108:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1956:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1957:13
+[KPoe Debug] Input info: 
+Object { artist: "TOMORROW X TOGETHER", title: "LOERLOER", album: "", duration: 199, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1958:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=LOERLOER&artist=TOMORROW%20X%20TOGETHER&duration=199 Spotify Lyrics+ Stable.user.js:1980:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:1984:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: false, lyricsType: undefined, lyricsCount: 0, source: undefined }
+Spotify Lyrics+ Stable.user.js:1991:17
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2010:19
+[KPoe Debug] ✗ All 5 attempts failed Spotify Lyrics+ Stable.user.js:2151:17
