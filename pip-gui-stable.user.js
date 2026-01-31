@@ -1715,11 +1715,15 @@ const PLAY_WORDS = [
   const ProviderKPoe = {
     async findLyrics(info) {
       try {
-        // Strategy: Try raw data first (preserves international characters),
-        // then fallback to normalized data (strips to English) if not found
+        // Strategy: Try multiple fallback approaches before giving up
+        // 1. Raw data (best for exact matches)
+        // 2. Clean title (remove feat/remix info)
+        // 3. First artist only (for multi-artist tracks)
+        // 4. First artist + clean title
+        // 5. Fully normalized (last resort)
         const duration = Math.floor(info.duration / 1000);
         
-        // First attempt: Use raw data (works for pure international songs and English songs)
+        // Attempt 1: Use raw data
         let songInfo = {
           artist: info.artist || "",
           title: info.title || "",
@@ -1728,10 +1732,55 @@ const PLAY_WORDS = [
         };
         let result = await fetchKPoeLyrics(songInfo);
         
-        // Fallback: If not found, try with normalized data (works for mixed international/English songs)
+        // Attempt 2: Remove extra info from title (feat., remix, etc.) but keep artist as-is
+        if (!result && info.title) {
+          const cleanTitle = Utils.removeExtraInfo(info.title);
+          if (cleanTitle !== info.title) {
+            console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            console.log("[KPoe Debug] Attempt 2: Trying with cleaned title (removed extra info)");
+            songInfo = {
+              artist: info.artist || "",
+              title: cleanTitle,
+              album: info.album || "",
+              duration
+            };
+            result = await fetchKPoeLyrics(songInfo);
+          }
+        }
+        
+        // Attempt 3: Try with first artist only (for multi-artist tracks)
+        if (!result && info.artist && (info.artist.includes(',') || info.artist.includes('&'))) {
+          const firstArtist = info.artist.split(/[,&]/)[0].trim();
+          console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          console.log("[KPoe Debug] Attempt 3: Trying with first artist only");
+          songInfo = {
+            artist: firstArtist,
+            title: info.title || "",
+            album: info.album || "",
+            duration
+          };
+          result = await fetchKPoeLyrics(songInfo);
+        }
+        
+        // Attempt 4: First artist + clean title
+        if (!result && info.artist && (info.artist.includes(',') || info.artist.includes('&'))) {
+          const firstArtist = info.artist.split(/[,&]/)[0].trim();
+          const cleanTitle = Utils.removeExtraInfo(info.title || "");
+          console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          console.log("[KPoe Debug] Attempt 4: Trying with first artist + cleaned title");
+          songInfo = {
+            artist: firstArtist,
+            title: cleanTitle,
+            album: info.album || "",
+            duration
+          };
+          result = await fetchKPoeLyrics(songInfo);
+        }
+        
+        // Attempt 5: Fully normalized (strips all special chars - last resort)
         if (!result) {
           console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-          console.log("[KPoe Debug] First attempt failed, trying with normalized data (fallback)");
+          console.log("[KPoe Debug] Attempt 5: Trying with fully normalized data (last resort)");
           songInfo = {
             artist: Utils.normalize(info.artist),
             title: Utils.normalize(info.title),
