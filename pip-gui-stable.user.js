@@ -1492,6 +1492,16 @@ const PLAY_WORDS = [
 
   // --- LRCLIB ---
   async function fetchLRCLibLyrics(songInfo, tryWithoutAlbum = false) {
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("[LRCLIB Debug] Starting lyrics search");
+  console.log("[LRCLIB Debug] Input info:", {
+    artist: songInfo.artist,
+    title: songInfo.title,
+    album: songInfo.album,
+    duration: songInfo.duration
+  });
+  console.log(`[LRCLIB Debug] Searching ${tryWithoutAlbum ? 'WITHOUT' : 'WITH'} album parameter`);
+  
   const params = [
     `artist_name=${encodeURIComponent(songInfo.artist)}`,
     `track_name=${encodeURIComponent(songInfo.title)}`
@@ -1500,14 +1510,20 @@ const PLAY_WORDS = [
   // Only add album if available and not skipped
   if (songInfo.album && !tryWithoutAlbum) {
     params.push(`album_name=${encodeURIComponent(songInfo.album)}`);
+    console.log("[LRCLIB Debug] Including album in search");
+  } else if (tryWithoutAlbum) {
+    console.log("[LRCLIB Debug] Retrying without album (fallback search)");
   }
 
   // Only include duration if it's a safe value
   if (songInfo.duration && songInfo.duration >= 10000) {
-    params.push(`duration=${Math.floor(songInfo.duration / 1000)}`);
+    const durationSec = Math.floor(songInfo.duration / 1000);
+    params.push(`duration=${durationSec}`);
+    console.log(`[LRCLIB Debug] Including duration: ${durationSec} seconds`);
   }
 
   const url = `https://lrclib.net/api/get?${params.join('&')}`;
+  console.log("[LRCLIB Debug] Request URL:", url);
 
   try {
     const response = await fetch(url, {
@@ -1517,14 +1533,38 @@ const PLAY_WORDS = [
       }
     });
 
+    console.log(`[LRCLIB Debug] Response status: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      DEBUG.warn('LRCLIB', `Request failed with status ${response.status}`);
+      if (response.status === 404) {
+        console.log("[LRCLIB Debug] ✗ Track not found in LRCLIB database");
+      } else if (response.status === 429) {
+        console.log("[LRCLIB Debug] ✗ Rate limit exceeded - too many requests");
+      } else {
+        console.log(`[LRCLIB Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+      }
       return null;
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log("[LRCLIB Debug] Response data:", {
+      hasPlainLyrics: !!data.plainLyrics,
+      hasSyncedLyrics: !!data.syncedLyrics,
+      isInstrumental: !!data.instrumental,
+      duration: data.duration
+    });
+
+    if (data.instrumental) {
+      console.log("[LRCLIB Debug] ⚠ Track marked as instrumental (no lyrics)");
+    } else if (data.syncedLyrics || data.plainLyrics) {
+      console.log(`[LRCLIB Debug] ✓ Lyrics found! Type: ${data.syncedLyrics ? 'Synced' : 'Unsynced only'}`);
+    } else {
+      console.log("[LRCLIB Debug] ✗ No lyrics data in response");
+    }
+
+    return data;
   } catch (e) {
-    console.error("LRCLIB fetch error:", e);
+    console.error("[LRCLIB Debug] ✗ Fetch error:", e.message || e);
     return null;
   }
 }
@@ -1535,10 +1575,10 @@ const PLAY_WORDS = [
         if (!data || (!data.syncedLyrics && !data.plainLyrics)) {
           data = await fetchLRCLibLyrics(info, true); // try without album
         }
-        if (!data) return { error: "No lyrics found for this track from LRCLIB" };
+        if (!data) return { error: "Track not found in LRCLIB database or no lyrics available" };
         return data;
       } catch (e) {
-        return { error: e.message || "LRCLIB fetch failed" };
+        return { error: e.message || "LRCLIB request failed - network error or service unavailable" };
       }
     },
     getUnsynced(body) {
@@ -1555,6 +1595,17 @@ const PLAY_WORDS = [
 
    // --- KPoe ---
   async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false) {
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("[KPoe Debug] Starting lyrics search");
+    console.log("[KPoe Debug] Input info:", {
+      artist: songInfo.artist,
+      title: songInfo.title,
+      album: songInfo.album,
+      duration: songInfo.duration,
+      sourceOrder: sourceOrder || 'none',
+      forceReload: forceReload
+    });
+    
     const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
       ? `&album=${encodeURIComponent(songInfo.album)}`
       : '';
@@ -1564,12 +1615,48 @@ const PLAY_WORDS = [
     if (forceReload) {
       fetchOptions = { cache: 'no-store' };
       forceReloadParam = `&forceReload=true`;
+      console.log("[KPoe Debug] Force reload enabled (bypassing cache)");
     }
+    
     const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
-    const response = await fetch(url, fetchOptions);
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data;
+    console.log("[KPoe Debug] Request URL:", url);
+    
+    try {
+      const response = await fetch(url, fetchOptions);
+      console.log(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log("[KPoe Debug] ✗ Track not found in KPoe database");
+        } else if (response.status === 429) {
+          console.log("[KPoe Debug] ✗ Rate limit exceeded - too many requests");
+        } else if (response.status === 500) {
+          console.log("[KPoe Debug] ✗ Server error - KPoe service may be down");
+        } else {
+          console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+        }
+        return null;
+      }
+      
+      const data = await response.json();
+      console.log("[KPoe Debug] Response data:", {
+        hasLyrics: !!(data && data.lyrics),
+        lyricsType: data?.type,
+        lyricsCount: data?.lyrics?.length || 0,
+        source: data?.metadata?.source
+      });
+      
+      if (data && data.lyrics && data.lyrics.length > 0) {
+        console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
+      } else {
+        console.log("[KPoe Debug] ✗ No lyrics in response");
+      }
+      
+      return data;
+    } catch (e) {
+      console.error("[KPoe Debug] ✗ Fetch error:", e.message || e);
+      return null;
+    }
   }
   function parseKPoeFormat(data) {
     if (!Array.isArray(data.lyrics)) return null;
@@ -1612,10 +1699,10 @@ const PLAY_WORDS = [
         const duration = Math.floor(info.duration / 1000);
         const songInfo = { artist, title, album, duration };
         const result = await fetchKPoeLyrics(songInfo);
-        if (!result) return { error: "No lyrics found for this track from KPoe" };
+        if (!result) return { error: "Track not found in KPoe database or no lyrics available" };
         return parseKPoeFormat(result);
       } catch (e) {
-        return { error: e.message || "KPoe fetch failed" };
+        return { error: e.message || "KPoe request failed - network error or service unavailable" };
       }
     },
     getUnsynced(body) {
@@ -1841,79 +1928,138 @@ function parseMusixmatchSyncedLyrics(subtitleBody) {
 
 
 async function fetchMusixmatchLyrics(songInfo) {
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("[Musixmatch Debug] Starting lyrics search");
+  console.log("[Musixmatch Debug] Input info:", {
+    artist: songInfo.artist,
+    title: songInfo.title
+  });
+  
   const token = localStorage.getItem("lyricsPlusMusixmatchToken");
   if (!token) {
+    console.log("[Musixmatch Debug] ✗ No token found - user needs to configure");
     return { error: "Double click on the Musixmatch provider to set up your token" };
   }
+  console.log("[Musixmatch Debug] ✓ Token found (length:", token.length, "characters)");
 
   // Step 1: Get track info
-  const trackResponse = await fetch(
-    `https://apic-desktop.musixmatch.com/ws/1.1/matcher.track.get?` +
+  const trackUrl = `https://apic-desktop.musixmatch.com/ws/1.1/matcher.track.get?` +
       `q_track=${encodeURIComponent(songInfo.title)}&` +
       `q_artist=${encodeURIComponent(songInfo.artist)}&` +
-      `format=json&usertoken=${encodeURIComponent(token)}&app_id=web-desktop-app-v1.0`,
-    {
+      `format=json&usertoken=${encodeURIComponent(token)}&app_id=web-desktop-app-v1.0`;
+  console.log("[Musixmatch Debug] Step 1: Fetching track info");
+  console.log("[Musixmatch Debug] Track URL:", trackUrl.replace(token, '***TOKEN***'));
+  
+  try {
+    const trackResponse = await fetch(trackUrl, {
       headers: {
         'user-agent': navigator.userAgent,
         'referer': 'https://www.musixmatch.com/',
       },
       cache: 'no-store',
-    }
-  );
-  if (!trackResponse.ok) return { error: "Track info request failed" };
-  const trackBody = await trackResponse.json();
-  const track = trackBody?.message?.body?.track;
-  if (!track) return { error: "Track not found" };
-
-  if (track.instrumental) {
-    return { error: "Track is instrumental (no lyrics available)" };
-  }
-
-  // Step 2: Fetch synced lyrics via subtitles.get
-  const subtitleResponse = await fetch(
-    `https://apic-desktop.musixmatch.com/ws/1.1/track.subtitles.get?` +
-      `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`,
-    {
-      headers: {
-        'user-agent': navigator.userAgent,
-        'referer': 'https://www.musixmatch.com/',
-      },
-      cache: 'no-store',
-    }
-  );
-  if (subtitleResponse.ok) {
-    const subtitleBody = await subtitleResponse.json();
-    const subtitleList = subtitleBody?.message?.body?.subtitle_list;
-    if (subtitleList && subtitleList.length > 0) {
-      const subtitleObj = subtitleList[0]?.subtitle;
-      if (subtitleObj?.subtitle_body) {
-        const synced = parseMusixmatchSyncedLyrics(subtitleObj.subtitle_body);
-        if (synced.length > 0) return { synced };
+    });
+    
+    console.log(`[Musixmatch Debug] Track response status: ${trackResponse.status}`);
+    
+    if (!trackResponse.ok) {
+      if (trackResponse.status === 401) {
+        console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid");
+        return { error: "Musixmatch token expired or invalid. Double click the Musixmatch provider to update your token." };
+      } else if (trackResponse.status === 404) {
+        console.log("[Musixmatch Debug] ✗ Track not found in Musixmatch database");
+        return { error: "Track not found in Musixmatch database" };
       }
+      console.log(`[Musixmatch Debug] ✗ Track request failed: ${trackResponse.status}`);
+      return { error: `Track lookup failed (HTTP ${trackResponse.status})` };
     }
-  }
+    
+    const trackBody = await trackResponse.json();
+    const track = trackBody?.message?.body?.track;
+    
+    if (!track) {
+      console.log("[Musixmatch Debug] ✗ No track data in response");
+      return { error: "Track not found in Musixmatch database" };
+    }
+    
+    console.log("[Musixmatch Debug] ✓ Track found:", {
+      trackId: track.track_id,
+      trackName: track.track_name,
+      artistName: track.artist_name,
+      hasLyrics: track.has_lyrics,
+      instrumental: track.instrumental
+    });
 
-  // Step 3: fallback to unsynced lyrics
-  const lyricsResponse = await fetch(
-    `https://apic-desktop.musixmatch.com/ws/1.1/track.lyrics.get?` +
-      `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`,
-    {
+    if (track.instrumental) {
+      console.log("[Musixmatch Debug] ⚠ Track marked as instrumental (no lyrics)");
+      return { error: "Track is instrumental (no lyrics available)" };
+    }
+
+    // Step 2: Fetch synced lyrics via subtitles.get
+    const subtitleUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.subtitles.get?` +
+        `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`;
+    console.log("[Musixmatch Debug] Step 2: Fetching synced lyrics (subtitles)");
+    
+    const subtitleResponse = await fetch(subtitleUrl, {
       headers: {
         'user-agent': navigator.userAgent,
         'referer': 'https://www.musixmatch.com/',
       },
       cache: 'no-store',
+    });
+    
+    console.log(`[Musixmatch Debug] Subtitle response status: ${subtitleResponse.status}`);
+    
+    if (subtitleResponse.ok) {
+      const subtitleBody = await subtitleResponse.json();
+      const subtitleList = subtitleBody?.message?.body?.subtitle_list;
+      if (subtitleList && subtitleList.length > 0) {
+        const subtitleObj = subtitleList[0]?.subtitle;
+        if (subtitleObj?.subtitle_body) {
+          console.log("[Musixmatch Debug] ✓ Synced lyrics found!");
+          const synced = parseMusixmatchSyncedLyrics(subtitleObj.subtitle_body);
+          console.log(`[Musixmatch Debug] Parsed ${synced.length} synced lyric lines`);
+          if (synced.length > 0) return { synced };
+        }
+      }
+      console.log("[Musixmatch Debug] No synced lyrics in subtitle response");
+    } else {
+      console.log(`[Musixmatch Debug] Subtitle request failed: ${subtitleResponse.status}`);
     }
-  );
-  if (!lyricsResponse.ok) return { error: "Lyrics request failed" };
-  const lyricsBody = await lyricsResponse.json();
-  const unsyncedRaw = lyricsBody?.message?.body?.lyrics?.lyrics_body;
-  if (unsyncedRaw) {
-    const unsynced = unsyncedRaw.split("\n").map(line => ({ text: line }));
-    return { unsynced };
-  }
 
-  return { error: "No lyrics found" };
+    // Step 3: fallback to unsynced lyrics
+    const lyricsUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.lyrics.get?` +
+        `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`;
+    console.log("[Musixmatch Debug] Step 3: Fetching unsynced lyrics (fallback)");
+    
+    const lyricsResponse = await fetch(lyricsUrl, {
+      headers: {
+        'user-agent': navigator.userAgent,
+        'referer': 'https://www.musixmatch.com/',
+      },
+      cache: 'no-store',
+    });
+    
+    console.log(`[Musixmatch Debug] Lyrics response status: ${lyricsResponse.status}`);
+    
+    if (!lyricsResponse.ok) {
+      console.log(`[Musixmatch Debug] ✗ Lyrics request failed: ${lyricsResponse.status}`);
+      return { error: `Lyrics fetch failed (HTTP ${lyricsResponse.status})` };
+    }
+    
+    const lyricsBody = await lyricsResponse.json();
+    const unsyncedRaw = lyricsBody?.message?.body?.lyrics?.lyrics_body;
+    if (unsyncedRaw) {
+      const unsynced = unsyncedRaw.split("\n").map(line => ({ text: line }));
+      console.log(`[Musixmatch Debug] ✓ Unsynced lyrics found! (${unsynced.length} lines)`);
+      return { unsynced };
+    }
+
+    console.log("[Musixmatch Debug] ✗ No lyrics found in any format");
+    return { error: "No lyrics available for this track from Musixmatch" };
+  } catch (e) {
+    console.error("[Musixmatch Debug] ✗ Fetch error:", e.message || e);
+    return { error: `Musixmatch request failed: ${e.message || 'Network error'}` };
+  }
 }
 
 // Extract synced lyrics from the fetchMusixmatchLyrics result
@@ -1940,18 +2086,18 @@ const ProviderMusixmatch = {
     try {
       const data = await fetchMusixmatchLyrics(info);
       if (!data) {
-  return { error: "No lyrics found for this track from Musixmatch" };
+  return { error: "Track not found in Musixmatch database or no lyrics available" };
 }
 if (data.error) {
   // If the error is about missing token, show that instead
   if (data.error.includes("Double click on the Musixmatch provider")) {
     return { error: data.error };
   }
-  return { error: "No lyrics found for this track from Musixmatch" };
+  return { error: "Track not found in Musixmatch database or no lyrics available" };
 }
 return data;
     } catch (e) {
-      return { error: e.message || "Musixmatch fetch failed" };
+      return { error: e.message || "Musixmatch request failed - network error or service unavailable" };
     }
   },
   getUnsynced: musixmatchGetUnsynced,
@@ -2739,20 +2885,30 @@ const ProviderGenius = {
 
 const ProviderSpotify = {
   async findLyrics(info) {
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("[Spotify Debug] Starting lyrics search");
+    console.log("[Spotify Debug] Input info:", {
+      trackId: info.trackId,
+      title: info.title,
+      artist: info.artist
+    });
+    
     const token = localStorage.getItem("lyricsPlusSpotifyToken");
 
     if (!token) {
-      console.warn("[SpotifyLyrics+] No Spotify user token found in localStorage.");
+      console.log("[Spotify Debug] ✗ No token found in localStorage");
       return { error: "Double click on the Spotify provider to set up your token.\n" + "A fresh token is required every hour/upon page reload for security." };
     }
+    console.log("[Spotify Debug] ✓ Token found (length:", token.length, "characters)");
 
     if (!info.trackId) {
-      console.warn("[SpotifyLyrics+] No trackId in song info:", info);
-      return { error: "No lyrics found for this track from Spotify" };
+      console.log("[Spotify Debug] ✗ No trackId provided in song info");
+      return { error: "Cannot fetch Spotify lyrics - track ID not available" };
     }
 
     const endpoint = `https://spclient.wg.spotify.com/color-lyrics/v2/track/${info.trackId}?format=json&vocalRemoval=false&market=from_token`;
-
+    console.log("[Spotify Debug] Request endpoint:", endpoint);
+    console.log("[Spotify Debug] Using Authorization: Bearer ***TOKEN***");
 
     try {
       const res = await fetch(endpoint, {
@@ -2764,38 +2920,56 @@ const ProviderSpotify = {
         },
       });
 
+      console.log(`[Spotify Debug] Response status: ${res.status} ${res.statusText}`);
 
       if (!res.ok) {
-    const text = await res.text();
-    console.warn("[SpotifyLyrics+] Non-ok response:", res.status, text);
+        const text = await res.text();
+        console.log("[Spotify Debug] Response body:", text.substring(0, 200));
 
-    if (res.status === 401) {
-        return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
-    }
-    if (res.status === 404) {
-        return { error: "No lyrics found for this track from Spotify" };
-    }
-    return { error: "No lyrics found for this track from Spotify" };
-}
+        if (res.status === 401) {
+          console.log("[Spotify Debug] ✗ Authentication failed - token expired or invalid");
+          return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
+        }
+        if (res.status === 404) {
+          console.log("[Spotify Debug] ✗ Track not found or no lyrics available");
+          return { error: "Track not found or no lyrics available from Spotify" };
+        }
+        if (res.status === 403) {
+          console.log("[Spotify Debug] ✗ Access forbidden - check token permissions");
+          return { error: "Access denied by Spotify - please refresh your token" };
+        }
+        console.log(`[Spotify Debug] ✗ Request failed: ${res.status} ${res.statusText}`);
+        return { error: `Spotify lyrics request failed (HTTP ${res.status})` };
+      }
 
       let data;
       try {
         data = await res.json();
       } catch (jsonErr) {
         const text = await res.text();
-        console.error("[SpotifyLyrics+] Failed to parse JSON. Raw response:", text);
-        return { error: "No lyrics found for this track from Spotify" };
+        console.error("[Spotify Debug] ✗ Failed to parse JSON. Raw response:", text.substring(0, 200));
+        return { error: "Invalid response format from Spotify" };
       }
+
+      console.log("[Spotify Debug] Response data:", {
+        hasLyrics: !!(data && data.lyrics),
+        hasLines: !!(data && data.lyrics && data.lyrics.lines),
+        lineCount: data?.lyrics?.lines?.length || 0,
+        syncType: data?.lyrics?.syncType,
+        language: data?.lyrics?.language
+      });
 
       // Adapt to your UI's expected data shape:
       if (!data || !data.lyrics || !data.lyrics.lines || !data.lyrics.lines.length) {
-        console.warn("[SpotifyLyrics+] No lines in API response:", data);
-        return { error: "No lyrics found for this track from Spotify" };
+        console.log("[Spotify Debug] ✗ No lyric lines in API response");
+        return { error: "Track not found or no lyrics available from Spotify" };
       }
+      
+      console.log(`[Spotify Debug] ✓ Lyrics found! Type: ${data.lyrics.syncType}, Lines: ${data.lyrics.lines.length}, Language: ${data.lyrics.language || 'unknown'}`);
       return data.lyrics;
     } catch (e) {
-      console.error("[SpotifyLyrics+] Fetch error:", e);
-      return { error: "No lyrics found for this track from Spotify" };
+      console.error("[Spotify Debug] ✗ Fetch error:", e.message || e);
+      return { error: `Spotify lyrics request failed: ${e.message || 'Network error'}` };
     }
   },
 
