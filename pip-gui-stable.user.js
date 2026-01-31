@@ -850,6 +850,14 @@
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+          
+          // Reset transliteration line if present
+          const nextEl = p.nextElementSibling;
+          if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
+            nextEl.style.color = "#9a9a9a";
+            nextEl.style.filter = "blur(0.7px)";
+            nextEl.style.opacity = "0.8";
+          }
         });
         return;
       }
@@ -861,6 +869,14 @@
           p.style.opacity = "1";
           p.style.transform = "scale(1.10)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+          
+          // Highlight transliteration line with lighter green if present
+          const nextEl = p.nextElementSibling;
+          if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
+            nextEl.style.color = "#4db56a";  // Lighter green for transliteration
+            nextEl.style.filter = "none";
+            nextEl.style.opacity = "0.9";
+          }
         } else {
           p.style.color = "white";
           p.style.fontWeight = "400";
@@ -868,6 +884,14 @@
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+          
+          // Reset transliteration line if present
+          const nextEl = p.nextElementSibling;
+          if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
+            nextEl.style.color = "#9a9a9a";
+            nextEl.style.filter = "blur(0.7px)";
+            nextEl.style.opacity = "0.8";
+          }
         }
       });
 
@@ -1664,7 +1688,8 @@ const PLAY_WORDS = [
           duration: duration / 1000,
           endTime: endTime / 1000,
           syllabus: parsedSyllabus,
-          element: item.element || {}
+          element: item.element || {},
+          transliteration: item.transliteration || null
         };
       }),
       metadata
@@ -5561,17 +5586,30 @@ const Providers = {
 
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
-      currentSyncedLyrics.forEach(({ text }) => {
+      currentSyncedLyrics.forEach(({ text, transliteration }) => {
         const p = document.createElement("p");
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         lyricsContainer.appendChild(p);
+        
+        // Add transliteration line if available
+        if (transliteration && transliteration.text) {
+          const translitDiv = document.createElement('div');
+          translitDiv.textContent = transliteration.text;
+          translitDiv.style.color = '#9a9a9a';  // Slightly lighter gray than translation
+          translitDiv.style.fontSize = '0.85em';
+          translitDiv.style.marginTop = '2px';
+          translitDiv.style.marginBottom = '8px';
+          translitDiv.style.transition = "color 0.15s, filter 0.13s, opacity 0.13s";
+          translitDiv.setAttribute('data-transliteration', 'true');
+          lyricsContainer.appendChild(translitDiv);
+        }
       });
       highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
-      currentUnsyncedLyrics.forEach(({ text }) => {
+      currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
         const p = document.createElement("p");
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
@@ -5581,6 +5619,21 @@ const Providers = {
         p.style.filter = "blur(0.7px)";
         p.style.opacity = "0.8";
         lyricsContainer.appendChild(p);
+        
+        // Add transliteration line if available
+        if (transliteration && transliteration.text) {
+          const translitDiv = document.createElement('div');
+          translitDiv.textContent = transliteration.text;
+          translitDiv.style.color = '#9a9a9a';  // Slightly lighter gray than translation
+          translitDiv.style.fontSize = '0.85em';
+          translitDiv.style.marginTop = '2px';
+          translitDiv.style.marginBottom = '8px';
+          translitDiv.style.filter = "blur(0.7px)";
+          translitDiv.style.opacity = "0.8";
+          translitDiv.style.transition = "color 0.15s, filter 0.13s, opacity 0.13s";
+          translitDiv.setAttribute('data-transliteration', 'true');
+          lyricsContainer.appendChild(translitDiv);
+        }
       });
       // For unsynced, always allow user scroll
       lyricsContainer.style.overflowY = "auto";
@@ -5669,17 +5722,30 @@ const Providers = {
 
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
-      currentSyncedLyrics.forEach(({ text }) => {
+      currentSyncedLyrics.forEach(({ text, transliteration }) => {
         const p = document.createElement("p");
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         lyricsContainer.appendChild(p);
+        
+        // Add transliteration line if available
+        if (transliteration && transliteration.text) {
+          const translitDiv = document.createElement('div');
+          translitDiv.textContent = transliteration.text;
+          translitDiv.style.color = '#9a9a9a';  // Slightly lighter gray than translation
+          translitDiv.style.fontSize = '0.85em';
+          translitDiv.style.marginTop = '2px';
+          translitDiv.style.marginBottom = '8px';
+          translitDiv.style.transition = "color 0.15s, filter 0.13s, opacity 0.13s";
+          translitDiv.setAttribute('data-transliteration', 'true');
+          lyricsContainer.appendChild(translitDiv);
+        }
       });
       highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
-      currentUnsyncedLyrics.forEach(({ text }) => {
+      currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
         const p = document.createElement("p");
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
@@ -5689,6 +5755,21 @@ const Providers = {
         p.style.filter = "blur(0.7px)";
         p.style.opacity = "0.8";
         lyricsContainer.appendChild(p);
+        
+        // Add transliteration line if available
+        if (transliteration && transliteration.text) {
+          const translitDiv = document.createElement('div');
+          translitDiv.textContent = transliteration.text;
+          translitDiv.style.color = '#9a9a9a';  // Slightly lighter gray than translation
+          translitDiv.style.fontSize = '0.85em';
+          translitDiv.style.marginTop = '2px';
+          translitDiv.style.marginBottom = '8px';
+          translitDiv.style.filter = "blur(0.7px)";
+          translitDiv.style.opacity = "0.8";
+          translitDiv.style.transition = "color 0.15s, filter 0.13s, opacity 0.13s";
+          translitDiv.setAttribute('data-transliteration', 'true');
+          lyricsContainer.appendChild(translitDiv);
+        }
       });
       // For unsynced, always allow user scroll
       lyricsContainer.style.overflowY = "auto";
