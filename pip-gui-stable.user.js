@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      14.9
+// @version      15.0
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,22 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (15.0): CODE QUALITY & BUG FIX RELEASE
+// Duplicate IIFE patterns merged into a single scope
+// Improved code mantainability and reduced bloat
+// Added comprehensive DEBUG system with 4 levels (ERROR, WARN, INFO, DEBUG)
+// Added specialized loggers: provider, dom, track, ui, perf
+// Performance timing for all provider operations
+// Memory leak fixes: ResourceManager for observer/listener cleanup
+// Fixed Genius provider failing to match songs with accented characters
+// Updated normalize() function to use NFD (Unicode Normalization Form Decomposed)
+// Now converts diacritics to base forms: ă→a, é→e, ñ→n, ö→o, etc.
+// Works for Romanian, Spanish, French, German, Portuguese, and all Latin-script languages
+// Fixed stale provider highlighting when reopening lyrics popup
+// Fixed thick separator lines (2-5px) caused by collapsed wrapper borders stacking
+// Fixed Musixmatch/LRCLIB returning "♪ Instrumental ♪" as synced lyrics
+// Autodetect now tries all providers before giving up
 
 // RESOLVED (14.9): FIXED THE ISSUE WHERE ANY ERROR FROM A PROVIDER WOULD SKIP THE REMAINING PROVIDERS AND BREAK THE LYRIC FETCHING LOOP
 
@@ -92,7 +108,189 @@
   let isShowingSyncedLyrics = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
 
-  // --- Pre-initialized OpenCC converters (created once at startup) ---
+  // ------------------------
+  // Constants & Configuration
+  // ------------------------
+  const TIMING = {
+    HIGHLIGHT_INTERVAL_MS: 50,        // How often to update synced lyrics highlighting
+    POLLING_INTERVAL_MS: 400,         // How often to check for track changes
+    OPENCC_RETRY_DELAY_MS: 100,       // Initial delay for OpenCC initialization retries
+    BUTTON_ADD_RETRY_MS: 1000,        // Delay between button injection attempts
+    DRAG_DEBOUNCE_MS: 1500,           // Debounce time after dragging before auto-resize
+    PROGRESS_WATCH_DEBOUNCE_MS: 300,  // Debounce for progress bar watcher
+  };
+
+  const LIMITS = {
+    OPENCC_MAX_RETRIES: 3,            // Max retries for OpenCC initialization
+    BUTTON_ADD_MAX_RETRIES: 10,       // Max retries for button injection
+  };
+
+  // ------------------------
+  // Debug Logging Infrastructure
+  // ------------------------
+  const DEBUG = {
+    enabled: true, // Set to false to disable all debug logging
+    
+    // Log levels with prefixes
+    error: (context, ...args) => {
+      if (DEBUG.enabled) console.error(`[Lyrics+ ERROR] [${context}]`, ...args);
+    },
+    warn: (context, ...args) => {
+      if (DEBUG.enabled) console.warn(`[Lyrics+ WARN] [${context}]`, ...args);
+    },
+    info: (context, ...args) => {
+      if (DEBUG.enabled) console.info(`[Lyrics+ INFO] [${context}]`, ...args);
+    },
+    debug: (context, ...args) => {
+      if (DEBUG.enabled) console.debug(`[Lyrics+ DEBUG] [${context}]`, ...args);
+    },
+    
+    // Specialized logging helpers
+    provider: {
+      start: (providerName, operation, trackInfo) => {
+        DEBUG.debug('Provider', `Starting ${operation} for ${providerName}:`, {
+          track: trackInfo.title,
+          artist: trackInfo.artist,
+          album: trackInfo.album
+        });
+      },
+      success: (providerName, operation, lyricsType, lineCount) => {
+        DEBUG.info('Provider', `✓ ${providerName} ${operation} succeeded:`, {
+          type: lyricsType,
+          lines: lineCount
+        });
+      },
+      failure: (providerName, operation, error) => {
+        DEBUG.warn('Provider', `✗ ${providerName} ${operation} failed:`, error);
+      },
+      timing: (providerName, operation, durationMs) => {
+        DEBUG.debug('Provider', `⏱ ${providerName} ${operation} took ${durationMs}ms`);
+      }
+    },
+    
+    dom: {
+      notFound: (selector, context) => {
+        DEBUG.warn('DOM', `Element not found: ${selector}`, context ? `Context: ${context}` : '');
+      },
+      found: (selector, element) => {
+        DEBUG.debug('DOM', `Element found: ${selector}`, element);
+      },
+      query: (selector, count) => {
+        DEBUG.debug('DOM', `Query "${selector}" returned ${count} elements`);
+      }
+    },
+    
+    track: {
+      changed: (oldId, newId, trackInfo) => {
+        DEBUG.info('Track', `Track changed: ${oldId || 'none'} → ${newId}`, trackInfo);
+      },
+      detected: (trackInfo) => {
+        DEBUG.debug('Track', 'Track info detected:', trackInfo);
+      }
+    },
+    
+    ui: {
+      popupCreated: () => {
+        DEBUG.info('UI', 'Popup created');
+      },
+      popupRemoved: () => {
+        DEBUG.info('UI', 'Popup removed');
+      },
+      buttonClick: (buttonName) => {
+        DEBUG.debug('UI', `Button clicked: ${buttonName}`);
+      },
+      stateChange: (stateName, value) => {
+        DEBUG.debug('UI', `State change: ${stateName} = ${value}`);
+      }
+    },
+    
+    perf: {
+      start: (operation) => {
+        const startTime = performance.now();
+        return {
+          end: () => {
+            const duration = performance.now() - startTime;
+            DEBUG.debug('Performance', `${operation} took ${duration.toFixed(2)}ms`);
+            return duration;
+          }
+        };
+      }
+    }
+  };
+
+  // Global flags for popup state management (shared with resize observer in setupPopupAutoResize)
+  window.lyricsPlusPopupIgnoreProportion = false;
+  window.lastProportion = { w: null, h: null };
+  window.lyricsPlusPopupIsDragging = false;
+
+  // ------------------------
+  // Resource Management & Cleanup System
+  // ------------------------
+  // Centralized tracking of all observers, listeners, and timers for proper cleanup
+  const ResourceManager = {
+    observers: [],
+    windowListeners: [],
+    
+    // Register a MutationObserver, IntersectionObserver, or ResizeObserver
+    registerObserver(observer, description) {
+      this.observers.push({ observer, description });
+      DEBUG.debug('ResourceManager', `Registered observer: ${description}`);
+      return observer;
+    },
+    
+    // Register a window event listener
+    registerWindowListener(eventType, handler, description) {
+      this.windowListeners.push({ eventType, handler, description });
+      window.addEventListener(eventType, handler);
+      DEBUG.debug('ResourceManager', `Registered window listener: ${eventType} (${description})`);
+    },
+    
+    // Cleanup all registered resources
+    cleanup() {
+      DEBUG.info('ResourceManager', `Cleaning up ${this.observers.length} observers and ${this.windowListeners.length} window listeners`);
+      
+      // Disconnect all observers
+      this.observers.forEach(({ observer, description }) => {
+        try {
+          observer.disconnect();
+          DEBUG.debug('ResourceManager', `Disconnected observer: ${description}`);
+        } catch (e) {
+          DEBUG.error('ResourceManager', `Failed to disconnect observer ${description}:`, e);
+        }
+      });
+      this.observers = [];
+      
+      // Remove all window listeners
+      this.windowListeners.forEach(({ eventType, handler, description }) => {
+        try {
+          window.removeEventListener(eventType, handler);
+          DEBUG.debug('ResourceManager', `Removed window listener: ${eventType} (${description})`);
+        } catch (e) {
+          DEBUG.error('ResourceManager', `Failed to remove listener ${description}:`, e);
+        }
+      });
+      this.windowListeners = [];
+    },
+    
+    // Cleanup specific observer
+    cleanupObserver(observer) {
+      const index = this.observers.findIndex(item => item.observer === observer);
+      if (index !== -1) {
+        const { description } = this.observers[index];
+        try {
+          observer.disconnect();
+          this.observers.splice(index, 1);
+          DEBUG.debug('ResourceManager', `Cleaned up observer: ${description}`);
+        } catch (e) {
+          DEBUG.error('ResourceManager', `Failed to cleanup observer ${description}:`, e);
+        }
+      }
+    }
+  };
+
+  // ------------------------
+  // Pre-initialized OpenCC converters (created once at startup)
+  // ------------------------
   // Using the full.js bundle, we initialize converters at startup to avoid
   // the issue of individual t2cn.js and cn2t.js files overwriting each other
   let openccT2CN = null; // Traditional to Simplified Chinese converter
@@ -102,8 +300,11 @@
   // Initialize OpenCC converters with retry mechanism
   // @require scripts should load before the userscript executes, but we add
   // a retry mechanism as a safety measure in case of any timing issues
-  function initOpenCCConverters(retries = 3, delay = 100) {
+  function initOpenCCConverters(retries = LIMITS.OPENCC_MAX_RETRIES, delay = TIMING.OPENCC_RETRY_DELAY_MS) {
     if (openccInitialized) return; // Already initialized, don't retry
+    
+    DEBUG.debug('OpenCC', `Initialization attempt (${LIMITS.OPENCC_MAX_RETRIES - retries + 1}/${LIMITS.OPENCC_MAX_RETRIES})`);
+    
     try {
       if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
         // The full.js bundle exposes OpenCC.Converter which takes { from, to } options
@@ -112,15 +313,16 @@
         openccT2CN = OpenCC.Converter({ from: 't', to: 'cn' });
         openccCN2T = OpenCC.Converter({ from: 'cn', to: 't' });
         openccInitialized = true;
-        console.log('[Lyrics+] OpenCC converters initialized successfully (t↔cn)');
+        DEBUG.info('OpenCC', 'Converters initialized successfully (t↔cn)');
       } else if (retries > 0) {
         // OpenCC not available yet, retry after a short delay
+        DEBUG.debug('OpenCC', `Not available yet, retrying in ${delay}ms (${retries} retries left)`);
         setTimeout(() => initOpenCCConverters(retries - 1, delay * 2), delay);
       } else {
-        console.warn('[Lyrics+] OpenCC not available after retries');
+        DEBUG.warn('OpenCC', 'Not available after all retries');
       }
     } catch (e) {
-      console.warn('[Lyrics+] OpenCC converter initialization error:', e);
+      DEBUG.error('OpenCC', 'Initialization error:', e);
     }
   }
   // Attempt initialization immediately
@@ -159,8 +361,10 @@
   }
 
 
-  /*
-  --- Old NowPlayingView logic: Forcibly hide NowPlayingView and its button in the playback controls menu
+  /*  
+  --- NOTE: Keeping the old version here as backup incase Spotify reverts the new NPV update.
+
+  --- Forcibly hide NowPlayingView and its button in the playback controls menu
   --- To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
       This CSS method hides the NowPlayingView from the user interface in a way that allows the rest of the Spotify home UI to seamlessly fill the space it would otherwise
       occupy, without leaving a black area present. Crucially, it keeps the NowPlayingView and its DOM structure present and accessible to JavaScript (so scripts can still read
@@ -202,85 +406,6 @@
       }
 
   */
-
-  /*
-  --- Old NowPlayingView logic: To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
-      The CSS "display: none" and "width: 0" make the NowPlayingView invisible to the user. However, the elements remain present in the page's HTML and accessible to JavaScript
-      which allows the SpotifyProvider to succesfully extract the trackId and fetch lyrics without requiring the user to have their window space occupied by the NowPlayingView.
-      Disbanded because the hiding method left a black area since the parent container still reserved space.
-
-      const styleId = 'lyricsplus-hide-npv-style';
-      if (!document.getElementById(styleId)) {
-          const style = document.createElement('style');
-          style.id = styleId;
-          style.textContent = `
-              .NowPlayingView,
-              .OTfMDdomT5S7B5dbYTT8:has(.NowPlayingView) {
-                  width: 0 !important;
-                  display: none !important;
-              }
-              [data-testid=control-button-npv] {
-                  display: none !important;
-              }
-          `;
-        document.head.appendChild(style);
-      }
-
-  */
-
-  /*
-  --- Disbanded NowPlayingView logic: Allow only user-initiated opens; keeping the NowPlaying button ---
-  I decided to disband the following code in favour of the current SpotifyProvider logic which requires the track informations selectors
-  from the NowPlayingView to remain present in the DOM.
-
-  let userOpenedNPV = false;
-
-  const NPV_BTN_SELECTOR = 'button[data-testid="control-button-npv"]';
-  const NPV_VIEW_SELECTOR = '.NowPlayingView, aside[data-testid="now-playing-bar"]';
-  const HIDE_BTN_SELECTOR = 'button[aria-label="Hide Now Playing view"]';
-
-  // Track user opening NPV
-  document.addEventListener('click', function(e) {
-      const openBtn = e.target.closest(NPV_BTN_SELECTOR);
-      const closeBtn = e.target.closest(HIDE_BTN_SELECTOR);
-      if (openBtn && e.isTrusted) userOpenedNPV = true;
-      if (closeBtn && e.isTrusted) userOpenedNPV = false;
-      // Still block synthetic (non-trusted) opens
-      if (openBtn && !e.isTrusted) {
-          e.stopImmediatePropagation();
-          e.preventDefault();
-      }
-  }, true);
-
-  // Close NPV only if it was NOT opened by the user
-  function closeNPV() {
-      const hideBtn = document.querySelector(HIDE_BTN_SELECTOR);
-      if (hideBtn && hideBtn.offsetParent !== null) hideBtn.click();
-  }
-
-  const npvObserver = new MutationObserver(() => {
-      const npv = document.querySelector(NPV_VIEW_SELECTOR);
-      // If NPV is open and user didn't open it, close it
-      if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
-  });
-  npvObserver.observe(document.body, { childList: true, subtree: true });
-
-  // On page load, ensure NPV is closed if not user-initiated
-  setTimeout(() => {
-      const npv = document.querySelector(NPV_VIEW_SELECTOR);
-      if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
-  }, 1000);
-
-  */
-
-  // Global flag (window.lyricsPlusPopupIsResizing) is used to prevent lyric highlighting updates from interfering with popup resizing
-
-  // Global flags below are used to prevent a bug with Revert to default position button
-  window.lyricsPlusPopupIgnoreProportion = false;
-  window.lastProportion = { w: null, h: null };
-
-  // Global flag to prevent popup glitch during manual drag
-  window.lyricsPlusPopupIsDragging = false;
 
   // ------------------------
   // Utils.js Functions
@@ -334,7 +459,7 @@
       const data = await response.json();
       return data[0][0][0];
     } catch (error) {
-      console.error('Translation failed:', error);
+      DEBUG.error('Translation', 'Failed to translate text:', error);
       return '[Translation Error]';
     }
   }
@@ -374,7 +499,7 @@
       try {
         if (!openccT2CN || !openccCN2T) {
           // Fallback if converters aren't initialized
-          console.warn('[Lyrics+] OpenCC converters not initialized for detection');
+          DEBUG.warn('OpenCC', 'Converters not initialized for script detection');
           return 'simplified'; // Default assumption
         }
 
@@ -403,7 +528,7 @@
           return 'simplified';
         }
       } catch (e) {
-        console.warn('[Lyrics+] Script type detection error:', e);
+        DEBUG.warn('OpenCC', 'Script type detection error:', e);
         return 'simplified'; // Default assumption on error
       }
     },
@@ -428,10 +553,10 @@
           return converter(str);
         }
         // Converter not available, return original
-        console.warn('[Lyrics+] T→CN converter not available');
+        DEBUG.warn('OpenCC', 'T→CN converter not available');
         return str;
       } catch (e) {
-        console.warn('[Lyrics+] Traditional to Simplified conversion error:', e);
+        DEBUG.error('OpenCC', 'Traditional to Simplified conversion error:', e);
         return str;
       }
     },
@@ -452,10 +577,10 @@
           return converter(str);
         }
         // Converter not available, return original
-        console.warn('[Lyrics+] CN→T converter not available');
+        DEBUG.warn('OpenCC', 'CN→T converter not available');
         return str;
       } catch (e) {
-        console.warn('[Lyrics+] Simplified to Traditional conversion error:', e);
+        DEBUG.error('OpenCC', 'Simplified to Traditional conversion error:', e);
         return str;
       }
     },
@@ -566,8 +691,12 @@
     if (contextLink) {
       const href = contextLink.getAttribute('href');
       const match = decodeURIComponent(href).match(/spotify:track:([a-zA-Z0-9]{22})/);
-      if (match) return match[1];
+      if (match) {
+        DEBUG.debug('Track', `Track ID extracted: ${match[1]}`);
+        return match[1];
+      }
     }
+    DEBUG.dom.notFound('a[data-testid="context-link"]...', 'getCurrentTrackId');
     return null;
   }
 
@@ -577,7 +706,12 @@
     const durationEl = document.querySelector('[data-testid="playback-duration"]');
     const positionEl = document.querySelector('[data-testid="playback-position"]');
     const trackId = getCurrentTrackId();
-    if (!titleEl || !artistEl) return null;
+    
+    if (!titleEl || !artistEl) {
+      DEBUG.dom.notFound(!titleEl ? 'context-item-info-title' : 'context-item-info-subtitles', 'getCurrentTrackInfo');
+      return null;
+    }
+    
     const title = titleEl.textContent.trim();
     const artist = artistEl.textContent.trim();
 
@@ -601,10 +735,11 @@
       const audio = document.querySelector('audio');
       if (audio && !isNaN(audio.duration) && audio.duration > 0) {
         duration = audio.duration * 1000;
+        DEBUG.debug('Track', 'Duration obtained from audio element');
       }
     }
 
-    return {
+    const trackInfo = {
       id: `${title}-${artist}`,
       title,
       artist,
@@ -613,6 +748,9 @@
       uri: "",
       trackId
     };
+    
+    DEBUG.track.detected(trackInfo);
+    return trackInfo;
   }
 
   function timeStringToMs(str) {
@@ -742,7 +880,7 @@
       if (activeP && isPlaying) {
         activeP.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-    }, 50);
+    }, TIMING.HIGHLIGHT_INTERVAL_MS);
   }
 
   function updateTabs(tabsContainer, noneSelected) {
@@ -1329,6 +1467,16 @@ const PLAY_WORDS = [
 
   // --- LRCLIB ---
   async function fetchLRCLibLyrics(songInfo, tryWithoutAlbum = false) {
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("[LRCLIB Debug] Starting lyrics search");
+  console.log("[LRCLIB Debug] Input info:", {
+    artist: songInfo.artist,
+    title: songInfo.title,
+    album: songInfo.album,
+    duration: songInfo.duration
+  });
+  console.log(`[LRCLIB Debug] Searching ${tryWithoutAlbum ? 'WITHOUT' : 'WITH'} album parameter`);
+  
   const params = [
     `artist_name=${encodeURIComponent(songInfo.artist)}`,
     `track_name=${encodeURIComponent(songInfo.title)}`
@@ -1337,14 +1485,20 @@ const PLAY_WORDS = [
   // Only add album if available and not skipped
   if (songInfo.album && !tryWithoutAlbum) {
     params.push(`album_name=${encodeURIComponent(songInfo.album)}`);
+    console.log("[LRCLIB Debug] Including album in search");
+  } else if (tryWithoutAlbum) {
+    console.log("[LRCLIB Debug] Retrying without album (fallback search)");
   }
 
   // Only include duration if it's a safe value
   if (songInfo.duration && songInfo.duration >= 10000) {
-    params.push(`duration=${Math.floor(songInfo.duration / 1000)}`);
+    const durationSec = Math.floor(songInfo.duration / 1000);
+    params.push(`duration=${durationSec}`);
+    console.log(`[LRCLIB Debug] Including duration: ${durationSec} seconds`);
   }
 
   const url = `https://lrclib.net/api/get?${params.join('&')}`;
+  console.log("[LRCLIB Debug] Request URL:", url);
 
   try {
     const response = await fetch(url, {
@@ -1354,14 +1508,38 @@ const PLAY_WORDS = [
       }
     });
 
+    console.log(`[LRCLIB Debug] Response status: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      console.warn(`LRCLIB request failed with status ${response.status}`);
+      if (response.status === 404) {
+        console.log("[LRCLIB Debug] ✗ Track not found in LRCLIB database");
+      } else if (response.status === 429) {
+        console.log("[LRCLIB Debug] ✗ Rate limit exceeded - too many requests");
+      } else {
+        console.log(`[LRCLIB Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+      }
       return null;
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log("[LRCLIB Debug] Response data:", {
+      hasPlainLyrics: !!data.plainLyrics,
+      hasSyncedLyrics: !!data.syncedLyrics,
+      isInstrumental: !!data.instrumental,
+      duration: data.duration
+    });
+
+    if (data.instrumental) {
+      console.log("[LRCLIB Debug] ⚠ Track marked as instrumental (no lyrics)");
+    } else if (data.syncedLyrics || data.plainLyrics) {
+      console.log(`[LRCLIB Debug] ✓ Lyrics found! Type: ${data.syncedLyrics ? 'Synced' : 'Unsynced only'}`);
+    } else {
+      console.log("[LRCLIB Debug] ✗ No lyrics data in response");
+    }
+
+    return data;
   } catch (e) {
-    console.error("LRCLIB fetch error:", e);
+    console.error("[LRCLIB Debug] ✗ Fetch error:", e.message || e);
     return null;
   }
 }
@@ -1372,19 +1550,19 @@ const PLAY_WORDS = [
         if (!data || (!data.syncedLyrics && !data.plainLyrics)) {
           data = await fetchLRCLibLyrics(info, true); // try without album
         }
-        if (!data) return { error: "No lyrics found for this track from LRCLIB" };
+        if (!data) return { error: "Track not found in LRCLIB database or no lyrics available" };
         return data;
       } catch (e) {
-        return { error: e.message || "LRCLIB fetch failed" };
+        return { error: e.message || "LRCLIB request failed - network error or service unavailable" };
       }
     },
     getUnsynced(body) {
-      if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+      if (body?.instrumental) return null; // Skip to next provider for instrumental tracks
       if (!body?.plainLyrics) return null;
       return Utils.parseLocalLyrics(body.plainLyrics).unsynced;
     },
     getSynced(body) {
-      if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+      if (body?.instrumental) return null; // Skip to next provider for instrumental tracks
       if (!body?.syncedLyrics) return null;
       return Utils.parseLocalLyrics(body.syncedLyrics).synced;
     }
@@ -1392,6 +1570,17 @@ const PLAY_WORDS = [
 
    // --- KPoe ---
   async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false) {
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("[KPoe Debug] Starting lyrics search");
+    console.log("[KPoe Debug] Input info:", {
+      artist: songInfo.artist,
+      title: songInfo.title,
+      album: songInfo.album,
+      duration: songInfo.duration,
+      sourceOrder: sourceOrder || 'none',
+      forceReload: forceReload
+    });
+    
     const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
       ? `&album=${encodeURIComponent(songInfo.album)}`
       : '';
@@ -1401,12 +1590,48 @@ const PLAY_WORDS = [
     if (forceReload) {
       fetchOptions = { cache: 'no-store' };
       forceReloadParam = `&forceReload=true`;
+      console.log("[KPoe Debug] Force reload enabled (bypassing cache)");
     }
+    
     const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
-    const response = await fetch(url, fetchOptions);
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data;
+    console.log("[KPoe Debug] Request URL:", url);
+    
+    try {
+      const response = await fetch(url, fetchOptions);
+      console.log(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log("[KPoe Debug] ✗ Track not found in KPoe database");
+        } else if (response.status === 429) {
+          console.log("[KPoe Debug] ✗ Rate limit exceeded - too many requests");
+        } else if (response.status === 500) {
+          console.log("[KPoe Debug] ✗ Server error - KPoe service may be down");
+        } else {
+          console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+        }
+        return null;
+      }
+      
+      const data = await response.json();
+      console.log("[KPoe Debug] Response data:", {
+        hasLyrics: !!(data && data.lyrics),
+        lyricsType: data?.type,
+        lyricsCount: data?.lyrics?.length || 0,
+        source: data?.metadata?.source
+      });
+      
+      if (data && data.lyrics && data.lyrics.length > 0) {
+        console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
+      } else {
+        console.log("[KPoe Debug] ✗ No lyrics in response");
+      }
+      
+      return data;
+    } catch (e) {
+      console.error("[KPoe Debug] ✗ Fetch error:", e.message || e);
+      return null;
+    }
   }
   function parseKPoeFormat(data) {
     if (!Array.isArray(data.lyrics)) return null;
@@ -1449,10 +1674,10 @@ const PLAY_WORDS = [
         const duration = Math.floor(info.duration / 1000);
         const songInfo = { artist, title, album, duration };
         const result = await fetchKPoeLyrics(songInfo);
-        if (!result) return { error: "No lyrics found for this track from KPoe" };
+        if (!result) return { error: "Track not found in KPoe database or no lyrics available" };
         return parseKPoeFormat(result);
       } catch (e) {
-        return { error: e.message || "KPoe fetch failed" };
+        return { error: e.message || "KPoe request failed - network error or service unavailable" };
       }
     },
     getUnsynced(body) {
@@ -1678,79 +1903,138 @@ function parseMusixmatchSyncedLyrics(subtitleBody) {
 
 
 async function fetchMusixmatchLyrics(songInfo) {
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("[Musixmatch Debug] Starting lyrics search");
+  console.log("[Musixmatch Debug] Input info:", {
+    artist: songInfo.artist,
+    title: songInfo.title
+  });
+  
   const token = localStorage.getItem("lyricsPlusMusixmatchToken");
   if (!token) {
+    console.log("[Musixmatch Debug] ✗ No token found - user needs to configure");
     return { error: "Double click on the Musixmatch provider to set up your token" };
   }
+  console.log("[Musixmatch Debug] ✓ Token found (length:", token.length, "characters)");
 
   // Step 1: Get track info
-  const trackResponse = await fetch(
-    `https://apic-desktop.musixmatch.com/ws/1.1/matcher.track.get?` +
+  const trackUrl = `https://apic-desktop.musixmatch.com/ws/1.1/matcher.track.get?` +
       `q_track=${encodeURIComponent(songInfo.title)}&` +
       `q_artist=${encodeURIComponent(songInfo.artist)}&` +
-      `format=json&usertoken=${encodeURIComponent(token)}&app_id=web-desktop-app-v1.0`,
-    {
+      `format=json&usertoken=${encodeURIComponent(token)}&app_id=web-desktop-app-v1.0`;
+  console.log("[Musixmatch Debug] Step 1: Fetching track info");
+  console.log("[Musixmatch Debug] Track URL:", trackUrl.replace(token, '***TOKEN***'));
+  
+  try {
+    const trackResponse = await fetch(trackUrl, {
       headers: {
         'user-agent': navigator.userAgent,
         'referer': 'https://www.musixmatch.com/',
       },
       cache: 'no-store',
-    }
-  );
-  if (!trackResponse.ok) return { error: "Track info request failed" };
-  const trackBody = await trackResponse.json();
-  const track = trackBody?.message?.body?.track;
-  if (!track) return { error: "Track not found" };
-
-  if (track.instrumental) {
-    return { synced: [{ text: "♪ Instrumental ♪", time: 0 }] };
-  }
-
-  // Step 2: Fetch synced lyrics via subtitles.get
-  const subtitleResponse = await fetch(
-    `https://apic-desktop.musixmatch.com/ws/1.1/track.subtitles.get?` +
-      `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`,
-    {
-      headers: {
-        'user-agent': navigator.userAgent,
-        'referer': 'https://www.musixmatch.com/',
-      },
-      cache: 'no-store',
-    }
-  );
-  if (subtitleResponse.ok) {
-    const subtitleBody = await subtitleResponse.json();
-    const subtitleList = subtitleBody?.message?.body?.subtitle_list;
-    if (subtitleList && subtitleList.length > 0) {
-      const subtitleObj = subtitleList[0]?.subtitle;
-      if (subtitleObj?.subtitle_body) {
-        const synced = parseMusixmatchSyncedLyrics(subtitleObj.subtitle_body);
-        if (synced.length > 0) return { synced };
+    });
+    
+    console.log(`[Musixmatch Debug] Track response status: ${trackResponse.status}`);
+    
+    if (!trackResponse.ok) {
+      if (trackResponse.status === 401) {
+        console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid");
+        return { error: "Musixmatch token expired or invalid. Double click the Musixmatch provider to update your token." };
+      } else if (trackResponse.status === 404) {
+        console.log("[Musixmatch Debug] ✗ Track not found in Musixmatch database");
+        return { error: "Track not found in Musixmatch database" };
       }
+      console.log(`[Musixmatch Debug] ✗ Track request failed: ${trackResponse.status}`);
+      return { error: `Track lookup failed (HTTP ${trackResponse.status})` };
     }
-  }
+    
+    const trackBody = await trackResponse.json();
+    const track = trackBody?.message?.body?.track;
+    
+    if (!track) {
+      console.log("[Musixmatch Debug] ✗ No track data in response");
+      return { error: "Track not found in Musixmatch database" };
+    }
+    
+    console.log("[Musixmatch Debug] ✓ Track found:", {
+      trackId: track.track_id,
+      trackName: track.track_name,
+      artistName: track.artist_name,
+      hasLyrics: track.has_lyrics,
+      instrumental: track.instrumental
+    });
 
-  // Step 3: fallback to unsynced lyrics
-  const lyricsResponse = await fetch(
-    `https://apic-desktop.musixmatch.com/ws/1.1/track.lyrics.get?` +
-      `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`,
-    {
+    if (track.instrumental) {
+      console.log("[Musixmatch Debug] ⚠ Track marked as instrumental (no lyrics)");
+      return { error: "Track is instrumental (no lyrics available)" };
+    }
+
+    // Step 2: Fetch synced lyrics via subtitles.get
+    const subtitleUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.subtitles.get?` +
+        `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`;
+    console.log("[Musixmatch Debug] Step 2: Fetching synced lyrics (subtitles)");
+    
+    const subtitleResponse = await fetch(subtitleUrl, {
       headers: {
         'user-agent': navigator.userAgent,
         'referer': 'https://www.musixmatch.com/',
       },
       cache: 'no-store',
+    });
+    
+    console.log(`[Musixmatch Debug] Subtitle response status: ${subtitleResponse.status}`);
+    
+    if (subtitleResponse.ok) {
+      const subtitleBody = await subtitleResponse.json();
+      const subtitleList = subtitleBody?.message?.body?.subtitle_list;
+      if (subtitleList && subtitleList.length > 0) {
+        const subtitleObj = subtitleList[0]?.subtitle;
+        if (subtitleObj?.subtitle_body) {
+          console.log("[Musixmatch Debug] ✓ Synced lyrics found!");
+          const synced = parseMusixmatchSyncedLyrics(subtitleObj.subtitle_body);
+          console.log(`[Musixmatch Debug] Parsed ${synced.length} synced lyric lines`);
+          if (synced.length > 0) return { synced };
+        }
+      }
+      console.log("[Musixmatch Debug] No synced lyrics in subtitle response");
+    } else {
+      console.log(`[Musixmatch Debug] Subtitle request failed: ${subtitleResponse.status}`);
     }
-  );
-  if (!lyricsResponse.ok) return { error: "Lyrics request failed" };
-  const lyricsBody = await lyricsResponse.json();
-  const unsyncedRaw = lyricsBody?.message?.body?.lyrics?.lyrics_body;
-  if (unsyncedRaw) {
-    const unsynced = unsyncedRaw.split("\n").map(line => ({ text: line }));
-    return { unsynced };
-  }
 
-  return { error: "No lyrics found" };
+    // Step 3: fallback to unsynced lyrics
+    const lyricsUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.lyrics.get?` +
+        `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`;
+    console.log("[Musixmatch Debug] Step 3: Fetching unsynced lyrics (fallback)");
+    
+    const lyricsResponse = await fetch(lyricsUrl, {
+      headers: {
+        'user-agent': navigator.userAgent,
+        'referer': 'https://www.musixmatch.com/',
+      },
+      cache: 'no-store',
+    });
+    
+    console.log(`[Musixmatch Debug] Lyrics response status: ${lyricsResponse.status}`);
+    
+    if (!lyricsResponse.ok) {
+      console.log(`[Musixmatch Debug] ✗ Lyrics request failed: ${lyricsResponse.status}`);
+      return { error: `Lyrics fetch failed (HTTP ${lyricsResponse.status})` };
+    }
+    
+    const lyricsBody = await lyricsResponse.json();
+    const unsyncedRaw = lyricsBody?.message?.body?.lyrics?.lyrics_body;
+    if (unsyncedRaw) {
+      const unsynced = unsyncedRaw.split("\n").map(line => ({ text: line }));
+      console.log(`[Musixmatch Debug] ✓ Unsynced lyrics found! (${unsynced.length} lines)`);
+      return { unsynced };
+    }
+
+    console.log("[Musixmatch Debug] ✗ No lyrics found in any format");
+    return { error: "No lyrics available for this track from Musixmatch" };
+  } catch (e) {
+    console.error("[Musixmatch Debug] ✗ Fetch error:", e.message || e);
+    return { error: `Musixmatch request failed: ${e.message || 'Network error'}` };
+  }
 }
 
 // Extract synced lyrics from the fetchMusixmatchLyrics result
@@ -1777,18 +2061,18 @@ const ProviderMusixmatch = {
     try {
       const data = await fetchMusixmatchLyrics(info);
       if (!data) {
-  return { error: "No lyrics found for this track from Musixmatch" };
+  return { error: "Track not found in Musixmatch database or no lyrics available" };
 }
 if (data.error) {
   // If the error is about missing token, show that instead
   if (data.error.includes("Double click on the Musixmatch provider")) {
     return { error: data.error };
   }
-  return { error: "No lyrics found for this track from Musixmatch" };
+  return { error: "Track not found in Musixmatch database or no lyrics available" };
 }
 return data;
     } catch (e) {
-      return { error: e.message || "Musixmatch fetch failed" };
+      return { error: e.message || "Musixmatch request failed - network error or service unavailable" };
     }
   },
   getUnsynced: musixmatchGetUnsynced,
@@ -1831,7 +2115,15 @@ async function fetchGeniusLyrics(info) {
 }
 
   function normalize(str) {
-    return str.toLowerCase().replace(/[^a-z0-9]/gi, '');
+    // Use NFD (Canonical Decomposition) to decompose diacritics into base + combining marks
+    // Then remove the combining marks (Unicode range \u0300-\u036f)
+    // This converts: ă→a, é→e, ñ→n, ö→o, etc.
+    // Finally, remove all remaining non-alphanumeric characters
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks
+      .replace(/[^a-z0-9]/gi, '');
   }
 
   function normalizeArtists(artist) {
@@ -2568,20 +2860,30 @@ const ProviderGenius = {
 
 const ProviderSpotify = {
   async findLyrics(info) {
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("[Spotify Debug] Starting lyrics search");
+    console.log("[Spotify Debug] Input info:", {
+      trackId: info.trackId,
+      title: info.title,
+      artist: info.artist
+    });
+    
     const token = localStorage.getItem("lyricsPlusSpotifyToken");
 
     if (!token) {
-      console.warn("[SpotifyLyrics+] No Spotify user token found in localStorage.");
+      console.log("[Spotify Debug] ✗ No token found in localStorage");
       return { error: "Double click on the Spotify provider to set up your token.\n" + "A fresh token is required every hour/upon page reload for security." };
     }
+    console.log("[Spotify Debug] ✓ Token found (length:", token.length, "characters)");
 
     if (!info.trackId) {
-      console.warn("[SpotifyLyrics+] No trackId in song info:", info);
-      return { error: "No lyrics found for this track from Spotify" };
+      console.log("[Spotify Debug] ✗ No trackId provided in song info");
+      return { error: "Cannot fetch Spotify lyrics - track ID not available" };
     }
 
     const endpoint = `https://spclient.wg.spotify.com/color-lyrics/v2/track/${info.trackId}?format=json&vocalRemoval=false&market=from_token`;
-
+    console.log("[Spotify Debug] Request endpoint:", endpoint);
+    console.log("[Spotify Debug] Using Authorization: Bearer ***TOKEN***");
 
     try {
       const res = await fetch(endpoint, {
@@ -2593,38 +2895,56 @@ const ProviderSpotify = {
         },
       });
 
+      console.log(`[Spotify Debug] Response status: ${res.status} ${res.statusText}`);
 
       if (!res.ok) {
-    const text = await res.text();
-    console.warn("[SpotifyLyrics+] Non-ok response:", res.status, text);
+        const text = await res.text();
+        console.log("[Spotify Debug] Response body:", text.substring(0, 200));
 
-    if (res.status === 401) {
-        return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
-    }
-    if (res.status === 404) {
-        return { error: "No lyrics found for this track from Spotify" };
-    }
-    return { error: "No lyrics found for this track from Spotify" };
-}
+        if (res.status === 401) {
+          console.log("[Spotify Debug] ✗ Authentication failed - token expired or invalid");
+          return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
+        }
+        if (res.status === 404) {
+          console.log("[Spotify Debug] ✗ Track not found or no lyrics available");
+          return { error: "Track not found or no lyrics available from Spotify" };
+        }
+        if (res.status === 403) {
+          console.log("[Spotify Debug] ✗ Access forbidden - check token permissions");
+          return { error: "Access denied by Spotify - please refresh your token" };
+        }
+        console.log(`[Spotify Debug] ✗ Request failed: ${res.status} ${res.statusText}`);
+        return { error: `Spotify lyrics request failed (HTTP ${res.status})` };
+      }
 
       let data;
       try {
         data = await res.json();
       } catch (jsonErr) {
         const text = await res.text();
-        console.error("[SpotifyLyrics+] Failed to parse JSON. Raw response:", text);
-        return { error: "No lyrics found for this track from Spotify" };
+        console.error("[Spotify Debug] ✗ Failed to parse JSON. Raw response:", text.substring(0, 200));
+        return { error: "Invalid response format from Spotify" };
       }
+
+      console.log("[Spotify Debug] Response data:", {
+        hasLyrics: !!(data && data.lyrics),
+        hasLines: !!(data && data.lyrics && data.lyrics.lines),
+        lineCount: data?.lyrics?.lines?.length || 0,
+        syncType: data?.lyrics?.syncType,
+        language: data?.lyrics?.language
+      });
 
       // Adapt to your UI's expected data shape:
       if (!data || !data.lyrics || !data.lyrics.lines || !data.lyrics.lines.length) {
-        console.warn("[SpotifyLyrics+] No lines in API response:", data);
-        return { error: "No lyrics found for this track from Spotify" };
+        console.log("[Spotify Debug] ✗ No lyric lines in API response");
+        return { error: "Track not found or no lyrics available from Spotify" };
       }
+      
+      console.log(`[Spotify Debug] ✓ Lyrics found! Type: ${data.lyrics.syncType}, Lines: ${data.lyrics.lines.length}, Language: ${data.lyrics.language || 'unknown'}`);
       return data.lyrics;
     } catch (e) {
-      console.error("[SpotifyLyrics+] Fetch error:", e);
-      return { error: "No lyrics found for this track from Spotify" };
+      console.error("[Spotify Debug] ✗ Fetch error:", e.message || e);
+      return { error: `Spotify lyrics request failed: ${e.message || 'Network error'}` };
     }
   },
 
@@ -2667,30 +2987,67 @@ const Providers = {
   // ------------------------
 
   function removePopup() {
+    DEBUG.ui.popupRemoved();
+    
+    // Clear all intervals
     if (highlightTimer) {
       clearInterval(highlightTimer);
       highlightTimer = null;
+      DEBUG.debug('Cleanup', 'highlightTimer cleared');
     }
     if (pollingInterval) {
       clearInterval(pollingInterval);
       pollingInterval = null;
+      DEBUG.debug('Cleanup', 'pollingInterval cleared');
     }
-    if (progressInterval) { // Stop progress updates when removing popup (dynamic progress bar)
+    if (progressInterval) {
       clearInterval(progressInterval);
       progressInterval = null;
+      DEBUG.debug('Cleanup', 'progressInterval cleared');
     }
+    
+    // Clean up popup-specific observers
     const existing = document.getElementById("lyrics-plus-popup");
     if (existing) {
-      if (existing._playPauseObserver) existing._playPauseObserver.disconnect();
-      existing._playPauseObserver = null;
+      // Disconnect all popup-attached observers
+      if (existing._playPauseObserver) {
+        ResourceManager.cleanupObserver(existing._playPauseObserver);
+        existing._playPauseObserver = null;
+      }
+      if (existing._shuffleObserver) {
+        ResourceManager.cleanupObserver(existing._shuffleObserver);
+        existing._shuffleObserver = null;
+      }
+      if (existing._repeatObserver) {
+        ResourceManager.cleanupObserver(existing._repeatObserver);
+        existing._repeatObserver = null;
+      }
+      
+      // Remove window mouseup handler for resize
+      if (existing._resizeMouseupHandler) {
+        window.removeEventListener("mouseup", existing._resizeMouseupHandler);
+        DEBUG.debug('Cleanup', 'Removed mouseup handler for resize');
+        existing._resizeMouseupHandler = null;
+      }
+      
+      // Clear popup references
       existing._playPauseBtn = null;
+      existing._shuffleBtn = null;
+      existing._repeatBtn = null;
+      existing._prevBtn = null;
+      existing._nextBtn = null;
+      existing._lyricsTabs = null;
+      
       existing.remove();
+      DEBUG.debug('Cleanup', 'Popup element and all observers removed from DOM');
     }
   }
 
   function observeSpotifyShuffle(popup) {
     if (!popup || !popup._shuffleBtn) return;
-    if (popup._shuffleObserver) popup._shuffleObserver.disconnect();
+    if (popup._shuffleObserver) {
+      ResourceManager.cleanupObserver(popup._shuffleObserver);
+    }
 
     // Use the new language-independent function to find the shuffle button
     const shuffleBtn = findSpotifyShuffleButton();
@@ -2702,12 +3059,14 @@ const Providers = {
       setTimeout(() => observeSpotifyShuffle(popup), 0);
     });
     observer.observe(shuffleBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
-    popup._shuffleObserver = observer;
+    popup._shuffleObserver = ResourceManager.registerObserver(observer, 'Shuffle button state');
   }
 
   function observeSpotifyRepeat(popup) {
     if (!popup || !popup._repeatBtn) return;
-    if (popup._repeatObserver) popup._repeatObserver.disconnect();
+    if (popup._repeatObserver) {
+      ResourceManager.cleanupObserver(popup._repeatObserver);
+    }
 
     // Use the new language-independent function to find the repeat button
     const repeatBtn = findSpotifyRepeatButton();
@@ -2719,12 +3078,14 @@ const Providers = {
       setTimeout(() => observeSpotifyRepeat(popup), 0);
     });
     observer.observe(repeatBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style', 'aria-checked'] });
-    popup._repeatObserver = observer;
+    popup._repeatObserver = ResourceManager.registerObserver(observer, 'Repeat button state');
   }
 
   function observeSpotifyPlayPause(popup) {
     if (!popup || !popup._playPauseBtn) return;
-    if (popup._playPauseObserver) popup._playPauseObserver.disconnect();
+    if (popup._playPauseObserver) {
+      ResourceManager.cleanupObserver(popup._playPauseObserver);
+    }
 
     // Use the new language-independent function to find the play/pause button
     const spBtn = findSpotifyPlayPauseButton();
@@ -2735,17 +3096,27 @@ const Providers = {
       }
     });
     observer.observe(spBtn, { attributes: true, attributeFilter: ['aria-label', 'class', 'style'] });
-    popup._playPauseObserver = observer;
+    popup._playPauseObserver = ResourceManager.registerObserver(observer, 'Play/pause button state');
   }
 
   function createPopup() {
+    DEBUG.ui.popupCreated();
     removePopup();
+
+    // Clear current provider so no provider is highlighted while searching for lyrics
+    Providers.current = null;
 
     // Load saved state from localStorage
     const savedState = localStorage.getItem('lyricsPlusPopupState');
     let pos = null;
     if (savedState) {
-      try { pos = JSON.parse(savedState); } catch { pos = null; }
+      try { 
+        pos = JSON.parse(savedState);
+        DEBUG.debug('UI', 'Loaded saved popup state', pos);
+      } catch { 
+        pos = null;
+        DEBUG.warn('UI', 'Failed to parse saved popup state');
+      }
     }
 
     const popup = document.createElement("div");
@@ -3437,7 +3808,7 @@ const Providers = {
     translatorWrapper.id = "lyrics-plus-translator-wrapper";
     translatorWrapper.style.display = "block";
     translatorWrapper.style.background = "#121212";
-    translatorWrapper.style.borderBottom = "1px solid #333";
+    translatorWrapper.style.borderBottom = "none"; // Will be set to "1px solid #333" if visible
     translatorWrapper.style.padding = "8px 12px";
     translatorWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     translatorWrapper.style.overflow = "hidden";
@@ -3452,10 +3823,12 @@ const Providers = {
       translatorWrapper.style.maxHeight = "100px";
       translatorWrapper.style.pointerEvents = "";
       translatorWrapper.style.padding = "8px 12px";
+      translatorWrapper.style.borderBottom = "1px solid #333";
     } else {
       translatorWrapper.style.maxHeight = "0";
       translatorWrapper.style.pointerEvents = "none";
       translatorWrapper.style.padding = "0 12px";
+      translatorWrapper.style.borderBottom = "none";
     }
     translatorWrapper.appendChild(translationControls);
 
@@ -3466,10 +3839,12 @@ const Providers = {
         translatorWrapper.style.maxHeight = "100px";
         translatorWrapper.style.pointerEvents = "";
         translatorWrapper.style.padding = "8px 12px";
+        translatorWrapper.style.borderBottom = "1px solid #333";
       } else {
         translatorWrapper.style.maxHeight = "0";
         translatorWrapper.style.pointerEvents = "none";
         translatorWrapper.style.padding = "0 12px";
+        translatorWrapper.style.borderBottom = "none";
       }
     };
 
@@ -3480,7 +3855,7 @@ const Providers = {
     offsetWrapper.style.justifyContent = "space-between";
     offsetWrapper.style.padding = "8px 12px";
     offsetWrapper.style.background = "#121212";
-    offsetWrapper.style.borderBottom = "1px solid #333";
+    offsetWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     offsetWrapper.style.fontSize = "15px";
     offsetWrapper.style.width = "100%";
 
@@ -3620,7 +3995,7 @@ const Providers = {
     tabsToggleWrapper.style.justifyContent = "space-between";
     tabsToggleWrapper.style.padding = "8px 12px";
     tabsToggleWrapper.style.background = "#121212";
-    tabsToggleWrapper.style.borderBottom = "1px solid #333";
+    tabsToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     tabsToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     tabsToggleWrapper.style.overflow = "hidden";
 
@@ -3646,7 +4021,7 @@ const Providers = {
     seekbarToggleWrapper.style.justifyContent = "space-between";
     seekbarToggleWrapper.style.padding = "8px 12px";
     seekbarToggleWrapper.style.background = "#121212";
-    seekbarToggleWrapper.style.borderBottom = "1px solid #333";
+    seekbarToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     seekbarToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     seekbarToggleWrapper.style.overflow = "hidden";
 
@@ -3672,7 +4047,7 @@ const Providers = {
     controlsToggleWrapper.style.justifyContent = "space-between";
     controlsToggleWrapper.style.padding = "8px 12px";
     controlsToggleWrapper.style.background = "#121212";
-    controlsToggleWrapper.style.borderBottom = "1px solid #333";
+    controlsToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     controlsToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     controlsToggleWrapper.style.overflow = "hidden";
 
@@ -3771,28 +4146,36 @@ const Providers = {
         offsetWrapper.style.maxHeight = "200px";
         offsetWrapper.style.pointerEvents = "";
         offsetWrapper.style.padding = "8px 12px";
+        offsetWrapper.style.borderBottom = "1px solid #333";
         tabsToggleWrapper.style.maxHeight = "50px";
         tabsToggleWrapper.style.pointerEvents = "";
         tabsToggleWrapper.style.padding = "8px 12px";
+        tabsToggleWrapper.style.borderBottom = "1px solid #333";
         seekbarToggleWrapper.style.maxHeight = "50px";
         seekbarToggleWrapper.style.pointerEvents = "";
         seekbarToggleWrapper.style.padding = "8px 12px";
+        seekbarToggleWrapper.style.borderBottom = "1px solid #333";
         controlsToggleWrapper.style.maxHeight = "50px";
         controlsToggleWrapper.style.pointerEvents = "";
         controlsToggleWrapper.style.padding = "8px 12px";
+        controlsToggleWrapper.style.borderBottom = "1px solid #333";
       } else {
         offsetWrapper.style.maxHeight = "0";
         offsetWrapper.style.pointerEvents = "none";
         offsetWrapper.style.padding = "0 12px";
+        offsetWrapper.style.borderBottom = "none";
         tabsToggleWrapper.style.maxHeight = "0";
         tabsToggleWrapper.style.pointerEvents = "none";
         tabsToggleWrapper.style.padding = "0 12px";
+        tabsToggleWrapper.style.borderBottom = "none";
         seekbarToggleWrapper.style.maxHeight = "0";
         seekbarToggleWrapper.style.pointerEvents = "none";
         seekbarToggleWrapper.style.padding = "0 12px";
+        seekbarToggleWrapper.style.borderBottom = "none";
         controlsToggleWrapper.style.maxHeight = "0";
         controlsToggleWrapper.style.pointerEvents = "none";
         controlsToggleWrapper.style.padding = "0 12px";
+        controlsToggleWrapper.style.borderBottom = "none";
       }
     }
 
@@ -5197,6 +5580,9 @@ const Providers = {
 
   // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info) {
+    DEBUG.info('Autodetect', 'Starting provider autodetection', info);
+    const startTime = performance.now();
+    
     const detectionOrder = [
       { name: "LRCLIB", type: "getSynced" },
       { name: "Spotify", type: "getSynced" },
@@ -5208,23 +5594,42 @@ const Providers = {
       { name: "Musixmatch", type: "getUnsynced" },
       { name: "Genius", type: "getUnsynced" }
     ];
+    
     for (const { name, type } of detectionOrder) {
       try {
+        const providerStartTime = performance.now();
+        DEBUG.provider.start(name, type, info);
+        
         const provider = Providers.map[name];
         const result = await provider.findLyrics(info);
+        
+        const providerDuration = performance.now() - providerStartTime;
+        
         if (result && !result.error) {
           let lyrics = provider[type](result);
           if (lyrics && lyrics.length > 0) {
+            DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
+            DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
+            
             Providers.setCurrent(name);
             if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
             await updateLyricsContent(popup, info);
+            
+            const totalDuration = performance.now() - startTime;
+            DEBUG.info('Autodetect', `Completed successfully in ${totalDuration.toFixed(2)}ms using ${name}`);
             return;
+          } else {
+            DEBUG.debug('Provider', `${name} ${type} returned empty lyrics`);
           }
+        } else {
+          DEBUG.provider.failure(name, type, result?.error || 'No result');
         }
+        
+        DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
       } catch (error) {
         // If a provider fails for any reason, continue looking for lyrics in other providers 
         // Without this try-catch, an error would skip the remaining providers and stop the loop.
-        console.warn(`[Lyrics+] Error checking ${name} provider:`, error);
+        DEBUG.provider.failure(name, type, error);
       }
     }
 
@@ -5239,6 +5644,9 @@ const Providers = {
     // Reset translation state when no lyrics are found
     translationPresent = false;
     lastTranslatedLang = null;
+    
+    const totalDuration = performance.now() - startTime;
+    DEBUG.warn('Autodetect', `No lyrics found after checking all providers (${totalDuration.toFixed(2)}ms)`);
   }
 
   function startPollingForTrackChange(popup) {
@@ -5247,6 +5655,7 @@ const Providers = {
       const info = getCurrentTrackInfo();
       if (!info) return;
       if (info.id !== currentTrackId) {
+        DEBUG.track.changed(currentTrackId, info.id, info);
         currentTrackId = info.id;
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
@@ -5273,7 +5682,7 @@ const Providers = {
       if (popup && popup._nextBtn) {
         updateNextButtonIcon(popup._nextBtn.iconWrapper);
       }
-    }, 400);
+    }, TIMING.POLLING_INTERVAL_MS);
   }
 
   function stopPollingForTrackChange() {
@@ -5283,7 +5692,7 @@ const Providers = {
     }
   }
 
-  function addButton(maxRetries = 10) {
+  function addButton(maxRetries = LIMITS.BUTTON_ADD_MAX_RETRIES) {
     let attempts = 0;
     const tryAdd = () => {
       // const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
@@ -5295,17 +5704,22 @@ const Providers = {
       if (!controls) {
         if (attempts < maxRetries) {
           attempts++;
-          setTimeout(tryAdd, 1000);
+          DEBUG.debug('Button', `Injection attempt ${attempts}/${maxRetries} - controls not found, retrying...`);
+          setTimeout(tryAdd, TIMING.BUTTON_ADD_RETRY_MS);
         } else {
-          console.warn("Lyrics+ button: Failed to find controls after max retries.");
+          DEBUG.error('Button', `Failed to inject Lyrics+ button after ${maxRetries} attempts`);
         }
         return;
       }
-      if (document.getElementById("lyrics-plus-btn")) return;
+      if (document.getElementById("lyrics-plus-btn")) {
+        DEBUG.debug('Button', 'Lyrics+ button already exists, skipping injection');
+        return;
+      }
       const btn = document.createElement("button");
       btn.id = "lyrics-plus-btn";
       btn.title = "Show Lyrics+";
       btn.textContent = "Lyrics+";
+      DEBUG.info('Button', 'Lyrics+ button injected successfully');
       Object.assign(btn.style, {
         backgroundColor: "#1db954",
         border: "none",
@@ -5332,10 +5746,12 @@ const Providers = {
     tryAdd();
   }
 
-  const observer = new MutationObserver(() => {
+  // Global observer to inject Lyrics+ button when DOM changes
+  const buttonInjectionObserver = new MutationObserver(() => {
     addButton();
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  ResourceManager.registerObserver(buttonInjectionObserver, 'Global button injection (document.body)');
+  buttonInjectionObserver.observe(document.body, { childList: true, subtree: true });
 
   function init() {
     addButton();
@@ -5346,15 +5762,14 @@ const Providers = {
     const pageObserver = new MutationObserver(() => {
       addButton();
     });
+    ResourceManager.registerObserver(pageObserver, 'Page observer (appRoot)');
     pageObserver.observe(appRoot, { childList: true, subtree: true });
   }
 
-  init();
-})();
-(function setupPopupAutoResize() {
-  window.lyricsPlusPopupIgnoreProportion = false;
+  // ------------------------
+  // Popup Auto-Resize Setup
+  // ------------------------
   // The popup will always keep the same proportion of the window as last set by the user.
-  window.lastProportion = window.lastProportion || { w: null, h: null };
 
   // Try to load last saved proportion from localStorage
   function loadProportion() {
@@ -5371,8 +5786,8 @@ const Providers = {
     if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion || window.lyricsPlusPopupIsDragging) {
       return;
     }
-    // Skip applying proportion if user has dragged the popup within the last 1.5 seconds
-    if (window.lyricsPlusPopupLastDragged && (Date.now() - window.lyricsPlusPopupLastDragged) < 1500) {
+    // Skip applying proportion if user has dragged the popup recently
+    if (window.lyricsPlusPopupLastDragged && (Date.now() - window.lyricsPlusPopupLastDragged) < TIMING.DRAG_DEBOUNCE_MS) {
       return;
     }
     if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
@@ -5396,34 +5811,42 @@ const Providers = {
       el.style && el.style.cursor === "nwse-resize"
     );
     if (!resizer) return;
-    resizer.addEventListener("mousedown", () => { isResizing = true; });
-    window.addEventListener("mouseup", () => {
+    
+    const mousedownHandler = () => { isResizing = true; };
+    const mouseupHandler = () => {
       if (isResizing) {
         savePopupState(popup);
       }
       isResizing = false;
-    });
+    };
+    
+    resizer.addEventListener("mousedown", mousedownHandler);
+    // Store handler on popup for cleanup
+    popup._resizeMouseupHandler = mouseupHandler;
+    window.addEventListener("mouseup", mouseupHandler);
+    
+    DEBUG.debug('PopupResize', 'Resize handlers attached');
   }
 
   // Listen for popup creation to hook the resizer
-  const popupObserver = new MutationObserver(() => {
+  const popupResizeObserver = new MutationObserver(() => {
     const popup = document.getElementById("lyrics-plus-popup");
     if (popup) {
       applyProportionToPopup(popup);
       observePopupResize();
     }
   });
-  popupObserver.observe(document.body, { childList: true, subtree: true });
+  ResourceManager.registerObserver(popupResizeObserver, 'Popup resize observer');
+  popupResizeObserver.observe(document.body, { childList: true, subtree: true });
 
   // On window resize, apply saved proportion
-  window.addEventListener("resize", () => {
+  const windowResizeHandler = () => {
     const popup = document.getElementById("lyrics-plus-popup");
     if (popup) {
       applyProportionToPopup(popup);
     }
-  });
+  };
+  ResourceManager.registerWindowListener("resize", windowResizeHandler, 'Popup proportion on window resize');
+
+  init();
 })();
-
-
-
-
