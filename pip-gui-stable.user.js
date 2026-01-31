@@ -1666,6 +1666,12 @@ const PLAY_WORDS = [
         const title = Utils.normalize(info.title);
         const album = Utils.normalize(info.album);
         const duration = Math.floor(info.duration / 1000);
+        
+        // Validate that artist and title are not empty
+        if (!artist || !title) {
+          return { error: "Artist and title are required for KPoe lyrics search" };
+        }
+        
         const songInfo = { artist, title, album, duration };
         const result = await fetchKPoeLyrics(songInfo);
         if (!result) return { error: "Track not found in KPoe database or no lyrics available" };
