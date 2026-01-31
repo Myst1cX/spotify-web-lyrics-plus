@@ -101,6 +101,7 @@
   let lastTranslatedLang = null;
   let translationPresent = false;
   let isTranslating = false;
+  let transliterationPresent = false;
   let isShowingSyncedLyrics = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
 
@@ -1664,7 +1665,8 @@ const PLAY_WORDS = [
           duration: duration / 1000,
           endTime: endTime / 1000,
           syllabus: parsedSyllabus,
-          element: item.element || {}
+          element: item.element || {},
+          transliteration: item.transliteration || null
         };
       }),
       metadata
@@ -1797,7 +1799,8 @@ const PLAY_WORDS = [
         }
         
         return {
-          text: text || ''
+          text: text || '',
+          transliteration: line.transliteration?.text || null
         };
       }).filter(line => line.text.trim() !== ''); // Filter out any empty lines
     },
@@ -1833,7 +1836,8 @@ const PLAY_WORDS = [
         
         return {
           time: Math.round(line.startTime * 1000),
-          text: text || ''
+          text: text || '',
+          transliteration: line.transliteration?.text || null
         };
       }).filter(line => line.text.trim() !== ''); // Filter out any empty lines
     },
@@ -3576,6 +3580,21 @@ const Providers = {
       lineHeight: "1",
     });
 
+    // --- Transliteration Toggle Button ---
+    const transliterationToggleBtn = document.createElement("button");
+    transliterationToggleBtn.textContent = "🔤";
+    transliterationToggleBtn.title = "Show/hide transliteration";
+    Object.assign(transliterationToggleBtn.style, {
+      marginRight: "6px",
+      cursor: "pointer",
+      background: "none",
+      border: "none",
+      color: "white",
+      fontSize: "16px",
+      lineHeight: "1",
+      display: "none", // Hidden by default, shown when transliteration data is available
+    });
+
     // --- Chinese Conversion Button (Traditional ⇄ Simplified) ---
     // Styled to match other header buttons
     const chineseConvBtn = document.createElement("button");
@@ -3631,6 +3650,7 @@ const Providers = {
     };
     // Store reference on popup for access in updateLyricsContent
     popup._chineseConvBtn = chineseConvBtn;
+    popup._transliterationToggleBtn = transliterationToggleBtn;
 
     // --- Download Synced Lyrics Button ---
     const downloadBtnWrapper = document.createElement("div");
@@ -3822,6 +3842,7 @@ const Providers = {
     buttonGroup.appendChild(btnReset);
     buttonGroup.appendChild(chineseConvBtn);
     buttonGroup.appendChild(translationToggleBtn);
+    buttonGroup.appendChild(transliterationToggleBtn);
     buttonGroup.appendChild(offsetToggleBtn);
     buttonGroup.appendChild(closeBtn);
 
@@ -3947,6 +3968,37 @@ const Providers = {
       isTranslating = false;
     }
 
+    function removeTransliterationLyrics() {
+      const transliterationEls = lyricsContainer.querySelectorAll('[data-transliteration="true"]');
+      transliterationEls.forEach(el => el.remove());
+      transliterationPresent = false;
+    }
+
+    function showTransliterationInPopup() {
+      if (!lyricsContainer || transliterationPresent) return;
+      const pEls = Array.from(lyricsContainer.querySelectorAll('p[data-transliteration-text]'));
+      pEls.forEach((p) => {
+        const transliterationText = p.getAttribute('data-transliteration-text');
+        if (transliterationText) {
+          const transliterationDiv = document.createElement('div');
+          transliterationDiv.textContent = transliterationText;
+          transliterationDiv.style.color = '#999'; // Slightly lighter gray than translation
+          transliterationDiv.style.fontSize = '0.9em'; // Slightly smaller
+          transliterationDiv.setAttribute('data-transliteration', 'true');
+          // Insert after lyric line but before translation if present
+          const nextSibling = p.nextSibling;
+          if (nextSibling && nextSibling.getAttribute && nextSibling.getAttribute('data-translated') === 'true') {
+            // If translation exists, insert before it
+            p.parentNode.insertBefore(transliterationDiv, nextSibling);
+          } else {
+            // Otherwise insert right after the lyric line
+            p.parentNode.insertBefore(transliterationDiv, nextSibling);
+          }
+        }
+      });
+      transliterationPresent = true;
+    }
+
     // Translator Controls Container
     const translatorWrapper = document.createElement("div");
     translatorWrapper.id = "lyrics-plus-translator-wrapper";
@@ -3991,6 +4043,17 @@ const Providers = {
         translatorWrapper.style.borderBottom = "none";
       }
     };
+
+    transliterationToggleBtn.onclick = () => {
+      if (transliterationPresent) {
+        removeTransliterationLyrics();
+        localStorage.setItem('lyricsPlusTransliterationEnabled', 'false');
+      } else {
+        showTransliterationInPopup();
+        localStorage.setItem('lyricsPlusTransliterationEnabled', 'true');
+      }
+    };
+
 
     // Offset Settings UI
     const offsetWrapper = document.createElement("div");
@@ -5556,22 +5619,30 @@ const Providers = {
 
     // Reset translation state when re-rendering lyrics
     translationPresent = false;
+    transliterationPresent = false;
     lastTranslatedLang = null;
     lyricsContainer.innerHTML = "";
 
+    const transliterationEnabled = localStorage.getItem('lyricsPlusTransliterationEnabled') === 'true';
+    let hasTransliterationData = false;
+
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
-      currentSyncedLyrics.forEach(({ text }) => {
+      currentSyncedLyrics.forEach(({ text, transliteration }) => {
         const p = document.createElement("p");
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        if (transliteration) {
+          p.setAttribute('data-transliteration-text', transliteration);
+          hasTransliterationData = true;
+        }
         lyricsContainer.appendChild(p);
       });
       highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
-      currentUnsyncedLyrics.forEach(({ text }) => {
+      currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
         const p = document.createElement("p");
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
@@ -5580,6 +5651,10 @@ const Providers = {
         p.style.fontWeight = "400";
         p.style.filter = "blur(0.7px)";
         p.style.opacity = "0.8";
+        if (transliteration) {
+          p.setAttribute('data-transliteration-text', transliteration);
+          hasTransliterationData = true;
+        }
         lyricsContainer.appendChild(p);
       });
       // For unsynced, always allow user scroll
@@ -5588,6 +5663,17 @@ const Providers = {
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
+    }
+
+    // Show/hide transliteration button based on data availability
+    const transliterationBtn = popup._transliterationToggleBtn;
+    if (transliterationBtn) {
+      transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
+    }
+
+    // Show transliteration if enabled and data is available
+    if (transliterationEnabled && hasTransliterationData) {
+      showTransliterationInPopup();
     }
   }
 
@@ -5600,6 +5686,7 @@ const Providers = {
     currentUnsyncedLyrics = null;
     // Reset translation state when loading new lyrics
     translationPresent = false;
+    transliterationPresent = false;
     lastTranslatedLang = null;
     lyricsContainer.textContent = "Loading lyrics...";
 
@@ -5667,19 +5754,26 @@ const Providers = {
     currentSyncedLyrics = (synced && synced.length > 0) ? synced : null;
     currentUnsyncedLyrics = (unsynced && unsynced.length > 0) ? unsynced : null;
 
+    const transliterationEnabled = localStorage.getItem('lyricsPlusTransliterationEnabled') === 'true';
+    let hasTransliterationData = false;
+
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
-      currentSyncedLyrics.forEach(({ text }) => {
+      currentSyncedLyrics.forEach(({ text, transliteration }) => {
         const p = document.createElement("p");
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        if (transliteration) {
+          p.setAttribute('data-transliteration-text', transliteration);
+          hasTransliterationData = true;
+        }
         lyricsContainer.appendChild(p);
       });
       highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
-      currentUnsyncedLyrics.forEach(({ text }) => {
+      currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
         const p = document.createElement("p");
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
@@ -5688,6 +5782,10 @@ const Providers = {
         p.style.fontWeight = "400";
         p.style.filter = "blur(0.7px)";
         p.style.opacity = "0.8";
+        if (transliteration) {
+          p.setAttribute('data-transliteration-text', transliteration);
+          hasTransliterationData = true;
+        }
         lyricsContainer.appendChild(p);
       });
       // For unsynced, always allow user scroll
@@ -5709,6 +5807,17 @@ const Providers = {
       }
       currentSyncedLyrics = null;
       currentUnsyncedLyrics = null;
+    }
+
+    // Show/hide transliteration button based on data availability
+    const transliterationBtn = popup._transliterationToggleBtn;
+    if (transliterationBtn) {
+      transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
+    }
+
+    // Show transliteration if enabled and data is available
+    if (transliterationEnabled && hasTransliterationData) {
+      showTransliterationInPopup();
     }
 
     // Show/hide download button appropriately - only use the variables already declared above!
@@ -5787,6 +5896,7 @@ const Providers = {
     currentLyricsContainer = lyricsContainer;
     // Reset translation state when no lyrics are found
     translationPresent = false;
+    transliterationPresent = false;
     lastTranslatedLang = null;
     
     const totalDuration = performance.now() - startTime;
