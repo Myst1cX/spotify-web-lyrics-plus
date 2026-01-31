@@ -3583,7 +3583,7 @@ const Providers = {
     // --- Transliteration Toggle Button ---
     const transliterationToggleBtn = document.createElement("button");
     transliterationToggleBtn.textContent = "🔤";
-    transliterationToggleBtn.title = "Show/hide transliteration";
+    transliterationToggleBtn.title = "Show transliteration";
     Object.assign(transliterationToggleBtn.style, {
       marginRight: "6px",
       cursor: "pointer",
@@ -3985,15 +3985,9 @@ const Providers = {
           transliterationDiv.style.color = '#999'; // Slightly lighter gray than translation
           transliterationDiv.style.fontSize = '0.9em'; // Slightly smaller
           transliterationDiv.setAttribute('data-transliteration', 'true');
-          // Insert after lyric line but before translation if present
+          // Insert after lyric line (before translation if present, or at end if not)
           const nextSibling = p.nextSibling;
-          if (nextSibling && nextSibling.getAttribute && nextSibling.getAttribute('data-translated') === 'true') {
-            // If translation exists, insert before it
-            p.parentNode.insertBefore(transliterationDiv, nextSibling);
-          } else {
-            // Otherwise insert right after the lyric line
-            p.parentNode.insertBefore(transliterationDiv, nextSibling);
-          }
+          p.parentNode.insertBefore(transliterationDiv, nextSibling);
         }
       });
       transliterationPresent = true;
@@ -4048,9 +4042,11 @@ const Providers = {
       if (transliterationPresent) {
         removeTransliterationLyrics();
         localStorage.setItem('lyricsPlusTransliterationEnabled', 'false');
+        transliterationToggleBtn.title = "Show transliteration";
       } else {
         showTransliterationInPopup();
         localStorage.setItem('lyricsPlusTransliterationEnabled', 'true');
+        transliterationToggleBtn.title = "Hide transliteration";
       }
     };
 
@@ -5674,6 +5670,10 @@ const Providers = {
     // Show transliteration if enabled and data is available
     if (transliterationEnabled && hasTransliterationData) {
       showTransliterationInPopup();
+      const transliterationBtn = popup._transliterationToggleBtn;
+      if (transliterationBtn) {
+        transliterationBtn.title = "Hide transliteration";
+      }
     }
   }
 
@@ -5818,6 +5818,10 @@ const Providers = {
     // Show transliteration if enabled and data is available
     if (transliterationEnabled && hasTransliterationData) {
       showTransliterationInPopup();
+      const transliterationBtn = popup._transliterationToggleBtn;
+      if (transliterationBtn) {
+        transliterationBtn.title = "Hide transliteration";
+      }
     }
 
     // Show/hide download button appropriately - only use the variables already declared above!
