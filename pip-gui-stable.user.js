@@ -1697,9 +1697,6 @@ const PLAY_WORDS = [
     getUnsynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
       
-      // Handle both Line and Word type lyrics
-      const isWordType = body.type === "Word";
-      
       return body.data.map(line => {
         let text = line.text;
         
