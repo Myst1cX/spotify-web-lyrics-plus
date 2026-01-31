@@ -103,6 +103,7 @@
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
+  let showTransliteration = true; // Toggle for showing/hiding transliteration lines
 
   // ------------------------
   // Constants & Configuration
@@ -805,6 +806,7 @@
     translitDiv.style.marginTop = '2px';
     translitDiv.style.marginBottom = '8px';
     translitDiv.style.transition = "color 0.15s, filter 0.13s, opacity 0.13s";
+    translitDiv.style.display = showTransliteration ? 'block' : 'none';
     if (applyBlur) {
       translitDiv.style.filter = "blur(0.7px)";
       translitDiv.style.opacity = "0.8";
