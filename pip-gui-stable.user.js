@@ -100,14 +100,22 @@
   let currentLyricsContainer = null;
   let lastTranslatedLang = null;
   let translationPresent = false;
+  let transliterationPresent = false;
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
-  let showTransliteration = true; // Toggle for showing/hiding transliteration lines
 
   // ------------------------
   // Constants & Configuration
   // ------------------------
+  const STORAGE_KEYS = {
+    TRANSLITERATION_ENABLED: 'lyricsPlusTransliterationEnabled',
+    TRANSLATION_LANG: 'lyricsPlusTranslationLang',
+    TRANSLATOR_VISIBLE: 'lyricsPlusTranslatorVisible',
+    FONT_SIZE: 'lyricsPlusFontSize',
+    CHINESE_CONVERSION: 'lyricsPlusChineseConversion',
+  };
+
   const TIMING = {
     HIGHLIGHT_INTERVAL_MS: 50,        // How often to update synced lyrics highlighting
     POLLING_INTERVAL_MS: 400,         // How often to check for track changes
