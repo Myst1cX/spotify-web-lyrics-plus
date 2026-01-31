@@ -108,7 +108,7 @@
   // Constants & Configuration
   // ------------------------
   const TIMING = {
-    HIGHLIGHT_INTERVAL_MS: 50,        // How often to update synced lyrics highlighting
+    HIGHLIGHT_INTERVAL_MS: 30,        // How often to update synced lyrics highlighting (30ms = ~33 updates/sec for fast rap)
     POLLING_INTERVAL_MS: 400,         // How often to check for track changes
     OPENCC_RETRY_DELAY_MS: 100,       // Initial delay for OpenCC initialization retries
     BUTTON_ADD_RETRY_MS: 1000,        // Delay between button injection attempts
@@ -843,7 +843,11 @@
       const curPosMs = timeStringToMs(posEl.textContent);
       const anticipatedMs = curPosMs + getAnticipationOffset();
       
-      // Find active line
+      // For word-level highlighting, use actual playback time (no anticipation)
+      // This ensures words are highlighted precisely when spoken, not early
+      const wordTimingMs = curPosMs;
+      
+      // Find active line (uses anticipation for reading ahead)
       let activeIndex = -1;
       for (let i = 0; i < lyrics.length; i++) {
         if (anticipatedMs >= (lyrics[i].time ?? lyrics[i].startTime)) activeIndex = i;
@@ -879,15 +883,15 @@
           p.style.transform = "scale(1.10)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
           
-          // Word-level highlighting for active line
+          // Word-level highlighting for active line (uses actual playback time)
           if (hasWordTiming && lyrics[idx].syllabus && lyrics[idx].syllabus.length > 0) {
             const spans = p.querySelectorAll('span[data-time]');
             let activeWordIndex = -1;
             
-            // Find active word within this line
+            // Find active word within this line using actual playback time
             for (let i = 0; i < spans.length; i++) {
               const wordTime = parseInt(spans[i].dataset.time);
-              if (anticipatedMs >= wordTime) {
+              if (wordTimingMs >= wordTime) {
                 activeWordIndex = i;
               } else {
                 break;
