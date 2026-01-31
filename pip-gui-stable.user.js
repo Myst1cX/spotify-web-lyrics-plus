@@ -13,6 +13,8 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (15.1): Fixing Kpoe Provider
+
 // RESOLVED (15.0): CODE QUALITY & BUG FIX RELEASE
 // Duplicate IIFE patterns merged into a single scope (fixed the Reference Error in console)
 // Improved code mantainability and reduced bloat
@@ -1662,12 +1664,32 @@ const PLAY_WORDS = [
   const ProviderKPoe = {
     async findLyrics(info) {
       try {
-        const artist = Utils.normalize(info.artist);
-        const title = Utils.normalize(info.title);
-        const album = Utils.normalize(info.album);
+        // Strategy: Try raw data first (preserves international characters),
+        // then fallback to normalized data (strips to English) if not found
         const duration = Math.floor(info.duration / 1000);
-        const songInfo = { artist, title, album, duration };
-        const result = await fetchKPoeLyrics(songInfo);
+        
+        // First attempt: Use raw data (works for pure international songs and English songs)
+        let songInfo = {
+          artist: info.artist || "",
+          title: info.title || "",
+          album: info.album || "",
+          duration
+        };
+        let result = await fetchKPoeLyrics(songInfo);
+        
+        // Fallback: If not found, try with normalized data (works for mixed international/English songs)
+        if (!result) {
+          console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          console.log("[KPoe Debug] First attempt failed, trying with normalized data (fallback)");
+          songInfo = {
+            artist: Utils.normalize(info.artist),
+            title: Utils.normalize(info.title),
+            album: Utils.normalize(info.album),
+            duration
+          };
+          result = await fetchKPoeLyrics(songInfo);
+        }
+        
         if (!result) return { error: "Track not found in KPoe database or no lyrics available" };
         return parseKPoeFormat(result);
       } catch (e) {
@@ -1676,16 +1698,45 @@ const PLAY_WORDS = [
     },
     getUnsynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({
-        text: line.text
-      }));
+      
+      return body.data.map(line => {
+        let text = line.text;
+        
+        // For Word type, line.text might be empty - reconstruct from syllabus
+        if ((!text || text.trim() === '') && line.syllabus && Array.isArray(line.syllabus)) {
+          text = line.syllabus.map(s => s.text || '').join('');
+        }
+        
+        return {
+          text: text || ''
+        };
+      }).filter(line => line.text.trim() !== ''); // Filter out any empty lines
     },
     getSynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({
-        time: Math.round(line.startTime * 1000),
-        text: line.text
-      }));
+      
+      // Handle both Line-synced and Word-synced lyrics
+      const isWordType = body.type === "Word";
+      if (isWordType) {
+        console.log("[KPoe Debug] Converting Word type lyrics to line-synced format");
+      }
+      
+      return body.data.map(line => {
+        let text = line.text;
+        
+        // For Word type, line.text might be empty - reconstruct from syllabus
+        if ((!text || text.trim() === '') && line.syllabus && Array.isArray(line.syllabus)) {
+          text = line.syllabus.map(s => s.text || '').join('');
+          if (isWordType) {
+            console.log(`[KPoe Debug] Reconstructed line from ${line.syllabus.length} words: "${text}"`);
+          }
+        }
+        
+        return {
+          time: Math.round(line.startTime * 1000),
+          text: text || ''
+        };
+      }).filter(line => line.text.trim() !== ''); // Filter out any empty lines
     },
   };
 
