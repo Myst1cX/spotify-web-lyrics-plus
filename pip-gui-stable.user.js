@@ -882,35 +882,6 @@
           p.style.opacity = "1";
           p.style.transform = "scale(1.10)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-          
-          // Word-level highlighting for active line (uses actual playback time)
-          if (hasWordTiming && lyrics[idx].syllabus && lyrics[idx].syllabus.length > 0) {
-            const spans = p.querySelectorAll('span[data-time]');
-            let activeWordIndex = -1;
-            
-            // Find active word within this line using actual playback time
-            for (let i = 0; i < spans.length; i++) {
-              const wordTime = parseInt(spans[i].dataset.time);
-              if (wordTimingMs >= wordTime) {
-                activeWordIndex = i;
-              } else {
-                break;
-              }
-            }
-            
-            // Highlight words progressively (karaoke style)
-            spans.forEach((span, wordIdx) => {
-              if (wordIdx <= activeWordIndex) {
-                // Completed/current words - bright green
-                span.style.color = "#1ed760";
-                span.style.fontWeight = "700";
-              } else {
-                // Upcoming words - dimmed like inactive lines (not bright white)
-                span.style.color = "rgba(255, 255, 255, 0.7)";
-                span.style.fontWeight = "400";
-              }
-            });
-          }
         } else {
           p.style.color = "white";
           p.style.fontWeight = "400";
@@ -918,12 +889,25 @@
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-          
-          // Reset all word spans for inactive lines
+        }
+        
+        // Word-level highlighting - independent of line active state
+        // Highlight words based purely on their individual timestamps
+        if (hasWordTiming && lyrics[idx] && lyrics[idx].syllabus && lyrics[idx].syllabus.length > 0) {
           const spans = p.querySelectorAll('span[data-time]');
-          spans.forEach(span => {
-            span.style.color = "inherit";
-            span.style.fontWeight = "inherit";
+          
+          // Highlight each word based on its own timestamp
+          spans.forEach((span) => {
+            const wordTime = parseInt(span.dataset.time);
+            if (wordTimingMs >= wordTime) {
+              // Word has been spoken - highlight it
+              span.style.color = "#1ed760";
+              span.style.fontWeight = "700";
+            } else {
+              // Word not yet spoken - dimmed
+              span.style.color = "rgba(255, 255, 255, 0.7)";
+              span.style.fontWeight = "400";
+            }
           });
         }
       });
