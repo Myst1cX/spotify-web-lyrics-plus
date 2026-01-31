@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      15.2
+// @version      15.3
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,10 +13,15 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+
+// RESOLVED (15.3): UPDATED TRANSLITERATION FUNCTIONS
+
 // RESOLVED (15.2): ADDED TRANSLITERATION BUTTON AND FUNCTIONS
 // Only shows up on KPoe provider, when the scraped lyrics contain transliteration
 
 // RESOLVED (15.1): FIXED THE KPOE PROVIDER (I HOPE)
+// NOTE: If a song previously had lyrics but now doesn't fetch them, it's possible that you exceeded the rate limit.
+// Either try again sometime later or try turning on a VPN and refreshing the page. If it now loads the lyrics, your theory is right.
 
 // RESOLVED (15.0): CODE QUALITY & BUG FIX RELEASE
 // Duplicate IIFE patterns merged into a single scope (fixed the Reference Error in console)
@@ -3454,6 +3459,7 @@ const Providers = {
       marginLeft: "2px",
       marginRight: "2px"
     });
+    console.log("✅ [Lyrics+ UI] Restore default position button created");
     btnReset.innerHTML = `
   <svg width="21" height="21" viewBox="0 0 24 24" style="display:block;">
     <g transform="rotate(-90 12 12)">
@@ -3466,6 +3472,7 @@ const Providers = {
 
     // Default Position and Size of the Popup Gui
     btnReset.onclick = () => {
+      console.log("🔄 [Lyrics+ UI] Restore default position button clicked");
       const rect = getSpotifyLyricsContainerRect();
       if (rect) {
         Object.assign(popup.style, {
@@ -3485,6 +3492,7 @@ const Providers = {
           height: rect.height
         }));
         savePopupState(popup);
+        console.log("✅ [Lyrics+ UI] Position restored to Spotify lyrics container position");
       } else {
         Object.assign(popup.style, {
           position: "fixed",
@@ -3503,6 +3511,7 @@ const Providers = {
           height: window.innerHeight * 0.795
         }));
         savePopupState(popup);
+        console.log("✅ [Lyrics+ UI] Position restored to default position (bottom-right corner)");
       }
     };
 
@@ -3513,6 +3522,8 @@ const Providers = {
     translationControls.style.justifyContent = 'space-between';
     translationControls.style.width = '100%';
     translationControls.style.gap = '8px';
+
+    console.log("✅ [Lyrics+ UI] Translation controls container created");
 
     const controlHeight = '28px';
     const fontSize = '13px';
@@ -3536,8 +3547,10 @@ const Providers = {
     langSelect.style.borderRadius = '5px';
     langSelect.style.fontSize = fontSize;
     langSelect.style.boxSizing = 'border-box';
+    console.log("✅ [Lyrics+ UI] Translation language dropdown created, current language:", getSavedTranslationLang());
     langSelect.onchange = () => {
       saveTranslationLang(langSelect.value);
+      console.log("📝 [Lyrics+ UI] Translation language changed to:", langSelect.value);
       removeTranslatedLyrics();
       lastTranslatedLang = null;
     };
@@ -3555,6 +3568,7 @@ const Providers = {
     translateBtn.style.fontSize = fontSize;
     translateBtn.style.cursor = 'pointer';
     translateBtn.style.boxSizing = 'border-box';
+    console.log("✅ [Lyrics+ UI] Translate button created");
     translateBtn.onclick = translateLyricsInPopup;
 
     const removeBtn = document.createElement('button');
@@ -3569,7 +3583,9 @@ const Providers = {
     removeBtn.style.fontSize = fontSize;
     removeBtn.style.cursor = 'pointer';
     removeBtn.style.boxSizing = 'border-box';
+    console.log("✅ [Lyrics+ UI] Remove translation button ('Original') created");
     removeBtn.onclick = () => {
+      console.log("🌐 [Lyrics+ Translation] Remove translation button clicked - showing original lyrics");
       removeTranslatedLyrics();
       lastTranslatedLang = null;
     };
@@ -3632,6 +3648,8 @@ const Providers = {
       lineHeight: "1",
       display: "none", // Hidden by default, shown when transliteration data is available
     });
+
+    console.log("✅ [Lyrics+ UI] Transliteration button created (hidden by default, shows when transliteration data available)");
 
     // --- Chinese Conversion Button (Traditional ⇄ Simplified) ---
     // Styled to match other header buttons
@@ -3779,6 +3797,8 @@ const Providers = {
     downloadBtnWrapper.appendChild(downloadBtn);
     downloadBtnWrapper.appendChild(downloadDropdown);
 
+    console.log("✅ [Lyrics+ UI] Download button created and added to DOM");
+
     // Logic for showing/hiding the dropdown and downloading
     downloadBtn.onclick = (e) => {
       // Always show dropdown if at least one download option is available
@@ -3814,10 +3834,12 @@ const Providers = {
     // Set up dropdown options
     syncOption.onclick = (e) => {
       downloadDropdown.style.display = "none";
+      console.log("💾 [Lyrics+ UI] Download synced lyrics clicked");
       if (currentSyncedLyrics) downloadSyncedLyrics(currentSyncedLyrics, getCurrentTrackInfo(), Providers.current);
     };
     unsyncOption.onclick = (e) => {
       downloadDropdown.style.display = "none";
+      console.log("💾 [Lyrics+ UI] Download unsynced lyrics clicked");
       if (currentUnsyncedLyrics) downloadUnsyncedLyrics(currentUnsyncedLyrics, getCurrentTrackInfo(), Providers.current);
     };
 
@@ -3838,8 +3860,10 @@ const Providers = {
       fontSizeSelect.appendChild(opt);
     });
     fontSizeSelect.value = localStorage.getItem("lyricsPlusFontSize") || "22";
+    console.log("✅ [Lyrics+ UI] Font size selector created with options: 16-56px, current value:", fontSizeSelect.value + "px");
     fontSizeSelect.onchange = () => {
       localStorage.setItem("lyricsPlusFontSize", fontSizeSelect.value);
+      console.log("📝 [Lyrics+ UI] Font size changed to:", fontSizeSelect.value + "px");
       const lyricsContent = document.getElementById("lyrics-plus-content");
       if (lyricsContent) {
         lyricsContent.style.fontSize = fontSizeSelect.value + "px";
@@ -3985,6 +4009,7 @@ const Providers = {
     async function translateLyricsInPopup() {
       if (!lyricsContainer || isTranslating) return;
       const targetLang = getSavedTranslationLang();
+      console.log("🌐 [Lyrics+ Translation] Translate button clicked, target language:", targetLang);
       if (translationPresent && lastTranslatedLang === targetLang) return;
       isTranslating = true;
       translateBtn.disabled = true;
@@ -3998,7 +4023,18 @@ const Providers = {
         translationDiv.textContent = translatedText;
         translationDiv.style.color = 'gray';
         translationDiv.setAttribute('data-translated', 'true');
-        p.parentNode.insertBefore(translationDiv, p.nextSibling);
+        
+        // Find correct insertion point: after transliteration if it exists, otherwise after lyric
+        let insertionPoint = p.nextSibling;
+        
+        // Check if next sibling is a transliteration div
+        if (insertionPoint && insertionPoint.nodeType === 1 && 
+            insertionPoint.getAttribute('data-transliteration') === 'true') {
+          // Transliteration exists - insert translation AFTER it
+          insertionPoint = insertionPoint.nextSibling;
+        }
+        
+        p.parentNode.insertBefore(translationDiv, insertionPoint);
       }));
       lastTranslatedLang = targetLang;
       translationPresent = true;
@@ -4094,10 +4130,12 @@ const Providers = {
         removeTransliterationLyrics();
         localStorage.setItem(STORAGE_KEYS.TRANSLITERATION_ENABLED, 'false');
         transliterationToggleBtn.title = "Show transliteration";
+        console.log("🔤 [Lyrics+ UI] Transliteration button clicked: HIDDEN");
       } else {
         showTransliterationInPopup();
         localStorage.setItem(STORAGE_KEYS.TRANSLITERATION_ENABLED, 'true');
         transliterationToggleBtn.title = "Hide transliteration";
+        console.log("🔤 [Lyrics+ UI] Transliteration button clicked: SHOWN");
       }
     };
 
@@ -4264,6 +4302,8 @@ const Providers = {
     tabsToggleCheckbox.className = "lyrics-plus-checkbox";
     tabsToggleCheckbox.style.cursor = "pointer";
 
+    console.log("✅ [Lyrics+ Settings] Tabs toggle created (Show lyrics source tabs)");
+
     tabsToggleWrapper.appendChild(tabsToggleLabel);
     tabsToggleWrapper.appendChild(tabsToggleCheckbox);
 
@@ -4290,6 +4330,8 @@ const Providers = {
     seekbarToggleCheckbox.className = "lyrics-plus-checkbox";
     seekbarToggleCheckbox.style.cursor = "pointer";
 
+    console.log("✅ [Lyrics+ Settings] Seekbar toggle created (Show seekbar)");
+
     seekbarToggleWrapper.appendChild(seekbarToggleLabel);
     seekbarToggleWrapper.appendChild(seekbarToggleCheckbox);
 
@@ -4315,6 +4357,8 @@ const Providers = {
     controlsToggleCheckbox.id = "lyrics-plus-controls-toggle-settings";
     controlsToggleCheckbox.className = "lyrics-plus-checkbox";
     controlsToggleCheckbox.style.cursor = "pointer";
+
+    console.log("✅ [Lyrics+ Settings] Playback controls toggle created (Show playback controls)");
 
     controlsToggleWrapper.appendChild(controlsToggleLabel);
     controlsToggleWrapper.appendChild(controlsToggleCheckbox);
@@ -4444,6 +4488,7 @@ const Providers = {
       seekbarVisible = seekbarToggleCheckbox.checked;
       localStorage.setItem('lyricsPlusSeekbarVisible', JSON.stringify(seekbarVisible));
       applyProgressWrapperVisibility(seekbarVisible);
+      console.log("📝 [Lyrics+ Settings] Seekbar visibility toggled:", seekbarVisible ? "SHOWN" : "HIDDEN");
     };
 
     // Playback controls checkbox change handler (in settings)
@@ -4451,6 +4496,7 @@ const Providers = {
       controlsVisible = controlsToggleCheckbox.checked;
       localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
       applyControlsVisibility(controlsVisible);
+      console.log("📝 [Lyrics+ Settings] Playback controls visibility toggled:", controlsVisible ? "SHOWN" : "HIDDEN");
     };
 
     // Apply initial visibility states
@@ -4461,13 +4507,17 @@ const Providers = {
     // Initialize checkboxes state
     seekbarToggleCheckbox.checked = seekbarVisible;
     controlsToggleCheckbox.checked = controlsVisible;
+    console.log("📝 [Lyrics+ Settings] Seekbar initial state:", seekbarVisible ? "SHOWN" : "HIDDEN");
+    console.log("📝 [Lyrics+ Settings] Playback controls initial state:", controlsVisible ? "SHOWN" : "HIDDEN");
 
     // Initialize and handle tabs toggle checkbox in settings
     tabsToggleCheckbox.checked = tabsVisible;
+    console.log("📝 [Lyrics+ Settings] Tabs initial state:", tabsVisible ? "SHOWN" : "HIDDEN");
     tabsToggleCheckbox.onchange = () => {
       tabsVisible = tabsToggleCheckbox.checked;
       localStorage.setItem('lyricsPlusTabsVisible', JSON.stringify(tabsVisible));
       applyTabsVisibility(tabsVisible);
+      console.log("📝 [Lyrics+ Settings] Tabs visibility toggled:", tabsVisible ? "SHOWN" : "HIDDEN");
     };
 
     // Create Spotify-style control buttons
@@ -4613,6 +4663,7 @@ const Providers = {
       const btn = findButton ? findButton() : null;
 
       if (btn) {
+        console.log("🎵 [Lyrics+ Playback] Command sent to Spotify:", command.toUpperCase());
         btn.click();
 
         // If on mobile, try touch events as a fallback
@@ -4634,6 +4685,7 @@ const Providers = {
         setTimeout(() => updateShuffleButton(btnShuffle, shuffleIconWrapper), 100);
       }
     );
+    console.log("✅ [Lyrics+ Playback] Shuffle button created");
 
     const { button: btnPrevious, iconWrapper: prevIconWrapper } = createSpotifyControlButton(
       "previous",
@@ -4642,6 +4694,7 @@ const Providers = {
     );
     // Use DOM-cloned icon from Spotify's visible button
     updatePreviousButtonIcon(prevIconWrapper);
+    console.log("✅ [Lyrics+ Playback] Previous button created");
 
     const { button: btnPlayPause, iconWrapper: playIconWrapper } = createPlayPauseButton(
       () => {
@@ -4649,6 +4702,7 @@ const Providers = {
         setTimeout(() => updatePlayPauseButton(btnPlayPause, playIconWrapper), 100);
       }
     );
+    console.log("✅ [Lyrics+ Playback] Play/Pause button created");
 
     const { button: btnNext, iconWrapper: nextIconWrapper } = createSpotifyControlButton(
       "next",
@@ -4657,6 +4711,7 @@ const Providers = {
     );
     // Use DOM-cloned icon from Spotify's visible button
     updateNextButtonIcon(nextIconWrapper);
+    console.log("✅ [Lyrics+ Playback] Next button created");
 
     const { button: btnRepeat, iconWrapper: repeatIconWrapper } = createSpotifyControlButton(
       "repeat",
@@ -4666,6 +4721,7 @@ const Providers = {
         setTimeout(() => updateRepeatButton(btnRepeat, repeatIconWrapper), 100);
       }
     );
+    console.log("✅ [Lyrics+ Playback] Repeat button created");
 
     // Initialize button states using DOM-cloned icons from Spotify's visible buttons
     updateShuffleButton(btnShuffle, shuffleIconWrapper);
@@ -4798,6 +4854,8 @@ const Providers = {
     progressWrapper.appendChild(timeNow);
     progressWrapper.appendChild(progressInput);
     progressWrapper.appendChild(timeTotal);
+
+    console.log("✅ [Lyrics+ Seekbar] Progress bar (seekbar) created with time display");
 
     // Apply initial visibility state for progressWrapper (must be after progressWrapper is created)
     applyProgressWrapperVisibility(seekbarVisible);
@@ -5613,6 +5671,7 @@ const Providers = {
     const commitSeek = (e) => {
       const val = Number(progressInput.value) || 0;
       userSeeking = false;
+      console.log("⏩ [Lyrics+ Seekbar] User seeked to position:", formatMs(val));
       // Just seek - no interpolation state to manage
       seekTo(val);
     };
@@ -5716,6 +5775,7 @@ const Providers = {
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
       transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
+      console.log("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
     }
 
     // Show transliteration if enabled and data is available
@@ -5749,7 +5809,10 @@ const Providers = {
 
     if (result.error) {
       lyricsContainer.textContent = result.error;
-      if (downloadBtn) downloadBtn.style.display = "none";
+      if (downloadBtn) {
+        downloadBtn.style.display = "none";
+        console.log("📝 [Lyrics+ UI] Download button hidden (lyrics error)");
+      }
       if (downloadDropdown) downloadDropdown.style.display = "none";
       if (chineseConvBtn) chineseConvBtn.style.display = "none";
       return;
@@ -5863,6 +5926,7 @@ const Providers = {
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
       transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
+      console.log("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
     }
 
     // Show transliteration if enabled and data is available
@@ -5877,8 +5941,10 @@ const Providers = {
     if (downloadBtn) {
       if (lyricsContainer.querySelectorAll('p').length > 0) {
         downloadBtn.style.display = "inline-flex";
+        console.log("📝 [Lyrics+ UI] Download button shown (lyrics loaded successfully)");
       } else {
         downloadBtn.style.display = "none";
+        console.log("📝 [Lyrics+ UI] Download button hidden (no lyrics to display)");
         if (downloadDropdown) downloadDropdown.style.display = "none";
       }
     }
