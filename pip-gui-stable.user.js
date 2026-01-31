@@ -3656,7 +3656,7 @@ const Providers = {
       background: "none",
       border: "none",
       color: "white",
-      fontSize: "12px",
+      fontSize: "16px",
       fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
       padding: "4px 6px",
       borderRadius: "4px",
@@ -4094,11 +4094,13 @@ const Providers = {
       translatorWrapper.style.pointerEvents = "";
       translatorWrapper.style.padding = "8px 12px";
       translatorWrapper.style.borderBottom = "1px solid #333";
+      translationToggleBtn.title = "Hide translation controls";
     } else {
       translatorWrapper.style.maxHeight = "0";
       translatorWrapper.style.pointerEvents = "none";
       translatorWrapper.style.padding = "0 12px";
       translatorWrapper.style.borderBottom = "none";
+      translationToggleBtn.title = "Show translation controls";
     }
     translatorWrapper.appendChild(translationControls);
 
@@ -4110,11 +4112,13 @@ const Providers = {
         translatorWrapper.style.pointerEvents = "";
         translatorWrapper.style.padding = "8px 12px";
         translatorWrapper.style.borderBottom = "1px solid #333";
+        translationToggleBtn.title = "Hide translation controls";
       } else {
         translatorWrapper.style.maxHeight = "0";
         translatorWrapper.style.pointerEvents = "none";
         translatorWrapper.style.padding = "0 12px";
         translatorWrapper.style.borderBottom = "none";
+        translationToggleBtn.title = "Show translation controls";
       }
     };
 
@@ -4474,6 +4478,7 @@ const Providers = {
       offsetVisible = !offsetVisible;
       localStorage.setItem('lyricsPlusOffsetVisible', JSON.stringify(offsetVisible));
       applyOffsetVisibility(offsetVisible);
+      offsetToggleBtn.title = offsetVisible ? "Hide timing offset" : "Show timing offset";
     };
 
     // Seekbar checkbox change handler (in settings)
@@ -4496,6 +4501,9 @@ const Providers = {
     applyOffsetVisibility(offsetVisible);
     applyControlsVisibility(controlsVisible);
     applyTabsVisibility(tabsVisible);
+    
+    // Set initial button titles based on visibility states
+    offsetToggleBtn.title = offsetVisible ? "Hide timing offset" : "Show timing offset";
 
     // Initialize checkboxes state
     seekbarToggleCheckbox.checked = seekbarVisible;
