@@ -3431,7 +3431,6 @@ const Providers = {
     title.style.margin = "0";
     title.style.fontWeight = "600";
     title.style.color = "white";
-    title.style.filter = "blur(0.7px)";
     title.style.opacity = "0.8";
 
     // Restore Default Position and Size button for the header
@@ -3927,7 +3926,6 @@ const Providers = {
       btn.style.backgroundColor = (Providers.current === name) ? "#1db954" : "#333";
       btn.style.color = "white";
       btn.style.fontWeight = "600";
-      btn.style.filter = "blur(0.7px)";
       btn.style.opacity = "0.8";
 
       btn.onclick = async (e) => {
@@ -6110,7 +6108,6 @@ const Providers = {
         marginLeft: "8px",
         userSelect: "none",
         cursor: "pointer",
-        filter: "blur(0.7px)",
         opacity: "0.8",
       });
       btn.onclick = () => {
