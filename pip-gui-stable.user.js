@@ -899,8 +899,8 @@
                 span.style.color = "#1ed760";
                 span.style.fontWeight = "700";
               } else {
-                // Upcoming words - inherit dimmer line color
-                span.style.color = "rgba(255, 255, 255, 0.5)";
+                // Upcoming words - white like active line text
+                span.style.color = "white";
                 span.style.fontWeight = "400";
               }
             });
