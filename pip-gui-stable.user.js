@@ -3430,7 +3430,9 @@ const Providers = {
     title.textContent = "Lyrics+";
     title.style.margin = "0";
     title.style.fontWeight = "600";
-    title.style.color = "#fff";
+    title.style.color = "white";
+    title.style.filter = "blur(0.7px)";
+    title.style.opacity = "0.8";
 
     // Restore Default Position and Size button for the header
     const btnReset = document.createElement("button");
@@ -3923,8 +3925,10 @@ const Providers = {
       btn.style.border = "none";
       btn.style.cursor = "pointer";
       btn.style.backgroundColor = (Providers.current === name) ? "#1db954" : "#333";
-      btn.style.color = "#fff";
+      btn.style.color = "white";
       btn.style.fontWeight = "600";
+      btn.style.filter = "blur(0.7px)";
+      btn.style.opacity = "0.8";
 
       btn.onclick = async (e) => {
         if (providerClickTimer) return; // already waiting for double-click, skip
@@ -6099,13 +6103,15 @@ const Providers = {
         backgroundColor: "#1db954",
         border: "none",
         borderRadius: "20px",
-        color: "#fff",
+        color: "white",
         fontWeight: "600",
         fontSize: "14px",
         padding: "6px 12px",
         marginLeft: "8px",
         userSelect: "none",
         cursor: "pointer",
+        filter: "blur(0.7px)",
+        opacity: "0.8",
       });
       btn.onclick = () => {
         let popup = document.getElementById("lyrics-plus-popup");
