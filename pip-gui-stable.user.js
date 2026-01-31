@@ -899,8 +899,8 @@
                 span.style.color = "#1ed760";
                 span.style.fontWeight = "700";
               } else {
-                // Upcoming words - white like active line text
-                span.style.color = "white";
+                // Upcoming words - dimmed like inactive lines (not bright white)
+                span.style.color = "rgba(255, 255, 255, 0.7)";
                 span.style.fontWeight = "400";
               }
             });
