@@ -1725,17 +1725,22 @@ const PLAY_WORDS = [
             const resultType = result.type || "Unknown";
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${resultType}`);
             
-            // Keep track of the best result (prefer Line over Word)
+            // Keep track of the best result (prefer Line > Word > Unknown)
             if (!bestResult) {
               // First successful result
               bestResult = result;
               bestResultType = resultType;
               console.log(`[KPoe Debug] Storing first result (${resultType} type)`);
-            } else if (bestResultType === "Word" && resultType === "Line") {
-              // Found Line type when we only had Word type - this is better!
+            } else if (resultType === "Line" && bestResultType !== "Line") {
+              // Found Line type - this is the best, upgrade regardless of current type
               bestResult = result;
               bestResultType = resultType;
-              console.log(`[KPoe Debug] ✓ Upgraded from Word to Line type lyrics!`);
+              console.log(`[KPoe Debug] ✓ Upgraded to Line type lyrics!`);
+            } else if (resultType === "Word" && bestResultType === "Unknown") {
+              // Found Word type when we only had Unknown - this is better
+              bestResult = result;
+              bestResultType = resultType;
+              console.log(`[KPoe Debug] ✓ Upgraded from Unknown to Word type lyrics!`);
             } else {
               console.log(`[KPoe Debug] Keeping previous result (current: ${bestResultType}, new: ${resultType})`);
             }
