@@ -122,6 +122,14 @@
     BUTTON_ADD_MAX_RETRIES: 10,       // Max retries for button injection
   };
 
+  const STORAGE_KEYS = {
+    TRANSLITERATION_ENABLED: 'lyricsPlusTransliterationEnabled',
+    TRANSLATION_LANG: 'lyricsPlusTranslationLang',
+    TRANSLATOR_VISIBLE: 'lyricsPlusTranslatorVisible',
+    FONT_SIZE: 'lyricsPlusFontSize',
+    CHINESE_CONVERSION: 'lyricsPlusChineseConversion',
+  };
+
   // ------------------------
   // Debug Logging Infrastructure
   // ------------------------
@@ -3981,7 +3989,8 @@ const Providers = {
         const transliterationText = p.getAttribute('data-transliteration-text');
         const transliterationDiv = document.createElement('div');
         transliterationDiv.textContent = transliterationText;
-        transliterationDiv.style.color = '#999'; // Slightly lighter gray than translation
+        // Use #999 (lighter than translation's 'gray' #808080) to subtly distinguish transliteration
+        transliterationDiv.style.color = '#999';
         transliterationDiv.style.fontSize = '0.9em'; // Slightly smaller
         transliterationDiv.setAttribute('data-transliteration', 'true');
         // Insert after lyric line (before translation if present, or at end if not)
@@ -4039,11 +4048,11 @@ const Providers = {
     transliterationToggleBtn.onclick = () => {
       if (transliterationPresent) {
         removeTransliterationLyrics();
-        localStorage.setItem('lyricsPlusTransliterationEnabled', 'false');
+        localStorage.setItem(STORAGE_KEYS.TRANSLITERATION_ENABLED, 'false');
         transliterationToggleBtn.title = "Show transliteration";
       } else {
         showTransliterationInPopup();
-        localStorage.setItem('lyricsPlusTransliterationEnabled', 'true');
+        localStorage.setItem(STORAGE_KEYS.TRANSLITERATION_ENABLED, 'true');
         transliterationToggleBtn.title = "Hide transliteration";
       }
     };
@@ -5617,7 +5626,7 @@ const Providers = {
     lastTranslatedLang = null;
     lyricsContainer.innerHTML = "";
 
-    const transliterationEnabled = localStorage.getItem('lyricsPlusTransliterationEnabled') === 'true';
+    const transliterationEnabled = localStorage.getItem(STORAGE_KEYS.TRANSLITERATION_ENABLED) === 'true';
     let hasTransliterationData = false;
 
     if (currentSyncedLyrics) {
@@ -5751,7 +5760,7 @@ const Providers = {
     currentSyncedLyrics = (synced && synced.length > 0) ? synced : null;
     currentUnsyncedLyrics = (unsynced && unsynced.length > 0) ? unsynced : null;
 
-    const transliterationEnabled = localStorage.getItem('lyricsPlusTransliterationEnabled') === 'true';
+    const transliterationEnabled = localStorage.getItem(STORAGE_KEYS.TRANSLITERATION_ENABLED) === 'true';
     let hasTransliterationData = false;
 
     if (currentSyncedLyrics) {
