@@ -1667,6 +1667,7 @@ const PLAY_WORDS = [
         // Strategy: Try multiple combinations to maximize coverage
         // No source restriction - let API search all sources (Apple, Spotify, etc.)
         // 5 attempts with different data normalization strategies
+        // Line-by-line lyrics are preferred over word-by-word, so check all attempts
         const duration = Math.floor(info.duration / 1000);
         
         const attempts = [
@@ -1702,6 +1703,9 @@ const PLAY_WORDS = [
           }
         ];
         
+        let bestResult = null;
+        let bestResultType = null;
+        
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
           console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -1718,9 +1722,34 @@ const PLAY_WORDS = [
           let result = await fetchKPoeLyrics(songInfo);
           
           if (result && result.lyrics && result.lyrics.length > 0) {
-            console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}!`);
-            return parseKPoeFormat(result);
+            console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
+            
+            // Keep track of the best result (prefer Line over Word)
+            if (!bestResult) {
+              // First successful result
+              bestResult = result;
+              bestResultType = result.type;
+              console.log(`[KPoe Debug] Storing first result (${result.type} type)`);
+            } else if (bestResultType === "Word" && result.type === "Line") {
+              // Found Line type when we only had Word type - this is better!
+              bestResult = result;
+              bestResultType = result.type;
+              console.log(`[KPoe Debug] ✓ Upgraded from Word to Line type lyrics!`);
+            } else {
+              console.log(`[KPoe Debug] Keeping previous result (current: ${bestResultType}, new: ${result.type})`);
+            }
+            
+            // If we found Line type, we can stop early since that's the best
+            if (bestResultType === "Line") {
+              console.log(`[KPoe Debug] ✓ Found Line type lyrics, stopping search`);
+              break;
+            }
           }
+        }
+        
+        if (bestResult) {
+          console.log(`[KPoe Debug] ✓ Returning best result: ${bestResultType} type`);
+          return parseKPoeFormat(bestResult);
         }
         
         console.log("[KPoe Debug] ✗ All 5 attempts failed");
