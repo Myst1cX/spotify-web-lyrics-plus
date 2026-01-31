@@ -3625,7 +3625,12 @@ const Providers = {
       color: "white",
       fontSize: "16px",
       lineHeight: "1",
+      padding: "4px 6px",
+      borderRadius: "4px",
+      transition: "background 0.15s ease",
     });
+    translationToggleBtn.onmouseenter = () => { translationToggleBtn.style.background = "#222"; };
+    translationToggleBtn.onmouseleave = () => { translationToggleBtn.style.background = "none"; };
 
     // --- Transliteration Toggle Button ---
     const transliterationToggleBtn = document.createElement("button");
@@ -3846,6 +3851,11 @@ const Providers = {
     fontSizeSelect.style.color = "white";
     fontSizeSelect.style.fontSize = "14px";
     fontSizeSelect.style.lineHeight = "1";
+    fontSizeSelect.style.padding = "4px 6px";
+    fontSizeSelect.style.borderRadius = "4px";
+    fontSizeSelect.style.transition = "background 0.15s ease";
+    fontSizeSelect.onmouseenter = () => { fontSizeSelect.style.background = "#222"; };
+    fontSizeSelect.onmouseleave = () => { fontSizeSelect.style.background = "#121212"; };
     ["16", "22", "28", "32", "38", "44", "50", "56"].forEach(size => {
       const opt = document.createElement("option");
       opt.value = size;
@@ -3874,6 +3884,11 @@ const Providers = {
     offsetToggleBtn.style.color = "white";
     offsetToggleBtn.style.fontSize = "16px";
     offsetToggleBtn.style.lineHeight = "1";
+    offsetToggleBtn.style.padding = "4px 6px";
+    offsetToggleBtn.style.borderRadius = "4px";
+    offsetToggleBtn.style.transition = "background 0.15s ease";
+    offsetToggleBtn.onmouseenter = () => { offsetToggleBtn.style.background = "#222"; };
+    offsetToggleBtn.onmouseleave = () => { offsetToggleBtn.style.background = "none"; };
 
     const titleBar = document.createElement("div");
     titleBar.style.display = "flex";
