@@ -3618,7 +3618,7 @@ const Providers = {
 
     // --- Transliteration Toggle Button ---
     const transliterationToggleBtn = document.createElement("button");
-    transliterationToggleBtn.textContent = "🔤";
+    transliterationToggleBtn.textContent = "🔡";
     transliterationToggleBtn.title = "Show transliteration";
     Object.assign(transliterationToggleBtn.style, {
       marginRight: "6px",
@@ -6141,3 +6141,4 @@ const Providers = {
 
   init();
 })();
+
