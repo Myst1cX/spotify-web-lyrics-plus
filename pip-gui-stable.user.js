@@ -5727,6 +5727,7 @@ const Providers = {
     currentSyncedLyrics = null;
     currentUnsyncedLyrics = null;
     currentKPoeData = null; // Reset KPoe data
+    kpoeLyricTypePreference = 'auto'; // Reset preference for new track
     // Reset translation state when loading new lyrics
     translationPresent = false;
     lastTranslatedLang = null;
@@ -5805,29 +5806,36 @@ const Providers = {
     currentUnsyncedLyrics = (unsynced && unsynced.length > 0) ? unsynced : null;
 
     // Show/hide lyric type switcher for KPoe Word type
+    // Check once if any line has word data to avoid repeated iteration
+    let hasAnyWordData = false;
     if (lyricTypeBtn) {
       const isKPoeWordType = Providers.current === "KPoe" && 
                              currentKPoeData && 
                              currentKPoeData.type === "Word" &&
-                             currentSyncedLyrics &&
-                             currentSyncedLyrics.some(line => line.syllabus && line.syllabus.length > 0);
-      lyricTypeBtn.style.display = isKPoeWordType ? "inline-flex" : "none";
+                             currentSyncedLyrics;
+      if (isKPoeWordType && currentSyncedLyrics.length > 0) {
+        // Check first line to determine if word data is available
+        hasAnyWordData = !!(currentSyncedLyrics[0].syllabus && currentSyncedLyrics[0].syllabus.length > 0);
+      }
+      lyricTypeBtn.style.display = hasAnyWordData ? "inline-flex" : "none";
     }
 
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
+      
+      // Determine rendering mode once for all lines
+      const userWantsWordMode = kpoeLyricTypePreference === 'word';
+      const userWantsLineMode = kpoeLyricTypePreference === 'line';
+      
       currentSyncedLyrics.forEach((line) => {
         const p = document.createElement("p");
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         
-        // Determine if we should render word-by-word
+        // Determine if we should render word-by-word for this line
         const hasWordData = line.syllabus && line.syllabus.length > 0 && line.isWordType;
-        const userWantsWordMode = kpoeLyricTypePreference === 'word';
-        const userWantsLineMode = kpoeLyricTypePreference === 'line';
         const shouldRenderWords = hasWordData && !userWantsLineMode && (userWantsWordMode || kpoeLyricTypePreference === 'auto');
         
-        // Check if this line has word-level timing data (KPoe Word type)
         if (shouldRenderWords) {
           // Render as word spans for word-by-word highlighting
           line.syllabus.forEach((word, idx) => {
