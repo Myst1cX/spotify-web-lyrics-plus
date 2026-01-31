@@ -864,6 +864,7 @@
           const nextEl = p.nextElementSibling;
           if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
             nextEl.style.color = "#9a9a9a";
+            nextEl.style.fontWeight = "400";
             nextEl.style.filter = "blur(0.7px)";
             nextEl.style.opacity = "0.8";
           }
@@ -883,6 +884,7 @@
           const nextEl = p.nextElementSibling;
           if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
             nextEl.style.color = "#1db954";  // Same green as highlighted lyric
+            nextEl.style.fontWeight = "700";  // Bold like highlighted lyric
             nextEl.style.filter = "none";
             nextEl.style.opacity = "1";
           }
@@ -898,6 +900,7 @@
           const nextEl = p.nextElementSibling;
           if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
             nextEl.style.color = "#9a9a9a";
+            nextEl.style.fontWeight = "400";
             nextEl.style.filter = "blur(0.7px)";
             nextEl.style.opacity = "0.8";
           }
@@ -4020,9 +4023,20 @@ const Providers = {
         transliterationDiv.style.marginBottom = '8px';
         transliterationDiv.style.transition = "color 0.15s, filter 0.13s, opacity 0.13s";
         transliterationDiv.setAttribute('data-transliteration', 'true');
-        // Insert after lyric line (before translation if present, or at end if not)
-        const nextSibling = p.nextSibling;
-        p.parentNode.insertBefore(transliterationDiv, nextSibling);
+        
+        // Always insert transliteration immediately after lyric line
+        // If translation exists, insert before it; otherwise after lyric
+        let insertionPoint = p.nextSibling;
+        
+        // Check if the next sibling is a translation div
+        if (insertionPoint && insertionPoint.nodeType === 1 && 
+            insertionPoint.getAttribute('data-translated') === 'true') {
+          // Translation exists - insert transliteration before it
+          p.parentNode.insertBefore(transliterationDiv, insertionPoint);
+        } else {
+          // No translation or next sibling is something else - insert after lyric
+          p.parentNode.insertBefore(transliterationDiv, insertionPoint);
+        }
       });
       transliterationPresent = true;
     }
