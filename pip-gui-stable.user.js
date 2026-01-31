@@ -4018,7 +4018,18 @@ const Providers = {
         translationDiv.textContent = translatedText;
         translationDiv.style.color = 'gray';
         translationDiv.setAttribute('data-translated', 'true');
-        p.parentNode.insertBefore(translationDiv, p.nextSibling);
+        
+        // Find correct insertion point: after transliteration if it exists, otherwise after lyric
+        let insertionPoint = p.nextSibling;
+        
+        // Check if next sibling is a transliteration div
+        if (insertionPoint && insertionPoint.nodeType === 1 && 
+            insertionPoint.getAttribute('data-transliteration') === 'true') {
+          // Transliteration exists - insert translation AFTER it
+          insertionPoint = insertionPoint.nextSibling;
+        }
+        
+        p.parentNode.insertBefore(translationDiv, insertionPoint);
       }));
       lastTranslatedLang = targetLang;
       translationPresent = true;
