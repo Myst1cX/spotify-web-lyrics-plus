@@ -3430,6 +3430,10 @@ const Providers = {
     title.textContent = "Lyrics+";
     title.style.margin = "0";
     title.style.fontWeight = "600";
+    title.style.backgroundImage = "linear-gradient(90deg, #1db954 0%, #1ed760 100%)";
+    title.style.webkitBackgroundClip = "text";
+    title.style.webkitTextFillColor = "transparent";
+    title.style.backgroundClip = "text";
 
     // Restore Default Position and Size button for the header
     const btnReset = document.createElement("button");
@@ -3922,8 +3926,11 @@ const Providers = {
       btn.style.border = "none";
       btn.style.cursor = "pointer";
       btn.style.backgroundColor = (Providers.current === name) ? "#1db954" : "#333";
-      btn.style.color = "white";
       btn.style.fontWeight = "600";
+      btn.style.backgroundImage = "linear-gradient(90deg, #1db954 0%, #1ed760 100%)";
+      btn.style.webkitBackgroundClip = "text";
+      btn.style.webkitTextFillColor = "transparent";
+      btn.style.backgroundClip = "text";
 
       btn.onclick = async (e) => {
         if (providerClickTimer) return; // already waiting for double-click, skip
@@ -6098,13 +6105,16 @@ const Providers = {
         backgroundColor: "#1db954",
         border: "none",
         borderRadius: "20px",
-        color: "white",
-        cursor: "pointer",
         fontWeight: "600",
         fontSize: "14px",
         padding: "6px 12px",
         marginLeft: "8px",
         userSelect: "none",
+        cursor: "pointer",
+        backgroundImage: "linear-gradient(90deg, #1db954 0%, #1ed760 100%)",
+        webkitBackgroundClip: "text",
+        webkitTextFillColor: "transparent",
+        backgroundClip: "text",
       });
       btn.onclick = () => {
         let popup = document.getElementById("lyrics-plus-popup");
