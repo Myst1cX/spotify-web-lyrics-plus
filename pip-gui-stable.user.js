@@ -3576,7 +3576,7 @@ const Providers = {
     translatorWrapper.id = "lyrics-plus-translator-wrapper";
     translatorWrapper.style.display = "block";
     translatorWrapper.style.background = "#121212";
-    translatorWrapper.style.borderBottom = "1px solid #333";
+    translatorWrapper.style.borderBottom = "none"; // Will be set to "1px solid #333" if visible
     translatorWrapper.style.padding = "8px 12px";
     translatorWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     translatorWrapper.style.overflow = "hidden";
@@ -3591,10 +3591,12 @@ const Providers = {
       translatorWrapper.style.maxHeight = "100px";
       translatorWrapper.style.pointerEvents = "";
       translatorWrapper.style.padding = "8px 12px";
+      translatorWrapper.style.borderBottom = "1px solid #333";
     } else {
       translatorWrapper.style.maxHeight = "0";
       translatorWrapper.style.pointerEvents = "none";
       translatorWrapper.style.padding = "0 12px";
+      translatorWrapper.style.borderBottom = "none";
     }
     translatorWrapper.appendChild(translationControls);
 
@@ -3605,10 +3607,12 @@ const Providers = {
         translatorWrapper.style.maxHeight = "100px";
         translatorWrapper.style.pointerEvents = "";
         translatorWrapper.style.padding = "8px 12px";
+        translatorWrapper.style.borderBottom = "1px solid #333";
       } else {
         translatorWrapper.style.maxHeight = "0";
         translatorWrapper.style.pointerEvents = "none";
         translatorWrapper.style.padding = "0 12px";
+        translatorWrapper.style.borderBottom = "none";
       }
     };
 
@@ -3619,7 +3623,7 @@ const Providers = {
     offsetWrapper.style.justifyContent = "space-between";
     offsetWrapper.style.padding = "8px 12px";
     offsetWrapper.style.background = "#121212";
-    offsetWrapper.style.borderBottom = "1px solid #333";
+    offsetWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     offsetWrapper.style.fontSize = "15px";
     offsetWrapper.style.width = "100%";
 
@@ -3759,7 +3763,7 @@ const Providers = {
     tabsToggleWrapper.style.justifyContent = "space-between";
     tabsToggleWrapper.style.padding = "8px 12px";
     tabsToggleWrapper.style.background = "#121212";
-    tabsToggleWrapper.style.borderBottom = "1px solid #333";
+    tabsToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     tabsToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     tabsToggleWrapper.style.overflow = "hidden";
 
@@ -3785,7 +3789,7 @@ const Providers = {
     seekbarToggleWrapper.style.justifyContent = "space-between";
     seekbarToggleWrapper.style.padding = "8px 12px";
     seekbarToggleWrapper.style.background = "#121212";
-    seekbarToggleWrapper.style.borderBottom = "1px solid #333";
+    seekbarToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     seekbarToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     seekbarToggleWrapper.style.overflow = "hidden";
 
@@ -3811,7 +3815,7 @@ const Providers = {
     controlsToggleWrapper.style.justifyContent = "space-between";
     controlsToggleWrapper.style.padding = "8px 12px";
     controlsToggleWrapper.style.background = "#121212";
-    controlsToggleWrapper.style.borderBottom = "1px solid #333";
+    controlsToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     controlsToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     controlsToggleWrapper.style.overflow = "hidden";
 
@@ -3910,28 +3914,36 @@ const Providers = {
         offsetWrapper.style.maxHeight = "200px";
         offsetWrapper.style.pointerEvents = "";
         offsetWrapper.style.padding = "8px 12px";
+        offsetWrapper.style.borderBottom = "1px solid #333";
         tabsToggleWrapper.style.maxHeight = "50px";
         tabsToggleWrapper.style.pointerEvents = "";
         tabsToggleWrapper.style.padding = "8px 12px";
+        tabsToggleWrapper.style.borderBottom = "1px solid #333";
         seekbarToggleWrapper.style.maxHeight = "50px";
         seekbarToggleWrapper.style.pointerEvents = "";
         seekbarToggleWrapper.style.padding = "8px 12px";
+        seekbarToggleWrapper.style.borderBottom = "1px solid #333";
         controlsToggleWrapper.style.maxHeight = "50px";
         controlsToggleWrapper.style.pointerEvents = "";
         controlsToggleWrapper.style.padding = "8px 12px";
+        controlsToggleWrapper.style.borderBottom = "1px solid #333";
       } else {
         offsetWrapper.style.maxHeight = "0";
         offsetWrapper.style.pointerEvents = "none";
         offsetWrapper.style.padding = "0 12px";
+        offsetWrapper.style.borderBottom = "none";
         tabsToggleWrapper.style.maxHeight = "0";
         tabsToggleWrapper.style.pointerEvents = "none";
         tabsToggleWrapper.style.padding = "0 12px";
+        tabsToggleWrapper.style.borderBottom = "none";
         seekbarToggleWrapper.style.maxHeight = "0";
         seekbarToggleWrapper.style.pointerEvents = "none";
         seekbarToggleWrapper.style.padding = "0 12px";
+        seekbarToggleWrapper.style.borderBottom = "none";
         controlsToggleWrapper.style.maxHeight = "0";
         controlsToggleWrapper.style.pointerEvents = "none";
         controlsToggleWrapper.style.padding = "0 12px";
+        controlsToggleWrapper.style.borderBottom = "none";
       }
     }
 
