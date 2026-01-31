@@ -1723,6 +1723,12 @@ const PLAY_WORDS = [
         // 5. Fully normalized (last resort)
         const duration = Math.floor(info.duration / 1000);
         
+        // Pre-compute values for efficiency
+        const hasMultipleArtists = info.artist && (info.artist.includes(',') || info.artist.includes('&'));
+        const firstArtist = hasMultipleArtists ? info.artist.split(/[,&]/)[0].trim() : null;
+        const cleanTitle = info.title ? Utils.removeExtraInfo(info.title) : "";
+        const titleHasExtras = cleanTitle !== info.title;
+        
         // Attempt 1: Use raw data
         let songInfo = {
           artist: info.artist || "",
@@ -1733,24 +1739,20 @@ const PLAY_WORDS = [
         let result = await fetchKPoeLyrics(songInfo);
         
         // Attempt 2: Remove extra info from title (feat., remix, etc.) but keep artist as-is
-        if (!result && info.title) {
-          const cleanTitle = Utils.removeExtraInfo(info.title);
-          if (cleanTitle !== info.title) {
-            console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            console.log("[KPoe Debug] Attempt 2: Trying with cleaned title (removed extra info)");
-            songInfo = {
-              artist: info.artist || "",
-              title: cleanTitle,
-              album: info.album || "",
-              duration
-            };
-            result = await fetchKPoeLyrics(songInfo);
-          }
+        if (!result && titleHasExtras) {
+          console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          console.log("[KPoe Debug] Attempt 2: Trying with cleaned title (removed extra info)");
+          songInfo = {
+            artist: info.artist || "",
+            title: cleanTitle,
+            album: info.album || "",
+            duration
+          };
+          result = await fetchKPoeLyrics(songInfo);
         }
         
         // Attempt 3: Try with first artist only (for multi-artist tracks)
-        if (!result && info.artist && (info.artist.includes(',') || info.artist.includes('&'))) {
-          const firstArtist = info.artist.split(/[,&]/)[0].trim();
+        if (!result && hasMultipleArtists) {
           console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
           console.log("[KPoe Debug] Attempt 3: Trying with first artist only");
           songInfo = {
@@ -1762,10 +1764,8 @@ const PLAY_WORDS = [
           result = await fetchKPoeLyrics(songInfo);
         }
         
-        // Attempt 4: First artist + clean title
-        if (!result && info.artist && (info.artist.includes(',') || info.artist.includes('&'))) {
-          const firstArtist = info.artist.split(/[,&]/)[0].trim();
-          const cleanTitle = Utils.removeExtraInfo(info.title || "");
+        // Attempt 4: First artist + clean title (only if title has extras to remove)
+        if (!result && hasMultipleArtists && titleHasExtras) {
           console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
           console.log("[KPoe Debug] Attempt 4: Trying with first artist + cleaned title");
           songInfo = {
