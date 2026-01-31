@@ -5805,19 +5805,23 @@ const Providers = {
     currentSyncedLyrics = (synced && synced.length > 0) ? synced : null;
     currentUnsyncedLyrics = (unsynced && unsynced.length > 0) ? unsynced : null;
 
-    // Show/hide lyric type switcher for KPoe Word type
-    // Check once if any line has word data to avoid repeated iteration
-    let hasAnyWordData = false;
+    // Show/hide lyric type switcher - only show when multiple types are available
+    // Button should only appear when we have BOTH line and word data to switch between
+    let hasMultipleLyricTypes = false;
     if (lyricTypeBtn) {
       const isKPoeWordType = Providers.current === "KPoe" && 
                              currentKPoeData && 
                              currentKPoeData.type === "Word" &&
                              currentSyncedLyrics;
       if (isKPoeWordType && currentSyncedLyrics.length > 0) {
-        // Check first line to determine if word data is available
-        hasAnyWordData = !!(currentSyncedLyrics[0].syllabus && currentSyncedLyrics[0].syllabus.length > 0);
+        // Check first line - Word type has both line.text AND syllabus data
+        // This means user can switch between line-by-line and word-by-word
+        const firstLine = currentSyncedLyrics[0];
+        const hasWordData = !!(firstLine.syllabus && firstLine.syllabus.length > 0);
+        const hasLineText = !!(firstLine.text);
+        hasMultipleLyricTypes = hasWordData && hasLineText; // Both types available
       }
-      lyricTypeBtn.style.display = hasAnyWordData ? "inline-flex" : "none";
+      lyricTypeBtn.style.display = hasMultipleLyricTypes ? "inline-flex" : "none";
     }
 
     if (currentSyncedLyrics) {
