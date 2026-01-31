@@ -1,0 +1,3482 @@
+// response 503 in console but when click on api link said 404 or cloudflare error worker exceeded limits.
+
+// api says:
+
+{
+  "error": {
+    "message": "Lyrics not found in sources: apple, lyricsplus, musixmatch-word, musixmatch, spotify",
+    "status": 404,
+    "details": {
+      "searchedSources": [
+        "apple",
+        "lyricsplus",
+        "musixmatch-word",
+        "musixmatch",
+        "spotify"
+      ],
+      "songInfo": {
+        "title": "Lipsa Ta",
+        "artist": "Stefan Costea Calinacho Simiz Pitariu George",
+        "album": ""
+      }
+    }
+  },
+  "processingTime": {
+    "timeElapsed": 1839,
+    "lastProcessed": 1769894445620
+  }
+}
+
+// i tried this fix: i turned on vpn, refreshed spotify, played the song and got lyrics on kpoe this time..
+
+// suddenly after vpn, api says:
+
+{
+  "type": "Word",
+  "KpoeTools": "2.0-LPlusBcknd",
+  "metadata": {
+    "source": "Musixmatch",
+    "songWriters": [
+      "Stefan Costea",
+      "Pitariu George",
+      "Calin Hasnas",
+      "Dragos Simiz"
+    ],
+    "leadingSilence": "0.000"
+  },
+  "lyrics": [
+    {
+      "time": 1320,
+      "duration": 2642,
+      "text": "(Ok, da' chiar daca nu rimeaza?)",
+      "syllabus": [
+        {
+          "time": 1320,
+          "duration": 725,
+          "text": "(Ok,"
+        },
+        {
+          "time": 2045,
+          "duration": 475,
+          "text": " "
+        },
+        {
+          "time": 2520,
+          "duration": 220,
+          "text": "da'"
+        },
+        {
+          "time": 2740,
+          "duration": 85,
+          "text": " "
+        },
+        {
+          "time": 2825,
+          "duration": 230,
+          "text": "chiar"
+        },
+        {
+          "time": 3055,
+          "duration": 55,
+          "text": " "
+        },
+        {
+          "time": 3110,
+          "duration": 175,
+          "text": "daca"
+        },
+        {
+          "time": 3285,
+          "duration": 55,
+          "text": " "
+        },
+        {
+          "time": 3340,
+          "duration": 80,
+          "text": "nu"
+        },
+        {
+          "time": 3420,
+          "duration": 40,
+          "text": " "
+        },
+        {
+          "time": 3460,
+          "duration": 502,
+          "text": "rimeaza?)"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 4740,
+      "duration": 810,
+      "text": "(Defapt da, fuck it)",
+      "syllabus": [
+        {
+          "time": 4740,
+          "duration": 225,
+          "text": "(Defapt"
+        },
+        {
+          "time": 4965,
+          "duration": 45,
+          "text": " "
+        },
+        {
+          "time": 5010,
+          "duration": 60,
+          "text": "da,"
+        },
+        {
+          "time": 5070,
+          "duration": 30,
+          "text": " "
+        },
+        {
+          "time": 5100,
+          "duration": 90,
+          "text": "fuck"
+        },
+        {
+          "time": 5190,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 5240,
+          "duration": 310,
+          "text": "it)"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 6040,
+      "duration": 827,
+      "text": "(Music doesn't have to rhyme)",
+      "syllabus": [
+        {
+          "time": 6040,
+          "duration": 100,
+          "text": "(Music"
+        },
+        {
+          "time": 6140,
+          "duration": 35,
+          "text": " "
+        },
+        {
+          "time": 6175,
+          "duration": 210,
+          "text": "doesn't"
+        },
+        {
+          "time": 6385,
+          "duration": 15,
+          "text": " "
+        },
+        {
+          "time": 6400,
+          "duration": 70,
+          "text": "have"
+        },
+        {
+          "time": 6470,
+          "duration": 30,
+          "text": " "
+        },
+        {
+          "time": 6500,
+          "duration": 25,
+          "text": "to"
+        },
+        {
+          "time": 6525,
+          "duration": 15,
+          "text": " "
+        },
+        {
+          "time": 6540,
+          "duration": 327,
+          "text": "rhyme)"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 7510,
+      "duration": 2763,
+      "text": "(Yeah, yeah)",
+      "syllabus": [
+        {
+          "time": 7510,
+          "duration": 1885,
+          "text": "(Yeah,"
+        },
+        {
+          "time": 9395,
+          "duration": 130,
+          "text": " "
+        },
+        {
+          "time": 9525,
+          "duration": 748,
+          "text": "yeah)"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 14150,
+      "duration": 4874,
+      "text": "Am ajuns, sa fiu ce-am vrut sa fiu",
+      "syllabus": [
+        {
+          "time": 14150,
+          "duration": 140,
+          "text": "Am"
+        },
+        {
+          "time": 14290,
+          "duration": 520,
+          "text": " "
+        },
+        {
+          "time": 14810,
+          "duration": 375,
+          "text": "ajuns,"
+        },
+        {
+          "time": 15185,
+          "duration": 1460,
+          "text": " "
+        },
+        {
+          "time": 16645,
+          "duration": 170,
+          "text": "sa"
+        },
+        {
+          "time": 16815,
+          "duration": 55,
+          "text": " "
+        },
+        {
+          "time": 16870,
+          "duration": 105,
+          "text": "fiu"
+        },
+        {
+          "time": 16975,
+          "duration": 135,
+          "text": " "
+        },
+        {
+          "time": 17110,
+          "duration": 290,
+          "text": "ce-"
+        },
+        {
+          "time": 17400,
+          "duration": 330,
+          "text": "am"
+        },
+        {
+          "time": 17730,
+          "duration": 105,
+          "text": " "
+        },
+        {
+          "time": 17835,
+          "duration": 315,
+          "text": "vrut"
+        },
+        {
+          "time": 18150,
+          "duration": 90,
+          "text": " "
+        },
+        {
+          "time": 18240,
+          "duration": 110,
+          "text": "sa"
+        },
+        {
+          "time": 18350,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 18410,
+          "duration": 614,
+          "text": "fiu"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 20180,
+      "duration": 2575,
+      "text": "Da' unde merg acum",
+      "syllabus": [
+        {
+          "time": 20180,
+          "duration": 320,
+          "text": "Da'"
+        },
+        {
+          "time": 20500,
+          "duration": 150,
+          "text": " "
+        },
+        {
+          "time": 20650,
+          "duration": 420,
+          "text": "unde"
+        },
+        {
+          "time": 21070,
+          "duration": 90,
+          "text": " "
+        },
+        {
+          "time": 21160,
+          "duration": 350,
+          "text": "merg"
+        },
+        {
+          "time": 21510,
+          "duration": 90,
+          "text": " "
+        },
+        {
+          "time": 21600,
+          "duration": 1155,
+          "text": "acum"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 23730,
+      "duration": 5901,
+      "text": "Acum cu lipsa ta (yeah, yeah)",
+      "syllabus": [
+        {
+          "time": 23730,
+          "duration": 460,
+          "text": "Acum"
+        },
+        {
+          "time": 24190,
+          "duration": 505,
+          "text": " "
+        },
+        {
+          "time": 24695,
+          "duration": 190,
+          "text": "cu"
+        },
+        {
+          "time": 24885,
+          "duration": 225,
+          "text": " "
+        },
+        {
+          "time": 25110,
+          "duration": 390,
+          "text": "lipsa"
+        },
+        {
+          "time": 25500,
+          "duration": 185,
+          "text": " "
+        },
+        {
+          "time": 25685,
+          "duration": 200,
+          "text": "ta"
+        },
+        {
+          "time": 25885,
+          "duration": 975,
+          "text": " "
+        },
+        {
+          "time": 26860,
+          "duration": 915,
+          "text": "(yeah,"
+        },
+        {
+          "time": 27775,
+          "duration": 700,
+          "text": " "
+        },
+        {
+          "time": 28475,
+          "duration": 1156,
+          "text": "yeah)"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 30160,
+      "duration": 4337,
+      "text": "Am ajuns, sa fiu ce-am vrut sa fiu",
+      "syllabus": [
+        {
+          "time": 30160,
+          "duration": 55,
+          "text": "Am"
+        },
+        {
+          "time": 30215,
+          "duration": 290,
+          "text": " "
+        },
+        {
+          "time": 30505,
+          "duration": 775,
+          "text": "ajuns,"
+        },
+        {
+          "time": 31280,
+          "duration": 355,
+          "text": " "
+        },
+        {
+          "time": 31635,
+          "duration": 145,
+          "text": "sa"
+        },
+        {
+          "time": 31780,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 31845,
+          "duration": 415,
+          "text": "fiu"
+        },
+        {
+          "time": 32260,
+          "duration": 185,
+          "text": " "
+        },
+        {
+          "time": 32445,
+          "duration": 220,
+          "text": "ce-"
+        },
+        {
+          "time": 32665,
+          "duration": 150,
+          "text": "am"
+        },
+        {
+          "time": 32815,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 32890,
+          "duration": 350,
+          "text": "vrut"
+        },
+        {
+          "time": 33240,
+          "duration": 155,
+          "text": " "
+        },
+        {
+          "time": 33395,
+          "duration": 260,
+          "text": "sa"
+        },
+        {
+          "time": 33655,
+          "duration": 105,
+          "text": " "
+        },
+        {
+          "time": 33760,
+          "duration": 737,
+          "text": "fiu"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 35250,
+      "duration": 2853,
+      "text": "Da' nu stiu unde merg acum",
+      "syllabus": [
+        {
+          "time": 35250,
+          "duration": 270,
+          "text": "Da'"
+        },
+        {
+          "time": 35520,
+          "duration": 105,
+          "text": " "
+        },
+        {
+          "time": 35625,
+          "duration": 130,
+          "text": "nu"
+        },
+        {
+          "time": 35755,
+          "duration": 95,
+          "text": " "
+        },
+        {
+          "time": 35850,
+          "duration": 390,
+          "text": "stiu"
+        },
+        {
+          "time": 36240,
+          "duration": 150,
+          "text": " "
+        },
+        {
+          "time": 36390,
+          "duration": 235,
+          "text": "unde"
+        },
+        {
+          "time": 36625,
+          "duration": 105,
+          "text": " "
+        },
+        {
+          "time": 36730,
+          "duration": 400,
+          "text": "merg"
+        },
+        {
+          "time": 37130,
+          "duration": 185,
+          "text": " "
+        },
+        {
+          "time": 37315,
+          "duration": 788,
+          "text": "acum"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 39300,
+      "duration": 2408,
+      "text": "Acum cu lipsa ta",
+      "syllabus": [
+        {
+          "time": 39300,
+          "duration": 565,
+          "text": "Acum"
+        },
+        {
+          "time": 39865,
+          "duration": 235,
+          "text": " "
+        },
+        {
+          "time": 40100,
+          "duration": 160,
+          "text": "cu"
+        },
+        {
+          "time": 40260,
+          "duration": 105,
+          "text": " "
+        },
+        {
+          "time": 40365,
+          "duration": 570,
+          "text": "lipsa"
+        },
+        {
+          "time": 40935,
+          "duration": 125,
+          "text": " "
+        },
+        {
+          "time": 41060,
+          "duration": 648,
+          "text": "ta"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 42920,
+      "duration": 2640,
+      "text": "(Pot sa imi vad de drum)",
+      "syllabus": [
+        {
+          "time": 42920,
+          "duration": 260,
+          "text": "(Pot"
+        },
+        {
+          "time": 43180,
+          "duration": 200,
+          "text": " "
+        },
+        {
+          "time": 43380,
+          "duration": 195,
+          "text": "sa"
+        },
+        {
+          "time": 43575,
+          "duration": 100,
+          "text": " "
+        },
+        {
+          "time": 43675,
+          "duration": 215,
+          "text": "imi"
+        },
+        {
+          "time": 43890,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 44000,
+          "duration": 260,
+          "text": "vad"
+        },
+        {
+          "time": 44260,
+          "duration": 80,
+          "text": " "
+        },
+        {
+          "time": 44340,
+          "duration": 125,
+          "text": "de"
+        },
+        {
+          "time": 44465,
+          "duration": 95,
+          "text": " "
+        },
+        {
+          "time": 44560,
+          "duration": 1000,
+          "text": "drum)"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 46360,
+      "duration": 2130,
+      "text": "Devine tot mai greu",
+      "syllabus": [
+        {
+          "time": 46360,
+          "duration": 495,
+          "text": "Devine"
+        },
+        {
+          "time": 46855,
+          "duration": 130,
+          "text": " "
+        },
+        {
+          "time": 46985,
+          "duration": 225,
+          "text": "tot"
+        },
+        {
+          "time": 47210,
+          "duration": 100,
+          "text": " "
+        },
+        {
+          "time": 47310,
+          "duration": 175,
+          "text": "mai"
+        },
+        {
+          "time": 47485,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 47545,
+          "duration": 945,
+          "text": "greu"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 49770,
+      "duration": 3543,
+      "text": "Sa tin echilibru' asta nesanatos",
+      "syllabus": [
+        {
+          "time": 49770,
+          "duration": 95,
+          "text": "Sa"
+        },
+        {
+          "time": 49865,
+          "duration": 190,
+          "text": " "
+        },
+        {
+          "time": 50055,
+          "duration": 345,
+          "text": "tin"
+        },
+        {
+          "time": 50400,
+          "duration": 140,
+          "text": " "
+        },
+        {
+          "time": 50540,
+          "duration": 900,
+          "text": "echilibru'"
+        },
+        {
+          "time": 51440,
+          "duration": 145,
+          "text": " "
+        },
+        {
+          "time": 51585,
+          "duration": 285,
+          "text": "asta"
+        },
+        {
+          "time": 51870,
+          "duration": 80,
+          "text": " "
+        },
+        {
+          "time": 51950,
+          "duration": 1363,
+          "text": "nesanatos"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 54050,
+      "duration": 3621,
+      "text": "Dispari din capu' meu (oooh)",
+      "syllabus": [
+        {
+          "time": 54050,
+          "duration": 530,
+          "text": "Dispari"
+        },
+        {
+          "time": 54580,
+          "duration": 395,
+          "text": " "
+        },
+        {
+          "time": 54975,
+          "duration": 160,
+          "text": "din"
+        },
+        {
+          "time": 55135,
+          "duration": 90,
+          "text": " "
+        },
+        {
+          "time": 55225,
+          "duration": 315,
+          "text": "capu'"
+        },
+        {
+          "time": 55540,
+          "duration": 115,
+          "text": " "
+        },
+        {
+          "time": 55655,
+          "duration": 405,
+          "text": "meu"
+        },
+        {
+          "time": 56060,
+          "duration": 130,
+          "text": " "
+        },
+        {
+          "time": 56190,
+          "duration": 1481,
+          "text": "(oooh)"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 61260,
+      "duration": 1840,
+      "text": "(Stai, stai, stai, hold up)",
+      "syllabus": [
+        {
+          "time": 61260,
+          "duration": 865,
+          "text": "(Stai,"
+        },
+        {
+          "time": 62125,
+          "duration": 45,
+          "text": " "
+        },
+        {
+          "time": 62170,
+          "duration": 102,
+          "text": "stai,"
+        },
+        {
+          "time": 62272,
+          "duration": 25,
+          "text": " "
+        },
+        {
+          "time": 62297,
+          "duration": 87,
+          "text": "stai,"
+        },
+        {
+          "time": 62384,
+          "duration": 28,
+          "text": " "
+        },
+        {
+          "time": 62412,
+          "duration": 141,
+          "text": "hold"
+        },
+        {
+          "time": 62553,
+          "duration": 131,
+          "text": " "
+        },
+        {
+          "time": 62684,
+          "duration": 416,
+          "text": "up)"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 63100,
+      "duration": 2284,
+      "text": "Din partea mea puteai pleca oricand",
+      "syllabus": [
+        {
+          "time": 63100,
+          "duration": 65,
+          "text": "Din"
+        },
+        {
+          "time": 63165,
+          "duration": 40,
+          "text": " "
+        },
+        {
+          "time": 63205,
+          "duration": 415,
+          "text": "partea"
+        },
+        {
+          "time": 63620,
+          "duration": 55,
+          "text": " "
+        },
+        {
+          "time": 63675,
+          "duration": 235,
+          "text": "mea"
+        },
+        {
+          "time": 63910,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 64020,
+          "duration": 345,
+          "text": "puteai"
+        },
+        {
+          "time": 64365,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 64425,
+          "duration": 205,
+          "text": "pleca"
+        },
+        {
+          "time": 64630,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 64680,
+          "duration": 704,
+          "text": "oricand"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 66070,
+      "duration": 2898,
+      "text": "Ai stat s-observi cum mor incet si cum, cum ma distrug",
+      "syllabus": [
+        {
+          "time": 66070,
+          "duration": 20,
+          "text": "Ai"
+        },
+        {
+          "time": 66090,
+          "duration": 20,
+          "text": " "
+        },
+        {
+          "time": 66110,
+          "duration": 40,
+          "text": "stat"
+        },
+        {
+          "time": 66150,
+          "duration": 55,
+          "text": " "
+        },
+        {
+          "time": 66205,
+          "duration": 110,
+          "text": "s-"
+        },
+        {
+          "time": 66315,
+          "duration": 495,
+          "text": "observi"
+        },
+        {
+          "time": 66810,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 66880,
+          "duration": 170,
+          "text": "cum"
+        },
+        {
+          "time": 67050,
+          "duration": 45,
+          "text": " "
+        },
+        {
+          "time": 67095,
+          "duration": 120,
+          "text": "mor"
+        },
+        {
+          "time": 67215,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 67275,
+          "duration": 200,
+          "text": "incet"
+        },
+        {
+          "time": 67475,
+          "duration": 85,
+          "text": " "
+        },
+        {
+          "time": 67560,
+          "duration": 65,
+          "text": "si"
+        },
+        {
+          "time": 67625,
+          "duration": 40,
+          "text": " "
+        },
+        {
+          "time": 67665,
+          "duration": 190,
+          "text": "cum,"
+        },
+        {
+          "time": 67855,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 67965,
+          "duration": 395,
+          "text": "cum"
+        },
+        {
+          "time": 68360,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 68425,
+          "duration": 100,
+          "text": "ma"
+        },
+        {
+          "time": 68525,
+          "duration": 30,
+          "text": " "
+        },
+        {
+          "time": 68555,
+          "duration": 413,
+          "text": "distrug"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 69630,
+      "duration": 4652,
+      "text": "Cum, cum crezi baby whatever, te-as inlocui whenever cu whoever",
+      "syllabus": [
+        {
+          "time": 69630,
+          "duration": 65,
+          "text": "Cum,"
+        },
+        {
+          "time": 69695,
+          "duration": 25,
+          "text": " "
+        },
+        {
+          "time": 69720,
+          "duration": 225,
+          "text": "cum"
+        },
+        {
+          "time": 69945,
+          "duration": 55,
+          "text": " "
+        },
+        {
+          "time": 70000,
+          "duration": 270,
+          "text": "crezi"
+        },
+        {
+          "time": 70270,
+          "duration": 115,
+          "text": " "
+        },
+        {
+          "time": 70385,
+          "duration": 180,
+          "text": "baby"
+        },
+        {
+          "time": 70565,
+          "duration": 55,
+          "text": " "
+        },
+        {
+          "time": 70620,
+          "duration": 390,
+          "text": "whatever,"
+        },
+        {
+          "time": 71010,
+          "duration": 195,
+          "text": " "
+        },
+        {
+          "time": 71205,
+          "duration": 205,
+          "text": "te-"
+        },
+        {
+          "time": 71410,
+          "duration": 75,
+          "text": "as"
+        },
+        {
+          "time": 71485,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 71535,
+          "duration": 260,
+          "text": "inlocui"
+        },
+        {
+          "time": 71795,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 71845,
+          "duration": 485,
+          "text": "whenever"
+        },
+        {
+          "time": 72330,
+          "duration": 120,
+          "text": " "
+        },
+        {
+          "time": 72450,
+          "duration": 160,
+          "text": "cu"
+        },
+        {
+          "time": 72610,
+          "duration": 160,
+          "text": " "
+        },
+        {
+          "time": 72770,
+          "duration": 1512,
+          "text": "whoever"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 74910,
+      "duration": 1936,
+      "text": "Nu vad problema",
+      "syllabus": [
+        {
+          "time": 74910,
+          "duration": 70,
+          "text": "Nu"
+        },
+        {
+          "time": 74980,
+          "duration": 230,
+          "text": " "
+        },
+        {
+          "time": 75210,
+          "duration": 280,
+          "text": "vad"
+        },
+        {
+          "time": 75490,
+          "duration": 85,
+          "text": " "
+        },
+        {
+          "time": 75575,
+          "duration": 1271,
+          "text": "problema"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 77770,
+      "duration": 3920,
+      "text": "Am ajuns, sa fiu ce-am vrut sa fiu",
+      "syllabus": [
+        {
+          "time": 77770,
+          "duration": 45,
+          "text": "Am"
+        },
+        {
+          "time": 77815,
+          "duration": 25,
+          "text": " "
+        },
+        {
+          "time": 77840,
+          "duration": 1155,
+          "text": "ajuns,"
+        },
+        {
+          "time": 78995,
+          "duration": 115,
+          "text": " "
+        },
+        {
+          "time": 79110,
+          "duration": 125,
+          "text": "sa"
+        },
+        {
+          "time": 79235,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 79305,
+          "duration": 140,
+          "text": "fiu"
+        },
+        {
+          "time": 79445,
+          "duration": 85,
+          "text": " "
+        },
+        {
+          "time": 79530,
+          "duration": 200,
+          "text": "ce-"
+        },
+        {
+          "time": 79730,
+          "duration": 230,
+          "text": "am"
+        },
+        {
+          "time": 79960,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 80070,
+          "duration": 225,
+          "text": "vrut"
+        },
+        {
+          "time": 80295,
+          "duration": 115,
+          "text": " "
+        },
+        {
+          "time": 80410,
+          "duration": 205,
+          "text": "sa"
+        },
+        {
+          "time": 80615,
+          "duration": 95,
+          "text": " "
+        },
+        {
+          "time": 80710,
+          "duration": 980,
+          "text": "fiu"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 82650,
+      "duration": 2665,
+      "text": "Da' unde merg acum",
+      "syllabus": [
+        {
+          "time": 82650,
+          "duration": 310,
+          "text": "Da'"
+        },
+        {
+          "time": 82960,
+          "duration": 150,
+          "text": " "
+        },
+        {
+          "time": 83110,
+          "duration": 550,
+          "text": "unde"
+        },
+        {
+          "time": 83660,
+          "duration": 130,
+          "text": " "
+        },
+        {
+          "time": 83790,
+          "duration": 505,
+          "text": "merg"
+        },
+        {
+          "time": 84295,
+          "duration": 170,
+          "text": " "
+        },
+        {
+          "time": 84465,
+          "duration": 850,
+          "text": "acum"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 86520,
+      "duration": 5248,
+      "text": "Acum cu lipsa ta (yeah, yeah)",
+      "syllabus": [
+        {
+          "time": 86520,
+          "duration": 305,
+          "text": "Acum"
+        },
+        {
+          "time": 86825,
+          "duration": 315,
+          "text": " "
+        },
+        {
+          "time": 87140,
+          "duration": 185,
+          "text": "cu"
+        },
+        {
+          "time": 87325,
+          "duration": 95,
+          "text": " "
+        },
+        {
+          "time": 87420,
+          "duration": 335,
+          "text": "lipsa"
+        },
+        {
+          "time": 87755,
+          "duration": 190,
+          "text": " "
+        },
+        {
+          "time": 87945,
+          "duration": 385,
+          "text": "ta"
+        },
+        {
+          "time": 88330,
+          "duration": 1105,
+          "text": " "
+        },
+        {
+          "time": 89435,
+          "duration": 820,
+          "text": "(yeah,"
+        },
+        {
+          "time": 90255,
+          "duration": 895,
+          "text": " "
+        },
+        {
+          "time": 91150,
+          "duration": 618,
+          "text": "yeah)"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 92200,
+      "duration": 4223,
+      "text": "Am ajuns, sa fiu ce-am vrut sa fiu",
+      "syllabus": [
+        {
+          "time": 92200,
+          "duration": 65,
+          "text": "Am"
+        },
+        {
+          "time": 92265,
+          "duration": 25,
+          "text": " "
+        },
+        {
+          "time": 92290,
+          "duration": 295,
+          "text": "ajuns,"
+        },
+        {
+          "time": 92585,
+          "duration": 1085,
+          "text": " "
+        },
+        {
+          "time": 93670,
+          "duration": 200,
+          "text": "sa"
+        },
+        {
+          "time": 93870,
+          "duration": 135,
+          "text": " "
+        },
+        {
+          "time": 94005,
+          "duration": 145,
+          "text": "fiu"
+        },
+        {
+          "time": 94150,
+          "duration": 100,
+          "text": " "
+        },
+        {
+          "time": 94250,
+          "duration": 395,
+          "text": "ce-"
+        },
+        {
+          "time": 94645,
+          "duration": 215,
+          "text": "am"
+        },
+        {
+          "time": 94860,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 94970,
+          "duration": 440,
+          "text": "vrut"
+        },
+        {
+          "time": 95410,
+          "duration": 205,
+          "text": " "
+        },
+        {
+          "time": 95615,
+          "duration": 195,
+          "text": "sa"
+        },
+        {
+          "time": 95810,
+          "duration": 115,
+          "text": " "
+        },
+        {
+          "time": 95925,
+          "duration": 498,
+          "text": "fiu"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 97850,
+      "duration": 3047,
+      "text": "Da' nu stiu unde merg acum",
+      "syllabus": [
+        {
+          "time": 97850,
+          "duration": 105,
+          "text": "Da'"
+        },
+        {
+          "time": 97955,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 98005,
+          "duration": 355,
+          "text": "nu"
+        },
+        {
+          "time": 98360,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 98470,
+          "duration": 315,
+          "text": "stiu"
+        },
+        {
+          "time": 98785,
+          "duration": 175,
+          "text": " "
+        },
+        {
+          "time": 98960,
+          "duration": 485,
+          "text": "unde"
+        },
+        {
+          "time": 99445,
+          "duration": 155,
+          "text": " "
+        },
+        {
+          "time": 99600,
+          "duration": 425,
+          "text": "merg"
+        },
+        {
+          "time": 100025,
+          "duration": 130,
+          "text": " "
+        },
+        {
+          "time": 100155,
+          "duration": 742,
+          "text": "acum"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 101410,
+      "duration": 2589,
+      "text": "Acum cu lipsa ta",
+      "syllabus": [
+        {
+          "time": 101410,
+          "duration": 540,
+          "text": "Acum"
+        },
+        {
+          "time": 101950,
+          "duration": 120,
+          "text": " "
+        },
+        {
+          "time": 102070,
+          "duration": 215,
+          "text": "cu"
+        },
+        {
+          "time": 102285,
+          "duration": 250,
+          "text": " "
+        },
+        {
+          "time": 102535,
+          "duration": 540,
+          "text": "lipsa"
+        },
+        {
+          "time": 103075,
+          "duration": 120,
+          "text": " "
+        },
+        {
+          "time": 103195,
+          "duration": 804,
+          "text": "ta"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 105070,
+      "duration": 2531,
+      "text": "(Ma vezi cu alta, ma vezi, ma vezi, ma vezi cu...)",
+      "syllabus": [
+        {
+          "time": 105070,
+          "duration": 105,
+          "text": "(Ma"
+        },
+        {
+          "time": 105175,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 105235,
+          "duration": 105,
+          "text": "vezi"
+        },
+        {
+          "time": 105340,
+          "duration": 35,
+          "text": " "
+        },
+        {
+          "time": 105375,
+          "duration": 40,
+          "text": "cu"
+        },
+        {
+          "time": 105415,
+          "duration": 25,
+          "text": " "
+        },
+        {
+          "time": 105440,
+          "duration": 115,
+          "text": "alta,"
+        },
+        {
+          "time": 105555,
+          "duration": 55,
+          "text": " "
+        },
+        {
+          "time": 105610,
+          "duration": 95,
+          "text": "ma"
+        },
+        {
+          "time": 105705,
+          "duration": 35,
+          "text": " "
+        },
+        {
+          "time": 105740,
+          "duration": 135,
+          "text": "vezi,"
+        },
+        {
+          "time": 105875,
+          "duration": 30,
+          "text": " "
+        },
+        {
+          "time": 105905,
+          "duration": 145,
+          "text": "ma"
+        },
+        {
+          "time": 106050,
+          "duration": 115,
+          "text": " "
+        },
+        {
+          "time": 106165,
+          "duration": 290,
+          "text": "vezi,"
+        },
+        {
+          "time": 106455,
+          "duration": 85,
+          "text": " "
+        },
+        {
+          "time": 106540,
+          "duration": 185,
+          "text": "ma"
+        },
+        {
+          "time": 106725,
+          "duration": 90,
+          "text": " "
+        },
+        {
+          "time": 106815,
+          "duration": 210,
+          "text": "vezi"
+        },
+        {
+          "time": 107025,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 107095,
+          "duration": 506,
+          "text": "cu...)"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 108010,
+      "duration": 1121,
+      "text": "Ma vezi cu alta",
+      "syllabus": [
+        {
+          "time": 108010,
+          "duration": 170,
+          "text": "Ma"
+        },
+        {
+          "time": 108180,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 108245,
+          "duration": 155,
+          "text": "vezi"
+        },
+        {
+          "time": 108400,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 108470,
+          "duration": 115,
+          "text": "cu"
+        },
+        {
+          "time": 108585,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 108660,
+          "duration": 471,
+          "text": "alta"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 109760,
+      "duration": 1153,
+      "text": "Da din pacate",
+      "syllabus": [
+        {
+          "time": 109760,
+          "duration": 135,
+          "text": "Da"
+        },
+        {
+          "time": 109895,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 109965,
+          "duration": 155,
+          "text": "din"
+        },
+        {
+          "time": 110120,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 110230,
+          "duration": 683,
+          "text": "pacate"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 111680,
+      "duration": 3155,
+      "text": "Arata baby mult mai bine de la spate",
+      "syllabus": [
+        {
+          "time": 111680,
+          "duration": 285,
+          "text": "Arata"
+        },
+        {
+          "time": 111965,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 112015,
+          "duration": 240,
+          "text": "baby"
+        },
+        {
+          "time": 112255,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 112365,
+          "duration": 290,
+          "text": "mult"
+        },
+        {
+          "time": 112655,
+          "duration": 95,
+          "text": " "
+        },
+        {
+          "time": 112750,
+          "duration": 240,
+          "text": "mai"
+        },
+        {
+          "time": 112990,
+          "duration": 90,
+          "text": " "
+        },
+        {
+          "time": 113080,
+          "duration": 245,
+          "text": "bine"
+        },
+        {
+          "time": 113325,
+          "duration": 105,
+          "text": " "
+        },
+        {
+          "time": 113430,
+          "duration": 145,
+          "text": "de"
+        },
+        {
+          "time": 113575,
+          "duration": 115,
+          "text": " "
+        },
+        {
+          "time": 113690,
+          "duration": 130,
+          "text": "la"
+        },
+        {
+          "time": 113820,
+          "duration": 105,
+          "text": " "
+        },
+        {
+          "time": 113925,
+          "duration": 910,
+          "text": "spate"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 115590,
+      "duration": 1253,
+      "text": "Ma vezi cu alta",
+      "syllabus": [
+        {
+          "time": 115590,
+          "duration": 125,
+          "text": "Ma"
+        },
+        {
+          "time": 115715,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 115785,
+          "duration": 175,
+          "text": "vezi"
+        },
+        {
+          "time": 115960,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 116025,
+          "duration": 140,
+          "text": "cu"
+        },
+        {
+          "time": 116165,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 116235,
+          "duration": 608,
+          "text": "alta"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 117470,
+      "duration": 1291,
+      "text": "Da din pacate",
+      "syllabus": [
+        {
+          "time": 117470,
+          "duration": 195,
+          "text": "Da"
+        },
+        {
+          "time": 117665,
+          "duration": 80,
+          "text": " "
+        },
+        {
+          "time": 117745,
+          "duration": 160,
+          "text": "din"
+        },
+        {
+          "time": 117905,
+          "duration": 85,
+          "text": " "
+        },
+        {
+          "time": 117990,
+          "duration": 771,
+          "text": "pacate"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 119300,
+      "duration": 2700,
+      "text": "Arata baby mult mai bine de la spate",
+      "syllabus": [
+        {
+          "time": 119300,
+          "duration": 150,
+          "text": "Arata"
+        },
+        {
+          "time": 119450,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 119515,
+          "duration": 195,
+          "text": "baby"
+        },
+        {
+          "time": 119710,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 119775,
+          "duration": 205,
+          "text": "mult"
+        },
+        {
+          "time": 119980,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 120050,
+          "duration": 215,
+          "text": "mai"
+        },
+        {
+          "time": 120265,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 120335,
+          "duration": 155,
+          "text": "bine"
+        },
+        {
+          "time": 120490,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 120550,
+          "duration": 115,
+          "text": "de"
+        },
+        {
+          "time": 120665,
+          "duration": 95,
+          "text": " "
+        },
+        {
+          "time": 120760,
+          "duration": 120,
+          "text": "la"
+        },
+        {
+          "time": 120880,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 120955,
+          "duration": 1045,
+          "text": "spate"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 122730,
+      "duration": 3533,
+      "text": "Tu esti doar o fosta eu pentru tine sunt fostu'",
+      "syllabus": [
+        {
+          "time": 122730,
+          "duration": 80,
+          "text": "Tu"
+        },
+        {
+          "time": 122810,
+          "duration": 90,
+          "text": " "
+        },
+        {
+          "time": 122900,
+          "duration": 200,
+          "text": "esti"
+        },
+        {
+          "time": 123100,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 123160,
+          "duration": 200,
+          "text": "doar"
+        },
+        {
+          "time": 123360,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 123425,
+          "duration": 65,
+          "text": "o"
+        },
+        {
+          "time": 123490,
+          "duration": 150,
+          "text": " "
+        },
+        {
+          "time": 123640,
+          "duration": 395,
+          "text": "fosta"
+        },
+        {
+          "time": 124035,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 124145,
+          "duration": 195,
+          "text": "eu"
+        },
+        {
+          "time": 124340,
+          "duration": 145,
+          "text": " "
+        },
+        {
+          "time": 124485,
+          "duration": 430,
+          "text": "pentru"
+        },
+        {
+          "time": 124915,
+          "duration": 80,
+          "text": " "
+        },
+        {
+          "time": 124995,
+          "duration": 210,
+          "text": "tine"
+        },
+        {
+          "time": 125205,
+          "duration": 135,
+          "text": " "
+        },
+        {
+          "time": 125340,
+          "duration": 210,
+          "text": "sunt"
+        },
+        {
+          "time": 125550,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 125610,
+          "duration": 653,
+          "text": "fostu'"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 126610,
+      "duration": 3103,
+      "text": "Prea multe apeluri, mesaje unde e rostu'",
+      "syllabus": [
+        {
+          "time": 126610,
+          "duration": 105,
+          "text": "Prea"
+        },
+        {
+          "time": 126715,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 126790,
+          "duration": 345,
+          "text": "multe"
+        },
+        {
+          "time": 127135,
+          "duration": 115,
+          "text": " "
+        },
+        {
+          "time": 127250,
+          "duration": 490,
+          "text": "apeluri,"
+        },
+        {
+          "time": 127740,
+          "duration": 85,
+          "text": " "
+        },
+        {
+          "time": 127825,
+          "duration": 420,
+          "text": "mesaje"
+        },
+        {
+          "time": 128245,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 128305,
+          "duration": 285,
+          "text": "unde"
+        },
+        {
+          "time": 128590,
+          "duration": 100,
+          "text": " "
+        },
+        {
+          "time": 128690,
+          "duration": 65,
+          "text": "e"
+        },
+        {
+          "time": 128755,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 128830,
+          "duration": 883,
+          "text": "rostu'"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 130410,
+      "duration": 3334,
+      "text": "Totu-n viata are un pret da' chiar merita costu'",
+      "syllabus": [
+        {
+          "time": 130410,
+          "duration": 135,
+          "text": "Totu-"
+        },
+        {
+          "time": 130545,
+          "duration": 50,
+          "text": "n"
+        },
+        {
+          "time": 130595,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 130670,
+          "duration": 265,
+          "text": "viata"
+        },
+        {
+          "time": 130935,
+          "duration": 105,
+          "text": " "
+        },
+        {
+          "time": 131040,
+          "duration": 265,
+          "text": "are"
+        },
+        {
+          "time": 131305,
+          "duration": 155,
+          "text": " "
+        },
+        {
+          "time": 131460,
+          "duration": 175,
+          "text": "un"
+        },
+        {
+          "time": 131635,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 131695,
+          "duration": 150,
+          "text": "pret"
+        },
+        {
+          "time": 131845,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 131895,
+          "duration": 100,
+          "text": "da'"
+        },
+        {
+          "time": 131995,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 132045,
+          "duration": 250,
+          "text": "chiar"
+        },
+        {
+          "time": 132295,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 132370,
+          "duration": 350,
+          "text": "merita"
+        },
+        {
+          "time": 132720,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 132830,
+          "duration": 914,
+          "text": "costu'"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 134380,
+      "duration": 3325,
+      "text": "Ce-i al meu e al meu, niciodata n-a fost al nostru",
+      "syllabus": [
+        {
+          "time": 134380,
+          "duration": 70,
+          "text": "Ce-"
+        },
+        {
+          "time": 134450,
+          "duration": 20,
+          "text": "i"
+        },
+        {
+          "time": 134470,
+          "duration": 95,
+          "text": " "
+        },
+        {
+          "time": 134565,
+          "duration": 75,
+          "text": "al"
+        },
+        {
+          "time": 134640,
+          "duration": 35,
+          "text": " "
+        },
+        {
+          "time": 134675,
+          "duration": 135,
+          "text": "meu"
+        },
+        {
+          "time": 134810,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 134860,
+          "duration": 55,
+          "text": "e"
+        },
+        {
+          "time": 134915,
+          "duration": 120,
+          "text": " "
+        },
+        {
+          "time": 135035,
+          "duration": 130,
+          "text": "al"
+        },
+        {
+          "time": 135165,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 135235,
+          "duration": 265,
+          "text": "meu,"
+        },
+        {
+          "time": 135500,
+          "duration": 85,
+          "text": " "
+        },
+        {
+          "time": 135585,
+          "duration": 310,
+          "text": "niciodata"
+        },
+        {
+          "time": 135895,
+          "duration": 45,
+          "text": " "
+        },
+        {
+          "time": 135940,
+          "duration": 60,
+          "text": "n-"
+        },
+        {
+          "time": 136000,
+          "duration": 55,
+          "text": "a"
+        },
+        {
+          "time": 136055,
+          "duration": 40,
+          "text": " "
+        },
+        {
+          "time": 136095,
+          "duration": 135,
+          "text": "fost"
+        },
+        {
+          "time": 136230,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 136295,
+          "duration": 60,
+          "text": "al"
+        },
+        {
+          "time": 136355,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 136420,
+          "duration": 1285,
+          "text": "nostru"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 138700,
+      "duration": 3719,
+      "text": "Am ajuns sa fiu ce-am vrut sa fiu da' cu ce pret",
+      "syllabus": [
+        {
+          "time": 138700,
+          "duration": 480,
+          "text": "Am"
+        },
+        {
+          "time": 139180,
+          "duration": 135,
+          "text": " "
+        },
+        {
+          "time": 139315,
+          "duration": 310,
+          "text": "ajuns"
+        },
+        {
+          "time": 139625,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 139735,
+          "duration": 95,
+          "text": "sa"
+        },
+        {
+          "time": 139830,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 139895,
+          "duration": 120,
+          "text": "fiu"
+        },
+        {
+          "time": 140015,
+          "duration": 105,
+          "text": " "
+        },
+        {
+          "time": 140120,
+          "duration": 265,
+          "text": "ce-"
+        },
+        {
+          "time": 140385,
+          "duration": 180,
+          "text": "am"
+        },
+        {
+          "time": 140565,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 140640,
+          "duration": 120,
+          "text": "vrut"
+        },
+        {
+          "time": 140760,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 140820,
+          "duration": 100,
+          "text": "sa"
+        },
+        {
+          "time": 140920,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 140980,
+          "duration": 75,
+          "text": "fiu"
+        },
+        {
+          "time": 141055,
+          "duration": 40,
+          "text": " "
+        },
+        {
+          "time": 141095,
+          "duration": 110,
+          "text": "da'"
+        },
+        {
+          "time": 141205,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 141270,
+          "duration": 95,
+          "text": "cu"
+        },
+        {
+          "time": 141365,
+          "duration": 30,
+          "text": " "
+        },
+        {
+          "time": 141395,
+          "duration": 95,
+          "text": "ce"
+        },
+        {
+          "time": 141490,
+          "duration": 55,
+          "text": " "
+        },
+        {
+          "time": 141545,
+          "duration": 874,
+          "text": "pret"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 143250,
+      "duration": 2807,
+      "text": "Si problema e ca am facut-o cu orice pret",
+      "syllabus": [
+        {
+          "time": 143250,
+          "duration": 40,
+          "text": "Si"
+        },
+        {
+          "time": 143290,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 143360,
+          "duration": 370,
+          "text": "problema"
+        },
+        {
+          "time": 143730,
+          "duration": 90,
+          "text": " "
+        },
+        {
+          "time": 143820,
+          "duration": 55,
+          "text": "e"
+        },
+        {
+          "time": 143875,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 143945,
+          "duration": 105,
+          "text": "ca"
+        },
+        {
+          "time": 144050,
+          "duration": 100,
+          "text": " "
+        },
+        {
+          "time": 144150,
+          "duration": 125,
+          "text": "am"
+        },
+        {
+          "time": 144275,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 144340,
+          "duration": 280,
+          "text": "facut-"
+        },
+        {
+          "time": 144620,
+          "duration": 65,
+          "text": "o"
+        },
+        {
+          "time": 144685,
+          "duration": 80,
+          "text": " "
+        },
+        {
+          "time": 144765,
+          "duration": 155,
+          "text": "cu"
+        },
+        {
+          "time": 144920,
+          "duration": 80,
+          "text": " "
+        },
+        {
+          "time": 145000,
+          "duration": 290,
+          "text": "orice"
+        },
+        {
+          "time": 145290,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 145360,
+          "duration": 697,
+          "text": "pret"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 146660,
+      "duration": 3322,
+      "text": "Castig totu' da te pierd pe tine",
+      "syllabus": [
+        {
+          "time": 146660,
+          "duration": 360,
+          "text": "Castig"
+        },
+        {
+          "time": 147020,
+          "duration": 80,
+          "text": " "
+        },
+        {
+          "time": 147100,
+          "duration": 235,
+          "text": "totu'"
+        },
+        {
+          "time": 147335,
+          "duration": 235,
+          "text": " "
+        },
+        {
+          "time": 147570,
+          "duration": 200,
+          "text": "da"
+        },
+        {
+          "time": 147770,
+          "duration": 90,
+          "text": " "
+        },
+        {
+          "time": 147860,
+          "duration": 125,
+          "text": "te"
+        },
+        {
+          "time": 147985,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 148050,
+          "duration": 425,
+          "text": "pierd"
+        },
+        {
+          "time": 148475,
+          "duration": 115,
+          "text": " "
+        },
+        {
+          "time": 148590,
+          "duration": 255,
+          "text": "pe"
+        },
+        {
+          "time": 148845,
+          "duration": 80,
+          "text": " "
+        },
+        {
+          "time": 148925,
+          "duration": 1057,
+          "text": "tine"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 150550,
+      "duration": 2585,
+      "text": "Mi-ai spus ai grija ca ajungi sa ma si pierzi",
+      "syllabus": [
+        {
+          "time": 150550,
+          "duration": 85,
+          "text": "Mi-"
+        },
+        {
+          "time": 150635,
+          "duration": 65,
+          "text": "ai"
+        },
+        {
+          "time": 150700,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 150775,
+          "duration": 155,
+          "text": "spus"
+        },
+        {
+          "time": 150930,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 151000,
+          "duration": 80,
+          "text": "ai"
+        },
+        {
+          "time": 151080,
+          "duration": 80,
+          "text": " "
+        },
+        {
+          "time": 151160,
+          "duration": 190,
+          "text": "grija"
+        },
+        {
+          "time": 151350,
+          "duration": 90,
+          "text": " "
+        },
+        {
+          "time": 151440,
+          "duration": 185,
+          "text": "ca"
+        },
+        {
+          "time": 151625,
+          "duration": 110,
+          "text": " "
+        },
+        {
+          "time": 151735,
+          "duration": 280,
+          "text": "ajungi"
+        },
+        {
+          "time": 152015,
+          "duration": 60,
+          "text": " "
+        },
+        {
+          "time": 152075,
+          "duration": 125,
+          "text": "sa"
+        },
+        {
+          "time": 152200,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 152275,
+          "duration": 150,
+          "text": "ma"
+        },
+        {
+          "time": 152425,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 152490,
+          "duration": 65,
+          "text": "si"
+        },
+        {
+          "time": 152555,
+          "duration": 55,
+          "text": " "
+        },
+        {
+          "time": 152610,
+          "duration": 525,
+          "text": "pierzi"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 153950,
+      "duration": 3227,
+      "text": "E un fel de te las sa pleci sau nu te las",
+      "syllabus": [
+        {
+          "time": 153950,
+          "duration": 20,
+          "text": "E"
+        },
+        {
+          "time": 153970,
+          "duration": 45,
+          "text": " "
+        },
+        {
+          "time": 154015,
+          "duration": 115,
+          "text": "un"
+        },
+        {
+          "time": 154130,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 154195,
+          "duration": 95,
+          "text": "fel"
+        },
+        {
+          "time": 154290,
+          "duration": 45,
+          "text": " "
+        },
+        {
+          "time": 154335,
+          "duration": 125,
+          "text": "de"
+        },
+        {
+          "time": 154460,
+          "duration": 85,
+          "text": " "
+        },
+        {
+          "time": 154545,
+          "duration": 650,
+          "text": "te"
+        },
+        {
+          "time": 155195,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 155270,
+          "duration": 135,
+          "text": "las"
+        },
+        {
+          "time": 155405,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 155480,
+          "duration": 245,
+          "text": "sa"
+        },
+        {
+          "time": 155725,
+          "duration": 95,
+          "text": " "
+        },
+        {
+          "time": 155820,
+          "duration": 175,
+          "text": "pleci"
+        },
+        {
+          "time": 155995,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 156045,
+          "duration": 130,
+          "text": "sau"
+        },
+        {
+          "time": 156175,
+          "duration": 55,
+          "text": " "
+        },
+        {
+          "time": 156230,
+          "duration": 70,
+          "text": "nu"
+        },
+        {
+          "time": 156300,
+          "duration": 95,
+          "text": " "
+        },
+        {
+          "time": 156395,
+          "duration": 100,
+          "text": "te"
+        },
+        {
+          "time": 156495,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 156545,
+          "duration": 632,
+          "text": "las"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 157990,
+      "duration": 3030,
+      "text": "E un fel de inca te vreau da' sunt distant",
+      "syllabus": [
+        {
+          "time": 157990,
+          "duration": 25,
+          "text": "E"
+        },
+        {
+          "time": 158015,
+          "duration": 30,
+          "text": " "
+        },
+        {
+          "time": 158045,
+          "duration": 90,
+          "text": "un"
+        },
+        {
+          "time": 158135,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 158210,
+          "duration": 110,
+          "text": "fel"
+        },
+        {
+          "time": 158320,
+          "duration": 330,
+          "text": " "
+        },
+        {
+          "time": 158650,
+          "duration": 130,
+          "text": "de"
+        },
+        {
+          "time": 158780,
+          "duration": 330,
+          "text": " "
+        },
+        {
+          "time": 159110,
+          "duration": 155,
+          "text": "inca"
+        },
+        {
+          "time": 159265,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 159315,
+          "duration": 100,
+          "text": "te"
+        },
+        {
+          "time": 159415,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 159480,
+          "duration": 300,
+          "text": "vreau"
+        },
+        {
+          "time": 159780,
+          "duration": 70,
+          "text": " "
+        },
+        {
+          "time": 159850,
+          "duration": 130,
+          "text": "da'"
+        },
+        {
+          "time": 159980,
+          "duration": 50,
+          "text": " "
+        },
+        {
+          "time": 160030,
+          "duration": 150,
+          "text": "sunt"
+        },
+        {
+          "time": 160180,
+          "duration": 75,
+          "text": " "
+        },
+        {
+          "time": 160255,
+          "duration": 765,
+          "text": "distant"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 161820,
+      "duration": 3784,
+      "text": "Ok te vreau si am vrut-o din start",
+      "syllabus": [
+        {
+          "time": 161820,
+          "duration": 110,
+          "text": "Ok"
+        },
+        {
+          "time": 161930,
+          "duration": 130,
+          "text": " "
+        },
+        {
+          "time": 162060,
+          "duration": 75,
+          "text": "te"
+        },
+        {
+          "time": 162135,
+          "duration": 65,
+          "text": " "
+        },
+        {
+          "time": 162200,
+          "duration": 235,
+          "text": "vreau"
+        },
+        {
+          "time": 162435,
+          "duration": 85,
+          "text": " "
+        },
+        {
+          "time": 162520,
+          "duration": 125,
+          "text": "si"
+        },
+        {
+          "time": 162645,
+          "duration": 115,
+          "text": " "
+        },
+        {
+          "time": 162760,
+          "duration": 190,
+          "text": "am"
+        },
+        {
+          "time": 162950,
+          "duration": 95,
+          "text": " "
+        },
+        {
+          "time": 163045,
+          "duration": 430,
+          "text": "vrut-"
+        },
+        {
+          "time": 163475,
+          "duration": 105,
+          "text": "o"
+        },
+        {
+          "time": 163580,
+          "duration": 170,
+          "text": " "
+        },
+        {
+          "time": 163750,
+          "duration": 220,
+          "text": "din"
+        },
+        {
+          "time": 163970,
+          "duration": 80,
+          "text": " "
+        },
+        {
+          "time": 164050,
+          "duration": 1554,
+          "text": "start"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 168620,
+      "duration": 6322,
+      "text": "N-am cum sa uit asa usor",
+      "syllabus": [
+        {
+          "time": 168620,
+          "duration": 595,
+          "text": "N-"
+        },
+        {
+          "time": 169215,
+          "duration": 260,
+          "text": "am"
+        },
+        {
+          "time": 169475,
+          "duration": 85,
+          "text": " "
+        },
+        {
+          "time": 169560,
+          "duration": 290,
+          "text": "cum"
+        },
+        {
+          "time": 169850,
+          "duration": 145,
+          "text": " "
+        },
+        {
+          "time": 169995,
+          "duration": 455,
+          "text": "sa"
+        },
+        {
+          "time": 170450,
+          "duration": 650,
+          "text": " "
+        },
+        {
+          "time": 171100,
+          "duration": 570,
+          "text": "uit"
+        },
+        {
+          "time": 171670,
+          "duration": 1150,
+          "text": " "
+        },
+        {
+          "time": 172820,
+          "duration": 360,
+          "text": "asa"
+        },
+        {
+          "time": 173180,
+          "duration": 265,
+          "text": " "
+        },
+        {
+          "time": 173445,
+          "duration": 1497,
+          "text": "usor"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 176330,
+      "duration": 4124,
+      "text": "N-am cum sa uit",
+      "syllabus": [
+        {
+          "time": 176330,
+          "duration": 235,
+          "text": "N-"
+        },
+        {
+          "time": 176565,
+          "duration": 285,
+          "text": "am"
+        },
+        {
+          "time": 176850,
+          "duration": 350,
+          "text": " "
+        },
+        {
+          "time": 177200,
+          "duration": 530,
+          "text": "cum"
+        },
+        {
+          "time": 177730,
+          "duration": 385,
+          "text": " "
+        },
+        {
+          "time": 178115,
+          "duration": 450,
+          "text": "sa"
+        },
+        {
+          "time": 178565,
+          "duration": 650,
+          "text": " "
+        },
+        {
+          "time": 179215,
+          "duration": 1239,
+          "text": "uit"
+        }
+      ],
+      "element": {}
+    },
+    {
+      "time": 182980,
+      "duration": 2105,
+      "text": "(Nah nah nah, nah nah)",
+      "syllabus": [
+        {
+          "time": 182980,
+          "duration": 310,
+          "text": "(Nah"
+        },
+        {
+          "time": 183290,
+          "duration": 150,
+          "text": " "
+        },
+        {
+          "time": 183440,
+          "duration": 205,
+          "text": "nah"
+        },
+        {
+          "time": 183645,
+          "duration": 90,
+          "text": " "
+        },
+        {
+          "time": 183735,
+          "duration": 245,
+          "text": "nah,"
+        },
+        {
+          "time": 183980,
+          "duration": 95,
+          "text": " "
+        },
+        {
+          "time": 184075,
+          "duration": 230,
+          "text": "nah"
+        },
+        {
+          "time": 184305,
+          "duration": 80,
+          "text": " "
+        },
+        {
+          "time": 184385,
+          "duration": 700,
+          "text": "nah)"
+        }
+      ],
+      "element": {}
+    }
+  ],
+  "cached": "None",
+  "processingTime": {
+    "timeElapsed": 1788,
+    "lastProcessed": 1769894429775
+  }
+}
+
+// and wth vpn, this was console:
+
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1996:13
+[KPoe Debug] Input info: 
+Object { artist: "Stefan Costea Calinacho Simiz Pitariu George", title: "Lipsa Ta", album: "", duration: 196, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1997:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Lipsa%20Ta&artist=Stefan%20Costea%20Calinacho%20Simiz%20Pitariu%20George&duration=196 Spotify Lyrics+ Stable.user.js:2019:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2023:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: false, lyricsType: undefined, lyricsCount: 0, source: undefined }
+Spotify Lyrics+ Stable.user.js:2030:17
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2049:19
+[KPoe Debug] ✓ Returning best result: Word type Spotify Lyrics+ Stable.user.js:2187:19
+[KPoe Debug] Converting Word type lyrics to line-synced format Spotify Lyrics+ Stable.user.js:2238:17
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2147:19
+[KPoe Debug] Attempt 1/5: Raw data with album Spotify Lyrics+ Stable.user.js:2148:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1995:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1996:13
+[KPoe Debug] Input info: 
+Object { artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", album: "", duration: 196, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1997:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Lipsa%20Ta&artist=Stefan%20Costea%2C%20Calinacho%2C%20Simiz%2C%20Pitariu%20George&duration=196 Spotify Lyrics+ Stable.user.js:2019:13
+[KPoe Debug] Response status: 200 Spotify Lyrics+ Stable.user.js:2023:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: true, lyricsType: "Word", lyricsCount: 46, source: "Musixmatch" }
+Spotify Lyrics+ Stable.user.js:2030:17
+[KPoe Debug] ✓ Lyrics found! Type: Word, Lines: 46, Source: Musixmatch Spotify Lyrics+ Stable.user.js:2042:17
+[KPoe Debug] ✓ Success on attempt 1! Type: Word Spotify Lyrics+ Stable.user.js:2161:21
+[KPoe Debug] Storing first result (Word type) Spotify Lyrics+ Stable.user.js:2168:23
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2147:19
+[KPoe Debug] Attempt 2/5: Raw data without album (sometimes album metadata is wrong) Spotify Lyrics+ Stable.user.js:2148:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1995:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1996:13
+[KPoe Debug] Input info: 
+Object { artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", album: "", duration: 196, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1997:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Lipsa%20Ta&artist=Stefan%20Costea%2C%20Calinacho%2C%20Simiz%2C%20Pitariu%20George&duration=196 Spotify Lyrics+ Stable.user.js:2019:13
+[KPoe Debug] Response status: 200 Spotify Lyrics+ Stable.user.js:2023:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: true, lyricsType: "Word", lyricsCount: 46, source: "Musixmatch" }
+Spotify Lyrics+ Stable.user.js:2030:17
+[KPoe Debug] ✓ Lyrics found! Type: Word, Lines: 46, Source: Musixmatch Spotify Lyrics+ Stable.user.js:2042:17
+[KPoe Debug] ✓ Success on attempt 2! Type: Word Spotify Lyrics+ Stable.user.js:2161:21
+[KPoe Debug] Keeping previous result (current: Word, new: Word) Spotify Lyrics+ Stable.user.js:2175:23
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2147:19
+[KPoe Debug] Attempt 3/5: Normalized artist, raw title Spotify Lyrics+ Stable.user.js:2148:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1995:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1996:13
+[KPoe Debug] Input info: 
+Object { artist: "Stefan Costea Calinacho Simiz Pitariu George", title: "Lipsa Ta", album: "", duration: 196, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1997:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Lipsa%20Ta&artist=Stefan%20Costea%20Calinacho%20Simiz%20Pitariu%20George&duration=196 Spotify Lyrics+ Stable.user.js:2019:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2023:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: false, lyricsType: undefined, lyricsCount: 0, source: undefined }
+Spotify Lyrics+ Stable.user.js:2030:17
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2049:19
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2147:19
+[KPoe Debug] Attempt 4/5: Raw artist, normalized title Spotify Lyrics+ Stable.user.js:2148:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1995:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1996:13
+[KPoe Debug] Input info: 
+Object { artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", album: "", duration: 196, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1997:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Lipsa%20Ta&artist=Stefan%20Costea%2C%20Calinacho%2C%20Simiz%2C%20Pitariu%20George&duration=196 Spotify Lyrics+ Stable.user.js:2019:13
+[KPoe Debug] Response status: 200 Spotify Lyrics+ Stable.user.js:2023:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: true, lyricsType: "Word", lyricsCount: 46, source: "Musixmatch" }
+Spotify Lyrics+ Stable.user.js:2030:17
+[KPoe Debug] ✓ Lyrics found! Type: Word, Lines: 46, Source: Musixmatch Spotify Lyrics+ Stable.user.js:2042:17
+[KPoe Debug] ✓ Success on attempt 4! Type: Word Spotify Lyrics+ Stable.user.js:2161:21
+[KPoe Debug] Keeping previous result (current: Word, new: Word) Spotify Lyrics+ Stable.user.js:2175:23
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2147:19
+[KPoe Debug] Attempt 5/5: Fully normalized data Spotify Lyrics+ Stable.user.js:2148:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1995:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1996:13
+[KPoe Debug] Input info: 
+Object { artist: "Stefan Costea Calinacho Simiz Pitariu George", title: "Lipsa Ta", album: "", duration: 196, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1997:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Lipsa%20Ta&artist=Stefan%20Costea%20Calinacho%20Simiz%20Pitariu%20George&duration=196 Spotify Lyrics+ Stable.user.js:2019:13
+Right Click: No Table Found content.js:19:17
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2023:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: false, lyricsType: undefined, lyricsCount: 0, source: undefined }
+Spotify Lyrics+ Stable.user.js:2030:17
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2049:19
+[KPoe Debug] ✓ Returning best result: Word type Spotify Lyrics+ Stable.user.js:2187:19
+[KPoe Debug] Converting Word type lyrics to line-synced format Spotify Lyrics+ Stable.user.js:2238:17
+[KPoe Debug] Processing Word type unsynced lyrics Spotify Lyrics+ Stable.user.js:2202:17
+
+// then i turned off vpn, refreshed tab, and kpoe gave lyrics normally, seems like it was even more successful in fetch:
+
+// console:
+
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2147:19
+[KPoe Debug] Attempt 1/5: Raw data with album Spotify Lyrics+ Stable.user.js:2148:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1995:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1996:13
+[KPoe Debug] Input info: 
+Object { artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", album: "", duration: 196, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1997:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Lipsa%20Ta&artist=Stefan%20Costea%2C%20Calinacho%2C%20Simiz%2C%20Pitariu%20George&duration=196 Spotify Lyrics+ Stable.user.js:2019:13
+[KPoe Debug] Response status: 200 Spotify Lyrics+ Stable.user.js:2023:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: true, lyricsType: "Word", lyricsCount: 46, source: "Musixmatch" }
+Spotify Lyrics+ Stable.user.js:2030:17
+[KPoe Debug] ✓ Lyrics found! Type: Word, Lines: 46, Source: Musixmatch Spotify Lyrics+ Stable.user.js:2042:17
+[KPoe Debug] ✓ Success on attempt 1! Type: Word Spotify Lyrics+ Stable.user.js:2161:21
+[KPoe Debug] Storing first result (Word type) Spotify Lyrics+ Stable.user.js:2168:23
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2147:19
+[KPoe Debug] Attempt 2/5: Raw data without album (sometimes album metadata is wrong) Spotify Lyrics+ Stable.user.js:2148:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1995:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1996:13
+[KPoe Debug] Input info: 
+Object { artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", album: "", duration: 196, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1997:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Lipsa%20Ta&artist=Stefan%20Costea%2C%20Calinacho%2C%20Simiz%2C%20Pitariu%20George&duration=196 Spotify Lyrics+ Stable.user.js:2019:13
+[KPoe Debug] Response status: 200 Spotify Lyrics+ Stable.user.js:2023:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: true, lyricsType: "Word", lyricsCount: 46, source: "Musixmatch" }
+Spotify Lyrics+ Stable.user.js:2030:17
+[KPoe Debug] ✓ Lyrics found! Type: Word, Lines: 46, Source: Musixmatch Spotify Lyrics+ Stable.user.js:2042:17
+[KPoe Debug] ✓ Success on attempt 2! Type: Word Spotify Lyrics+ Stable.user.js:2161:21
+[KPoe Debug] Keeping previous result (current: Word, new: Word) Spotify Lyrics+ Stable.user.js:2175:23
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2147:19
+[KPoe Debug] Attempt 3/5: Normalized artist, raw title Spotify Lyrics+ Stable.user.js:2148:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1995:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1996:13
+[KPoe Debug] Input info: 
+Object { artist: "Stefan Costea Calinacho Simiz Pitariu George", title: "Lipsa Ta", album: "", duration: 196, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1997:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Lipsa%20Ta&artist=Stefan%20Costea%20Calinacho%20Simiz%20Pitariu%20George&duration=196 Spotify Lyrics+ Stable.user.js:2019:13
+[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:2023:15
+[KPoe Debug] Failed to parse response body (status: 503): JSON.parse: unexpected character at line 1 column 1 of the JSON data. No lyrics data available. Spotify Lyrics+ Stable.user.js:2037:17
+[KPoe Debug] ✗ Request failed: 503 Spotify Lyrics+ Stable.user.js:2055:19
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2147:19
+[KPoe Debug] Attempt 4/5: Raw artist, normalized title Spotify Lyrics+ Stable.user.js:2148:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1995:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1996:13
+[KPoe Debug] Input info: 
+Object { artist: "Stefan Costea, Calinacho, Simiz, Pitariu George", title: "Lipsa Ta", album: "", duration: 196, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1997:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Lipsa%20Ta&artist=Stefan%20Costea%2C%20Calinacho%2C%20Simiz%2C%20Pitariu%20George&duration=196 Spotify Lyrics+ Stable.user.js:2019:13
+[KPoe Debug] Response status: 200 Spotify Lyrics+ Stable.user.js:2023:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: true, lyricsType: "Word", lyricsCount: 46, source: "Musixmatch" }
+Spotify Lyrics+ Stable.user.js:2030:17
+[KPoe Debug] ✓ Lyrics found! Type: Word, Lines: 46, Source: Musixmatch Spotify Lyrics+ Stable.user.js:2042:17
+[KPoe Debug] ✓ Success on attempt 4! Type: Word Spotify Lyrics+ Stable.user.js:2161:21
+[KPoe Debug] Keeping previous result (current: Word, new: Word) Spotify Lyrics+ Stable.user.js:2175:23
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2147:19
+[KPoe Debug] Attempt 5/5: Fully normalized data Spotify Lyrics+ Stable.user.js:2148:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1995:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1996:13
+[KPoe Debug] Input info: 
+Object { artist: "Stefan Costea Calinacho Simiz Pitariu George", title: "Lipsa Ta", album: "", duration: 196, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:1997:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Lipsa%20Ta&artist=Stefan%20Costea%20Calinacho%20Simiz%20Pitariu%20George&duration=196 Spotify Lyrics+ Stable.user.js:2019:13
+[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:2023:15
+[KPoe Debug] Failed to parse response body (status: 503): JSON.parse: unexpected character at line 1 column 1 of the JSON data. No lyrics data available. Spotify Lyrics+ Stable.user.js:2037:17
+[KPoe Debug] ✗ Request failed: 503 Spotify Lyrics+ Stable.user.js:2055:19
+[KPoe Debug] ✓ Returning best result: Word type Spotify Lyrics+ Stable.user.js:2187:19
+[KPoe Debug] Converting Word type lyrics to line-synced format Spotify Lyrics+ Stable.user.js:2238:17
+[KPoe Debug] Processing Word type unsynced lyrics Spotify Lyrics+ Stable.user.js:2202:17
