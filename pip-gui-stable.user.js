@@ -1753,7 +1753,7 @@ const PLAY_WORDS = [
         }
         
         console.log("[KPoe Debug] ✗ All 5 attempts failed");
-        return { error: "Track not found in KPoe database after 5 attempts or no lyrics available" };
+        return { error: "Track not found in KPoe database or no lyrics available" };
       } catch (e) {
         return { error: e.message || "KPoe request failed - network error or service unavailable" };
       }
@@ -5985,3 +5985,4 @@ const Providers = {
 
   init();
 })();
+
