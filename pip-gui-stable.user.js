@@ -1459,12 +1459,12 @@ const PLAY_WORDS = [
       }
     },
     getUnsynced(body) {
-      if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+      if (body?.instrumental) return null; // Skip to next provider for instrumental tracks
       if (!body?.plainLyrics) return null;
       return Utils.parseLocalLyrics(body.plainLyrics).unsynced;
     },
     getSynced(body) {
-      if (body?.instrumental) return [{ text: "♪ Instrumental ♪" }];
+      if (body?.instrumental) return null; // Skip to next provider for instrumental tracks
       if (!body?.syncedLyrics) return null;
       return Utils.parseLocalLyrics(body.syncedLyrics).synced;
     }
@@ -1783,7 +1783,7 @@ async function fetchMusixmatchLyrics(songInfo) {
   if (!track) return { error: "Track not found" };
 
   if (track.instrumental) {
-    return { synced: [{ text: "♪ Instrumental ♪", time: 0 }] };
+    return { error: "Track is instrumental (no lyrics available)" };
   }
 
   // Step 2: Fetch synced lyrics via subtitles.get
