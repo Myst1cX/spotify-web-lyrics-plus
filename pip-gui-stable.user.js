@@ -797,7 +797,7 @@
   }
 
   // Helper function to create a transliteration element with proper styling
-  function createTransliterationElement(transliterationText, isUnsynced = false) {
+  function createTransliterationElement(transliterationText, applyBlur = false) {
     const translitDiv = document.createElement('div');
     translitDiv.textContent = transliterationText;
     translitDiv.style.color = '#9a9a9a';  // Slightly lighter gray than translation
@@ -805,7 +805,7 @@
     translitDiv.style.marginTop = '2px';
     translitDiv.style.marginBottom = '8px';
     translitDiv.style.transition = "color 0.15s, filter 0.13s, opacity 0.13s";
-    if (isUnsynced) {
+    if (applyBlur) {
       translitDiv.style.filter = "blur(0.7px)";
       translitDiv.style.opacity = "0.8";
     }
