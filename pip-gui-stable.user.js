@@ -893,7 +893,7 @@
         
         // Word-level highlighting - independent of line active state
         // Highlight words based purely on their individual timestamps
-        if (hasWordTiming && lyrics[idx] && lyrics[idx].syllabus && lyrics[idx].syllabus.length > 0) {
+        if (hasWordTiming && lyrics[idx].syllabus && lyrics[idx].syllabus.length > 0) {
           const spans = p.querySelectorAll('span[data-time]');
           
           // Highlight each word based on its own timestamp
