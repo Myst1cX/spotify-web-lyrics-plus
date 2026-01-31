@@ -1608,7 +1608,7 @@ const PLAY_WORDS = [
           source: data?.metadata?.source
         });
       } catch (parseError) {
-        console.log("[KPoe Debug] Failed to parse response body:", parseError.message);
+        console.log(`[KPoe Debug] Failed to parse response body (status: ${response.status}): ${parseError.message}. No lyrics data available.`);
       }
       
       // If we got valid lyrics data, return it regardless of status code
