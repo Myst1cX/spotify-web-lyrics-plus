@@ -1601,51 +1601,79 @@ const PLAY_WORDS = [
     const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
     console.log("[KPoe Debug] Request URL:", url);
     
-    try {
-      const response = await fetch(url, fetchOptions);
-      console.log(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
+    // Retry logic for 503 errors with parse failures
+    const maxRetries = 2; // Total attempts = 1 initial + 2 retries = 3
+    const retryDelay = 1000; // 1 second delay between retries
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (attempt > 0) {
+        console.log(`[KPoe Debug] Retry attempt ${attempt}/${maxRetries} after ${retryDelay}ms delay...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
       
-      // Try to parse response body even on error status codes
-      // Some APIs may return error status but still include data
-      let data = null;
       try {
-        data = await response.json();
-        console.log("[KPoe Debug] Response data:", {
-          hasLyrics: !!(data && data.lyrics),
-          lyricsType: data?.type,
-          lyricsCount: data?.lyrics?.length || 0,
-          source: data?.metadata?.source
-        });
-      } catch (parseError) {
-        console.log(`[KPoe Debug] Failed to parse response body (status: ${response.status}): ${parseError.message}. No lyrics data available.`);
-      }
-      
-      // If we got valid lyrics data, return it regardless of status code
-      if (data && data.lyrics && data.lyrics.length > 0) {
-        console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
-        return data;
-      }
-      
-      // No valid lyrics data, log error based on status code
-      if (!response.ok) {
-        if (response.status === 404) {
-          console.log("[KPoe Debug] ✗ Track not found in KPoe database");
-        } else if (response.status === 429) {
-          console.log("[KPoe Debug] ✗ Rate limit exceeded - too many requests");
-        } else if (response.status === 500) {
-          console.log("[KPoe Debug] ✗ Server error - KPoe service may be down");
-        } else {
-          console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+        const response = await fetch(url, fetchOptions);
+        console.log(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
+        
+        // Try to parse response body even on error status codes
+        // Some APIs may return error status but still include data
+        let data = null;
+        let parseError = null;
+        try {
+          data = await response.json();
+          console.log("[KPoe Debug] Response data:", {
+            hasLyrics: !!(data && data.lyrics),
+            lyricsType: data?.type,
+            lyricsCount: data?.lyrics?.length || 0,
+            source: data?.metadata?.source
+          });
+        } catch (e) {
+          parseError = e;
+          console.log(`[KPoe Debug] Failed to parse response body (status: ${response.status}): ${e.message}. No lyrics data available.`);
         }
-      } else {
-        console.log("[KPoe Debug] ✗ No lyrics in response");
+        
+        // If we got valid lyrics data, return it regardless of status code
+        if (data && data.lyrics && data.lyrics.length > 0) {
+          console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
+          return data;
+        }
+        
+        // Check if we should retry: 503 status + parse error + not last attempt
+        if (response.status === 503 && parseError && attempt < maxRetries) {
+          console.log(`[KPoe Debug] ⚠ 503 error with parse failure - will retry (${maxRetries - attempt} attempts remaining)`);
+          continue; // Try again
+        }
+        
+        // No valid lyrics data and no retry - log error based on status code
+        if (!response.ok) {
+          if (response.status === 404) {
+            console.log("[KPoe Debug] ✗ Track not found in KPoe database");
+          } else if (response.status === 429) {
+            console.log("[KPoe Debug] ✗ Rate limit exceeded - too many requests");
+          } else if (response.status === 500) {
+            console.log("[KPoe Debug] ✗ Server error - KPoe service may be down");
+          } else if (response.status === 503) {
+            console.log("[KPoe Debug] ✗ Service temporarily unavailable (503)");
+          } else {
+            console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+          }
+        } else {
+          console.log("[KPoe Debug] ✗ No lyrics in response");
+        }
+        
+        return null;
+      } catch (e) {
+        // Network error - only retry on last attempt if it's not the last one
+        if (attempt < maxRetries) {
+          console.log(`[KPoe Debug] ⚠ Fetch error: ${e.message} - will retry (${maxRetries - attempt} attempts remaining)`);
+          continue;
+        }
+        console.error("[KPoe Debug] ✗ Fetch error:", e.message || e);
+        return null;
       }
-      
-      return null;
-    } catch (e) {
-      console.error("[KPoe Debug] ✗ Fetch error:", e.message || e);
-      return null;
     }
+    
+    return null;
   }
   function parseKPoeFormat(data) {
     if (!Array.isArray(data.lyrics)) return null;
