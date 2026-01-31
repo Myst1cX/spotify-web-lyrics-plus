@@ -1664,16 +1664,42 @@ const PLAY_WORDS = [
   const ProviderKPoe = {
     async findLyrics(info) {
       try {
-        // Strategy: Try multiple combinations of raw/normalized data and source orders
-        // 5 attempts covering the majority of cases
+        // Strategy: Try multiple combinations to maximize coverage
+        // No source restriction - let API search all sources (Apple, Spotify, etc.)
+        // 5 attempts with different data normalization strategies
         const duration = Math.floor(info.duration / 1000);
         
         const attempts = [
-          { useNormalized: false, sourceOrder: '', description: "Raw data, no source preference" },
-          { useNormalized: false, sourceOrder: 'Apple', description: "Raw data, Apple source" },
-          { useNormalized: false, sourceOrder: 'Spotify', description: "Raw data, Spotify source" },
-          { useNormalized: true, sourceOrder: '', description: "Normalized data, no source preference" },
-          { useNormalized: true, sourceOrder: 'Apple', description: "Normalized data, Apple source" }
+          { 
+            normalizeArtist: false, 
+            normalizeTitle: false, 
+            includeAlbum: true, 
+            description: "Raw data with album" 
+          },
+          { 
+            normalizeArtist: false, 
+            normalizeTitle: false, 
+            includeAlbum: false, 
+            description: "Raw data without album (sometimes album metadata is wrong)" 
+          },
+          { 
+            normalizeArtist: true, 
+            normalizeTitle: false, 
+            includeAlbum: false, 
+            description: "Normalized artist, raw title" 
+          },
+          { 
+            normalizeArtist: false, 
+            normalizeTitle: true, 
+            includeAlbum: false, 
+            description: "Raw artist, normalized title" 
+          },
+          { 
+            normalizeArtist: true, 
+            normalizeTitle: true, 
+            includeAlbum: false, 
+            description: "Fully normalized data" 
+          }
         ];
         
         for (let i = 0; i < attempts.length; i++) {
@@ -1682,13 +1708,14 @@ const PLAY_WORDS = [
           console.log(`[KPoe Debug] Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
           
           let songInfo = {
-            artist: attempt.useNormalized ? Utils.normalize(info.artist) : (info.artist || ""),
-            title: attempt.useNormalized ? Utils.normalize(info.title) : (info.title || ""),
-            album: attempt.useNormalized ? Utils.normalize(info.album) : (info.album || ""),
+            artist: attempt.normalizeArtist ? Utils.normalize(info.artist) : (info.artist || ""),
+            title: attempt.normalizeTitle ? Utils.normalize(info.title) : (info.title || ""),
+            album: attempt.includeAlbum ? (info.album || "") : "",
             duration
           };
           
-          let result = await fetchKPoeLyrics(songInfo, attempt.sourceOrder);
+          // No sourceOrder parameter - let API search all sources
+          let result = await fetchKPoeLyrics(songInfo);
           
           if (result && result.lyrics && result.lyrics.length > 0) {
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}!`);
