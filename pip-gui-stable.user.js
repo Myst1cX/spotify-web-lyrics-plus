@@ -101,6 +101,8 @@
   let isTranslating = false;
   let isShowingSyncedLyrics = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
+  let currentKPoeData = null; // Store original KPoe response for type switching
+  let kpoeLyricTypePreference = 'auto'; // 'auto', 'line', or 'word'
 
   // ------------------------
   // Constants & Configuration
@@ -3642,6 +3644,121 @@ const Providers = {
     // Store reference on popup for access in updateLyricsContent
     popup._chineseConvBtn = chineseConvBtn;
 
+    // --- KPoe Lyric Type Switcher Button ---
+    const lyricTypeBtnWrapper = document.createElement("div");
+    lyricTypeBtnWrapper.style.position = "relative"; // For dropdown positioning
+
+    const lyricTypeBtn = document.createElement("button");
+    lyricTypeBtn.title = "Switch lyric type";
+    Object.assign(lyricTypeBtn.style, {
+      marginLeft: "0px",
+      marginRight: "8px",
+      background: "none",
+      color: "#fff",
+      border: "none",
+      borderRadius: "5px",
+      padding: "0 8px",
+      cursor: "pointer",
+      height: "28px",
+      display: "none",
+      alignItems: "center",
+      justifyContent: "center",
+      transition: "none",
+      position: "relative",
+      fontSize: "13px",
+      fontWeight: "500"
+    });
+    lyricTypeBtn.onmouseenter = () => { lyricTypeBtn.style.background = "#222"; };
+    lyricTypeBtn.onmouseleave = () => { lyricTypeBtn.style.background = "none"; };
+    lyricTypeBtn.textContent = "Type";
+
+    // Dropdown menu for lyric type
+    const lyricTypeDropdown = document.createElement("div");
+    lyricTypeBtn._dropdown = lyricTypeDropdown;
+    Object.assign(lyricTypeDropdown.style, {
+      position: "absolute",
+      top: "110%",
+      left: "0",
+      minWidth: "90px",
+      backgroundColor: "#121212",
+      border: "1px solid #444",
+      borderRadius: "8px",
+      boxShadow: "0 2px 12px #0009",
+      zIndex: 99999,
+      display: "none",
+      flexDirection: "column",
+      padding: "4px 4px"
+    });
+    lyricTypeDropdown.tabIndex = -1;
+
+    const lineTypeOption = document.createElement("button");
+    lineTypeOption.textContent = "Line-by-line";
+    Object.assign(lineTypeOption.style, {
+      background: "#121212",
+      color: "#fff",
+      border: "none",
+      padding: "8px 10px",
+      cursor: "pointer",
+      textAlign: "left",
+      fontSize: "14px",
+      borderRadius: "5px"
+    });
+    lineTypeOption.onmouseenter = () => { lineTypeOption.style.background = "#333"; lineTypeOption.style.color = "#fff"; };
+    lineTypeOption.onmouseleave = () => { lineTypeOption.style.background = "#121212"; lineTypeOption.style.color = "#fff"; };
+
+    const wordTypeOption = document.createElement("button");
+    wordTypeOption.textContent = "Word-by-word";
+    Object.assign(wordTypeOption.style, {
+      background: "#121212",
+      color: "#fff",
+      border: "none",
+      padding: "8px 10px",
+      cursor: "pointer",
+      textAlign: "left",
+      fontSize: "14px",
+      borderRadius: "5px"
+    });
+    wordTypeOption.onmouseenter = () => { wordTypeOption.style.background = "#333"; wordTypeOption.style.color = "#fff"; };
+    wordTypeOption.onmouseleave = () => { wordTypeOption.style.background = "#121212"; wordTypeOption.style.color = "#fff"; };
+
+    lyricTypeDropdown.appendChild(lineTypeOption);
+    lyricTypeDropdown.appendChild(wordTypeOption);
+
+    lyricTypeBtnWrapper.appendChild(lyricTypeBtn);
+    lyricTypeBtnWrapper.appendChild(lyricTypeDropdown);
+
+    // Logic for showing/hiding the dropdown
+    lyricTypeBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      lyricTypeDropdown.style.display = "flex";
+      setTimeout(() => {
+        const hide = (ev) => {
+          if (!lyricTypeDropdown.contains(ev.target) && ev.target !== lyricTypeBtn) {
+            lyricTypeDropdown.style.display = "none";
+            document.removeEventListener("mousedown", hide);
+          }
+        };
+        document.addEventListener("mousedown", hide);
+      }, 1);
+    };
+
+    // Set up dropdown options
+    lineTypeOption.onclick = (e) => {
+      lyricTypeDropdown.style.display = "none";
+      kpoeLyricTypePreference = 'line';
+      rerenderLyrics(popup);
+    };
+    wordTypeOption.onclick = (e) => {
+      lyricTypeDropdown.style.display = "none";
+      kpoeLyricTypePreference = 'word';
+      rerenderLyrics(popup);
+    };
+
+    // Store reference on popup for access in updateLyricsContent
+    popup._lyricTypeBtn = lyricTypeBtn;
+    popup._lyricTypeDropdown = lyricTypeDropdown;
+
     // --- Download Synced Lyrics Button ---
     const downloadBtnWrapper = document.createElement("div");
     downloadBtnWrapper.style.position = "relative"; // For dropdown positioning
@@ -3827,6 +3944,7 @@ const Providers = {
     const buttonGroup = document.createElement("div");
     buttonGroup.style.display = "flex";
     buttonGroup.style.alignItems = "center";
+    buttonGroup.appendChild(lyricTypeBtnWrapper);
     buttonGroup.appendChild(downloadBtnWrapper);
     buttonGroup.appendChild(fontSizeSelect);
     buttonGroup.appendChild(btnReset);
@@ -5608,6 +5726,7 @@ const Providers = {
     currentLyricsContainer = lyricsContainer;
     currentSyncedLyrics = null;
     currentUnsyncedLyrics = null;
+    currentKPoeData = null; // Reset KPoe data
     // Reset translation state when loading new lyrics
     translationPresent = false;
     lastTranslatedLang = null;
@@ -5616,6 +5735,8 @@ const Providers = {
     const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
     const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
     const chineseConvBtn = popup._chineseConvBtn;
+    const lyricTypeBtn = popup._lyricTypeBtn;
+    const lyricTypeDropdown = popup._lyricTypeDropdown;
 
     const provider = Providers.getCurrent();
     const result = await provider.findLyrics(info);
@@ -5625,7 +5746,13 @@ const Providers = {
       if (downloadBtn) downloadBtn.style.display = "none";
       if (downloadDropdown) downloadDropdown.style.display = "none";
       if (chineseConvBtn) chineseConvBtn.style.display = "none";
+      if (lyricTypeBtn) lyricTypeBtn.style.display = "none";
       return;
+    }
+
+    // Store original KPoe data for type switching
+    if (Providers.current === "KPoe" && result.type) {
+      currentKPoeData = result;
     }
 
     let synced = provider.getSynced(result);
@@ -5677,6 +5804,16 @@ const Providers = {
     currentSyncedLyrics = (synced && synced.length > 0) ? synced : null;
     currentUnsyncedLyrics = (unsynced && unsynced.length > 0) ? unsynced : null;
 
+    // Show/hide lyric type switcher for KPoe Word type
+    if (lyricTypeBtn) {
+      const isKPoeWordType = Providers.current === "KPoe" && 
+                             currentKPoeData && 
+                             currentKPoeData.type === "Word" &&
+                             currentSyncedLyrics &&
+                             currentSyncedLyrics.some(line => line.syllabus && line.syllabus.length > 0);
+      lyricTypeBtn.style.display = isKPoeWordType ? "inline-flex" : "none";
+    }
+
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
       currentSyncedLyrics.forEach((line) => {
@@ -5684,8 +5821,14 @@ const Providers = {
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         
+        // Determine if we should render word-by-word
+        const hasWordData = line.syllabus && line.syllabus.length > 0 && line.isWordType;
+        const userWantsWordMode = kpoeLyricTypePreference === 'word';
+        const userWantsLineMode = kpoeLyricTypePreference === 'line';
+        const shouldRenderWords = hasWordData && !userWantsLineMode && (userWantsWordMode || kpoeLyricTypePreference === 'auto');
+        
         // Check if this line has word-level timing data (KPoe Word type)
-        if (line.syllabus && line.syllabus.length > 0 && line.isWordType) {
+        if (shouldRenderWords) {
           // Render as word spans for word-by-word highlighting
           line.syllabus.forEach((word, idx) => {
             const span = document.createElement("span");
