@@ -1640,28 +1640,7 @@ const PLAY_WORDS = [
       const response = await fetch(url, fetchOptions);
       console.log(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
       
-      // Try to parse response body even on error status codes
-      // Some APIs may return error status but still include data
-      let data = null;
-      try {
-        data = await response.json();
-        console.log("[KPoe Debug] Response data:", {
-          hasLyrics: !!(data && data.lyrics),
-          lyricsType: data?.type,
-          lyricsCount: data?.lyrics?.length || 0,
-          source: data?.metadata?.source
-        });
-      } catch (parseError) {
-        console.log(`[KPoe Debug] Failed to parse response body (status: ${response.status}): ${parseError.message}. No lyrics data available.`);
-      }
-      
-      // If we got valid lyrics data, return it regardless of status code
-      if (data && data.lyrics && data.lyrics.length > 0) {
-        console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
-        return data;
-      }
-      
-      // No valid lyrics data, log error based on status code
+      // Check if response is ok before parsing
       if (!response.ok) {
         if (response.status === 404) {
           console.log("[KPoe Debug] ✗ Track not found in KPoe database");
@@ -1672,10 +1651,24 @@ const PLAY_WORDS = [
         } else {
           console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
         }
-      } else {
-        console.log("[KPoe Debug] ✗ No lyrics in response");
+        return null;
       }
       
+      // Only parse response on successful status
+      const data = await response.json();
+      console.log("[KPoe Debug] Response data:", {
+        hasLyrics: !!(data && data.lyrics),
+        lyricsType: data?.type,
+        lyricsCount: data?.lyrics?.length || 0,
+        source: data?.metadata?.source
+      });
+      
+      if (data && data.lyrics && data.lyrics.length > 0) {
+        console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
+        return data;
+      }
+      
+      console.log("[KPoe Debug] ✗ No lyrics in response");
       return null;
     } catch (e) {
       console.error("[KPoe Debug] ✗ Fetch error:", e.message || e);
