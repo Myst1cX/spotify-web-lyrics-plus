@@ -1722,21 +1722,22 @@ const PLAY_WORDS = [
           let result = await fetchKPoeLyrics(songInfo);
           
           if (result && result.lyrics && result.lyrics.length > 0) {
-            console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
+            const resultType = result.type || "Unknown";
+            console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${resultType}`);
             
             // Keep track of the best result (prefer Line over Word)
             if (!bestResult) {
               // First successful result
               bestResult = result;
-              bestResultType = result.type;
-              console.log(`[KPoe Debug] Storing first result (${result.type} type)`);
-            } else if (bestResultType === "Word" && result.type === "Line") {
+              bestResultType = resultType;
+              console.log(`[KPoe Debug] Storing first result (${resultType} type)`);
+            } else if (bestResultType === "Word" && resultType === "Line") {
               // Found Line type when we only had Word type - this is better!
               bestResult = result;
-              bestResultType = result.type;
+              bestResultType = resultType;
               console.log(`[KPoe Debug] ✓ Upgraded from Word to Line type lyrics!`);
             } else {
-              console.log(`[KPoe Debug] Keeping previous result (current: ${bestResultType}, new: ${result.type})`);
+              console.log(`[KPoe Debug] Keeping previous result (current: ${bestResultType}, new: ${resultType})`);
             }
             
             // If we found Line type, we can stop early since that's the best
