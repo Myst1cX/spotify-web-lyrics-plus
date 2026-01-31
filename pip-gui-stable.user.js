@@ -125,7 +125,7 @@
   // Debug Logging Infrastructure
   // ------------------------
   const DEBUG = {
-    enabled: true, // Set to false to disable all debug logging
+    enabled: false, // Set to false to disable all debug logging
     
     // Log levels with prefixes
     error: (context, ...args) => {
