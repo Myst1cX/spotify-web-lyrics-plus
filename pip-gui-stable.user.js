@@ -1662,14 +1662,32 @@ const PLAY_WORDS = [
   const ProviderKPoe = {
     async findLyrics(info) {
       try {
-        // Don't use Utils.normalize() - it strips non-ASCII characters (Chinese, Japanese, Korean, etc.)
-        // Pass raw data directly to API like LRCLIB does
-        const artist = info.artist || "";
-        const title = info.title || "";
-        const album = info.album || "";
+        // Strategy: Try raw data first (preserves international characters),
+        // then fallback to normalized data (strips to English) if not found
         const duration = Math.floor(info.duration / 1000);
-        const songInfo = { artist, title, album, duration };
-        const result = await fetchKPoeLyrics(songInfo);
+        
+        // First attempt: Use raw data (works for pure international songs and English songs)
+        let songInfo = {
+          artist: info.artist || "",
+          title: info.title || "",
+          album: info.album || "",
+          duration
+        };
+        let result = await fetchKPoeLyrics(songInfo);
+        
+        // Fallback: If not found, try with normalized data (works for mixed international/English songs)
+        if (!result) {
+          console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          console.log("[KPoe Debug] First attempt failed, trying with normalized data (fallback)");
+          songInfo = {
+            artist: Utils.normalize(info.artist),
+            title: Utils.normalize(info.title),
+            album: Utils.normalize(info.album),
+            duration
+          };
+          result = await fetchKPoeLyrics(songInfo);
+        }
+        
         if (!result) return { error: "Track not found in KPoe database or no lyrics available" };
         return parseKPoeFormat(result);
       } catch (e) {
