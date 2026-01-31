@@ -1602,12 +1602,12 @@ const PLAY_WORDS = [
     console.log("[KPoe Debug] Request URL:", url);
     
     // Retry logic for 503 errors with parse failures
-    const maxRetries = 2; // Total attempts = 1 initial + 2 retries = 3
+    const retryAttempts = 2; // Number of retries after initial attempt (total = 3 attempts)
     const retryDelay = 1000; // 1 second delay between retries
     
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= retryAttempts; attempt++) {
       if (attempt > 0) {
-        console.log(`[KPoe Debug] Retry attempt ${attempt}/${maxRetries} after ${retryDelay}ms delay...`);
+        console.log(`[KPoe Debug] Retry attempt ${attempt}/${retryAttempts} after ${retryDelay}ms delay...`);
         await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
       
@@ -1639,8 +1639,8 @@ const PLAY_WORDS = [
         }
         
         // Check if we should retry: 503 status + parse error + not last attempt
-        if (response.status === 503 && parseError && attempt < maxRetries) {
-          console.log(`[KPoe Debug] ⚠ 503 error with parse failure - will retry (${maxRetries - attempt} attempts remaining)`);
+        if (response.status === 503 && parseError && attempt < retryAttempts) {
+          console.log(`[KPoe Debug] ⚠ 503 error with parse failure - will retry (${retryAttempts - attempt} attempts remaining)`);
           continue; // Try again
         }
         
@@ -1663,9 +1663,9 @@ const PLAY_WORDS = [
         
         return null;
       } catch (e) {
-        // Network error - only retry on last attempt if it's not the last one
-        if (attempt < maxRetries) {
-          console.log(`[KPoe Debug] ⚠ Fetch error: ${e.message} - will retry (${maxRetries - attempt} attempts remaining)`);
+        // Network error - only retry if it's not the last attempt
+        if (attempt < retryAttempts) {
+          console.log(`[KPoe Debug] ⚠ Fetch error: ${e.message} - will retry (${retryAttempts - attempt} attempts remaining)`);
           continue;
         }
         console.error("[KPoe Debug] ✗ Fetch error:", e.message || e);
