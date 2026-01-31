@@ -1,62 +1,4 @@
-// console: attempt 5 actually found synced lyrics but didnt register as such. 
 
-[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2098:19
-[KPoe Debug] Attempt 1/5: Raw data with album Spotify Lyrics+ Stable.user.js:2099:19
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1956:13
-[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1957:13
-[KPoe Debug] Input info: 
-Object { artist: "攬佬SKAI ISYOURGOD", title: "八方來財(Stacks from All Sides)", album: "", duration: 173, sourceOrder: "none", forceReload: false }
-Spotify Lyrics+ Stable.user.js:1958:13
-[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=%E5%85%AB%E6%96%B9%E4%BE%86%E8%B2%A1(Stacks%20from%20All%20Sides)&artist=%E6%94%AC%E4%BD%ACSKAI%20ISYOURGOD&duration=173 Spotify Lyrics+ Stable.user.js:1980:13
-[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:1984:15
-[KPoe Debug] ✗ Request failed: 503 Spotify Lyrics+ Stable.user.js:1994:19
-[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2098:19
-[KPoe Debug] Attempt 2/5: Raw data without album (sometimes album metadata is wrong) Spotify Lyrics+ Stable.user.js:2099:19
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1956:13
-[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1957:13
-[KPoe Debug] Input info: 
-Object { artist: "攬佬SKAI ISYOURGOD", title: "八方來財(Stacks from All Sides)", album: "", duration: 173, sourceOrder: "none", forceReload: false }
-Spotify Lyrics+ Stable.user.js:1958:13
-[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=%E5%85%AB%E6%96%B9%E4%BE%86%E8%B2%A1(Stacks%20from%20All%20Sides)&artist=%E6%94%AC%E4%BD%ACSKAI%20ISYOURGOD&duration=173 Spotify Lyrics+ Stable.user.js:1980:13
-[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:1984:15
-[KPoe Debug] ✗ Request failed: 503 Spotify Lyrics+ Stable.user.js:1994:19
-[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2098:19
-[KPoe Debug] Attempt 3/5: Normalized artist, raw title Spotify Lyrics+ Stable.user.js:2099:19
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1956:13
-[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1957:13
-[KPoe Debug] Input info: 
-Object { artist: "SKAI ISYOURGOD", title: "八方來財(Stacks from All Sides)", album: "", duration: 173, sourceOrder: "none", forceReload: false }
-Spotify Lyrics+ Stable.user.js:1958:13
-[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=%E5%85%AB%E6%96%B9%E4%BE%86%E8%B2%A1(Stacks%20from%20All%20Sides)&artist=SKAI%20ISYOURGOD&duration=173 Spotify Lyrics+ Stable.user.js:1980:13
-[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:1984:15
-[KPoe Debug] ✗ Request failed: 503 Spotify Lyrics+ Stable.user.js:1994:19
-[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2098:19
-[KPoe Debug] Attempt 4/5: Raw artist, normalized title Spotify Lyrics+ Stable.user.js:2099:19
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1956:13
-[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1957:13
-[KPoe Debug] Input info: 
-Object { artist: "攬佬SKAI ISYOURGOD", title: "Stacks from All Sides", album: "", duration: 173, sourceOrder: "none", forceReload: false }
-Spotify Lyrics+ Stable.user.js:1958:13
-[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Stacks%20from%20All%20Sides&artist=%E6%94%AC%E4%BD%ACSKAI%20ISYOURGOD&duration=173 Spotify Lyrics+ Stable.user.js:1980:13
-[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:1984:15
-[KPoe Debug] ✗ Request failed: 503 Spotify Lyrics+ Stable.user.js:1994:19
-[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2098:19
-[KPoe Debug] Attempt 5/5: Fully normalized data Spotify Lyrics+ Stable.user.js:2099:19
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1956:13
-[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1957:13
-[KPoe Debug] Input info: 
-Object { artist: "SKAI ISYOURGOD", title: "Stacks from All Sides", album: "", duration: 173, sourceOrder: "none", forceReload: false }
-Spotify Lyrics+ Stable.user.js:1958:13
-[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Stacks%20from%20All%20Sides&artist=SKAI%20ISYOURGOD&duration=173 Spotify Lyrics+ Stable.user.js:1980:13
-[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:1984:15
-[KPoe Debug] ✗ Request failed: 503 Spotify Lyrics+ Stable.user.js:1994:19
-[KPoe Debug] ✗ All 5 attempts failed Spotify Lyrics+ Stable.user.js:2142:17
-
-//if we open api link, we see lyrics were indeed found. maybe our userscript didnt manage to scrape it? content below:
-
-JSON Pretty Print
-
- 
 {
   "KpoeTools": "1.7-ConvertTTMLtoJSON-DOMParser",
   "type": "Word",
@@ -3018,5 +2960,3 @@ JSON Pretty Print
     "lastProcessed": 1769883172122
   }
 }
- 
-
