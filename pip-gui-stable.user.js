@@ -1696,16 +1696,48 @@ const PLAY_WORDS = [
     },
     getUnsynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({
-        text: line.text
-      }));
+      
+      // Handle both Line and Word type lyrics
+      const isWordType = body.type === "Word";
+      
+      return body.data.map(line => {
+        let text = line.text;
+        
+        // For Word type, line.text might be empty - reconstruct from syllabus
+        if ((!text || text.trim() === '') && line.syllabus && Array.isArray(line.syllabus)) {
+          text = line.syllabus.map(s => s.text || '').join('');
+        }
+        
+        return {
+          text: text || ''
+        };
+      }).filter(line => line.text.trim() !== ''); // Filter out any empty lines
     },
     getSynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
-      return body.data.map(line => ({
-        time: Math.round(line.startTime * 1000),
-        text: line.text
-      }));
+      
+      // Handle both Line-synced and Word-synced lyrics
+      const isWordType = body.type === "Word";
+      if (isWordType) {
+        console.log("[KPoe Debug] Converting Word type lyrics to line-synced format");
+      }
+      
+      return body.data.map(line => {
+        let text = line.text;
+        
+        // For Word type, line.text might be empty - reconstruct from syllabus
+        if ((!text || text.trim() === '') && line.syllabus && Array.isArray(line.syllabus)) {
+          text = line.syllabus.map(s => s.text || '').join('');
+          if (isWordType) {
+            console.log(`[KPoe Debug] Reconstructed line from ${line.syllabus.length} words: "${text}"`);
+          }
+        }
+        
+        return {
+          time: Math.round(line.startTime * 1000),
+          text: text || ''
+        };
+      }).filter(line => line.text.trim() !== ''); // Filter out any empty lines
     },
   };
 
