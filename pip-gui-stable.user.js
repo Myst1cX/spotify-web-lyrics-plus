@@ -804,6 +804,7 @@
     }
     
     // Check if we have word-level timing data (KPoe Word type)
+    // This is computed once when lyrics load, not every interval tick
     const hasWordTiming = lyrics.some(line => line.syllabus && line.syllabus.length > 0 && line.isWordType);
     
     highlightTimer = setInterval(() => {
