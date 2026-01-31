@@ -92,7 +92,31 @@
   let isShowingSyncedLyrics = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
 
-  // --- Pre-initialized OpenCC converters (created once at startup) ---
+  // ------------------------
+  // Constants & Configuration
+  // ------------------------
+  const TIMING = {
+    HIGHLIGHT_INTERVAL_MS: 50,        // How often to update synced lyrics highlighting
+    POLLING_INTERVAL_MS: 400,         // How often to check for track changes
+    OPENCC_RETRY_DELAY_MS: 100,       // Initial delay for OpenCC initialization retries
+    BUTTON_ADD_RETRY_MS: 1000,        // Delay between button injection attempts
+    DRAG_DEBOUNCE_MS: 1500,           // Debounce time after dragging before auto-resize
+    PROGRESS_WATCH_DEBOUNCE_MS: 300,  // Debounce for progress bar watcher
+  };
+
+  const LIMITS = {
+    OPENCC_MAX_RETRIES: 3,            // Max retries for OpenCC initialization
+    BUTTON_ADD_MAX_RETRIES: 10,       // Max retries for button injection
+  };
+
+  // Global flags for popup state management (shared with resize observer in setupPopupAutoResize)
+  window.lyricsPlusPopupIgnoreProportion = false;
+  window.lastProportion = { w: null, h: null };
+  window.lyricsPlusPopupIsDragging = false;
+
+  // ------------------------
+  // Pre-initialized OpenCC converters (created once at startup)
+  // ------------------------
   // Using the full.js bundle, we initialize converters at startup to avoid
   // the issue of individual t2cn.js and cn2t.js files overwriting each other
   let openccT2CN = null; // Traditional to Simplified Chinese converter
@@ -102,7 +126,7 @@
   // Initialize OpenCC converters with retry mechanism
   // @require scripts should load before the userscript executes, but we add
   // a retry mechanism as a safety measure in case of any timing issues
-  function initOpenCCConverters(retries = 3, delay = 100) {
+  function initOpenCCConverters(retries = LIMITS.OPENCC_MAX_RETRIES, delay = TIMING.OPENCC_RETRY_DELAY_MS) {
     if (openccInitialized) return; // Already initialized, don't retry
     try {
       if (typeof OpenCC !== 'undefined' && OpenCC.Converter) {
@@ -159,128 +183,9 @@
   }
 
 
-  /*
-  --- Old NowPlayingView logic: Forcibly hide NowPlayingView and its button in the playback controls menu
-  --- To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
-      This CSS method hides the NowPlayingView from the user interface in a way that allows the rest of the Spotify home UI to seamlessly fill the space it would otherwise
-      occupy, without leaving a black area present. Crucially, it keeps the NowPlayingView and its DOM structure present and accessible to JavaScript (so scripts can still read
-      track info), but makes it invisible and non-interactive to the user.
-  --- The `.NowPlayingView` element is made invisible by setting `opacity: 0` and `pointer-events: none`, but remains in the DOM for selector access.
-      It is positioned absolutely and given a negative z-index, so it does not participate in the normal document flow or block other content.
-      Its flex value is set to `0 0 0%` to ensure it does not reserve any space in the parent flex container.
-      The immediate parents (`.a_fKt7xvd8od_kEb` and `.zjCIcN96KsMfWwRo`) are forced to `width: 0`, `min-width: 0`,
-      `max-width: 0`, and `flex-basis: 0` so that they collapse entirely, allowing the rest of the UI to expand and fill the area, eliminating the black gap.
-      The "Show Now Playing view" button (`.wJiY1vDfuci2a4db`) and the old NPV button in the playback controls (`[data-testid=control-button-npv]`) are hidden from the UI.
-
-      const styleId = 'lyricsplus-hide-npv-style';
-      if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-              .NowPlayingView {
-                  position: absolute !important;
-                  left: 0; top: 0;
-                  width: 100% !important;
-                  height: 100% !important;
-                  opacity: 0 !important;
-                  pointer-events: none !important;
-                  z-index: -1 !important;
-                  flex: 0 0 0% !important;
-              }
-              .oXO9_yYs6JyOwkBn8E4a {
-                  width: 0 !important;
-                  min-width: 0 !important;
-                  max-width: 0 !important;
-                  flex-basis: 0 !important;
-                  overflow: hidden !important;
-              }
-              [data-testid=control-button-npv] {
-                  display: none !important;
-              }
-          `;
-        document.head.appendChild(style);
-      }
-
-  */
-
-  /*
-  --- Old NowPlayingView logic: To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
-      The CSS "display: none" and "width: 0" make the NowPlayingView invisible to the user. However, the elements remain present in the page's HTML and accessible to JavaScript
-      which allows the SpotifyProvider to succesfully extract the trackId and fetch lyrics without requiring the user to have their window space occupied by the NowPlayingView.
-      Disbanded because the hiding method left a black area since the parent container still reserved space.
-
-      const styleId = 'lyricsplus-hide-npv-style';
-      if (!document.getElementById(styleId)) {
-          const style = document.createElement('style');
-          style.id = styleId;
-          style.textContent = `
-              .NowPlayingView,
-              .OTfMDdomT5S7B5dbYTT8:has(.NowPlayingView) {
-                  width: 0 !important;
-                  display: none !important;
-              }
-              [data-testid=control-button-npv] {
-                  display: none !important;
-              }
-          `;
-        document.head.appendChild(style);
-      }
-
-  */
-
-  /*
-  --- Disbanded NowPlayingView logic: Allow only user-initiated opens; keeping the NowPlaying button ---
-  I decided to disband the following code in favour of the current SpotifyProvider logic which requires the track informations selectors
-  from the NowPlayingView to remain present in the DOM.
-
-  let userOpenedNPV = false;
-
-  const NPV_BTN_SELECTOR = 'button[data-testid="control-button-npv"]';
-  const NPV_VIEW_SELECTOR = '.NowPlayingView, aside[data-testid="now-playing-bar"]';
-  const HIDE_BTN_SELECTOR = 'button[aria-label="Hide Now Playing view"]';
-
-  // Track user opening NPV
-  document.addEventListener('click', function(e) {
-      const openBtn = e.target.closest(NPV_BTN_SELECTOR);
-      const closeBtn = e.target.closest(HIDE_BTN_SELECTOR);
-      if (openBtn && e.isTrusted) userOpenedNPV = true;
-      if (closeBtn && e.isTrusted) userOpenedNPV = false;
-      // Still block synthetic (non-trusted) opens
-      if (openBtn && !e.isTrusted) {
-          e.stopImmediatePropagation();
-          e.preventDefault();
-      }
-  }, true);
-
-  // Close NPV only if it was NOT opened by the user
-  function closeNPV() {
-      const hideBtn = document.querySelector(HIDE_BTN_SELECTOR);
-      if (hideBtn && hideBtn.offsetParent !== null) hideBtn.click();
-  }
-
-  const npvObserver = new MutationObserver(() => {
-      const npv = document.querySelector(NPV_VIEW_SELECTOR);
-      // If NPV is open and user didn't open it, close it
-      if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
-  });
-  npvObserver.observe(document.body, { childList: true, subtree: true });
-
-  // On page load, ensure NPV is closed if not user-initiated
-  setTimeout(() => {
-      const npv = document.querySelector(NPV_VIEW_SELECTOR);
-      if (npv && npv.offsetParent !== null && !userOpenedNPV) closeNPV();
-  }, 1000);
-
-  */
-
-  // Global flag (window.lyricsPlusPopupIsResizing) is used to prevent lyric highlighting updates from interfering with popup resizing
-
-  // Global flags below are used to prevent a bug with Revert to default position button
-  window.lyricsPlusPopupIgnoreProportion = false;
-  window.lastProportion = { w: null, h: null };
-
-  // Global flag to prevent popup glitch during manual drag
-  window.lyricsPlusPopupIsDragging = false;
+  /* Note: Previous versions tried different methods to hide the NowPlayingView. The current approach
+     (lines 135-159) collapses the parent container to zero width, which hides the UI while keeping
+     the DOM elements accessible to JavaScript for track info extraction by the SpotifyProvider. */
 
   // ------------------------
   // Utils.js Functions
@@ -742,7 +647,7 @@
       if (activeP && isPlaying) {
         activeP.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-    }, 50);
+    }, TIMING.HIGHLIGHT_INTERVAL_MS);
   }
 
   function updateTabs(tabsContainer, noneSelected) {
@@ -5273,7 +5178,7 @@ const Providers = {
       if (popup && popup._nextBtn) {
         updateNextButtonIcon(popup._nextBtn.iconWrapper);
       }
-    }, 400);
+    }, TIMING.POLLING_INTERVAL_MS);
   }
 
   function stopPollingForTrackChange() {
@@ -5283,7 +5188,7 @@ const Providers = {
     }
   }
 
-  function addButton(maxRetries = 10) {
+  function addButton(maxRetries = LIMITS.BUTTON_ADD_MAX_RETRIES) {
     let attempts = 0;
     const tryAdd = () => {
       // const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
@@ -5295,7 +5200,7 @@ const Providers = {
       if (!controls) {
         if (attempts < maxRetries) {
           attempts++;
-          setTimeout(tryAdd, 1000);
+          setTimeout(tryAdd, TIMING.BUTTON_ADD_RETRY_MS);
         } else {
           console.warn("Lyrics+ button: Failed to find controls after max retries.");
         }
@@ -5349,12 +5254,10 @@ const Providers = {
     pageObserver.observe(appRoot, { childList: true, subtree: true });
   }
 
-  init();
-})();
-(function setupPopupAutoResize() {
-  window.lyricsPlusPopupIgnoreProportion = false;
+  // ------------------------
+  // Popup Auto-Resize Setup
+  // ------------------------
   // The popup will always keep the same proportion of the window as last set by the user.
-  window.lastProportion = window.lastProportion || { w: null, h: null };
 
   // Try to load last saved proportion from localStorage
   function loadProportion() {
@@ -5371,8 +5274,8 @@ const Providers = {
     if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion || window.lyricsPlusPopupIsDragging) {
       return;
     }
-    // Skip applying proportion if user has dragged the popup within the last 1.5 seconds
-    if (window.lyricsPlusPopupLastDragged && (Date.now() - window.lyricsPlusPopupLastDragged) < 1500) {
+    // Skip applying proportion if user has dragged the popup recently
+    if (window.lyricsPlusPopupLastDragged && (Date.now() - window.lyricsPlusPopupLastDragged) < TIMING.DRAG_DEBOUNCE_MS) {
       return;
     }
     if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
@@ -5406,14 +5309,14 @@ const Providers = {
   }
 
   // Listen for popup creation to hook the resizer
-  const popupObserver = new MutationObserver(() => {
+  const popupResizeObserver = new MutationObserver(() => {
     const popup = document.getElementById("lyrics-plus-popup");
     if (popup) {
       applyProportionToPopup(popup);
       observePopupResize();
     }
   });
-  popupObserver.observe(document.body, { childList: true, subtree: true });
+  popupResizeObserver.observe(document.body, { childList: true, subtree: true });
 
   // On window resize, apply saved proportion
   window.addEventListener("resize", () => {
@@ -5422,6 +5325,8 @@ const Providers = {
       applyProportionToPopup(popup);
     }
   });
+
+  init();
 })();
 
 
