@@ -1664,34 +1664,40 @@ const PLAY_WORDS = [
   const ProviderKPoe = {
     async findLyrics(info) {
       try {
-        // Strategy: Try raw data first (preserves international characters),
-        // then fallback to normalized data (strips to English) if not found
+        // Strategy: Try multiple combinations of raw/normalized data and source orders
+        // 5 attempts covering the majority of cases
         const duration = Math.floor(info.duration / 1000);
         
-        // First attempt: Use raw data (works for pure international songs and English songs)
-        let songInfo = {
-          artist: info.artist || "",
-          title: info.title || "",
-          album: info.album || "",
-          duration
-        };
-        let result = await fetchKPoeLyrics(songInfo);
+        const attempts = [
+          { useNormalized: false, sourceOrder: '', description: "Raw data, no source preference" },
+          { useNormalized: false, sourceOrder: 'Apple', description: "Raw data, Apple source" },
+          { useNormalized: false, sourceOrder: 'Spotify', description: "Raw data, Spotify source" },
+          { useNormalized: true, sourceOrder: '', description: "Normalized data, no source preference" },
+          { useNormalized: true, sourceOrder: 'Apple', description: "Normalized data, Apple source" }
+        ];
         
-        // Fallback: If not found, try with normalized data (works for mixed international/English songs)
-        if (!result) {
+        for (let i = 0; i < attempts.length; i++) {
+          const attempt = attempts[i];
           console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-          console.log("[KPoe Debug] First attempt failed, trying with normalized data (fallback)");
-          songInfo = {
-            artist: Utils.normalize(info.artist),
-            title: Utils.normalize(info.title),
-            album: Utils.normalize(info.album),
+          console.log(`[KPoe Debug] Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
+          
+          let songInfo = {
+            artist: attempt.useNormalized ? Utils.normalize(info.artist) : (info.artist || ""),
+            title: attempt.useNormalized ? Utils.normalize(info.title) : (info.title || ""),
+            album: attempt.useNormalized ? Utils.normalize(info.album) : (info.album || ""),
             duration
           };
-          result = await fetchKPoeLyrics(songInfo);
+          
+          let result = await fetchKPoeLyrics(songInfo, attempt.sourceOrder);
+          
+          if (result && result.lyrics && result.lyrics.length > 0) {
+            console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}!`);
+            return parseKPoeFormat(result);
+          }
         }
         
-        if (!result) return { error: "Track not found in KPoe database or no lyrics available" };
-        return parseKPoeFormat(result);
+        console.log("[KPoe Debug] ✗ All 5 attempts failed");
+        return { error: "Track not found in KPoe database after 5 attempts or no lyrics available" };
       } catch (e) {
         return { error: e.message || "KPoe request failed - network error or service unavailable" };
       }
@@ -1699,12 +1705,23 @@ const PLAY_WORDS = [
     getUnsynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
       
+      const isWordType = body.type === "Word";
+      
       return body.data.map(line => {
         let text = line.text;
         
         // For Word type, line.text might be empty - reconstruct from syllabus
         if ((!text || text.trim() === '') && line.syllabus && Array.isArray(line.syllabus)) {
-          text = line.syllabus.map(s => s.text || '').join('');
+          // Join syllables with intelligent spacing for word boundaries
+          text = line.syllabus.map((s, index) => {
+            const syllableText = s.text || '';
+            // Add space after syllable if it's marked as line ending (word boundary)
+            // or if the next syllable doesn't start with punctuation
+            if (s.isLineEnding && index < line.syllabus.length - 1) {
+              return syllableText + ' ';
+            }
+            return syllableText;
+          }).join('').trim();
         }
         
         return {
@@ -1726,9 +1743,19 @@ const PLAY_WORDS = [
         
         // For Word type, line.text might be empty - reconstruct from syllabus
         if ((!text || text.trim() === '') && line.syllabus && Array.isArray(line.syllabus)) {
-          text = line.syllabus.map(s => s.text || '').join('');
+          // Join syllables with intelligent spacing for word boundaries
+          text = line.syllabus.map((s, index) => {
+            const syllableText = s.text || '';
+            // Add space after syllable if it's marked as line ending (word boundary)
+            // or if the next syllable doesn't start with punctuation
+            if (s.isLineEnding && index < line.syllabus.length - 1) {
+              return syllableText + ' ';
+            }
+            return syllableText;
+          }).join('').trim();
+          
           if (isWordType) {
-            console.log(`[KPoe Debug] Reconstructed line from ${line.syllabus.length} words: "${text}"`);
+            console.log(`[KPoe Debug] Reconstructed line from ${line.syllabus.length} syllables: "${text}"`);
           }
         }
         
