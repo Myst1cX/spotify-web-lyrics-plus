@@ -1655,7 +1655,7 @@ const PLAY_WORDS = [
             }
             console.log("[KPoe Debug] ✗ 503 response had no valid lyrics data");
           } catch (parseError) {
-            console.log("[KPoe Debug] ✗ Failed to parse 503 response:", parseError.message);
+            console.log("[KPoe Debug] ✗ Failed to parse 503 response:", parseError?.message || parseError || "Unknown error");
           }
           return null;
         }
