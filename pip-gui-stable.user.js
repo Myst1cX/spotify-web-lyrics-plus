@@ -1658,10 +1658,9 @@ const PLAY_WORDS = [
             
             if (!startsWithBrace) {
               console.log("[KPoe Debug] ⚠ 503 response is NOT JSON - likely rate limiting or CDN error");
-              console.log("[KPoe Debug] 💡 TIP: If you keep getting 503 errors, try:");
-              console.log("[KPoe Debug]   1. Wait a few minutes and refresh the page");
-              console.log("[KPoe Debug]   2. Use a VPN and refresh the page (changes your IP)");
-              console.log("[KPoe Debug]   3. The API is likely rate limiting your IP address");
+              console.log("[KPoe Debug] 💡 TIP: The API is rate limiting your IP address. To fix this:");
+              console.log("[KPoe Debug]   1. Use a VPN and refresh the page (changes your IP)");
+              console.log("[KPoe Debug]   2. Wait a few minutes and refresh the page");
               // Return special marker so we can track rate limiting
               return { _got503: true, _rateLimited: true };
             }
@@ -1811,7 +1810,10 @@ const PLAY_WORDS = [
 
           // Add delay between attempts if we've seen 503 errors (possible rate limiting)
           if (i > 0 && got503Count > 0) {
-            const delayMs = 1000 + (got503Count * 500); // Increase delay with each 503
+            // Progressive backoff: base 1000ms + 500ms per 503 error
+            // This gives the API rate limiter time to reset while not making users wait too long
+            // Example: 1st retry after 503 = 1500ms, 2nd retry = 2000ms, etc.
+            const delayMs = 1000 + (got503Count * 500);
             console.log(`[KPoe Debug] ⏱ Waiting ${delayMs}ms before attempt (${got503Count} previous 503 errors detected)`);
             await new Promise(resolve => setTimeout(resolve, delayMs));
           }
@@ -1833,7 +1835,9 @@ const PLAY_WORDS = [
           if (result && result._got503) {
             got503Count++;
             const isRateLimited = result._rateLimited;
-            console.log(`[KPoe Debug] ⚠ 503 error detected (total: ${got503Count}/${i + 1} attempts)${isRateLimited ? ' - RATE LIMITED' : ''}`);
+            // isRateLimited is true when response was non-JSON (HTML error page)
+            // _got503 alone means response was JSON but had no lyrics or failed to parse
+            console.log(`[KPoe Debug] ⚠ 503 error detected (total: ${got503Count}/${i + 1} attempts)${isRateLimited ? ' - RATE LIMITED (non-JSON response)' : ' - got 503 but response was JSON'}`);
             // Clean up tracking properties
             delete result._got503;
             delete result._rateLimited;
