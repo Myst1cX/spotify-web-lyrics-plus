@@ -1556,6 +1556,10 @@ const PLAY_WORDS = [
         console.log("[LRCLIB Debug] ✗ Track not found in LRCLIB database");
       } else if (response.status === 429) {
         console.log("[LRCLIB Debug] ✗ Rate limit exceeded - too many requests");
+      } else if (response.status === 503) {
+        console.log("[LRCLIB Debug] ✗ Service unavailable - LRCLIB may be down");
+      } else if (response.status === 400) {
+        console.log("[LRCLIB Debug] ✗ Bad request - Invalid parameters");
       } else {
         console.log(`[LRCLIB Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
       }
@@ -1649,6 +1653,10 @@ const PLAY_WORDS = [
           console.log("[KPoe Debug] ✗ Rate limit exceeded - too many requests");
         } else if (response.status === 500) {
           console.log("[KPoe Debug] ✗ Server error - KPoe service may be down");
+        } else if (response.status === 503) {
+          console.log("[KPoe Debug] ✗ Service unavailable - KPoe may be down or exceeded resource limits");
+        } else if (response.status === 400) {
+          console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
         } else {
           console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
         }
@@ -2128,6 +2136,15 @@ async function fetchMusixmatchLyrics(songInfo) {
       } else if (trackResponse.status === 404) {
         console.log("[Musixmatch Debug] ✗ Track not found in Musixmatch database");
         return { error: "Track not found in Musixmatch database" };
+      } else if (trackResponse.status === 429) {
+        console.log("[Musixmatch Debug] ✗ Rate limit exceeded - too many requests");
+        return { error: "Rate limit exceeded - please try again later" };
+      } else if (trackResponse.status === 503) {
+        console.log("[Musixmatch Debug] ✗ Service unavailable - Musixmatch may be down");
+        return { error: "Musixmatch service unavailable - please try again later" };
+      } else if (trackResponse.status === 400) {
+        console.log("[Musixmatch Debug] ✗ Bad request - Invalid parameters");
+        return { error: "Bad request - Invalid parameters" };
       }
       console.log(`[Musixmatch Debug] ✗ Track request failed: ${trackResponse.status}`);
       return { error: `Track lookup failed (HTTP ${trackResponse.status})` };
@@ -3097,6 +3114,18 @@ const ProviderSpotify = {
         if (res.status === 403) {
           console.log("[Spotify Debug] ✗ Access forbidden - check token permissions");
           return { error: "Access denied by Spotify - please refresh your token" };
+        }
+        if (res.status === 429) {
+          console.log("[Spotify Debug] ✗ Rate limit exceeded - too many requests");
+          return { error: "Rate limit exceeded - please try again later" };
+        }
+        if (res.status === 503) {
+          console.log("[Spotify Debug] ✗ Service unavailable - Spotify may be down");
+          return { error: "Spotify service unavailable - please try again later" };
+        }
+        if (res.status === 400) {
+          console.log("[Spotify Debug] ✗ Bad request - Invalid parameters");
+          return { error: "Bad request - Invalid parameters" };
         }
         console.log(`[Spotify Debug] ✗ Request failed: ${res.status} ${res.statusText}`);
         return { error: `Spotify lyrics request failed (HTTP ${res.status})` };
