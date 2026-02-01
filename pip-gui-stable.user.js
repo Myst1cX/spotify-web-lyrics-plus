@@ -1641,8 +1641,26 @@ const PLAY_WORDS = [
       const response = await fetch(url, fetchOptions);
       console.log(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
 
-      // Check if response is ok before parsing
+      // Handle non-ok responses
       if (!response.ok) {
+        // Special handling for 503: KPoe API sometimes returns 503 but still includes valid lyrics data
+        if (response.status === 503) {
+          console.log("[KPoe Debug] ⚠ Got 503 response, attempting to parse JSON anyway (KPoe API quirk)");
+          try {
+            const data = await response.json();
+            // Check if valid lyrics data exists despite 503 status
+            if (data && data.lyrics && data.lyrics.length > 0) {
+              console.log(`[KPoe Debug] ✓ Found valid lyrics despite 503! Type: ${data.type}, Lines: ${data.lyrics.length}`);
+              return data;
+            }
+            console.log("[KPoe Debug] ✗ 503 response had no valid lyrics data");
+          } catch (parseError) {
+            console.log("[KPoe Debug] ✗ Failed to parse 503 response:", parseError.message);
+          }
+          return null;
+        }
+        
+        // Handle other error statuses
         if (response.status === 404) {
           console.log("[KPoe Debug] ✗ Track not found in KPoe database");
         } else if (response.status === 429) {
@@ -1655,7 +1673,7 @@ const PLAY_WORDS = [
         return null;
       }
 
-      // Only parse response on successful status
+      // Parse response on successful status
       const data = await response.json();
       console.log("[KPoe Debug] Response data:", {
         hasLyrics: !!(data && data.lyrics),
