@@ -1656,7 +1656,7 @@ const PLAY_WORDS = [
             
             // Check if valid lyrics data exists
             if (data && data.lyrics && data.lyrics.length > 0) {
-              console.log(`[KPoe Debug] ✓ Found valid lyrics in 503 response! Type: ${data.type}, Lines: ${data.lyrics.length}`);
+              console.log(`[KPoe Debug] ✓ Found valid lyrics in 503 response! Type: ${data.type || 'unknown'}, Lines: ${data.lyrics.length}`);
               return data;
             }
             
