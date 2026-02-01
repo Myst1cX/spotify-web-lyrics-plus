@@ -1653,44 +1653,45 @@ const PLAY_WORDS = [
         // Special handling for 503: KPoe API returns 503 status with valid JSON OR rate limiting
         if (response.status === 503) {
           console.log("[KPoe Debug] ⚠ Got 503 response - could be rate limiting or API returning data with 503 status");
+          
+          // Get the response text to check what we actually received
+          let responseText;
           try {
-            // Get the response text to check what we actually received
-            let responseText = await response.text();
-            console.log("[KPoe Debug] 503 response body length:", responseText.length);
-            console.log("[KPoe Debug] 503 response body (first 300 chars):", responseText.substring(0, 300));
-            
-            // Remove BOM (Byte Order Mark) if present, then trim whitespace
-            if (responseText.charCodeAt(0) === 0xFEFF) {
-              responseText = responseText.substring(1);
-            }
-            const cleanedText = responseText.trim();
-            
-            // Try to parse as JSON directly - simpler and more reliable than string checking
-            let data;
-            try {
-              data = JSON.parse(cleanedText);
-            } catch (jsonError) {
-              // Not valid JSON - this is a rate limit error page (HTML/text)
-              console.log("[KPoe Debug] ⚠ 503 response is NOT valid JSON - likely rate limiting or CDN error");
-              logRateLimitGuidance();
-              return { _got503: true, _rateLimited: true };
-            }
-            
-            console.log("[KPoe Debug] ✓ Successfully parsed 503 response as JSON");
-            
-            // Check if valid lyrics data exists despite 503 status
-            if (data && data.lyrics && data.lyrics.length > 0) {
-              console.log(`[KPoe Debug] ✓ Found valid lyrics in 503 response! Type: ${data.type}, Lines: ${data.lyrics.length}`);
-              return data;
-            }
-            console.log("[KPoe Debug] ✗ 503 response parsed but had no valid lyrics data");
-            return { _got503: true, _rateLimited: false };
-          } catch (parseError) {
-            // Unexpected error during text retrieval or processing
-            console.log("[KPoe Debug] ✗ Error processing 503 response:", parseError?.message || parseError || "Unknown error");
+            responseText = await response.text();
+          } catch (textError) {
+            console.log("[KPoe Debug] ✗ Error reading 503 response body:", textError?.message || textError || "Unknown error");
+            return { _got503: true, _rateLimited: true };
+          }
+          
+          console.log("[KPoe Debug] 503 response body length:", responseText.length);
+          console.log("[KPoe Debug] 503 response body (first 300 chars):", responseText.substring(0, 300));
+          
+          // Remove BOM (Byte Order Mark) if present, then trim whitespace
+          if (responseText.charCodeAt(0) === 0xFEFF) {
+            responseText = responseText.substring(1);
+          }
+          const cleanedText = responseText.trim();
+          
+          // Try to parse as JSON directly - simpler and more reliable than string checking
+          let data;
+          try {
+            data = JSON.parse(cleanedText);
+          } catch (jsonError) {
+            // Not valid JSON - this is a rate limit error page (HTML/text)
+            console.log("[KPoe Debug] ⚠ 503 response is NOT valid JSON - likely rate limiting or CDN error");
             logRateLimitGuidance();
             return { _got503: true, _rateLimited: true };
           }
+          
+          console.log("[KPoe Debug] ✓ Successfully parsed 503 response as JSON");
+          
+          // Check if valid lyrics data exists despite 503 status
+          if (data && data.lyrics && data.lyrics.length > 0) {
+            console.log(`[KPoe Debug] ✓ Found valid lyrics in 503 response! Type: ${data.type}, Lines: ${data.lyrics.length}`);
+            return data;
+          }
+          console.log("[KPoe Debug] ✗ 503 response parsed but had no valid lyrics data");
+          return { _got503: true, _rateLimited: false };
         }
         
         // Handle other error statuses
@@ -1841,9 +1842,6 @@ const PLAY_WORDS = [
             // _rateLimited === true: response was non-JSON (HTML error page) = rate limited
             // _rateLimited === false: response was valid JSON but had no lyrics = unusual API behavior
             console.log(`[KPoe Debug] ⚠ 503 error detected (total: ${got503Count}/${i + 1} attempts)${isRateLimited ? ' - RATE LIMITED (non-JSON response)' : ' - got 503 with JSON but no lyrics'}`);
-            // Clean up tracking properties
-            delete result._got503;
-            delete result._rateLimited;
             // Treat 503 as no result for this attempt
             result = null;
           }
