@@ -1666,7 +1666,7 @@ const PLAY_WORDS = [
             console.log("[KPoe Debug] First 200 chars:", responseText.substring(0, 200));
             console.log("[KPoe Debug] First 20 char codes:", 
               Array.from(responseText.substring(0, 20)).map((c, i) => `[${i}]=${c.charCodeAt(0)}`).join(' '));
-            console.log("[KPoe Debug] Starts with '{' or '['?", /^[\s\{\[]/.test(responseText));
+            console.log("[KPoe Debug] Starts with '{' or '['?", /^\s*[\{\[]/.test(responseText));
             
             // Try to parse as JSON - KPoe API often returns valid JSON even with 503 status
             const data = JSON.parse(responseText.trim());
