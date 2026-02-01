@@ -3312,16 +3312,26 @@ const Providers = {
     // Clear current provider so no provider is highlighted while searching for lyrics
     Providers.current = null;
 
-    // Load saved state from localStorage
-    const savedState = localStorage.getItem('lyricsPlusPopupState');
+    // Load saved proportion from localStorage (stored as ratios of window size)
+    const savedProportion = localStorage.getItem('lyricsPlusPopupProportion');
     let pos = null;
-    if (savedState) {
+    let needsSaveInitialState = false;
+    if (savedProportion) {
       try {
-        pos = JSON.parse(savedState);
-        DEBUG.debug('UI', 'Loaded saved popup state', pos);
+        const proportion = JSON.parse(savedProportion);
+        // Convert proportions to absolute pixel values for initial positioning
+        if (proportion.w && proportion.h && proportion.x !== undefined && proportion.y !== undefined) {
+          pos = {
+            left: window.innerWidth * proportion.x,
+            top: window.innerHeight * proportion.y,
+            width: window.innerWidth * proportion.w,
+            height: window.innerHeight * proportion.h
+          };
+          DEBUG.debug('UI', 'Loaded saved popup proportion and converted to pixels', pos);
+        }
       } catch {
         pos = null;
-        DEBUG.warn('UI', 'Failed to parse saved popup state');
+        DEBUG.warn('UI', 'Failed to parse saved popup proportion');
       }
     }
 
@@ -3375,6 +3385,7 @@ const Providers = {
       });
     } else {
       // fallback to container or default
+      needsSaveInitialState = true;
       let rect = getSpotifyLyricsContainerRect();
       if (rect) {
         Object.assign(popup.style, {
@@ -3399,12 +3410,6 @@ const Providers = {
           right: "auto",
           bottom: "auto"
         });
-        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height
-        }));
       } else {
         // fallback
         Object.assign(popup.style, {
@@ -3501,12 +3506,6 @@ const Providers = {
           bottom: "auto",
           zIndex: 100000
         });
-        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height
-        }));
         savePopupState(popup);
         console.log("✅ [Lyrics+ UI] Position restored to Spotify lyrics container position");
       } else {
@@ -3520,12 +3519,6 @@ const Providers = {
           height: "79.5vh",
           zIndex: 100000
         });
-        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-          left: null,
-          top: null,
-          width: 360,
-          height: window.innerHeight * 0.795
-        }));
         savePopupState(popup);
         console.log("✅ [Lyrics+ UI] Position restored to default position (bottom-right corner)");
       }
@@ -4909,6 +4902,11 @@ const Providers = {
         y: rect.top / window.innerHeight
       };
       localStorage.setItem('lyricsPlusPopupProportion', JSON.stringify(window.lastProportion));
+    }
+
+    // Save initial state if using default position (not restored from saved state)
+    if (needsSaveInitialState) {
+      savePopupState(popup);
     }
 
     (function makeDraggable(el, handle) {
