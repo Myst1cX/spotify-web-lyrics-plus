@@ -1,0 +1,1111 @@
+// console:
+
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2172:19
+[KPoe Debug] Attempt 1/5: Raw data with album Spotify Lyrics+ Stable.user.js:2173:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2001:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2002:13
+[KPoe Debug] Input info: 
+Object { artist: "攬佬SKAI ISYOURGOD", title: "因果(Karma Code)", album: "", duration: 151, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2003:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=%E5%9B%A0%E6%9E%9C(Karma%20Code)&artist=%E6%94%AC%E4%BD%ACSKAI%20ISYOURGOD&duration=151 Spotify Lyrics+ Stable.user.js:2025:13
+[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:2029:15
+[KPoe Debug] ⚠ Got 503 response - attempting to extract lyrics anyway Spotify Lyrics+ Stable.user.js:2035:19
+[KPoe Debug] 503 response body length: 4709 Spotify Lyrics+ Stable.user.js:2039:21
+[KPoe Debug] ✗ Failed to parse 503 response: JSON.parse: unexpected character at line 1 column 1 of the JSON data Spotify Lyrics+ Stable.user.js:2053:21
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2172:19
+[KPoe Debug] Attempt 2/5: Raw data without album (sometimes album metadata is wrong) Spotify Lyrics+ Stable.user.js:2173:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2001:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2002:13
+[KPoe Debug] Input info: 
+Object { artist: "攬佬SKAI ISYOURGOD", title: "因果(Karma Code)", album: "", duration: 151, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2003:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=%E5%9B%A0%E6%9E%9C(Karma%20Code)&artist=%E6%94%AC%E4%BD%ACSKAI%20ISYOURGOD&duration=151 Spotify Lyrics+ Stable.user.js:2025:13
+[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:2029:15
+[KPoe Debug] ⚠ Got 503 response - attempting to extract lyrics anyway Spotify Lyrics+ Stable.user.js:2035:19
+[KPoe Debug] 503 response body length: 4709 Spotify Lyrics+ Stable.user.js:2039:21
+[KPoe Debug] ✗ Failed to parse 503 response: JSON.parse: unexpected character at line 1 column 1 of the JSON data Spotify Lyrics+ Stable.user.js:2053:21
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2172:19
+[KPoe Debug] Attempt 3/5: Normalized artist, raw title Spotify Lyrics+ Stable.user.js:2173:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2001:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2002:13
+[KPoe Debug] Input info: 
+Object { artist: "SKAI ISYOURGOD", title: "因果(Karma Code)", album: "", duration: 151, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2003:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=%E5%9B%A0%E6%9E%9C(Karma%20Code)&artist=SKAI%20ISYOURGOD&duration=151 Spotify Lyrics+ Stable.user.js:2025:13
+[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:2029:15
+[KPoe Debug] ⚠ Got 503 response - attempting to extract lyrics anyway Spotify Lyrics+ Stable.user.js:2035:19
+[KPoe Debug] 503 response body length: 4709 Spotify Lyrics+ Stable.user.js:2039:21
+[KPoe Debug] ✗ Failed to parse 503 response: JSON.parse: unexpected character at line 1 column 1 of the JSON data Spotify Lyrics+ Stable.user.js:2053:21
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2172:19
+[KPoe Debug] Attempt 4/5: Raw artist, normalized title Spotify Lyrics+ Stable.user.js:2173:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2001:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2002:13
+[KPoe Debug] Input info: 
+Object { artist: "攬佬SKAI ISYOURGOD", title: "Karma Code", album: "", duration: 151, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2003:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Karma%20Code&artist=%E6%94%AC%E4%BD%ACSKAI%20ISYOURGOD&duration=151 Spotify Lyrics+ Stable.user.js:2025:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2029:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2060:19
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2172:19
+[KPoe Debug] Attempt 5/5: Fully normalized data Spotify Lyrics+ Stable.user.js:2173:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2001:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2002:13
+[KPoe Debug] Input info: 
+Object { artist: "SKAI ISYOURGOD", title: "Karma Code", album: "", duration: 151, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2003:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Karma%20Code&artist=SKAI%20ISYOURGOD&duration=151 Spotify Lyrics+ Stable.user.js:2025:13
+[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:2029:15
+[KPoe Debug] ⚠ Got 503 response - attempting to extract lyrics anyway Spotify Lyrics+ Stable.user.js:2035:19
+[KPoe Debug] 503 response body length: 4709 Spotify Lyrics+ Stable.user.js:2039:21
+[KPoe Debug] ✗ Failed to parse 503 response: JSON.parse: unexpected character at line 1 column 1 of the JSON data Spotify Lyrics+ Stable.user.js:2053:21
+[KPoe Debug] ✗ All 5 attempts failed Spotify Lyrics+ Stable.user.js:2216:17
+📝 [Lyrics+ UI] Download button hidden (lyrics error) Spotify Lyrics+ Stable.user.js:6229:17
+
+// api:
+
+{
+   "KpoeTools":"1.7-ConvertTTMLtoJSON-DOMParser",
+   "type":"Line",
+   "metadata":{
+      "source":"Apple",
+      "songWriters":[
+         "SKAI isyourgod"
+      ],
+      "title":"",
+      "language":"zh-Hans",
+      "agents":{
+         "v1":{
+            "type":"person",
+            "name":"",
+            "alias":"v1"
+         }
+      },
+      "songParts":[
+         {
+            "name":"Verse",
+            "time":14469,
+            "duration":12752
+         },
+         {
+            "name":"Verse",
+            "time":28203,
+            "duration":25633
+         },
+         {
+            "name":"Verse",
+            "time":54394,
+            "duration":13572
+         },
+         {
+            "name":"Verse",
+            "time":68067,
+            "duration":7202
+         },
+         {
+            "name":"Verse",
+            "time":75344,
+            "duration":6429
+         },
+         {
+            "name":"Verse",
+            "time":81800,
+            "duration":6816
+         },
+         {
+            "name":"Verse",
+            "time":88619,
+            "duration":6780
+         },
+         {
+            "name":"Verse",
+            "time":96719,
+            "duration":12846
+         },
+         {
+            "name":"Verse",
+            "time":110477,
+            "duration":25810
+         }
+      ],
+      "totalDuration":"2:31.111"
+   },
+   "lyrics":[
+      {
+         "time":14469,
+         "duration":2475,
+         "text":"老天保佑金山银山前路有",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L1",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":0
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian bao you jin shan yin shan qian lu you"
+         }
+      },
+      {
+         "time":17890,
+         "duration":2454,
+         "text":"老天教唆别管江湖龙虎斗",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L2",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":0
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian jiao suo bie guan jiang hu long hu dou"
+         }
+      },
+      {
+         "time":21381,
+         "duration":2421,
+         "text":"老天叮嘱这辈子我善不丢",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L3",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":0
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian ding zhu zhe bei zi wo shan bu diu"
+         }
+      },
+      {
+         "time":24733,
+         "duration":2488,
+         "text":"老天就怕三十六雷总打秋",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L4",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":0
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian jiu pa san shi liu lei zong da qiu"
+         }
+      },
+      {
+         "time":28203,
+         "duration":3360,
+         "text":"魑魅魍魉总出现在秋收后 (算帐)",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L5",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"chi mei wang liang zong chu xian zai qiu shou hou (suan zhang)"
+         }
+      },
+      {
+         "time":31635,
+         "duration":3323,
+         "text":"魑魅魍魉总出现在秋收后 (消灭)",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L6",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"chi mei wang liang zong chu xian zai qiu shou hou (xiao mie)"
+         }
+      },
+      {
+         "time":35057,
+         "duration":3384,
+         "text":"老天让我一棍铲除啮齿类 (田鼠)",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L7",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian rang wo yi gun chan chu nie chi lei (tian shu)"
+         }
+      },
+      {
+         "time":38489,
+         "duration":2466,
+         "text":"第二棍附魔我打穿对家楼",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L8",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"di er gun fu mo wo da chuan dui jia lou"
+         }
+      },
+      {
+         "time":41482,
+         "duration":542,
+         "text":"因果",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L9",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yin guo"
+         }
+      },
+      {
+         "time":44031,
+         "duration":526,
+         "text":"因果",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L10",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yin guo"
+         }
+      },
+      {
+         "time":45722,
+         "duration":2219,
+         "text":"老天让放下屠刀但这是他的",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L11",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian rang fang xia tu dao dan zhe shi ta de"
+         }
+      },
+      {
+         "time":48324,
+         "duration":606,
+         "text":"因果",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L12",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yin guo"
+         }
+      },
+      {
+         "time":52687,
+         "duration":1149,
+         "text":"该不该放下屠刀",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L13",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"gai bu gai fang xia tu dao"
+         }
+      },
+      {
+         "time":54394,
+         "duration":658,
+         "text":"如果放",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L14",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"ru guo fang"
+         }
+      },
+      {
+         "time":55229,
+         "duration":2378,
+         "text":"角落潜伏饿鬼分分钟一棒",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L15",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"jiao luo qian fu e gui fen fen zhong yi bang"
+         }
+      },
+      {
+         "time":57773,
+         "duration":813,
+         "text":"如果提",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L16",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"ru guo ti"
+         }
+      },
+      {
+         "time":58581,
+         "duration":2480,
+         "text":"心中恶念超过善的话没办法平",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L17",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"xin zhong e nian chao guo shan de hua mei ban fa ping"
+         }
+      },
+      {
+         "time":61240,
+         "duration":725,
+         "text":"要还债",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L18",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yao huan zhai"
+         }
+      },
+      {
+         "time":62075,
+         "duration":2472,
+         "text":"兵来将挡因为我是个奈非天",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L19",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"bing lai jiang dang yin wei wo shi ge nai fei tian"
+         }
+      },
+      {
+         "time":64616,
+         "duration":707,
+         "text":"手腕上",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L20",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"shou wan shang"
+         }
+      },
+      {
+         "time":65568,
+         "duration":2398,
+         "text":"五路财神虚空藏 挡一切",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L21",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"wu lu cai shen xu kong cang dang yi qie"
+         }
+      },
+      {
+         "time":68067,
+         "duration":1128,
+         "text":"海面刮大浪",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L22",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":3
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"hai mian gua da lang"
+         }
+      },
+      {
+         "time":69374,
+         "duration":1152,
+         "text":"要不要秋后算账",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L23",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":3
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yao bu yao qiu hou suan zhang"
+         }
+      },
+      {
+         "time":70640,
+         "duration":822,
+         "text":"我不是God",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L24",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":3
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"wo bu shi God"
+         }
+      },
+      {
+         "time":71553,
+         "duration":1170,
+         "text":"我需要平衡阴阳",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L25",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":3
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"wo xu yao ping heng yin yang"
+         }
+      },
+      {
+         "time":72784,
+         "duration":1112,
+         "text":"看懂这因果业障",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L26",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":3
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"kan dong zhe yin guo ye zhang"
+         }
+      },
+      {
+         "time":74125,
+         "duration":1144,
+         "text":"看懂这因果业障",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L27",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":3
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"kan dong zhe yin guo ye zhang"
+         }
+      },
+      {
+         "time":75344,
+         "duration":1296,
+         "text":"世界上条条框框",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L28",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"shi jie shang tiao tiao kuang kuang"
+         }
+      },
+      {
+         "time":76642,
+         "duration":1147,
+         "text":"就好像打牌记账",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L29",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"jiu hao xiang da pai ji zhang"
+         }
+      },
+      {
+         "time":77901,
+         "duration":1200,
+         "text":"迟早会到你头上",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L30",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"chi zao hui dao ni tou shang"
+         }
+      },
+      {
+         "time":79195,
+         "duration":1160,
+         "text":"谁不想打翻身仗",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L31",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"shei bu xiang da fan shen zhang"
+         }
+      },
+      {
+         "time":80512,
+         "duration":1261,
+         "text":"谁不想打翻身仗",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L32",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"shei bu xiang da fan shen zhang"
+         }
+      },
+      {
+         "time":81800,
+         "duration":1568,
+         "text":"总有人在卖着惨",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L33",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":5
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"zong you ren zai mai zhe can"
+         }
+      },
+      {
+         "time":83445,
+         "duration":1688,
+         "text":"总有人想利用善",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L34",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":5
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"zong you ren xiang li yong shan"
+         }
+      },
+      {
+         "time":85147,
+         "duration":1664,
+         "text":"殊不知 天在看",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L35",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":5
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"shu bu zhi tian zai kan"
+         }
+      },
+      {
+         "time":86931,
+         "duration":1685,
+         "text":"祸根找上门 惨",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L36",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":5
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"huo gen zhao shang men can"
+         }
+      },
+      {
+         "time":88619,
+         "duration":1656,
+         "text":"你把爱拿来闹着玩",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L37",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":6
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"ni ba ai na lai nao zhe wan"
+         }
+      },
+      {
+         "time":90409,
+         "duration":1512,
+         "text":"你把爱当做子弹",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L38",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":6
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"ni ba ai dang zuo zi dan"
+         }
+      },
+      {
+         "time":92017,
+         "duration":1624,
+         "text":"殊不知 天在看",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L39",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":6
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"shu bu zhi tian zai kan"
+         }
+      },
+      {
+         "time":93727,
+         "duration":1672,
+         "text":"拍拍手 完蛋",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L40",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":6
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"pai pai shou wan dan"
+         }
+      },
+      {
+         "time":96719,
+         "duration":2494,
+         "text":"老天保佑金山银山前路有",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L41",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":7
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian bao you jin shan yin shan qian lu you"
+         }
+      },
+      {
+         "time":100141,
+         "duration":2505,
+         "text":"老天教唆别管江湖龙虎斗",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L42",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":7
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian jiao suo bie guan jiang hu long hu dou"
+         }
+      },
+      {
+         "time":103598,
+         "duration":2594,
+         "text":"老天叮嘱这辈子我善不丢",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L43",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":7
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian ding zhu zhe bei zi wo shan bu diu"
+         }
+      },
+      {
+         "time":106984,
+         "duration":2581,
+         "text":"老天就怕三十六雷总打秋",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L44",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":7
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian jiu pa san shi liu lei zong da qiu"
+         }
+      },
+      {
+         "time":110477,
+         "duration":3374,
+         "text":"魑魅魍魉总出现在秋收后 (算帐)",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L45",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":8
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"chi mei wang liang zong chu xian zai qiu shou hou (suan zhang)"
+         }
+      },
+      {
+         "time":113939,
+         "duration":3344,
+         "text":"魑魅魍魉总出现在秋收后 (消灭)",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L46",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":8
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"chi mei wang liang zong chu xian zai qiu shou hou (xiao mie)"
+         }
+      },
+      {
+         "time":117339,
+         "duration":3311,
+         "text":"老天让我一棍铲除啮齿类 (田鼠)",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L47",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":8
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian rang wo yi gun chan chu nie chi lei (tian shu)"
+         }
+      },
+      {
+         "time":120787,
+         "duration":2509,
+         "text":"第二棍附魔我打穿对家楼",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L48",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":8
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"di er gun fu mo wo da chuan dui jia lou"
+         }
+      },
+      {
+         "time":123704,
+         "duration":696,
+         "text":"因果",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L49",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":8
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yin guo"
+         }
+      },
+      {
+         "time":126309,
+         "duration":538,
+         "text":"因果",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L50",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":8
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yin guo"
+         }
+      },
+      {
+         "time":128021,
+         "duration":2245,
+         "text":"老天让放下屠刀但这是他的",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L51",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":8
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lao tian rang fang xia tu dao dan zhe shi ta de"
+         }
+      },
+      {
+         "time":130652,
+         "duration":536,
+         "text":"因果",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L52",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":8
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yin guo"
+         }
+      },
+      {
+         "time":133227,
+         "duration":511,
+         "text":"因果",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L53",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":8
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yin guo"
+         }
+      },
+      {
+         "time":134884,
+         "duration":1403,
+         "text":"算了 给你个面子",
+         "syllabus":[
+            
+         ],
+         "element":{
+            "key":"L54",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":8
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"suan le gei ni ge mian zi"
+         }
+      }
+   ],
+   "cached":"GDrive",
+   "processingTime":{
+      "timeElapsed":2189,
+      "lastProcessed":1769938138035
+   }
+}
