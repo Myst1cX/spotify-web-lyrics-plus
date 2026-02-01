@@ -1884,7 +1884,7 @@ const PLAY_WORDS = [
         console.log("[KPoe Debug] ✗ All 5 attempts failed");
         if (got503Count > 0) {
           console.log(`[KPoe Debug] ⚠ Detected ${got503Count} 503 error(s) - likely IP-based rate limiting`);
-          return { error: `Rate limited by KPoe API (${got503Count} 503 errors). Try using a VPN and refreshing the page.` };
+          return { error: `Rate limited by KPoe API (${got503Count} 503 errors). Please try again later or from a different IP address.` };
         }
         return { error: "Track not found in KPoe database or no lyrics available" };
       } catch (e) {
