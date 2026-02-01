@@ -1655,30 +1655,27 @@ const PLAY_WORDS = [
           console.log("[KPoe Debug] ⚠ Got 503 response - could be rate limiting or API returning data with 503 status");
           try {
             // Get the response text to check what we actually received
-            const responseText = await response.text();
+            let responseText = await response.text();
             console.log("[KPoe Debug] 503 response body length:", responseText.length);
             console.log("[KPoe Debug] 503 response body (first 300 chars):", responseText.substring(0, 300));
             
-            // Check if this looks like a rate limit error (HTML/text) vs JSON data
-            const trimmedText = responseText.trim();
-            const startsWithBrace = trimmedText.startsWith('{') || trimmedText.startsWith('[');
+            // Remove BOM (Byte Order Mark) if present, then trim whitespace
+            if (responseText.charCodeAt(0) === 0xFEFF) {
+              responseText = responseText.substring(1);
+            }
+            const cleanedText = responseText.trim();
             
-            if (!startsWithBrace) {
-              console.log("[KPoe Debug] ⚠ 503 response is NOT JSON - likely rate limiting or CDN error");
+            // Try to parse as JSON directly - simpler and more reliable than string checking
+            let data;
+            try {
+              data = JSON.parse(cleanedText);
+            } catch (jsonError) {
+              // Not valid JSON - this is a rate limit error page (HTML/text)
+              console.log("[KPoe Debug] ⚠ 503 response is NOT valid JSON - likely rate limiting or CDN error");
               logRateLimitGuidance();
-              // Return special marker so we can track rate limiting
               return { _got503: true, _rateLimited: true };
             }
             
-            // Clean the response text - remove BOM, trim whitespace
-            let cleanedText = trimmedText;
-            // Remove BOM (Byte Order Mark) if present
-            if (cleanedText.charCodeAt(0) === 0xFEFF) {
-              cleanedText = cleanedText.substring(1);
-            }
-            
-            // Try to parse as JSON
-            const data = JSON.parse(cleanedText);
             console.log("[KPoe Debug] ✓ Successfully parsed 503 response as JSON");
             
             // Check if valid lyrics data exists despite 503 status
@@ -1687,9 +1684,10 @@ const PLAY_WORDS = [
               return data;
             }
             console.log("[KPoe Debug] ✗ 503 response parsed but had no valid lyrics data");
-            return { _got503: true };
+            return { _got503: true, _rateLimited: false };
           } catch (parseError) {
-            console.log("[KPoe Debug] ✗ Failed to parse 503 response:", parseError?.message || parseError || "Unknown error");
+            // Unexpected error during text retrieval or processing
+            console.log("[KPoe Debug] ✗ Error processing 503 response:", parseError?.message || parseError || "Unknown error");
             logRateLimitGuidance();
             return { _got503: true, _rateLimited: true };
           }
@@ -1840,9 +1838,9 @@ const PLAY_WORDS = [
           if (result && result._got503) {
             got503Count++;
             const isRateLimited = result._rateLimited;
-            // isRateLimited is true when response was non-JSON (HTML error page)
-            // _got503 alone means response was JSON but had no lyrics or failed to parse
-            console.log(`[KPoe Debug] ⚠ 503 error detected (total: ${got503Count}/${i + 1} attempts)${isRateLimited ? ' - RATE LIMITED (non-JSON response)' : ' - got 503 but response was JSON'}`);
+            // _rateLimited === true: response was non-JSON (HTML error page) = rate limited
+            // _rateLimited === false: response was valid JSON but had no lyrics = unusual API behavior
+            console.log(`[KPoe Debug] ⚠ 503 error detected (total: ${got503Count}/${i + 1} attempts)${isRateLimited ? ' - RATE LIMITED (non-JSON response)' : ' - got 503 with JSON but no lyrics'}`);
             // Clean up tracking properties
             delete result._got503;
             delete result._rateLimited;
