@@ -1627,9 +1627,18 @@ const PLAY_WORDS = [
       : '';
     const sourceParam = sourceOrder ? `&source=${encodeURIComponent(sourceOrder)}` : '';
     let forceReloadParam = forceReload ? `&forceReload=true` : '';
-    let fetchOptions = {};
+    
+    // Set up fetch options with proper encoding support
+    // Exclude zstd encoding as fetch() doesn't auto-decompress it (causes binary data parse errors)
+    // Only accept gzip, deflate, and br (Brotli) which fetch() handles automatically
+    let fetchOptions = {
+      headers: {
+        'Accept-Encoding': 'gzip, deflate, br'
+      }
+    };
+    
     if (forceReload) {
-      fetchOptions = { cache: 'no-store' };
+      fetchOptions.cache = 'no-store';
       forceReloadParam = `&forceReload=true`;
       console.log("[KPoe Debug] Force reload enabled (bypassing cache)");
     }
