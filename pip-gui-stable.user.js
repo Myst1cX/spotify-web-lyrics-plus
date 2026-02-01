@@ -3540,6 +3540,7 @@ const Providers = {
     langSelect.style.border = 'none';
     langSelect.style.borderRadius = '5px';
     langSelect.style.fontSize = fontSize;
+    langSelect.style.fontWeight = '600';
     langSelect.style.boxSizing = 'border-box';
     console.log("✅ [Lyrics+ UI] Translation language dropdown created, current language:", getSavedTranslationLang());
     langSelect.onchange = () => {
@@ -3560,6 +3561,7 @@ const Providers = {
     translateBtn.style.border = 'none';
     translateBtn.style.borderRadius = '5px';
     translateBtn.style.fontSize = fontSize;
+    translateBtn.style.fontWeight = '600';
     translateBtn.style.cursor = 'pointer';
     translateBtn.style.boxSizing = 'border-box';
     console.log("✅ [Lyrics+ UI] Translate button created");
@@ -3575,6 +3577,7 @@ const Providers = {
     removeBtn.style.border = 'none';
     removeBtn.style.borderRadius = '5px';
     removeBtn.style.fontSize = fontSize;
+    removeBtn.style.fontWeight = '600';
     removeBtn.style.cursor = 'pointer';
     removeBtn.style.boxSizing = 'border-box';
     console.log("✅ [Lyrics+ UI] Remove translation button ('Original') created");
