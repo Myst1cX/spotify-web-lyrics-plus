@@ -3315,12 +3315,12 @@ const Providers = {
     // Load saved proportion from localStorage (stored as ratios of window size)
     const savedProportion = localStorage.getItem('lyricsPlusPopupProportion');
     let pos = null;
-    let needsSaveInitialState = false;
+    let shouldSaveDefaultPosition = false;
     if (savedProportion) {
       try {
         const proportion = JSON.parse(savedProportion);
         // Convert proportions to absolute pixel values for initial positioning
-        if (proportion.w && proportion.h && proportion.x !== undefined && proportion.y !== undefined) {
+        if (proportion.w !== undefined && proportion.h !== undefined && proportion.x !== undefined && proportion.y !== undefined) {
           pos = {
             left: window.innerWidth * proportion.x,
             top: window.innerHeight * proportion.y,
@@ -3385,7 +3385,7 @@ const Providers = {
       });
     } else {
       // fallback to container or default
-      needsSaveInitialState = true;
+      shouldSaveDefaultPosition = true;
       let rect = getSpotifyLyricsContainerRect();
       if (rect) {
         Object.assign(popup.style, {
@@ -4905,7 +4905,7 @@ const Providers = {
     }
 
     // Save initial state if using default position (not restored from saved state)
-    if (needsSaveInitialState) {
+    if (shouldSaveDefaultPosition) {
       savePopupState(popup);
     }
 
