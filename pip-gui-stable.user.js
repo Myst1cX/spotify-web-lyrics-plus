@@ -1611,6 +1611,13 @@ const PLAY_WORDS = [
 
    // --- KPoe ---
   async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false) {
+    // Helper function for consistent rate limiting guidance messages
+    function logRateLimitGuidance() {
+      console.log("[KPoe Debug] 💡 TIP: The API is rate limiting your IP address. To fix this:");
+      console.log("[KPoe Debug]   1. Use a VPN and refresh the page (changes your IP)");
+      console.log("[KPoe Debug]   2. Wait a few minutes and refresh the page");
+    }
+
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("[KPoe Debug] Starting lyrics search");
     console.log("[KPoe Debug] Input info:", {
@@ -1658,9 +1665,7 @@ const PLAY_WORDS = [
             
             if (!startsWithBrace) {
               console.log("[KPoe Debug] ⚠ 503 response is NOT JSON - likely rate limiting or CDN error");
-              console.log("[KPoe Debug] 💡 TIP: The API is rate limiting your IP address. To fix this:");
-              console.log("[KPoe Debug]   1. Use a VPN and refresh the page (changes your IP)");
-              console.log("[KPoe Debug]   2. Wait a few minutes and refresh the page");
+              logRateLimitGuidance();
               // Return special marker so we can track rate limiting
               return { _got503: true, _rateLimited: true };
             }
@@ -1685,7 +1690,7 @@ const PLAY_WORDS = [
             return { _got503: true };
           } catch (parseError) {
             console.log("[KPoe Debug] ✗ Failed to parse 503 response:", parseError?.message || parseError || "Unknown error");
-            console.log("[KPoe Debug] 💡 This is likely rate limiting. Try using a VPN and refreshing the page.");
+            logRateLimitGuidance();
             return { _got503: true, _rateLimited: true };
           }
         }
@@ -1879,7 +1884,6 @@ const PLAY_WORDS = [
         console.log("[KPoe Debug] ✗ All 5 attempts failed");
         if (got503Count > 0) {
           console.log(`[KPoe Debug] ⚠ Detected ${got503Count} 503 error(s) - likely IP-based rate limiting`);
-          console.log("[KPoe Debug] 💡 SOLUTION: Enable a VPN and refresh the page to get a new IP address");
           return { error: `Rate limited by KPoe API (${got503Count} 503 errors). Try using a VPN and refreshing the page.` };
         }
         return { error: "Track not found in KPoe database or no lyrics available" };
