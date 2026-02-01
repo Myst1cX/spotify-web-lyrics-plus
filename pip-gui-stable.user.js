@@ -20,7 +20,7 @@
 // RESOLVED (15.2): ADDED TRANSLITERATION BUTTON AND FUNCTIONS
 // Only shows up on KPoe provider, when the scraped lyrics contain transliteration
 
-// RESOLVED (15.1): FIXED THE KPOE PROVIDER (I HOPE)
+// RESOLVED (15.1): FIXED THE  PROVIDER (I HOPE)
 // NOTE: If a song previously had lyrics but now doesn't fetch them, it's possible that you exceeded the rate limit.
 // Either try again sometime later or try turning on a VPN and refreshing the page. If it now loads the lyrics, your theory is right.
 
@@ -1648,7 +1648,9 @@ const PLAY_WORDS = [
         } else if (response.status === 429) {
           console.log("[KPoe Debug] ✗ Rate limit exceeded - too many requests");
         } else if (response.status === 500) {
-          console.log("[KPoe Debug] ✗ Server error - KPoe service may be down");
+          console.log("[KPoe Debug] ✗ Internal Server Error - Kpoe may be down");
+        } else if (response.status === 503) {
+          console.log("[KPoe Debug] ✗ Service unavailable - KPoe may be down or exceeded resource limits");
         } else {
           console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
         }
@@ -6225,3 +6227,4 @@ const Providers = {
 
   init();
 })();
+
