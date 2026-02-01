@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      15.4
+// @version      15.5
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,8 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (15.5): YET ANOTHER KPOE PROVIDER FIX (MORE ACCURATE ERROR HANDLING)
+
 // RESOLVED (15.4): UI TWEAKS (improved readability)
 
 // RESOLVED (15.3): UPDATED TRANSLITERATION FUNCTIONS
@@ -20,7 +22,7 @@
 // RESOLVED (15.2): ADDED TRANSLITERATION BUTTON AND FUNCTIONS
 // Only shows up on KPoe provider, when the scraped lyrics contain transliteration
 
-// RESOLVED (15.1): FIXED THE  PROVIDER (I HOPE)
+// RESOLVED (15.1): FIXED KPOE PROVIDER (I HOPE)
 // NOTE: If a song previously had lyrics but now doesn't fetch them, it's possible that you exceeded the rate limit.
 // Either try again sometime later or try turning on a VPN and refreshing the page. If it now loads the lyrics, your theory is right.
 
@@ -1645,16 +1647,23 @@ const PLAY_WORDS = [
       if (!response.ok) {
         if (response.status === 404) {
           console.log("[KPoe Debug] ✗ Track not found in KPoe database");
+          return { error: "Track not found in KPoe database" };
+        } else if (response.status === 400) {
+          console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
+          return { error: "Bad request - Invalid parameters" };
         } else if (response.status === 429) {
           console.log("[KPoe Debug] ✗ Rate limit exceeded - too many requests");
+          return { error: "Rate limit exceeded - too many requests" };
         } else if (response.status === 500) {
-          console.log("[KPoe Debug] ✗ Internal Server Error - Kpoe may be down");
+          console.log("[KPoe Debug] ✗ Internal Server Error - KPoe may be down");
+          return { error: "Internal Server Error - KPoe may be down" };
         } else if (response.status === 503) {
           console.log("[KPoe Debug] ✗ Service unavailable - KPoe may be down or exceeded resource limits");
+          return { error: "Service unavailable - KPoe may be down or exceeded resource limits" };
         } else {
           console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+          return { error: `Request failed: ${response.status} ${response.statusText}` };
         }
-        return null;
       }
 
       // Only parse response on successful status
@@ -1755,6 +1764,7 @@ const PLAY_WORDS = [
 
         let bestResult = null;
         let bestResultType = null;
+        let lastError = null; // Track the last error for reporting
 
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
@@ -1771,7 +1781,12 @@ const PLAY_WORDS = [
           // No sourceOrder parameter - let API search all sources
           let result = await fetchKPoeLyrics(songInfo);
 
-          if (result && result.lyrics && result.lyrics.length > 0) {
+          // Handle errors - log but continue trying other attempts
+          if (result && result.error) {
+            lastError = result.error; // Track the last error
+            console.log(`[KPoe Debug] ✗ Error on attempt ${i + 1}: ${result.error}`);
+            // Continue to next attempt - sometimes one of them goes through
+          } else if (result && result.lyrics && result.lyrics.length > 0) {
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
 
             // Keep track of the best result (prefer Line over Word)
@@ -1803,6 +1818,10 @@ const PLAY_WORDS = [
         }
 
         console.log("[KPoe Debug] ✗ All 5 attempts failed");
+        // If we have a specific error from the last attempt, return it
+        if (lastError) {
+          return { error: lastError };
+        }
         return { error: "Track not found in KPoe database or no lyrics available" };
       } catch (e) {
         return { error: e.message || "KPoe request failed - network error or service unavailable" };
@@ -6227,4 +6246,3 @@ const Providers = {
 
   init();
 })();
-
