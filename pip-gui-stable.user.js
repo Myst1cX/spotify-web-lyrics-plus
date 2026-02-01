@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      15.5
+// @version      15.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (15.6): POPUP RESTORED STATE FIX 
 
 // RESOLVED (15.5): YET ANOTHER KPOE PROVIDER FIX (MORE ACCURATE ERROR HANDLING)
 
@@ -3312,16 +3314,26 @@ const Providers = {
     // Clear current provider so no provider is highlighted while searching for lyrics
     Providers.current = null;
 
-    // Load saved state from localStorage
-    const savedState = localStorage.getItem('lyricsPlusPopupState');
+    // Load saved proportion from localStorage (stored as ratios of window size)
+    const savedProportion = localStorage.getItem('lyricsPlusPopupProportion');
     let pos = null;
-    if (savedState) {
+    let shouldSaveDefaultPosition = false;
+    if (savedProportion) {
       try {
-        pos = JSON.parse(savedState);
-        DEBUG.debug('UI', 'Loaded saved popup state', pos);
+        const proportion = JSON.parse(savedProportion);
+        // Convert proportions to absolute pixel values for initial positioning
+        if (proportion.w !== undefined && proportion.h !== undefined && proportion.x !== undefined && proportion.y !== undefined) {
+          pos = {
+            left: window.innerWidth * proportion.x,
+            top: window.innerHeight * proportion.y,
+            width: window.innerWidth * proportion.w,
+            height: window.innerHeight * proportion.h
+          };
+          DEBUG.debug('UI', 'Loaded saved popup proportion and converted to pixels', pos);
+        }
       } catch {
         pos = null;
-        DEBUG.warn('UI', 'Failed to parse saved popup state');
+        DEBUG.warn('UI', 'Failed to parse saved popup proportion');
       }
     }
 
@@ -3375,6 +3387,7 @@ const Providers = {
       });
     } else {
       // fallback to container or default
+      shouldSaveDefaultPosition = true;
       let rect = getSpotifyLyricsContainerRect();
       if (rect) {
         Object.assign(popup.style, {
@@ -3399,12 +3412,6 @@ const Providers = {
           right: "auto",
           bottom: "auto"
         });
-        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height
-        }));
       } else {
         // fallback
         Object.assign(popup.style, {
@@ -3501,12 +3508,6 @@ const Providers = {
           bottom: "auto",
           zIndex: 100000
         });
-        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height
-        }));
         savePopupState(popup);
         console.log("✅ [Lyrics+ UI] Position restored to Spotify lyrics container position");
       } else {
@@ -3520,12 +3521,6 @@ const Providers = {
           height: "79.5vh",
           zIndex: 100000
         });
-        localStorage.setItem('lyricsPlusPopupState', JSON.stringify({
-          left: null,
-          top: null,
-          width: 360,
-          height: window.innerHeight * 0.795
-        }));
         savePopupState(popup);
         console.log("✅ [Lyrics+ UI] Position restored to default position (bottom-right corner)");
       }
@@ -4909,6 +4904,11 @@ const Providers = {
         y: rect.top / window.innerHeight
       };
       localStorage.setItem('lyricsPlusPopupProportion', JSON.stringify(window.lastProportion));
+    }
+
+    // Save initial state if using default position (not restored from saved state)
+    if (shouldSaveDefaultPosition) {
+      savePopupState(popup);
     }
 
     (function makeDraggable(el, handle) {
