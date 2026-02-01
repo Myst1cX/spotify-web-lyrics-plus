@@ -1649,6 +1649,9 @@ const PLAY_WORDS = [
           console.log("[KPoe Debug] ✗ Rate limit exceeded - too many requests");
         } else if (response.status === 500) {
           console.log("[KPoe Debug] ✗ Server error - KPoe service may be down");
+        } else if (response.status === 503) {
+          console.log("[KPoe Debug] ✗ Possible rate limit. Try again later.");
+          throw new Error("Possible rate limit. Try again later.");
         } else {
           console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
         }
