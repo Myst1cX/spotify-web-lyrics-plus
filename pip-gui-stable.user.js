@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      15.3.test
+// @version      15.4
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (15.4): UI TWEAKS (improved readability)
 
 // RESOLVED (15.3): UPDATED TRANSLITERATION FUNCTIONS
 
@@ -928,7 +929,7 @@
       if (noneSelected || !Providers.current) {
         btn.style.backgroundColor = "#333";
       } else {
-        btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
+        btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1aa34a" : "#333";
       }
     });
   }
@@ -3430,6 +3431,7 @@ const Providers = {
     title.textContent = "Lyrics+";
     title.style.margin = "0";
     title.style.fontWeight = "600";
+    title.style.color = "#cfcfcf"; // similar to github icon background color
 
     // Restore Default Position and Size button for the header
     const btnReset = document.createElement("button");
@@ -3535,10 +3537,11 @@ const Providers = {
     langSelect.style.minWidth = '0';
     langSelect.style.height = controlHeight;
     langSelect.style.background = '#333';
-    langSelect.style.color = 'white';
+    langSelect.style.color = '#e0e0e0';
     langSelect.style.border = 'none';
     langSelect.style.borderRadius = '5px';
     langSelect.style.fontSize = fontSize;
+    langSelect.style.fontWeight = '400';
     langSelect.style.boxSizing = 'border-box';
     console.log("✅ [Lyrics+ UI] Translation language dropdown created, current language:", getSavedTranslationLang());
     langSelect.onchange = () => {
@@ -3554,11 +3557,12 @@ const Providers = {
     translateBtn.style.flex = '1';
     translateBtn.style.minWidth = '0';
     translateBtn.style.height = controlHeight;
-    translateBtn.style.background = '#1db954';
-    translateBtn.style.color = 'white';
+    translateBtn.style.background = '#1aa34a';
+    translateBtn.style.color = '#e0e0e0';
     translateBtn.style.border = 'none';
     translateBtn.style.borderRadius = '5px';
     translateBtn.style.fontSize = fontSize;
+    translateBtn.style.fontWeight = '600';
     translateBtn.style.cursor = 'pointer';
     translateBtn.style.boxSizing = 'border-box';
     console.log("✅ [Lyrics+ UI] Translate button created");
@@ -3570,10 +3574,11 @@ const Providers = {
     removeBtn.style.minWidth = '0';
     removeBtn.style.height = controlHeight;
     removeBtn.style.background = '#333';
-    removeBtn.style.color = 'white';
+    removeBtn.style.color = '#e0e0e0';
     removeBtn.style.border = 'none';
     removeBtn.style.borderRadius = '5px';
     removeBtn.style.fontSize = fontSize;
+    removeBtn.style.fontWeight = '600';
     removeBtn.style.cursor = 'pointer';
     removeBtn.style.boxSizing = 'border-box';
     console.log("✅ [Lyrics+ UI] Remove translation button ('Original') created");
@@ -3921,8 +3926,8 @@ const Providers = {
       btn.style.borderRadius = "6px";
       btn.style.border = "none";
       btn.style.cursor = "pointer";
-      btn.style.backgroundColor = (Providers.current === name) ? "#1db954" : "#333";
-      btn.style.color = "white";
+      btn.style.backgroundColor = (Providers.current === name) ? "#1aa34a" : "#333";
+      btn.style.color = "#e0e0e0";
       btn.style.fontWeight = "600";
 
       btn.onclick = async (e) => {
@@ -4501,7 +4506,7 @@ const Providers = {
     applyOffsetVisibility(offsetVisible);
     applyControlsVisibility(controlsVisible);
     applyTabsVisibility(tabsVisible);
-    
+
     // Set initial button titles based on visibility states
     offsetToggleBtn.title = offsetVisible ? "Hide timing offset" : "Show timing offset";
 
@@ -6095,16 +6100,16 @@ const Providers = {
       btn.textContent = "Lyrics+";
       DEBUG.info('Button', 'Lyrics+ button injected successfully');
       Object.assign(btn.style, {
-        backgroundColor: "#1db954",
+        backgroundColor: "#1aa34a",
         border: "none",
         borderRadius: "20px",
-        color: "white",
-        cursor: "pointer",
+        color: "#e0e0e0",
         fontWeight: "600",
         fontSize: "14px",
         padding: "6px 12px",
         marginLeft: "8px",
         userSelect: "none",
+        cursor: "pointer",
       });
       btn.onclick = () => {
         let popup = document.getElementById("lyrics-plus-popup");
