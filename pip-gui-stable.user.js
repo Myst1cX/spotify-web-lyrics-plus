@@ -1647,7 +1647,12 @@ const PLAY_WORDS = [
         if (response.status === 503) {
           console.log("[KPoe Debug] ⚠ Got 503 response, attempting to parse JSON anyway (KPoe API quirk)");
           try {
-            const data = await response.json();
+            // First, get the response text to check what we actually received
+            const responseText = await response.text();
+            console.log("[KPoe Debug] 503 response body (first 200 chars):", responseText.substring(0, 200));
+            
+            // Try to parse as JSON
+            const data = JSON.parse(responseText);
             // Check if valid lyrics data exists despite 503 status
             if (data && data.lyrics && data.lyrics.length > 0) {
               console.log(`[KPoe Debug] ✓ Found valid lyrics despite 503! Type: ${data.type}, Lines: ${data.lyrics.length}`);
@@ -1656,6 +1661,7 @@ const PLAY_WORDS = [
             console.log("[KPoe Debug] ✗ 503 response had no valid lyrics data");
           } catch (parseError) {
             console.log("[KPoe Debug] ✗ Failed to parse 503 response:", parseError?.message || parseError || "Unknown error");
+            console.log("[KPoe Debug] ℹ 503 errors are often transient (CDN/proxy issues). The API may be working - try refreshing or waiting a moment.");
           }
           return null;
         }
