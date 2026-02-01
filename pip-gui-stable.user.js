@@ -1645,16 +1645,23 @@ const PLAY_WORDS = [
       if (!response.ok) {
         if (response.status === 404) {
           console.log("[KPoe Debug] ✗ Track not found in KPoe database");
+          return { error: "Track not found in KPoe database" };
+        } else if (response.status === 400) {
+          console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
+          return { error: "Bad request - Invalid parameters" };
         } else if (response.status === 429) {
           console.log("[KPoe Debug] ✗ Rate limit exceeded - too many requests");
+          return { error: "Rate limit exceeded - too many requests" };
         } else if (response.status === 500) {
           console.log("[KPoe Debug] ✗ Internal Server Error - Kpoe may be down");
+          return { error: "Internal Server Error - KPoe may be down" };
         } else if (response.status === 503) {
           console.log("[KPoe Debug] ✗ Service unavailable - KPoe may be down or exceeded resource limits");
+          return { error: "Service unavailable - KPoe may be down or exceeded resource limits" };
         } else {
           console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+          return { error: `Request failed: ${response.status} ${response.statusText}` };
         }
-        return null;
       }
 
       // Only parse response on successful status
@@ -1771,7 +1778,21 @@ const PLAY_WORDS = [
           // No sourceOrder parameter - let API search all sources
           let result = await fetchKPoeLyrics(songInfo);
 
-          if (result && result.lyrics && result.lyrics.length > 0) {
+          // Check for critical errors that should stop retry attempts
+          if (result && result.error) {
+            const errorMsg = result.error;
+            // For 400, 429, 500, 503 errors, stop immediately and return the error
+            if (errorMsg.includes("Bad request") || 
+                errorMsg.includes("Rate limit exceeded") || 
+                errorMsg.includes("Internal Server Error") || 
+                errorMsg.includes("Service unavailable") ||
+                errorMsg.includes("Request failed")) {
+              console.log(`[KPoe Debug] ✗ Critical error encountered: ${errorMsg}`);
+              return result; // Return error immediately
+            }
+            // For 404 errors (Track not found), continue trying other attempts
+            console.log(`[KPoe Debug] Track not found on attempt ${i + 1}, continuing...`);
+          } else if (result && result.lyrics && result.lyrics.length > 0) {
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
 
             // Keep track of the best result (prefer Line over Word)
