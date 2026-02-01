@@ -1,112 +1,3031 @@
-[Musixmatch Debug] Track response status: 200 Spotify Lyrics+ Stable.user.js:2324:13
-[Musixmatch Debug] ✓ Track found: 
-Object { trackId: 330591451, trackName: "弯弯的月亮", artistName: "刘欢", hasLyrics: 0, instrumental: 0 }
-Spotify Lyrics+ Stable.user.js:2346:13
-[Musixmatch Debug] Step 2: Fetching synced lyrics (subtitles) Spotify Lyrics+ Stable.user.js:2362:13
-[Musixmatch Debug] Subtitle response status: 200 Spotify Lyrics+ Stable.user.js:2372:13
-[Musixmatch Debug] No synced lyrics in subtitle response Spotify Lyrics+ Stable.user.js:2386:15
-[Musixmatch Debug] Step 3: Fetching unsynced lyrics (fallback) Spotify Lyrics+ Stable.user.js:2394:13
-[Musixmatch Debug] Lyrics response status: 200 Spotify Lyrics+ Stable.user.js:2404:13
-[Musixmatch Debug] ✗ No lyrics found in any format Spotify Lyrics+ Stable.user.js:2419:13
-[Lyrics+ WARN] [Provider] ✗ Musixmatch getSynced failed: Track not found in Musixmatch database or no lyrics available Spotify Lyrics+ Stable.user.js:526:34
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1857:11
-[LRCLIB Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1858:11
-[LRCLIB Debug] Input info: 
-Object { artist: "刘欢", title: "弯弯的月亮", album: "", duration: 300000 }
-Spotify Lyrics+ Stable.user.js:1859:11
-[LRCLIB Debug] Searching WITH album parameter Spotify Lyrics+ Stable.user.js:1865:11
-[LRCLIB Debug] Including duration: 300 seconds Spotify Lyrics+ Stable.user.js:1884:13
-[LRCLIB Debug] Request URL: https://lrclib.net/api/get?artist_name=%E5%88%98%E6%AC%A2&track_name=%E5%BC%AF%E5%BC%AF%E7%9A%84%E6%9C%88%E4%BA%AE&duration=300 Spotify Lyrics+ Stable.user.js:1888:11
-[LRCLIB Debug] Response status: 200 OK Spotify Lyrics+ Stable.user.js:1898:13
-[LRCLIB Debug] Response data: 
-Object { hasPlainLyrics: true, hasSyncedLyrics: false, isInstrumental: false, duration: 301.8399999 }
-Spotify Lyrics+ Stable.user.js:1912:13
-[LRCLIB Debug] ✓ Lyrics found! Type: Unsynced only Spotify Lyrics+ Stable.user.js:1922:15
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1857:11
-[LRCLIB Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1858:11
-[LRCLIB Debug] Input info: 
-Object { artist: "刘欢", title: "弯弯的月亮", album: "", duration: 300000 }
-Spotify Lyrics+ Stable.user.js:1859:11
-[LRCLIB Debug] Searching WITH album parameter Spotify Lyrics+ Stable.user.js:1865:11
-[LRCLIB Debug] Including duration: 300 seconds Spotify Lyrics+ Stable.user.js:1884:13
-[LRCLIB Debug] Request URL: https://lrclib.net/api/get?artist_name=%E5%88%98%E6%AC%A2&track_name=%E5%BC%AF%E5%BC%AF%E7%9A%84%E6%9C%88%E4%BA%AE&duration=300 Spotify Lyrics+ Stable.user.js:1888:11
-[LRCLIB Debug] Response status: 200 OK Spotify Lyrics+ Stable.user.js:1898:13
-[LRCLIB Debug] Response data: 
-Object { hasPlainLyrics: true, hasSyncedLyrics: false, isInstrumental: false, duration: 301.8399999 }
-Spotify Lyrics+ Stable.user.js:1912:13
-[LRCLIB Debug] ✓ Lyrics found! Type: Unsynced only Spotify Lyrics+ Stable.user.js:1922:15
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2293:11
-[Musixmatch Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2294:11
-[Musixmatch Debug] Input info: 
-Object { artist: "刘欢", title: "弯弯的月亮" }
-Spotify Lyrics+ Stable.user.js:2295:11
-[Musixmatch Debug] ✓ Token found (length: 52 characters) Spotify Lyrics+ Stable.user.js:2305:11
-[Musixmatch Debug] Step 1: Fetching track info Spotify Lyrics+ Stable.user.js:2312:11
-[Musixmatch Debug] Track URL: https://apic-desktop.musixmatch.com/ws/1.1/matcher.track.get?q_track=%E5%BC%AF%E5%BC%AF%E7%9A%84%E6%9C%88%E4%BA%AE&q_artist=%E5%88%98%E6%AC%A2&format=json&usertoken=***TOKEN***&app_id=web-desktop-app-v1.0 Spotify Lyrics+ Stable.user.js:2313:11
-[Musixmatch Debug] Track response status: 200 Spotify Lyrics+ Stable.user.js:2324:13
-[Musixmatch Debug] ✓ Track found: 
-Object { trackId: 330591451, trackName: "弯弯的月亮", artistName: "刘欢", hasLyrics: 0, instrumental: 0 }
-Spotify Lyrics+ Stable.user.js:2346:13
-[Musixmatch Debug] Step 2: Fetching synced lyrics (subtitles) Spotify Lyrics+ Stable.user.js:2362:13
-[Musixmatch Debug] Subtitle response status: 200 Spotify Lyrics+ Stable.user.js:2372:13
-[Musixmatch Debug] No synced lyrics in subtitle response Spotify Lyrics+ Stable.user.js:2386:15
-[Musixmatch Debug] Step 3: Fetching unsynced lyrics (fallback) Spotify Lyrics+ Stable.user.js:2394:13
-[Musixmatch Debug] Lyrics response status: 200 Spotify Lyrics+ Stable.user.js:2404:13
-[Musixmatch Debug] ✗ No lyrics found in any format Spotify Lyrics+ Stable.user.js:2419:13
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1960:13
-// hi my code analyst! note how below kpoe is conducting what seems to be a blank search??? this is from script provider autodetection.
-[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1961:13
-[KPoe Debug] Input info: 
-Object { artist: "", title: "", album: "", duration: 300, sourceOrder: "none", forceReload: false }
-Spotify Lyrics+ Stable.user.js:1962:13
-[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=&artist=&duration=300 Spotify Lyrics+ Stable.user.js:1984:13
-[KPoe Debug] Response status: 400 Spotify Lyrics+ Stable.user.js:1988:15
-[KPoe Debug] ✗ Request failed: 400 Spotify Lyrics+ Stable.user.js:1998:19
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1960:13
-[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1961:13
-[KPoe Debug] Input info: 
-Object { artist: "", title: "", album: "", duration: 300, sourceOrder: "none", forceReload: false }
-Spotify Lyrics+ Stable.user.js:1962:13
-[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=&artist=&duration=300 Spotify Lyrics+ Stable.user.js:1984:13
-[KPoe Debug] Response status: 400 Spotify Lyrics+ Stable.user.js:1988:15
-[KPoe Debug] ✗ Request failed: 400 Spotify Lyrics+ Stable.user.js:1998:19
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1857:11
-[LRCLIB Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1858:11
-[LRCLIB Debug] Input info: 
-Object { artist: "攬佬SKAI ISYOURGOD", title: "八方來財(Stacks from All Sides)", album: "", duration: 173000 }
-Spotify Lyrics+ Stable.user.js:1859:11
-[LRCLIB Debug] Searching WITH album parameter Spotify Lyrics+ Stable.user.js:1865:11
-[LRCLIB Debug] Including duration: 173 seconds Spotify Lyrics+ Stable.user.js:1884:13
-[LRCLIB Debug] Request URL: https://lrclib.net/api/get?artist_name=%E6%94%AC%E4%BD%ACSKAI%20ISYOURGOD&track_name=%E5%85%AB%E6%96%B9%E4%BE%86%E8%B2%A1(Stacks%20from%20All%20Sides)&duration=173 Spotify Lyrics+ Stable.user.js:1888:11
-Right Click: No Table Found content.js:19:17
-[LRCLIB Debug] Response status: 200 OK Spotify Lyrics+ Stable.user.js:1898:13
-[LRCLIB Debug] Response data: 
-Object { hasPlainLyrics: true, hasSyncedLyrics: true, isInstrumental: false, duration: 174 }
-Spotify Lyrics+ Stable.user.js:1912:13
-[LRCLIB Debug] ✓ Lyrics found! Type: Synced Spotify Lyrics+ Stable.user.js:1922:15
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1857:11
-[LRCLIB Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1858:11
-[LRCLIB Debug] Input info: 
-Object { artist: "攬佬SKAI ISYOURGOD", title: "八方來財(Stacks from All Sides)", album: "", duration: 173000 }
-Spotify Lyrics+ Stable.user.js:1859:11
-[LRCLIB Debug] Searching WITH album parameter Spotify Lyrics+ Stable.user.js:1865:11
-[LRCLIB Debug] Including duration: 173 seconds Spotify Lyrics+ Stable.user.js:1884:13
-[LRCLIB Debug] Request URL: https://lrclib.net/api/get?artist_name=%E6%94%AC%E4%BD%ACSKAI%20ISYOURGOD&track_name=%E5%85%AB%E6%96%B9%E4%BE%86%E8%B2%A1(Stacks%20from%20All%20Sides)&duration=173 Spotify Lyrics+ Stable.user.js:1888:11
-[LRCLIB Debug] Response status: 200 OK Spotify Lyrics+ Stable.user.js:1898:13
-[LRCLIB Debug] Response data: 
-Object { hasPlainLyrics: true, hasSyncedLyrics: true, isInstrumental: false, duration: 174 }
-Spotify Lyrics+ Stable.user.js:1912:13
-[LRCLIB Debug] ✓ Lyrics found! Type: Synced Spotify Lyrics+ Stable.user.js:1922:15
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:1960:13
+// console says response 503 and my lyrics gui says that track was not found in kpoe database but if i open api link in browser it shows synced lyrics (attempt 5)
 
-// hi to my code analyst! i am hijacking the thread to tell you that below is the kpoe response after manual click which is what should be. the blank response from far above was from auto detect...
-[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:1961:13
+// console:
+
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2146:19
+[KPoe Debug] Attempt 1/5: Raw data with album Spotify Lyrics+ Stable.user.js:2147:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2001:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2002:13
 [KPoe Debug] Input info: 
-Object { artist: "SKAI ISYOURGOD", title: "Stacks from All Sides", album: "", duration: 172, sourceOrder: "none", forceReload: false }
-Spotify Lyrics+ Stable.user.js:1962:13
-[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Stacks%20from%20All%20Sides&artist=SKAI%20ISYOURGOD&duration=172 Spotify Lyrics+ Stable.user.js:1984:13
-[KPoe Debug] Response status: 200 Spotify Lyrics+ Stable.user.js:1988:15
-[KPoe Debug] Response data: 
-Object { hasLyrics: true, lyricsType: "Word", lyricsCount: 33, source: "Apple" }
-Spotify Lyrics+ Stable.user.js:2004:15
-[KPoe Debug] ✓ Lyrics found! Type: Word, Lines: 33, Source: Apple Spotify Lyrics+ Stable.user.js:2012:17
+Object { artist: "攬佬SKAI ISYOURGOD", title: "八方來財(Stacks from All Sides)", album: "", duration: 173, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2003:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=%E5%85%AB%E6%96%B9%E4%BE%86%E8%B2%A1(Stacks%20from%20All%20Sides)&artist=%E6%94%AC%E4%BD%ACSKAI%20ISYOURGOD&duration=173 Spotify Lyrics+ Stable.user.js:2025:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2029:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2034:19
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2146:19
+[KPoe Debug] Attempt 2/5: Raw data without album (sometimes album metadata is wrong) Spotify Lyrics+ Stable.user.js:2147:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2001:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2002:13
+[KPoe Debug] Input info: 
+Object { artist: "攬佬SKAI ISYOURGOD", title: "八方來財(Stacks from All Sides)", album: "", duration: 173, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2003:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=%E5%85%AB%E6%96%B9%E4%BE%86%E8%B2%A1(Stacks%20from%20All%20Sides)&artist=%E6%94%AC%E4%BD%ACSKAI%20ISYOURGOD&duration=173 Spotify Lyrics+ Stable.user.js:2025:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2029:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2034:19
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2146:19
+[KPoe Debug] Attempt 3/5: Normalized artist, raw title Spotify Lyrics+ Stable.user.js:2147:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2001:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2002:13
+[KPoe Debug] Input info: 
+Object { artist: "SKAI ISYOURGOD", title: "八方來財(Stacks from All Sides)", album: "", duration: 173, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2003:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=%E5%85%AB%E6%96%B9%E4%BE%86%E8%B2%A1(Stacks%20from%20All%20Sides)&artist=SKAI%20ISYOURGOD&duration=173 Spotify Lyrics+ Stable.user.js:2025:13
+[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:2029:15
+[KPoe Debug] ✗ Request failed: 503 Spotify Lyrics+ Stable.user.js:2040:19
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2146:19
+[KPoe Debug] Attempt 4/5: Raw artist, normalized title Spotify Lyrics+ Stable.user.js:2147:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2001:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2002:13
+[KPoe Debug] Input info: 
+Object { artist: "攬佬SKAI ISYOURGOD", title: "Stacks from All Sides", album: "", duration: 173, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2003:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Stacks%20from%20All%20Sides&artist=%E6%94%AC%E4%BD%ACSKAI%20ISYOURGOD&duration=173 Spotify Lyrics+ Stable.user.js:2025:13
+🔄 [Lyrics+ UI] Restore default position button clicked Spotify Lyrics+ Stable.user.js:3857:15
+✅ [Lyrics+ UI] Position restored to Spotify lyrics container position Spotify Lyrics+ Stable.user.js:3877:17
+Right Click: No Table Found content.js:19:17
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2029:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2034:19
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2146:19
+[KPoe Debug] Attempt 5/5: Fully normalized data Spotify Lyrics+ Stable.user.js:2147:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2001:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2002:13
+[KPoe Debug] Input info: 
+Object { artist: "SKAI ISYOURGOD", title: "Stacks from All Sides", album: "", duration: 173, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2003:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Stacks%20from%20All%20Sides&artist=SKAI%20ISYOURGOD&duration=173 Spotify Lyrics+ Stable.user.js:2025:13
+[KPoe Debug] Response status: 503 Spotify Lyrics+ Stable.user.js:2029:15
+[KPoe Debug] ✗ Request failed: 503 Spotify Lyrics+ Stable.user.js:2040:19
+[KPoe Debug] ✗ All 5 attempts failed Spotify Lyrics+ Stable.user.js:2190:17
+📝 [Lyrics+ UI] Download button hidden (lyrics error) Spotify Lyrics+ Stable.user.js:6207:17
+Source map error: Error: URL constructor:  is not a valid URL.
+Stack in the worker:resolveSourceMapURL@resource://devtools/client/shared/source-map-loader/utils/fetchSourceMap.js:56:22
+getOriginalURLs@resource://devtools/client/shared/source-map-loader/source-map.js:75:24
+workerHandler/</<@resource://devtools/client/shared/worker-utils.js:115:52
+workerHandler/<@resource://devtools/client/shared/worker-utils.js:113:13
+
+Resource URL: wasm:https://open-exp.spotifycdn.com/cdn/build/web-player/web-player.f1b563be.js%20line%2040%20%3E%20WebAssembly.Module
+Source Map URL: null
+
+// api response: 
+
+{
+   "KpoeTools":"1.7-ConvertTTMLtoJSON-DOMParser",
+   "type":"Word",
+   "metadata":{
+      "source":"Apple",
+      "songWriters":[
+         "SKAI ISYOURGOD"
+      ],
+      "title":"",
+      "language":"zh-Hans",
+      "agents":{
+         "v1":{
+            "type":"person",
+            "name":"",
+            "alias":"v1"
+         }
+      },
+      "songParts":[
+         {
+            "name":"Chorus",
+            "time":37500,
+            "duration":15217
+         },
+         {
+            "name":"Chorus",
+            "time":53096,
+            "duration":15109
+         },
+         {
+            "name":"Verse",
+            "time":69190,
+            "duration":15046
+         },
+         {
+            "name":"Verse",
+            "time":84302,
+            "duration":14886
+         },
+         {
+            "name":"Bridge",
+            "time":99406,
+            "duration":15015
+         },
+         {
+            "name":"Chorus",
+            "time":115541,
+            "duration":15251
+         },
+         {
+            "name":"Chorus",
+            "time":131146,
+            "duration":15130
+         }
+      ],
+      "totalDuration":"2:53.037"
+   },
+   "lyrics":[
+      {
+         "time":37500,
+         "duration":3460,
+         "text":"我们这的憋佬仔 脖子上喜欢挂玉牌",
+         "syllabus":[
+            {
+               "time":37500,
+               "duration":265,
+               "text":"我们"
+            },
+            {
+               "time":37765,
+               "duration":243,
+               "text":"这的"
+            },
+            {
+               "time":38008,
+               "duration":462,
+               "text":"憋佬"
+            },
+            {
+               "time":38470,
+               "duration":528,
+               "text":"仔 "
+            },
+            {
+               "time":38998,
+               "duration":227,
+               "text":"脖子"
+            },
+            {
+               "time":39225,
+               "duration":190,
+               "text":"上"
+            },
+            {
+               "time":39415,
+               "duration":554,
+               "text":"喜欢"
+            },
+            {
+               "time":39969,
+               "duration":464,
+               "text":"挂玉"
+            },
+            {
+               "time":40433,
+               "duration":527,
+               "text":"牌"
+            }
+         ],
+         "element":{
+            "key":"L1",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":0
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"wo men zhe de bie lao zai bo zi shang xi huan gua yu pai",
+            "syllabus":[
+               {
+                  "time":37500,
+                  "duration":265,
+                  "text":"wo men "
+               },
+               {
+                  "time":37765,
+                  "duration":243,
+                  "text":"zhe de "
+               },
+               {
+                  "time":38008,
+                  "duration":462,
+                  "text":"bie lao "
+               },
+               {
+                  "time":38470,
+                  "duration":528,
+                  "text":"zai "
+               },
+               {
+                  "time":38998,
+                  "duration":227,
+                  "text":"bo zi "
+               },
+               {
+                  "time":39225,
+                  "duration":190,
+                  "text":"shang "
+               },
+               {
+                  "time":39415,
+                  "duration":554,
+                  "text":"xi huan "
+               },
+               {
+                  "time":39969,
+                  "duration":464,
+                  "text":"gua yu "
+               },
+               {
+                  "time":40433,
+                  "duration":527,
+                  "text":"pai"
+               }
+            ]
+         }
+      },
+      {
+         "time":41359,
+         "duration":3592,
+         "text":"香炉供台上摆 长大才开白黄牌",
+         "syllabus":[
+            {
+               "time":41359,
+               "duration":571,
+               "text":"香炉"
+            },
+            {
+               "time":41930,
+               "duration":319,
+               "text":"供台"
+            },
+            {
+               "time":42249,
+               "duration":198,
+               "text":"上"
+            },
+            {
+               "time":42447,
+               "duration":412,
+               "text":"摆 "
+            },
+            {
+               "time":42859,
+               "duration":494,
+               "text":"长大"
+            },
+            {
+               "time":43353,
+               "duration":502,
+               "text":"才开"
+            },
+            {
+               "time":43855,
+               "duration":479,
+               "text":"白黄"
+            },
+            {
+               "time":44334,
+               "duration":617,
+               "text":"牌"
+            }
+         ],
+         "element":{
+            "key":"L2",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":0
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"xiang lu gong tai shang bai zhang da cai kai bai huang pai",
+            "syllabus":[
+               {
+                  "time":41359,
+                  "duration":571,
+                  "text":"xiang lu "
+               },
+               {
+                  "time":41930,
+                  "duration":319,
+                  "text":"gong tai "
+               },
+               {
+                  "time":42249,
+                  "duration":198,
+                  "text":"shang "
+               },
+               {
+                  "time":42447,
+                  "duration":412,
+                  "text":"bai "
+               },
+               {
+                  "time":42859,
+                  "duration":494,
+                  "text":"zhang da "
+               },
+               {
+                  "time":43353,
+                  "duration":502,
+                  "text":"cai kai "
+               },
+               {
+                  "time":43855,
+                  "duration":479,
+                  "text":"bai huang "
+               },
+               {
+                  "time":44334,
+                  "duration":617,
+                  "text":"pai"
+               }
+            ]
+         }
+      },
+      {
+         "time":45237,
+         "duration":3499,
+         "text":"虔诚拜三拜 钱包里面多几百",
+         "syllabus":[
+            {
+               "time":45237,
+               "duration":584,
+               "text":"虔诚"
+            },
+            {
+               "time":45821,
+               "duration":498,
+               "text":"拜三"
+            },
+            {
+               "time":46319,
+               "duration":263,
+               "text":"拜 "
+            },
+            {
+               "time":47205,
+               "duration":336,
+               "text":"钱包"
+            },
+            {
+               "time":47541,
+               "duration":224,
+               "text":"里面"
+            },
+            {
+               "time":47765,
+               "duration":469,
+               "text":"多几"
+            },
+            {
+               "time":48234,
+               "duration":502,
+               "text":"百"
+            }
+         ],
+         "element":{
+            "key":"L3",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":0
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"qian cheng bai san bai qian bao li mian duo ji bai",
+            "syllabus":[
+               {
+                  "time":45237,
+                  "duration":584,
+                  "text":"qian cheng "
+               },
+               {
+                  "time":45821,
+                  "duration":498,
+                  "text":"bai san "
+               },
+               {
+                  "time":46319,
+                  "duration":263,
+                  "text":"bai "
+               },
+               {
+                  "time":47205,
+                  "duration":336,
+                  "text":"qian bao "
+               },
+               {
+                  "time":47541,
+                  "duration":224,
+                  "text":"li mian "
+               },
+               {
+                  "time":47765,
+                  "duration":469,
+                  "text":"duo ji "
+               },
+               {
+                  "time":48234,
+                  "duration":502,
+                  "text":"bai"
+               }
+            ]
+         }
+      },
+      {
+         "time":49196,
+         "duration":3521,
+         "text":"易的是六合彩 难的是等河牌",
+         "syllabus":[
+            {
+               "time":49196,
+               "duration":252,
+               "text":"易"
+            },
+            {
+               "time":49448,
+               "duration":265,
+               "text":"的是"
+            },
+            {
+               "time":49713,
+               "duration":440,
+               "text":"六合"
+            },
+            {
+               "time":50153,
+               "duration":403,
+               "text":"彩 "
+            },
+            {
+               "time":51176,
+               "duration":296,
+               "text":"难的"
+            },
+            {
+               "time":51472,
+               "duration":185,
+               "text":"是"
+            },
+            {
+               "time":51657,
+               "duration":501,
+               "text":"等河"
+            },
+            {
+               "time":52158,
+               "duration":559,
+               "text":"牌"
+            }
+         ],
+         "element":{
+            "key":"L4",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":0
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yi de shi liu he cai nan de shi deng he pai",
+            "syllabus":[
+               {
+                  "time":49196,
+                  "duration":252,
+                  "text":"yi "
+               },
+               {
+                  "time":49448,
+                  "duration":265,
+                  "text":"de shi "
+               },
+               {
+                  "time":49713,
+                  "duration":440,
+                  "text":"liu he "
+               },
+               {
+                  "time":50153,
+                  "duration":403,
+                  "text":"cai "
+               },
+               {
+                  "time":51176,
+                  "duration":296,
+                  "text":"nan de "
+               },
+               {
+                  "time":51472,
+                  "duration":185,
+                  "text":"shi "
+               },
+               {
+                  "time":51657,
+                  "duration":501,
+                  "text":"deng he "
+               },
+               {
+                  "time":52158,
+                  "duration":559,
+                  "text":"pai"
+               }
+            ]
+         }
+      },
+      {
+         "time":53096,
+         "duration":3319,
+         "text":"来财 来 来财 来",
+         "syllabus":[
+            {
+               "time":53096,
+               "duration":171,
+               "text":"来"
+            },
+            {
+               "time":53267,
+               "duration":316,
+               "text":"财 "
+            },
+            {
+               "time":54064,
+               "duration":294,
+               "text":"来 "
+            },
+            {
+               "time":55029,
+               "duration":180,
+               "text":"来"
+            },
+            {
+               "time":55209,
+               "duration":242,
+               "text":"财 "
+            },
+            {
+               "time":55998,
+               "duration":417,
+               "text":"来"
+            }
+         ],
+         "element":{
+            "key":"L5",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lai cai lai lai cai lai",
+            "syllabus":[
+               {
+                  "time":53096,
+                  "duration":171,
+                  "text":"lai "
+               },
+               {
+                  "time":53267,
+                  "duration":316,
+                  "text":"cai "
+               },
+               {
+                  "time":54064,
+                  "duration":294,
+                  "text":"lai "
+               },
+               {
+                  "time":55029,
+                  "duration":180,
+                  "text":"lai "
+               },
+               {
+                  "time":55209,
+                  "duration":242,
+                  "text":"cai "
+               },
+               {
+                  "time":55998,
+                  "duration":417,
+                  "text":"lai"
+               }
+            ]
+         }
+      },
+      {
+         "time":56995,
+         "duration":3300,
+         "text":"来财 来 来财 来",
+         "syllabus":[
+            {
+               "time":56995,
+               "duration":171,
+               "text":"来"
+            },
+            {
+               "time":57166,
+               "duration":316,
+               "text":"财 "
+            },
+            {
+               "time":58002,
+               "duration":332,
+               "text":"来 "
+            },
+            {
+               "time":58928,
+               "duration":180,
+               "text":"来"
+            },
+            {
+               "time":59108,
+               "duration":279,
+               "text":"财 "
+            },
+            {
+               "time":59897,
+               "duration":398,
+               "text":"来"
+            }
+         ],
+         "element":{
+            "key":"L6",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lai cai lai lai cai lai",
+            "syllabus":[
+               {
+                  "time":56995,
+                  "duration":171,
+                  "text":"lai "
+               },
+               {
+                  "time":57166,
+                  "duration":316,
+                  "text":"cai "
+               },
+               {
+                  "time":58002,
+                  "duration":332,
+                  "text":"lai "
+               },
+               {
+                  "time":58928,
+                  "duration":180,
+                  "text":"lai "
+               },
+               {
+                  "time":59108,
+                  "duration":279,
+                  "text":"cai "
+               },
+               {
+                  "time":59897,
+                  "duration":398,
+                  "text":"lai"
+               }
+            ]
+         }
+      },
+      {
+         "time":60905,
+         "duration":3420,
+         "text":"宗旨利滚利 对应好运八方来",
+         "syllabus":[
+            {
+               "time":60905,
+               "duration":499,
+               "text":"宗旨"
+            },
+            {
+               "time":61404,
+               "duration":515,
+               "text":"利滚"
+            },
+            {
+               "time":61919,
+               "duration":265,
+               "text":"利 "
+            },
+            {
+               "time":62383,
+               "duration":174,
+               "text":"对"
+            },
+            {
+               "time":62557,
+               "duration":150,
+               "text":"应"
+            },
+            {
+               "time":62828,
+               "duration":205,
+               "text":"好"
+            },
+            {
+               "time":63033,
+               "duration":188,
+               "text":"运"
+            },
+            {
+               "time":63398,
+               "duration":461,
+               "text":"八方"
+            },
+            {
+               "time":63859,
+               "duration":466,
+               "text":"来"
+            }
+         ],
+         "element":{
+            "key":"L7",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"zong zhi li gun li dui ying hao yun ba fang lai",
+            "syllabus":[
+               {
+                  "time":60905,
+                  "duration":499,
+                  "text":"zong zhi "
+               },
+               {
+                  "time":61404,
+                  "duration":515,
+                  "text":"li gun "
+               },
+               {
+                  "time":61919,
+                  "duration":265,
+                  "text":"li "
+               },
+               {
+                  "time":62383,
+                  "duration":174,
+                  "text":"dui "
+               },
+               {
+                  "time":62557,
+                  "duration":150,
+                  "text":"ying "
+               },
+               {
+                  "time":62828,
+                  "duration":205,
+                  "text":"hao "
+               },
+               {
+                  "time":63033,
+                  "duration":188,
+                  "text":"yun "
+               },
+               {
+                  "time":63398,
+                  "duration":461,
+                  "text":"ba fang "
+               },
+               {
+                  "time":63859,
+                  "duration":466,
+                  "text":"lai"
+               }
+            ]
+         }
+      },
+      {
+         "time":64716,
+         "duration":3489,
+         "text":"散了才能聚 你不出手 说聊斋",
+         "syllabus":[
+            {
+               "time":64716,
+               "duration":532,
+               "text":"散了"
+            },
+            {
+               "time":65248,
+               "duration":561,
+               "text":"才能"
+            },
+            {
+               "time":65809,
+               "duration":215,
+               "text":"聚 "
+            },
+            {
+               "time":66224,
+               "duration":282,
+               "text":"你不"
+            },
+            {
+               "time":66506,
+               "duration":209,
+               "text":"出"
+            },
+            {
+               "time":66715,
+               "duration":282,
+               "text":"手 "
+            },
+            {
+               "time":67143,
+               "duration":576,
+               "text":"说聊"
+            },
+            {
+               "time":67719,
+               "duration":486,
+               "text":"斋"
+            }
+         ],
+         "element":{
+            "key":"L8",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":1
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"san le cai neng ju ni bu chu shou shuo liao zhai",
+            "syllabus":[
+               {
+                  "time":64716,
+                  "duration":532,
+                  "text":"san le "
+               },
+               {
+                  "time":65248,
+                  "duration":561,
+                  "text":"cai neng "
+               },
+               {
+                  "time":65809,
+                  "duration":215,
+                  "text":"ju "
+               },
+               {
+                  "time":66224,
+                  "duration":282,
+                  "text":"ni bu "
+               },
+               {
+                  "time":66506,
+                  "duration":209,
+                  "text":"chu "
+               },
+               {
+                  "time":66715,
+                  "duration":282,
+                  "text":"shou "
+               },
+               {
+                  "time":67143,
+                  "duration":576,
+                  "text":"shuo liao "
+               },
+               {
+                  "time":67719,
+                  "duration":486,
+                  "text":"zhai"
+               }
+            ]
+         }
+      },
+      {
+         "time":69190,
+         "duration":1541,
+         "text":"这一把直接合",
+         "syllabus":[
+            {
+               "time":69190,
+               "duration":312,
+               "text":"这一"
+            },
+            {
+               "time":69502,
+               "duration":214,
+               "text":"把"
+            },
+            {
+               "time":69716,
+               "duration":454,
+               "text":"直接"
+            },
+            {
+               "time":70170,
+               "duration":561,
+               "text":"合"
+            }
+         ],
+         "element":{
+            "key":"L9",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"zhe yi ba zhi jie he",
+            "syllabus":[
+               {
+                  "time":69190,
+                  "duration":312,
+                  "text":"zhe yi "
+               },
+               {
+                  "time":69502,
+                  "duration":214,
+                  "text":"ba "
+               },
+               {
+                  "time":69716,
+                  "duration":454,
+                  "text":"zhi jie "
+               },
+               {
+                  "time":70170,
+                  "duration":561,
+                  "text":"he"
+               }
+            ]
+         }
+      },
+      {
+         "time":70887,
+         "duration":1699,
+         "text":"因为我花钱交朋友",
+         "syllabus":[
+            {
+               "time":70887,
+               "duration":193,
+               "text":"因为"
+            },
+            {
+               "time":71080,
+               "duration":100,
+               "text":"我"
+            },
+            {
+               "time":71180,
+               "duration":469,
+               "text":"花钱"
+            },
+            {
+               "time":71649,
+               "duration":494,
+               "text":"交朋"
+            },
+            {
+               "time":72143,
+               "duration":443,
+               "text":"友"
+            }
+         ],
+         "element":{
+            "key":"L10",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yin wei wo hua qian jiao peng you",
+            "syllabus":[
+               {
+                  "time":70887,
+                  "duration":193,
+                  "text":"yin wei "
+               },
+               {
+                  "time":71080,
+                  "duration":100,
+                  "text":"wo "
+               },
+               {
+                  "time":71180,
+                  "duration":469,
+                  "text":"hua qian "
+               },
+               {
+                  "time":71649,
+                  "duration":494,
+                  "text":"jiao peng "
+               },
+               {
+                  "time":72143,
+                  "duration":443,
+                  "text":"you"
+               }
+            ]
+         }
+      },
+      {
+         "time":72913,
+         "duration":3559,
+         "text":"艺高人胆大 揽佬小盲三条九",
+         "syllabus":[
+            {
+               "time":72913,
+               "duration":692,
+               "text":"艺高"
+            },
+            {
+               "time":73605,
+               "duration":510,
+               "text":"人胆"
+            },
+            {
+               "time":74115,
+               "duration":362,
+               "text":"大 "
+            },
+            {
+               "time":74854,
+               "duration":178,
+               "text":"揽佬"
+            },
+            {
+               "time":75032,
+               "duration":438,
+               "text":"小盲"
+            },
+            {
+               "time":75470,
+               "duration":535,
+               "text":"三条"
+            },
+            {
+               "time":76005,
+               "duration":467,
+               "text":"九"
+            }
+         ],
+         "element":{
+            "key":"L11",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yi gao ren dan da lan lao xiao mang san tiao jiu",
+            "syllabus":[
+               {
+                  "time":72913,
+                  "duration":692,
+                  "text":"yi gao "
+               },
+               {
+                  "time":73605,
+                  "duration":510,
+                  "text":"ren dan "
+               },
+               {
+                  "time":74115,
+                  "duration":362,
+                  "text":"da "
+               },
+               {
+                  "time":74854,
+                  "duration":178,
+                  "text":"lan lao "
+               },
+               {
+                  "time":75032,
+                  "duration":438,
+                  "text":"xiao mang "
+               },
+               {
+                  "time":75470,
+                  "duration":535,
+                  "text":"san tiao "
+               },
+               {
+                  "time":76005,
+                  "duration":467,
+                  "text":"jiu"
+               }
+            ]
+         }
+      },
+      {
+         "time":76802,
+         "duration":3571,
+         "text":"回馈一下社会先 摸到那顶皇冠后",
+         "syllabus":[
+            {
+               "time":76802,
+               "duration":437,
+               "text":"回"
+            },
+            {
+               "time":77239,
+               "duration":128,
+               "text":"馈一"
+            },
+            {
+               "time":77367,
+               "duration":135,
+               "text":"下"
+            },
+            {
+               "time":77502,
+               "duration":476,
+               "text":"社会"
+            },
+            {
+               "time":77978,
+               "duration":353,
+               "text":"先 "
+            },
+            {
+               "time":78732,
+               "duration":246,
+               "text":"摸到"
+            },
+            {
+               "time":78978,
+               "duration":450,
+               "text":"那顶"
+            },
+            {
+               "time":79428,
+               "duration":548,
+               "text":"皇冠"
+            },
+            {
+               "time":79976,
+               "duration":397,
+               "text":"后"
+            }
+         ],
+         "element":{
+            "key":"L12",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"hui kui yi xia she hui xian mo dao na ding huang guan hou",
+            "syllabus":[
+               {
+                  "time":76802,
+                  "duration":437,
+                  "text":"hui "
+               },
+               {
+                  "time":77239,
+                  "duration":128,
+                  "text":"kui yi "
+               },
+               {
+                  "time":77367,
+                  "duration":135,
+                  "text":"xia "
+               },
+               {
+                  "time":77502,
+                  "duration":476,
+                  "text":"she hui "
+               },
+               {
+                  "time":77978,
+                  "duration":353,
+                  "text":"xian "
+               },
+               {
+                  "time":78732,
+                  "duration":246,
+                  "text":"mo dao "
+               },
+               {
+                  "time":78978,
+                  "duration":450,
+                  "text":"na ding "
+               },
+               {
+                  "time":79428,
+                  "duration":548,
+                  "text":"huang guan "
+               },
+               {
+                  "time":79976,
+                  "duration":397,
+                  "text":"hou"
+               }
+            ]
+         }
+      },
+      {
+         "time":80656,
+         "duration":3580,
+         "text":"找你做事人太多 事情两袖清风做",
+         "syllabus":[
+            {
+               "time":80656,
+               "duration":277,
+               "text":"找你"
+            },
+            {
+               "time":80933,
+               "duration":463,
+               "text":"做事"
+            },
+            {
+               "time":81396,
+               "duration":544,
+               "text":"人太"
+            },
+            {
+               "time":81940,
+               "duration":324,
+               "text":"多 "
+            },
+            {
+               "time":82591,
+               "duration":298,
+               "text":"事情"
+            },
+            {
+               "time":82889,
+               "duration":382,
+               "text":"两袖"
+            },
+            {
+               "time":83271,
+               "duration":573,
+               "text":"清风"
+            },
+            {
+               "time":83844,
+               "duration":392,
+               "text":"做"
+            }
+         ],
+         "element":{
+            "key":"L13",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":2
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"zhao ni zuo shi ren tai duo shi qing liang xiu qing feng zuo",
+            "syllabus":[
+               {
+                  "time":80656,
+                  "duration":277,
+                  "text":"zhao ni "
+               },
+               {
+                  "time":80933,
+                  "duration":463,
+                  "text":"zuo shi "
+               },
+               {
+                  "time":81396,
+                  "duration":544,
+                  "text":"ren tai "
+               },
+               {
+                  "time":81940,
+                  "duration":324,
+                  "text":"duo "
+               },
+               {
+                  "time":82591,
+                  "duration":298,
+                  "text":"shi qing "
+               },
+               {
+                  "time":82889,
+                  "duration":382,
+                  "text":"liang xiu "
+               },
+               {
+                  "time":83271,
+                  "duration":573,
+                  "text":"qing feng "
+               },
+               {
+                  "time":83844,
+                  "duration":392,
+                  "text":"zuo"
+               }
+            ]
+         }
+      },
+      {
+         "time":84302,
+         "duration":3391,
+         "text":"一阴一阳之谓道 紫气东来",
+         "syllabus":[
+            {
+               "time":84302,
+               "duration":229,
+               "text":"一"
+            },
+            {
+               "time":84531,
+               "duration":195,
+               "text":"阴"
+            },
+            {
+               "time":84822,
+               "duration":186,
+               "text":"一"
+            },
+            {
+               "time":85008,
+               "duration":203,
+               "text":"阳"
+            },
+            {
+               "time":85277,
+               "duration":400,
+               "text":"之谓"
+            },
+            {
+               "time":85776,
+               "duration":359,
+               "text":"道 "
+            },
+            {
+               "time":86192,
+               "duration":546,
+               "text":"紫气"
+            },
+            {
+               "time":86738,
+               "duration":480,
+               "text":"东"
+            },
+            {
+               "time":87218,
+               "duration":475,
+               "text":"来"
+            }
+         ],
+         "element":{
+            "key":"L14",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":3
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yi yin yi yang zhi wei dao zi qi dong lai",
+            "syllabus":[
+               {
+                  "time":84302,
+                  "duration":229,
+                  "text":"yi "
+               },
+               {
+                  "time":84531,
+                  "duration":195,
+                  "text":"yin "
+               },
+               {
+                  "time":84822,
+                  "duration":186,
+                  "text":"yi "
+               },
+               {
+                  "time":85008,
+                  "duration":203,
+                  "text":"yang "
+               },
+               {
+                  "time":85277,
+                  "duration":400,
+                  "text":"zhi wei "
+               },
+               {
+                  "time":85776,
+                  "duration":359,
+                  "text":"dao "
+               },
+               {
+                  "time":86192,
+                  "duration":546,
+                  "text":"zi qi "
+               },
+               {
+                  "time":86738,
+                  "duration":480,
+                  "text":"dong "
+               },
+               {
+                  "time":87218,
+                  "duration":475,
+                  "text":"lai"
+               }
+            ]
+         }
+      },
+      {
+         "time":88181,
+         "duration":3461,
+         "text":"明码标价的那些物 非黑即白",
+         "syllabus":[
+            {
+               "time":88181,
+               "duration":792,
+               "text":"明码标"
+            },
+            {
+               "time":88973,
+               "duration":224,
+               "text":"价的"
+            },
+            {
+               "time":89197,
+               "duration":490,
+               "text":"那些"
+            },
+            {
+               "time":89687,
+               "duration":462,
+               "text":"物 "
+            },
+            {
+               "time":90149,
+               "duration":539,
+               "text":"非黑"
+            },
+            {
+               "time":90688,
+               "duration":496,
+               "text":"即"
+            },
+            {
+               "time":91184,
+               "duration":458,
+               "text":"白"
+            }
+         ],
+         "element":{
+            "key":"L15",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":3
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"ming ma biao jia de na xie wu fei hei ji bai",
+            "syllabus":[
+               {
+                  "time":88181,
+                  "duration":792,
+                  "text":"ming ma biao "
+               },
+               {
+                  "time":88973,
+                  "duration":224,
+                  "text":"jia de "
+               },
+               {
+                  "time":89197,
+                  "duration":490,
+                  "text":"na xie "
+               },
+               {
+                  "time":89687,
+                  "duration":462,
+                  "text":"wu "
+               },
+               {
+                  "time":90149,
+                  "duration":539,
+                  "text":"fei hei "
+               },
+               {
+                  "time":90688,
+                  "duration":496,
+                  "text":"ji "
+               },
+               {
+                  "time":91184,
+                  "duration":458,
+                  "text":"bai"
+               }
+            ]
+         }
+      },
+      {
+         "time":92141,
+         "duration":3298,
+         "text":"若上颁奖台 切莫张灯结彩",
+         "syllabus":[
+            {
+               "time":92141,
+               "duration":1232,
+               "text":"若上颁奖台 "
+            },
+            {
+               "time":93373,
+               "duration":299,
+               "text":"切"
+            },
+            {
+               "time":93672,
+               "duration":376,
+               "text":"莫"
+            },
+            {
+               "time":94107,
+               "duration":491,
+               "text":"张灯"
+            },
+            {
+               "time":94598,
+               "duration":488,
+               "text":"结"
+            },
+            {
+               "time":95086,
+               "duration":353,
+               "text":"彩"
+            }
+         ],
+         "element":{
+            "key":"L16",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":3
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"ruo shang ban jiang tai qie mo zhang deng jie cai",
+            "syllabus":[
+               {
+                  "time":92141,
+                  "duration":1232,
+                  "text":"ruo shang ban jiang tai "
+               },
+               {
+                  "time":93373,
+                  "duration":299,
+                  "text":"qie "
+               },
+               {
+                  "time":93672,
+                  "duration":376,
+                  "text":"mo "
+               },
+               {
+                  "time":94107,
+                  "duration":491,
+                  "text":"zhang deng "
+               },
+               {
+                  "time":94598,
+                  "duration":488,
+                  "text":"jie "
+               },
+               {
+                  "time":95086,
+                  "duration":353,
+                  "text":"cai"
+               }
+            ]
+         }
+      },
+      {
+         "time":96055,
+         "duration":3133,
+         "text":"八仙桌的收尾少不了空心菜",
+         "syllabus":[
+            {
+               "time":96055,
+               "duration":1731,
+               "text":"八仙桌的收尾少"
+            },
+            {
+               "time":97786,
+               "duration":205,
+               "text":"不了"
+            },
+            {
+               "time":97991,
+               "duration":520,
+               "text":"空心"
+            },
+            {
+               "time":98511,
+               "duration":677,
+               "text":"菜"
+            }
+         ],
+         "element":{
+            "key":"L17",
+            "songPart":"Verse",
+            "singer":"v1",
+            "songPartIndex":3
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"ba xian zhuo de shou wei shao bu liao kong xin cai",
+            "syllabus":[
+               {
+                  "time":96055,
+                  "duration":1731,
+                  "text":"ba xian zhuo de shou wei shao "
+               },
+               {
+                  "time":97786,
+                  "duration":205,
+                  "text":"bu liao "
+               },
+               {
+                  "time":97991,
+                  "duration":520,
+                  "text":"kong xin "
+               },
+               {
+                  "time":98511,
+                  "duration":677,
+                  "text":"cai"
+               }
+            ]
+         }
+      },
+      {
+         "time":99406,
+         "duration":2010,
+         "text":"上北下南 左西右东",
+         "syllabus":[
+            {
+               "time":99406,
+               "duration":493,
+               "text":"上北"
+            },
+            {
+               "time":99899,
+               "duration":234,
+               "text":"下"
+            },
+            {
+               "time":100133,
+               "duration":186,
+               "text":"南 "
+            },
+            {
+               "time":100408,
+               "duration":512,
+               "text":"左西"
+            },
+            {
+               "time":100920,
+               "duration":159,
+               "text":"右"
+            },
+            {
+               "time":101079,
+               "duration":337,
+               "text":"东"
+            }
+         ],
+         "element":{
+            "key":"L18",
+            "songPart":"Bridge",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"shang bei xia nan zuo xi you dong",
+            "syllabus":[
+               {
+                  "time":99406,
+                  "duration":493,
+                  "text":"shang bei "
+               },
+               {
+                  "time":99899,
+                  "duration":234,
+                  "text":"xia "
+               },
+               {
+                  "time":100133,
+                  "duration":186,
+                  "text":"nan "
+               },
+               {
+                  "time":100408,
+                  "duration":512,
+                  "text":"zuo xi "
+               },
+               {
+                  "time":100920,
+                  "duration":159,
+                  "text":"you "
+               },
+               {
+                  "time":101079,
+                  "duration":337,
+                  "text":"dong"
+               }
+            ]
+         }
+      },
+      {
+         "time":101425,
+         "duration":1911,
+         "text":"东南东北 西北西南",
+         "syllabus":[
+            {
+               "time":101425,
+               "duration":485,
+               "text":"东南"
+            },
+            {
+               "time":101910,
+               "duration":208,
+               "text":"东"
+            },
+            {
+               "time":102118,
+               "duration":167,
+               "text":"北 "
+            },
+            {
+               "time":102305,
+               "duration":471,
+               "text":"西北"
+            },
+            {
+               "time":102776,
+               "duration":198,
+               "text":"西"
+            },
+            {
+               "time":102974,
+               "duration":362,
+               "text":"南"
+            }
+         ],
+         "element":{
+            "key":"L19",
+            "songPart":"Bridge",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"dong nan dong bei xi bei xi nan",
+            "syllabus":[
+               {
+                  "time":101425,
+                  "duration":485,
+                  "text":"dong nan "
+               },
+               {
+                  "time":101910,
+                  "duration":208,
+                  "text":"dong "
+               },
+               {
+                  "time":102118,
+                  "duration":167,
+                  "text":"bei "
+               },
+               {
+                  "time":102305,
+                  "duration":471,
+                  "text":"xi bei "
+               },
+               {
+                  "time":102776,
+                  "duration":198,
+                  "text":"xi "
+               },
+               {
+                  "time":102974,
+                  "duration":362,
+                  "text":"nan"
+               }
+            ]
+         }
+      },
+      {
+         "time":103377,
+         "duration":1850,
+         "text":"步步高升 八方来财",
+         "syllabus":[
+            {
+               "time":103377,
+               "duration":439,
+               "text":"步步"
+            },
+            {
+               "time":103816,
+               "duration":192,
+               "text":"高"
+            },
+            {
+               "time":104008,
+               "duration":179,
+               "text":"升 "
+            },
+            {
+               "time":104334,
+               "duration":406,
+               "text":"八方"
+            },
+            {
+               "time":104740,
+               "duration":186,
+               "text":"来"
+            },
+            {
+               "time":104926,
+               "duration":301,
+               "text":"财"
+            }
+         ],
+         "element":{
+            "key":"L20",
+            "songPart":"Bridge",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"bu bu gao sheng ba fang lai cai",
+            "syllabus":[
+               {
+                  "time":103377,
+                  "duration":439,
+                  "text":"bu bu "
+               },
+               {
+                  "time":103816,
+                  "duration":192,
+                  "text":"gao "
+               },
+               {
+                  "time":104008,
+                  "duration":179,
+                  "text":"sheng "
+               },
+               {
+                  "time":104334,
+                  "duration":406,
+                  "text":"ba fang "
+               },
+               {
+                  "time":104740,
+                  "duration":186,
+                  "text":"lai "
+               },
+               {
+                  "time":104926,
+                  "duration":301,
+                  "text":"cai"
+               }
+            ]
+         }
+      },
+      {
+         "time":105237,
+         "duration":1780,
+         "text":"四海为家 家兴旺",
+         "syllabus":[
+            {
+               "time":105237,
+               "duration":503,
+               "text":"四海"
+            },
+            {
+               "time":105740,
+               "duration":203,
+               "text":"为"
+            },
+            {
+               "time":105943,
+               "duration":200,
+               "text":"家 "
+            },
+            {
+               "time":106238,
+               "duration":459,
+               "text":"家兴"
+            },
+            {
+               "time":106697,
+               "duration":320,
+               "text":"旺"
+            }
+         ],
+         "element":{
+            "key":"L21",
+            "songPart":"Bridge",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"si hai wei jia jia xing wang",
+            "syllabus":[
+               {
+                  "time":105237,
+                  "duration":503,
+                  "text":"si hai "
+               },
+               {
+                  "time":105740,
+                  "duration":203,
+                  "text":"wei "
+               },
+               {
+                  "time":105943,
+                  "duration":200,
+                  "text":"jia "
+               },
+               {
+                  "time":106238,
+                  "duration":459,
+                  "text":"jia xing "
+               },
+               {
+                  "time":106697,
+                  "duration":320,
+                  "text":"wang"
+               }
+            ]
+         }
+      },
+      {
+         "time":107217,
+         "duration":1930,
+         "text":"百事可乐 千事吉祥",
+         "syllabus":[
+            {
+               "time":107217,
+               "duration":411,
+               "text":"百事"
+            },
+            {
+               "time":107628,
+               "duration":188,
+               "text":"可"
+            },
+            {
+               "time":107816,
+               "duration":202,
+               "text":"乐 "
+            },
+            {
+               "time":108093,
+               "duration":520,
+               "text":"千事"
+            },
+            {
+               "time":108613,
+               "duration":171,
+               "text":"吉"
+            },
+            {
+               "time":108784,
+               "duration":363,
+               "text":"祥"
+            }
+         ],
+         "element":{
+            "key":"L22",
+            "songPart":"Bridge",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"bai shi ke le qian shi ji xiang",
+            "syllabus":[
+               {
+                  "time":107217,
+                  "duration":411,
+                  "text":"bai shi "
+               },
+               {
+                  "time":107628,
+                  "duration":188,
+                  "text":"ke "
+               },
+               {
+                  "time":107816,
+                  "duration":202,
+                  "text":"le "
+               },
+               {
+                  "time":108093,
+                  "duration":520,
+                  "text":"qian shi "
+               },
+               {
+                  "time":108613,
+                  "duration":171,
+                  "text":"ji "
+               },
+               {
+                  "time":108784,
+                  "duration":363,
+                  "text":"xiang"
+               }
+            ]
+         }
+      },
+      {
+         "time":109158,
+         "duration":1870,
+         "text":"万事如意 顺风顺水",
+         "syllabus":[
+            {
+               "time":109158,
+               "duration":453,
+               "text":"万事"
+            },
+            {
+               "time":109611,
+               "duration":175,
+               "text":"如"
+            },
+            {
+               "time":109786,
+               "duration":256,
+               "text":"意 "
+            },
+            {
+               "time":110042,
+               "duration":502,
+               "text":"顺风"
+            },
+            {
+               "time":110544,
+               "duration":186,
+               "text":"顺"
+            },
+            {
+               "time":110730,
+               "duration":298,
+               "text":"水"
+            }
+         ],
+         "element":{
+            "key":"L23",
+            "songPart":"Bridge",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"wan shi ru yi shun feng shun shui",
+            "syllabus":[
+               {
+                  "time":109158,
+                  "duration":453,
+                  "text":"wan shi "
+               },
+               {
+                  "time":109611,
+                  "duration":175,
+                  "text":"ru "
+               },
+               {
+                  "time":109786,
+                  "duration":256,
+                  "text":"yi "
+               },
+               {
+                  "time":110042,
+                  "duration":502,
+                  "text":"shun feng "
+               },
+               {
+                  "time":110544,
+                  "duration":186,
+                  "text":"shun "
+               },
+               {
+                  "time":110730,
+                  "duration":298,
+                  "text":"shui"
+               }
+            ]
+         }
+      },
+      {
+         "time":111129,
+         "duration":1790,
+         "text":"天道酬勤 鹏程万里",
+         "syllabus":[
+            {
+               "time":111129,
+               "duration":422,
+               "text":"天道"
+            },
+            {
+               "time":111551,
+               "duration":198,
+               "text":"酬"
+            },
+            {
+               "time":111749,
+               "duration":269,
+               "text":"勤 "
+            },
+            {
+               "time":112018,
+               "duration":462,
+               "text":"鹏程"
+            },
+            {
+               "time":112480,
+               "duration":175,
+               "text":"万"
+            },
+            {
+               "time":112655,
+               "duration":264,
+               "text":"里"
+            }
+         ],
+         "element":{
+            "key":"L24",
+            "songPart":"Bridge",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"tian dao chou qin peng cheng wan li",
+            "syllabus":[
+               {
+                  "time":111129,
+                  "duration":422,
+                  "text":"tian dao "
+               },
+               {
+                  "time":111551,
+                  "duration":198,
+                  "text":"chou "
+               },
+               {
+                  "time":111749,
+                  "duration":269,
+                  "text":"qin "
+               },
+               {
+                  "time":112018,
+                  "duration":462,
+                  "text":"peng cheng "
+               },
+               {
+                  "time":112480,
+                  "duration":175,
+                  "text":"wan "
+               },
+               {
+                  "time":112655,
+                  "duration":264,
+                  "text":"li"
+               }
+            ]
+         }
+      },
+      {
+         "time":113251,
+         "duration":1170,
+         "text":"你不给点表示吗",
+         "syllabus":[
+            {
+               "time":113251,
+               "duration":222,
+               "text":"你不"
+            },
+            {
+               "time":113473,
+               "duration":224,
+               "text":"给点"
+            },
+            {
+               "time":113697,
+               "duration":188,
+               "text":"表"
+            },
+            {
+               "time":113885,
+               "duration":201,
+               "text":"示"
+            },
+            {
+               "time":114086,
+               "duration":335,
+               "text":"吗"
+            }
+         ],
+         "element":{
+            "key":"L25",
+            "songPart":"Bridge",
+            "singer":"v1",
+            "songPartIndex":4
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"ni bu gei dian biao shi ma",
+            "syllabus":[
+               {
+                  "time":113251,
+                  "duration":222,
+                  "text":"ni bu "
+               },
+               {
+                  "time":113473,
+                  "duration":224,
+                  "text":"gei dian "
+               },
+               {
+                  "time":113697,
+                  "duration":188,
+                  "text":"biao "
+               },
+               {
+                  "time":113885,
+                  "duration":201,
+                  "text":"shi "
+               },
+               {
+                  "time":114086,
+                  "duration":335,
+                  "text":"ma"
+               }
+            ]
+         }
+      },
+      {
+         "time":115541,
+         "duration":3479,
+         "text":"我们这的憋佬仔 脖子上喜欢挂玉牌",
+         "syllabus":[
+            {
+               "time":115541,
+               "duration":265,
+               "text":"我们"
+            },
+            {
+               "time":115806,
+               "duration":243,
+               "text":"这的"
+            },
+            {
+               "time":116049,
+               "duration":462,
+               "text":"憋佬"
+            },
+            {
+               "time":116511,
+               "duration":528,
+               "text":"仔 "
+            },
+            {
+               "time":117039,
+               "duration":227,
+               "text":"脖子"
+            },
+            {
+               "time":117266,
+               "duration":190,
+               "text":"上"
+            },
+            {
+               "time":117456,
+               "duration":554,
+               "text":"喜欢"
+            },
+            {
+               "time":118010,
+               "duration":464,
+               "text":"挂玉"
+            },
+            {
+               "time":118474,
+               "duration":546,
+               "text":"牌"
+            }
+         ],
+         "element":{
+            "key":"L26",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":5
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"wo men zhe de bie lao zai bo zi shang xi huan gua yu pai",
+            "syllabus":[
+               {
+                  "time":115541,
+                  "duration":265,
+                  "text":"wo men "
+               },
+               {
+                  "time":115806,
+                  "duration":243,
+                  "text":"zhe de "
+               },
+               {
+                  "time":116049,
+                  "duration":462,
+                  "text":"bie lao "
+               },
+               {
+                  "time":116511,
+                  "duration":528,
+                  "text":"zai "
+               },
+               {
+                  "time":117039,
+                  "duration":227,
+                  "text":"bo zi "
+               },
+               {
+                  "time":117266,
+                  "duration":190,
+                  "text":"shang "
+               },
+               {
+                  "time":117456,
+                  "duration":554,
+                  "text":"xi huan "
+               },
+               {
+                  "time":118010,
+                  "duration":464,
+                  "text":"gua yu "
+               },
+               {
+                  "time":118474,
+                  "duration":546,
+                  "text":"pai"
+               }
+            ]
+         }
+      },
+      {
+         "time":119440,
+         "duration":3617,
+         "text":"香炉供台上摆 长大才开白黄牌",
+         "syllabus":[
+            {
+               "time":119440,
+               "duration":571,
+               "text":"香炉"
+            },
+            {
+               "time":120011,
+               "duration":319,
+               "text":"供台"
+            },
+            {
+               "time":120330,
+               "duration":198,
+               "text":"上"
+            },
+            {
+               "time":120528,
+               "duration":412,
+               "text":"摆 "
+            },
+            {
+               "time":120940,
+               "duration":494,
+               "text":"长大"
+            },
+            {
+               "time":121434,
+               "duration":502,
+               "text":"才开"
+            },
+            {
+               "time":121936,
+               "duration":479,
+               "text":"白黄"
+            },
+            {
+               "time":122415,
+               "duration":642,
+               "text":"牌"
+            }
+         ],
+         "element":{
+            "key":"L27",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":5
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"xiang lu gong tai shang bai zhang da cai kai bai huang pai",
+            "syllabus":[
+               {
+                  "time":119440,
+                  "duration":571,
+                  "text":"xiang lu "
+               },
+               {
+                  "time":120011,
+                  "duration":319,
+                  "text":"gong tai "
+               },
+               {
+                  "time":120330,
+                  "duration":198,
+                  "text":"shang "
+               },
+               {
+                  "time":120528,
+                  "duration":412,
+                  "text":"bai "
+               },
+               {
+                  "time":120940,
+                  "duration":494,
+                  "text":"zhang da "
+               },
+               {
+                  "time":121434,
+                  "duration":502,
+                  "text":"cai kai "
+               },
+               {
+                  "time":121936,
+                  "duration":479,
+                  "text":"bai huang "
+               },
+               {
+                  "time":122415,
+                  "duration":642,
+                  "text":"pai"
+               }
+            ]
+         }
+      },
+      {
+         "time":123313,
+         "duration":3415,
+         "text":"虔诚拜三拜 钱包里面多几百",
+         "syllabus":[
+            {
+               "time":123313,
+               "duration":617,
+               "text":"虔诚"
+            },
+            {
+               "time":123930,
+               "duration":498,
+               "text":"拜三"
+            },
+            {
+               "time":124428,
+               "duration":263,
+               "text":"拜 "
+            },
+            {
+               "time":125314,
+               "duration":336,
+               "text":"钱包"
+            },
+            {
+               "time":125650,
+               "duration":224,
+               "text":"里面"
+            },
+            {
+               "time":125874,
+               "duration":469,
+               "text":"多几"
+            },
+            {
+               "time":126343,
+               "duration":385,
+               "text":"百"
+            }
+         ],
+         "element":{
+            "key":"L28",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":5
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"qian cheng bai san bai qian bao li mian duo ji bai",
+            "syllabus":[
+               {
+                  "time":123313,
+                  "duration":617,
+                  "text":"qian cheng "
+               },
+               {
+                  "time":123930,
+                  "duration":498,
+                  "text":"bai san "
+               },
+               {
+                  "time":124428,
+                  "duration":263,
+                  "text":"bai "
+               },
+               {
+                  "time":125314,
+                  "duration":336,
+                  "text":"qian bao "
+               },
+               {
+                  "time":125650,
+                  "duration":224,
+                  "text":"li mian "
+               },
+               {
+                  "time":125874,
+                  "duration":469,
+                  "text":"duo ji "
+               },
+               {
+                  "time":126343,
+                  "duration":385,
+                  "text":"bai"
+               }
+            ]
+         }
+      },
+      {
+         "time":127268,
+         "duration":3524,
+         "text":"易的是六合彩 难的是等河牌",
+         "syllabus":[
+            {
+               "time":127268,
+               "duration":252,
+               "text":"易"
+            },
+            {
+               "time":127520,
+               "duration":265,
+               "text":"的是"
+            },
+            {
+               "time":127785,
+               "duration":440,
+               "text":"六合"
+            },
+            {
+               "time":128225,
+               "duration":403,
+               "text":"彩 "
+            },
+            {
+               "time":129248,
+               "duration":296,
+               "text":"难的"
+            },
+            {
+               "time":129544,
+               "duration":185,
+               "text":"是"
+            },
+            {
+               "time":129729,
+               "duration":501,
+               "text":"等河"
+            },
+            {
+               "time":130230,
+               "duration":562,
+               "text":"牌"
+            }
+         ],
+         "element":{
+            "key":"L29",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":5
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"yi de shi liu he cai nan de shi deng he pai",
+            "syllabus":[
+               {
+                  "time":127268,
+                  "duration":252,
+                  "text":"yi "
+               },
+               {
+                  "time":127520,
+                  "duration":265,
+                  "text":"de shi "
+               },
+               {
+                  "time":127785,
+                  "duration":440,
+                  "text":"liu he "
+               },
+               {
+                  "time":128225,
+                  "duration":403,
+                  "text":"cai "
+               },
+               {
+                  "time":129248,
+                  "duration":296,
+                  "text":"nan de "
+               },
+               {
+                  "time":129544,
+                  "duration":185,
+                  "text":"shi "
+               },
+               {
+                  "time":129729,
+                  "duration":501,
+                  "text":"deng he "
+               },
+               {
+                  "time":130230,
+                  "duration":562,
+                  "text":"pai"
+               }
+            ]
+         }
+      },
+      {
+         "time":131146,
+         "duration":3251,
+         "text":"来财 来 来财 来",
+         "syllabus":[
+            {
+               "time":131146,
+               "duration":171,
+               "text":"来"
+            },
+            {
+               "time":131317,
+               "duration":316,
+               "text":"财 "
+            },
+            {
+               "time":132114,
+               "duration":294,
+               "text":"来 "
+            },
+            {
+               "time":133079,
+               "duration":180,
+               "text":"来"
+            },
+            {
+               "time":133259,
+               "duration":242,
+               "text":"财 "
+            },
+            {
+               "time":134048,
+               "duration":349,
+               "text":"来"
+            }
+         ],
+         "element":{
+            "key":"L30",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":6
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lai cai lai lai cai lai",
+            "syllabus":[
+               {
+                  "time":131146,
+                  "duration":171,
+                  "text":"lai "
+               },
+               {
+                  "time":131317,
+                  "duration":316,
+                  "text":"cai "
+               },
+               {
+                  "time":132114,
+                  "duration":294,
+                  "text":"lai "
+               },
+               {
+                  "time":133079,
+                  "duration":180,
+                  "text":"lai "
+               },
+               {
+                  "time":133259,
+                  "duration":242,
+                  "text":"cai "
+               },
+               {
+                  "time":134048,
+                  "duration":349,
+                  "text":"lai"
+               }
+            ]
+         }
+      },
+      {
+         "time":135047,
+         "duration":3289,
+         "text":"来财 来 来财 来",
+         "syllabus":[
+            {
+               "time":135047,
+               "duration":171,
+               "text":"来"
+            },
+            {
+               "time":135218,
+               "duration":316,
+               "text":"财 "
+            },
+            {
+               "time":136015,
+               "duration":294,
+               "text":"来 "
+            },
+            {
+               "time":136980,
+               "duration":180,
+               "text":"来"
+            },
+            {
+               "time":137160,
+               "duration":242,
+               "text":"财 "
+            },
+            {
+               "time":137949,
+               "duration":387,
+               "text":"来"
+            }
+         ],
+         "element":{
+            "key":"L31",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":6
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"lai cai lai lai cai lai",
+            "syllabus":[
+               {
+                  "time":135047,
+                  "duration":171,
+                  "text":"lai "
+               },
+               {
+                  "time":135218,
+                  "duration":316,
+                  "text":"cai "
+               },
+               {
+                  "time":136015,
+                  "duration":294,
+                  "text":"lai "
+               },
+               {
+                  "time":136980,
+                  "duration":180,
+                  "text":"lai "
+               },
+               {
+                  "time":137160,
+                  "duration":242,
+                  "text":"cai "
+               },
+               {
+                  "time":137949,
+                  "duration":387,
+                  "text":"lai"
+               }
+            ]
+         }
+      },
+      {
+         "time":138927,
+         "duration":3460,
+         "text":"宗旨利滚利 对应好运八方来",
+         "syllabus":[
+            {
+               "time":138927,
+               "duration":499,
+               "text":"宗旨"
+            },
+            {
+               "time":139426,
+               "duration":515,
+               "text":"利滚"
+            },
+            {
+               "time":139941,
+               "duration":265,
+               "text":"利 "
+            },
+            {
+               "time":140405,
+               "duration":174,
+               "text":"对"
+            },
+            {
+               "time":140579,
+               "duration":150,
+               "text":"应"
+            },
+            {
+               "time":140850,
+               "duration":205,
+               "text":"好"
+            },
+            {
+               "time":141055,
+               "duration":188,
+               "text":"运"
+            },
+            {
+               "time":141420,
+               "duration":461,
+               "text":"八方"
+            },
+            {
+               "time":141881,
+               "duration":506,
+               "text":"来"
+            }
+         ],
+         "element":{
+            "key":"L32",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":6
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"zong zhi li gun li dui ying hao yun ba fang lai",
+            "syllabus":[
+               {
+                  "time":138927,
+                  "duration":499,
+                  "text":"zong zhi "
+               },
+               {
+                  "time":139426,
+                  "duration":515,
+                  "text":"li gun "
+               },
+               {
+                  "time":139941,
+                  "duration":265,
+                  "text":"li "
+               },
+               {
+                  "time":140405,
+                  "duration":174,
+                  "text":"dui "
+               },
+               {
+                  "time":140579,
+                  "duration":150,
+                  "text":"ying "
+               },
+               {
+                  "time":140850,
+                  "duration":205,
+                  "text":"hao "
+               },
+               {
+                  "time":141055,
+                  "duration":188,
+                  "text":"yun "
+               },
+               {
+                  "time":141420,
+                  "duration":461,
+                  "text":"ba fang "
+               },
+               {
+                  "time":141881,
+                  "duration":506,
+                  "text":"lai"
+               }
+            ]
+         }
+      },
+      {
+         "time":142800,
+         "duration":3476,
+         "text":"散了才能聚 你不出手 说聊斋",
+         "syllabus":[
+            {
+               "time":142800,
+               "duration":579,
+               "text":"散了"
+            },
+            {
+               "time":143379,
+               "duration":513,
+               "text":"才能"
+            },
+            {
+               "time":143892,
+               "duration":191,
+               "text":"聚 "
+            },
+            {
+               "time":144302,
+               "duration":248,
+               "text":"你不"
+            },
+            {
+               "time":144550,
+               "duration":199,
+               "text":"出"
+            },
+            {
+               "time":144749,
+               "duration":250,
+               "text":"手 "
+            },
+            {
+               "time":145199,
+               "duration":556,
+               "text":"说聊"
+            },
+            {
+               "time":145755,
+               "duration":521,
+               "text":"斋"
+            }
+         ],
+         "element":{
+            "key":"L33",
+            "songPart":"Chorus",
+            "singer":"v1",
+            "songPartIndex":6
+         },
+         "transliteration":{
+            "lang":"zh-Latn-pinyin",
+            "text":"san le cai neng ju ni bu chu shou shuo liao zhai",
+            "syllabus":[
+               {
+                  "time":142800,
+                  "duration":579,
+                  "text":"san le "
+               },
+               {
+                  "time":143379,
+                  "duration":513,
+                  "text":"cai neng "
+               },
+               {
+                  "time":143892,
+                  "duration":191,
+                  "text":"ju "
+               },
+               {
+                  "time":144302,
+                  "duration":248,
+                  "text":"ni bu "
+               },
+               {
+                  "time":144550,
+                  "duration":199,
+                  "text":"chu "
+               },
+               {
+                  "time":144749,
+                  "duration":250,
+                  "text":"shou "
+               },
+               {
+                  "time":145199,
+                  "duration":556,
+                  "text":"shuo liao "
+               },
+               {
+                  "time":145755,
+                  "duration":521,
+                  "text":"zhai"
+               }
+            ]
+         }
+      }
+   ],
+   "cached":"GDrive",
+   "processingTime":{
+      "timeElapsed":1647,
+      "lastProcessed":1769936117086
+   }
+}
