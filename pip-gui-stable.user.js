@@ -3662,12 +3662,8 @@ const Providers = {
       border: "none",
       color: "white",
       fontSize: "16px",
-      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
-      padding: "4px 6px",
-      borderRadius: "4px",
-      userSelect: "none",
+      lineHeight: "1",
       display: "none", // Hidden by default, shown when Chinese lyrics are present
-      transition: "background 0.15s ease",
     });
     chineseConvBtn.onmouseenter = () => { chineseConvBtn.style.background = "#222"; };
     chineseConvBtn.onmouseleave = () => { chineseConvBtn.style.background = "none"; };
