@@ -1651,9 +1651,6 @@ const PLAY_WORDS = [
           return null;
         } else if (response.status === 503) {
           console.log("[KPoe Debug] ✗ Possible rate limit. Try again later.");
-          return { error: "Possible rate limit. Try again later." };
-        } else if (response.status === 500) {
-          console.log("[KPoe Debug] ✗ Server error - KPoe service may be down");
           return null;
         } else {
           console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
@@ -1774,13 +1771,6 @@ const PLAY_WORDS = [
 
           // No sourceOrder parameter - let API search all sources
           let result = await fetchKPoeLyrics(songInfo);
-
-          // Check if result contains an error (like 503 rate limit)
-          if (result && result.error) {
-            // Return the error immediately without trying more attempts
-            console.log(`[KPoe Debug] ✗ Stopping attempts due to error: ${result.error}`);
-            return result;
-          }
 
           if (result && result.lyrics && result.lyrics.length > 0) {
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
