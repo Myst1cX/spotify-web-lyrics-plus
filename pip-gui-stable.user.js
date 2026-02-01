@@ -1762,6 +1762,7 @@ const PLAY_WORDS = [
 
         let bestResult = null;
         let bestResultType = null;
+        let lastError = null; // Track the last error for reporting
 
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
@@ -1778,20 +1779,11 @@ const PLAY_WORDS = [
           // No sourceOrder parameter - let API search all sources
           let result = await fetchKPoeLyrics(songInfo);
 
-          // Check for critical errors that should stop retry attempts
+          // Handle errors - log but continue trying other attempts
           if (result && result.error) {
-            const errorMsg = result.error;
-            // For 400, 429, 500, 503 errors, stop immediately and return the error
-            if (errorMsg.includes("Bad request") || 
-                errorMsg.includes("Rate limit exceeded") || 
-                errorMsg.includes("Internal Server Error") || 
-                errorMsg.includes("Service unavailable") ||
-                errorMsg.includes("Request failed")) {
-              console.log(`[KPoe Debug] ✗ Critical error encountered: ${errorMsg}`);
-              return result; // Return error immediately
-            }
-            // For 404 errors (Track not found), continue trying other attempts
-            console.log(`[KPoe Debug] Track not found on attempt ${i + 1}, continuing...`);
+            lastError = result.error; // Track the last error
+            console.log(`[KPoe Debug] ✗ Error on attempt ${i + 1}: ${result.error}`);
+            // Continue to next attempt - sometimes one of them goes through
           } else if (result && result.lyrics && result.lyrics.length > 0) {
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
 
@@ -1824,6 +1816,10 @@ const PLAY_WORDS = [
         }
 
         console.log("[KPoe Debug] ✗ All 5 attempts failed");
+        // If we have a specific error from the last attempt, return it
+        if (lastError) {
+          return { error: lastError };
+        }
         return { error: "Track not found in KPoe database or no lyrics available" };
       } catch (e) {
         return { error: e.message || "KPoe request failed - network error or service unavailable" };
