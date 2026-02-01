@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      15.3.test
+// @version      15.4.test.white
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -928,7 +928,7 @@
       if (noneSelected || !Providers.current) {
         btn.style.backgroundColor = "#333";
       } else {
-        btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1db954" : "#333";
+        btn.style.backgroundColor = (btn.textContent === Providers.current) ? "#1aa34a" : "#333";
       }
     });
   }
@@ -3430,8 +3430,7 @@ const Providers = {
     title.textContent = "Lyrics+";
     title.style.margin = "0";
     title.style.fontWeight = "600";
-    title.style.color = "white";
-    title.style.opacity = "0.8";
+    title.style.color = "#cfcfcf"; // similar to github icon background color
 
     // Restore Default Position and Size button for the header
     const btnReset = document.createElement("button");
@@ -3556,7 +3555,7 @@ const Providers = {
     translateBtn.style.flex = '1';
     translateBtn.style.minWidth = '0';
     translateBtn.style.height = controlHeight;
-    translateBtn.style.background = '#1db954';
+    translateBtn.style.background = '#1aa34a';
     translateBtn.style.color = 'white';
     translateBtn.style.border = 'none';
     translateBtn.style.borderRadius = '5px';
@@ -3923,10 +3922,9 @@ const Providers = {
       btn.style.borderRadius = "6px";
       btn.style.border = "none";
       btn.style.cursor = "pointer";
-      btn.style.backgroundColor = (Providers.current === name) ? "#1db954" : "#333";
-      btn.style.color = "white";
+      btn.style.backgroundColor = (Providers.current === name) ? "#1aa34a" : "#333";
+      btn.style.color = "#e0e0e0";
       btn.style.fontWeight = "600";
-      btn.style.opacity = "0.8";
 
       btn.onclick = async (e) => {
         if (providerClickTimer) return; // already waiting for double-click, skip
@@ -4504,7 +4502,7 @@ const Providers = {
     applyOffsetVisibility(offsetVisible);
     applyControlsVisibility(controlsVisible);
     applyTabsVisibility(tabsVisible);
-    
+
     // Set initial button titles based on visibility states
     offsetToggleBtn.title = offsetVisible ? "Hide timing offset" : "Show timing offset";
 
@@ -6098,17 +6096,16 @@ const Providers = {
       btn.textContent = "Lyrics+";
       DEBUG.info('Button', 'Lyrics+ button injected successfully');
       Object.assign(btn.style, {
-        backgroundColor: "#1db954",
+        backgroundColor: "#1aa34a",
         border: "none",
         borderRadius: "20px",
-        color: "white",
+        color: "#e0e0e0",
         fontWeight: "600",
         fontSize: "14px",
         padding: "6px 12px",
         marginLeft: "8px",
         userSelect: "none",
         cursor: "pointer",
-        opacity: "0.8",
       });
       btn.onclick = () => {
         let popup = document.getElementById("lyrics-plus-popup");
