@@ -1,0 +1,772 @@
+<aside
+   aria-label="Now playing view"
+   class="vDYkSjYiSm42esIK NowPlayingView"
+   style="
+      --section-background-base: var(--background-elevated-base);
+      --section-padding: 16px;
+      --section-border-radius: 8px;
+   "
+   id="Desktop_PanelContainer_Id"
+   tabindex="-1"
+>
+   <div class="YZ3y8n8ToUt_xDKt">
+      <div class="qnPIl9fdY2o_u8Hw">
+         <div class="QrZ1VrsZtmod5Bxz g3QSV3tq49ScV2jX hKGfsWvk3lAtfZie">
+            <button
+               tabindex="0"
+               class="Button-sc-1dqy6lx-0 fprjoI e-91000-overflow-wrap-anywhere e-91000-button-tertiary--icon-only aqGpJi3W1ucmWcI3"
+               aria-label="Hide Now Playing view"
+               aria-hidden="false"
+               data-encore-id="buttonTertiary"
+            >
+               <span aria-hidden="true" class="e-91000-button__icon-wrapper"
+                  ><svg
+                     data-encore-id="icon"
+                     role="img"
+                     aria-hidden="true"
+                     class="e-91000-icon e-91000-baseline e-91000-icon--auto-mirror"
+                     style="
+                        --encore-icon-height: var(
+                           --encore-graphic-size-decorative-smaller
+                        );
+                        --encore-icon-width: var(
+                           --encore-graphic-size-decorative-smaller
+                        );
+                     "
+                     viewBox="0 0 16 16"
+                  >
+                     <path
+                        d="M5.03 10.53a.75.75 0 1 1-1.06-1.06L5.44 8 3.97 6.53a.75.75 0 0 1 1.06-1.06l2 2a.75.75 0 0 1 0 1.06z"
+                     ></path>
+                     <path
+                        d="M1 0a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1zm.5 1.5h8v13h-8zm13 13H11v-13h3.5z"
+                     ></path></svg
+               ></span>
+            </button>
+            <div class="eEUtPccfpw1koKqB up4Cfoxwg_41o4BT _kGmWXwIOGgLPDCa">
+               <a
+                  draggable="true"
+                  class="PBCFekjvGMMtsjt1"
+                  href="/playlist/3FyyUCu4ShyHBoH43mR1yo?uid=d63e2b52ddd68b26&amp;uri=spotify:track:09H1lojoD6C9ygAa62inrW"
+                  ><div class="oCCknGEXYP0WZG8A">
+                     <span class="OINH5zA0pQyzffwo"
+                        ><span
+                           class="Cz0_emqDhTg390Au"
+                           style="--marquee-width: 286px"
+                           ><h1
+                              class="e-91000-text encore-text-body-medium-bold encore-internal-color-text-base"
+                              data-encore-id="text"
+                              dir="auto"
+                           >
+                              Shubby
+                           </h1></span
+                        ></span
+                     >
+                  </div></a
+               >
+            </div>
+            <span class="zgLBLbwwAoVBtxJo SR7K4r2ugBwBspFK"
+               ><div class="AOjfP4IUaWU1nKYE">
+                  <button
+                     aria-haspopup="menu"
+                     data-testid="more-button"
+                     class="Button-sc-1dqy6lx-0 fprjoI e-91000-overflow-wrap-anywhere e-91000-button-tertiary--icon-only xfsjC59pFlEJ3yNI"
+                     aria-label='More options for Épisode III - "Les mains libres"'
+                     data-encore-id="buttonTertiary"
+                  >
+                     <span
+                        aria-hidden="true"
+                        class="e-91000-button__icon-wrapper"
+                        ><svg
+                           data-encore-id="icon"
+                           role="img"
+                           aria-hidden="true"
+                           class="e-91000-icon e-91000-baseline"
+                           style="
+                              --encore-icon-height: var(
+                                 --encore-graphic-size-decorative-smaller
+                              );
+                              --encore-icon-width: var(
+                                 --encore-graphic-size-decorative-smaller
+                              );
+                           "
+                           viewBox="0 0 16 16"
+                        >
+                           <path
+                              d="M3 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m6.5 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0M16 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"
+                           ></path></svg
+                     ></span></button
+                  ><button
+                     class="Button-sc-1dqy6lx-0 fprjoI e-91000-overflow-wrap-anywhere e-91000-button-tertiary--icon-only xfsjC59pFlEJ3yNI"
+                     aria-label="Expand Now Playing view"
+                     data-encore-id="buttonTertiary"
+                  >
+                     <span
+                        aria-hidden="true"
+                        class="e-91000-button__icon-wrapper"
+                        ><svg
+                           data-encore-id="icon"
+                           role="img"
+                           aria-hidden="true"
+                           class="e-91000-icon e-91000-baseline"
+                           style="
+                              --encore-icon-height: var(
+                                 --encore-graphic-size-decorative-smaller
+                              );
+                              --encore-icon-width: var(
+                                 --encore-graphic-size-decorative-smaller
+                              );
+                           "
+                           viewBox="0 0 16 16"
+                        >
+                           <path
+                              d="M6.53 9.47a.75.75 0 0 1 0 1.06l-2.72 2.72h1.018a.75.75 0 0 1 0 1.5H1.25v-3.579a.75.75 0 0 1 1.5 0v1.018l2.72-2.72a.75.75 0 0 1 1.06 0zm2.94-2.94a.75.75 0 0 1 0-1.06l2.72-2.72h-1.018a.75.75 0 1 1 0-1.5h3.578v3.579a.75.75 0 0 1-1.5 0V3.81l-2.72 2.72a.75.75 0 0 1-1.06 0"
+                           ></path></svg
+                     ></span>
+                  </button></div
+            ></span>
+         </div>
+      </div>
+      <div
+         data-overlayscrollbars-initialize="true"
+         class="O0Nd1A1LVGMf7xi_ qLlzLghnvcCySJ8T"
+         data-overlayscrollbars="host"
+      >
+         <div
+            class=""
+            data-overlayscrollbars-viewport="scrollbarHidden overflowXHidden overflowYScroll"
+            tabindex="-1"
+            style="
+               margin-right: 0px;
+               margin-bottom: 0px;
+               margin-left: 0px;
+               top: 0px;
+               right: auto;
+               left: 0px;
+               width: calc(100% + 0px);
+               padding: 0px;
+            "
+         >
+            <div
+               class="YZ3y8n8ToUt_xDKt MZyYJf3i00YTL4FP po8s7jl0kxg30Oe3"
+               data-ubi-impression-logged="true"
+            >
+               <div class="jopwK3Aj8es35ujg" data-testid="NPV_Panel_OpenDiv">
+                  <div class="H_NURHJx32o_Tfti">
+                     <div class="Ivr71pATb3kHjmCm">
+                        <div
+                           class="muznK3MRUjUec7Jo fuq9616CQ8Fhz6n6 yiy_EezkGycfPvS3"
+                        >
+                           <div
+                              class="cE6aCTnm0oUUGjR0 QniGNpglI7Qq052T"
+                              aria-hidden="true"
+                              data-testid="track-visual-enhancement"
+                           >
+                              <div draggable="true" class="OqH2IeYWvEUgzNgA">
+                                 <div
+                                    data-testid="cover-drop-target"
+                                    class="q8mQFn7r8UYsKdHE aIU4qABgiIgjAEyD _H2ZzS_Atuwx6wh9 tMFkXbMSXNUegQIu EYdwwRebZIgjbKy_"
+                                 >
+                                    <a
+                                       draggable="false"
+                                       data-testid="context-link"
+                                       data-context-item-type="track"
+                                       style="border: medium"
+                                       aria-label='Now playing: Épisode III - "Les mains libres" by Yuzmv'
+                                       href="/album/5YLIrkBDqVtlFvD86zZeKH?uid=d63e2b52ddd68b26&amp;uri=spotify%3Atrack%3A09H1lojoD6C9ygAa62inrW"
+                                       ><div class="TevfkTnw3MGoxpI5">
+                                          <div
+                                             class="s1ft0kHOwOh71ov_ lCbuKQ_HfL4yze5_"
+                                             aria-hidden="true"
+                                          >
+                                             <div class="JHEcxruRuoEItJ1J">
+                                                <svg
+                                                   data-encore-id="icon"
+                                                   role="img"
+                                                   aria-hidden="true"
+                                                   class="e-91000-icon e-91000-baseline"
+                                                   data-testid="track"
+                                                   viewBox="0 0 24 24"
+                                                >
+                                                   <path
+                                                      d="M6 3h15v15.167a3.5 3.5 0 1 1-3.5-3.5H19V5H8v13.167a3.5 3.5 0 1 1-3.5-3.5H6zm0 13.667H4.5a1.5 1.5 0 1 0 1.5 1.5zm13 0h-1.5a1.5 1.5 0 1 0 1.5 1.5z"
+                                                   ></path>
+                                                </svg>
+                                             </div>
+                                             <img
+                                                aria-hidden="false"
+                                                draggable="false"
+                                                src="https://i.scdn.co/image/ab67616d0000b273da2caf4e0cd2a4895c7dd1f2"
+                                                data-testid="cover-art-image"
+                                                alt=""
+                                                class="obD7rdENNc2n3fC0 XKSrCjmdPkrllkPc qIwhHcbG780QDz68"
+                                             />
+                                          </div></div
+                                    ></a>
+                                 </div>
+                              </div>
+                           </div>
+                           <div class="jDEJUdVW3pEDRC6E" aria-hidden="true">
+                              <div draggable="true">
+                                 <div
+                                    class="canvasVideoContainerNPV Aj0SLDANBjINzpsp fgiDNEwjNTY_zmmb"
+                                 >
+                                    <video
+                                       loop=""
+                                       src="blob:https://open.spotify.com/2a62292f-f536-4577-8aa1-509eb22c593f"
+                                       crossorigin="anonymous"
+                                    ></video>
+                                 </div>
+                              </div>
+                           </div>
+                           <div
+                              id="VideoPlayerNpv_ReactPortal"
+                              class="q3myDkNIyUos5ldQ"
+                           ></div>
+                        </div>
+                        <div class="X8eqXqMjKs8yMGVw hBioTrVEyfsb5rSR">
+                           <div
+                              class="E9fQvMtlBDsjhB7U"
+                              data-testid="minimized-track-visual-enhancement"
+                           >
+                              <div draggable="true">
+                                 <div
+                                    data-testid="cover-drop-target"
+                                    class="q8mQFn7r8UYsKdHE aIU4qABgiIgjAEyD _H2ZzS_Atuwx6wh9 tMFkXbMSXNUegQIu EYdwwRebZIgjbKy_"
+                                 >
+                                    <a
+                                       draggable="false"
+                                       data-testid="context-link"
+                                       data-context-item-type="track"
+                                       style="border: medium"
+                                       aria-label='Now playing: Épisode III - "Les mains libres" by Yuzmv'
+                                       href="/album/5YLIrkBDqVtlFvD86zZeKH?uid=d63e2b52ddd68b26&amp;uri=spotify%3Atrack%3A09H1lojoD6C9ygAa62inrW"
+                                       ><div class="uVyMunytiYA60EVG">
+                                          <div
+                                             class="s1ft0kHOwOh71ov_ lCbuKQ_HfL4yze5_"
+                                             aria-hidden="true"
+                                          >
+                                             <div class="JHEcxruRuoEItJ1J">
+                                                <svg
+                                                   data-encore-id="icon"
+                                                   role="img"
+                                                   aria-hidden="true"
+                                                   class="e-91000-icon e-91000-baseline"
+                                                   data-testid="track"
+                                                   viewBox="0 0 24 24"
+                                                >
+                                                   <path
+                                                      d="M6 3h15v15.167a3.5 3.5 0 1 1-3.5-3.5H19V5H8v13.167a3.5 3.5 0 1 1-3.5-3.5H6zm0 13.667H4.5a1.5 1.5 0 1 0 1.5 1.5zm13 0h-1.5a1.5 1.5 0 1 0 1.5 1.5z"
+                                                   ></path>
+                                                </svg>
+                                             </div>
+                                             <img
+                                                aria-hidden="false"
+                                                draggable="false"
+                                                loading="eager"
+                                                src="https://i.scdn.co/image/ab67616d00004851da2caf4e0cd2a4895c7dd1f2"
+                                                data-testid="cover-art-image"
+                                                alt=""
+                                                class="obD7rdENNc2n3fC0 XKSrCjmdPkrllkPc qIwhHcbG780QDz68"
+                                             />
+                                          </div></div
+                                    ></a>
+                                 </div>
+                              </div>
+                           </div>
+                           <div class="a0PBEVgrzqIdU1IV PZqkGvH2tH8xbDWT">
+                              <div class="fOSYRD0ZQ7wnd6Y4">
+                                 <div class="oCCknGEXYP0WZG8A">
+                                    <span class="OINH5zA0pQyzffwo"
+                                       ><span
+                                          class="Cz0_emqDhTg390Au"
+                                          style="--marquee-width: 358px"
+                                          ><div
+                                             class="e-91000-text encore-text-title-small IrXzI0xGt90E6_xQ"
+                                             data-encore-id="text"
+                                             data-testid="context-item-info-title"
+                                             dir="auto"
+                                          >
+                                             <span draggable="true"
+                                                ><a
+                                                   draggable="false"
+                                                   data-testid="context-item-link"
+                                                   href="/album/5YLIrkBDqVtlFvD86zZeKH"
+                                                   >Épisode III - "Les mains
+                                                   libres"</a
+                                                ></span
+                                             >
+                                          </div></span
+                                       ></span
+                                    >
+                                 </div>
+                              </div>
+                              <div class="jEiAs1et4fAU3chW"></div>
+                              <div class="xSfZMAalZIg2nzIs">
+                                 <div class="oCCknGEXYP0WZG8A">
+                                    <span class="OINH5zA0pQyzffwo"
+                                       ><span
+                                          class="Cz0_emqDhTg390Au"
+                                          style="--marquee-width: 63px"
+                                          ><div
+                                             class="e-91000-text encore-text-body-medium encore-internal-color-text-subdued xSfZMAalZIg2nzIs"
+                                             data-encore-id="text"
+                                             data-testid="context-item-info-subtitles"
+                                          >
+                                             <span
+                                                ><a
+                                                   draggable="true"
+                                                   data-testid="context-item-info-artist"
+                                                   dir="auto"
+                                                   href="/artist/1cYA2rnKwpVYe9iVH3Djjm"
+                                                   >Yuzmv</a
+                                                ></span
+                                             >
+                                          </div></span
+                                       ></span
+                                    >
+                                 </div>
+                              </div>
+                           </div>
+                           <button
+                              tabindex="0"
+                              class="Button-sc-1dqy6lx-0 iBjBCb e-91000-overflow-wrap-anywhere e-91000-button-tertiary--icon-only e-91000-button-tertiary--condensed D3IIJJzBZAs85pbQ KPaqkditE0X7pDpE bFukgmYgnN0iUcDc"
+                              aria-label="Copy link to Song"
+                              aria-hidden="false"
+                              data-encore-id="buttonTertiary"
+                           >
+                              <span
+                                 aria-hidden="true"
+                                 class="e-91000-button__icon-wrapper"
+                                 ><svg
+                                    data-encore-id="icon"
+                                    role="img"
+                                    aria-hidden="true"
+                                    class="e-91000-icon e-91000-baseline"
+                                    style=""
+                                    viewBox="0 0 24 24"
+                                 >
+                                    <path
+                                       d="M3 8a1 1 0 0 1 1-1h3.5v2H5v11h14V9h-2.5V7H20a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"
+                                    ></path>
+                                    <path
+                                       d="M12 12.326a1 1 0 0 0 1-1V3.841l1.793 1.793a1 1 0 1 0 1.414-1.414L12 .012 7.793 4.22a1 1 0 1 0 1.414 1.414L11 3.84v7.485a1 1 0 0 0 1 1z"
+                                    ></path></svg
+                              ></span>
+                           </button>
+                           <div class="K35IDBMaSDY689DK">
+                              <button
+                                 aria-checked="true"
+                                 class="Button-sc-1dqy6lx-0 ktrqOI e-91000-overflow-wrap-anywhere e-91000-button-tertiary--icon-only e-91000-button-tertiary--condensed YImjRdEJ5XECMt4k"
+                                 aria-label="Add to playlist"
+                                 data-encore-id="buttonTertiary"
+                              >
+                                 <span
+                                    aria-hidden="true"
+                                    class="e-91000-button__icon-wrapper"
+                                    ><svg
+                                       data-encore-id="icon"
+                                       role="img"
+                                       aria-hidden="true"
+                                       class="e-91000-icon e-91000-baseline"
+                                       style="
+                                          --encore-icon-fill: var(
+                                             --text-bright-accent,
+                                             #107434
+                                          );
+                                       "
+                                       viewBox="0 0 24 24"
+                                    >
+                                       <path
+                                          d="M1 12C1 5.925 5.925 1 12 1s11 4.925 11 11-4.925 11-11 11S1 18.075 1 12m16.398-2.38a1 1 0 0 0-1.414-1.413l-6.011 6.01-1.894-1.893a1 1 0 0 0-1.414 1.414l3.308 3.308z"
+                                       ></path></svg
+                                 ></span>
+                              </button>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="ax9CMxA763c25wSn tDBAoTKiCjMk1wxv">
+                     <button
+                        type="button"
+                        aria-label="Yuzmv"
+                        class="VCr6RKnMnFgSa6ES"
+                        tabindex="0"
+                        data-testid="npv-artist-bio-button"
+                     >
+                        <div class="a7gn1W5xEIEyxWUU">
+                           <div
+                              class="B3B0XuueQy4Swpyw ppsr9k1cXo055Z3t P1a_MNB6ZEIu50sz"
+                              style="
+                                 background-image: linear-gradient(
+                                       rgba(0, 0, 0, 0.5) 0%,
+                                       rgba(0, 0, 0, 0) 50%
+                                    ),
+                                    url(&quot;https://i.scdn.co/image/ab6761670000ecd4656f0415a99c3eb88ba70359&quot;);
+                              "
+                           >
+                              <div class="oyoU3RD4WIkhZoGS">
+                                 <div class="fWHCnIZLtjosK_LG">
+                                    <h2
+                                       class="e-91000-text encore-text-body-medium-bold encore-internal-color-text-base"
+                                       data-encore-id="text"
+                                    >
+                                       <div class="MWLidDQUomwI27KW">
+                                          About the artist
+                                       </div>
+                                    </h2>
+                                 </div>
+                              </div>
+                           </div>
+                           <div class="jHqD4CkJSTwpZihD">
+                              <a
+                                 data-testid="npv-artist-link"
+                                 href="/artist/1cYA2rnKwpVYe9iVH3Djjm"
+                                 ><span
+                                    class="e-91000-text encore-text-body-medium-bold"
+                                    data-encore-id="text"
+                                    dir="auto"
+                                    >Yuzmv</span
+                                 ></a
+                              >
+                              <div class="qZic2UAurxQGNl86">
+                                 <div
+                                    class="e-91000-text encore-text-body-medium encore-internal-color-text-subdued r93sBIuYn8gZrIXH"
+                                    data-encore-id="text"
+                                 >
+                                    309,602 monthly listeners
+                                 </div>
+                                 <div
+                                    tabindex="0"
+                                    class="Button-sc-y0gtbx-0 iEnZvo encore-text-body-small-bold e-91000-button--small FDg7hywxBtkuuzr0"
+                                    data-encore-id="buttonSecondary"
+                                 >
+                                    Unfollow
+                                 </div>
+                              </div>
+                              <span
+                                 class="e-91000-text encore-text-body-small encore-internal-color-text-subdued ENFK1ZUWR7URBbit"
+                                 data-encore-id="text"
+                                 >Yuzmv, prononcé Youzma vient du sud de
+                                 l’hexagone. Ses sons entêtants enveloppent les
+                                 images qu’il nous délivre dans ses clips
+                                 surnaturels et pour le moins obscurs,
+                                 éclaircissant ou assombrissant le paysage. Tout
+                                 comme son ombre, il dissimule ou dévoile ses
+                                 décors. Ruptures amoureuses, déceptions,
+                                 accidents de vie, lassitude et mélancolie
+                                 autant de sujets qui lui font prendre
+                                 l’autoroute des mots, un flow continu où il s’y
+                                 perd souvent de nuit. Les obstacles ne
+                                 l’arrêtent pas. Il compose et écrit comme il
+                                 vit. Souvent borné, tard et obstiné dans son
+                                 home studio il vous invite dorénavant à le
+                                 rejoindre, lui et ses névroses…</span
+                              >
+                           </div>
+                        </div>
+                     </button>
+                  </div>
+                  <div class="ax9CMxA763c25wSn qy8cKKS5c5Y24cTG">
+                     <div class="fWHCnIZLtjosK_LG">
+                        <h2
+                           class="e-91000-text encore-text-body-medium-bold encore-internal-color-text-base"
+                           data-encore-id="text"
+                        >
+                           <div class="MWLidDQUomwI27KW">Credits</div>
+                        </h2>
+                        <button
+                           class="Button-sc-1dqy6lx-0 gLxfIu encore-text-body-small-bold e-91000-overflow-wrap-anywhere e-91000-button-tertiary--condensed oqeF2FeqF6EiapE0"
+                           data-encore-id="buttonTertiary"
+                        >
+                           Show all
+                        </button>
+                     </div>
+                     <div>
+                        <div
+                           class="e-91000-box e-91000-baseline e-91000-box--naked e-91000-box--interactive e-91000-box--browser-default-focus e-91000-box--padding-custom e-91000-box--hover-custom e-91000-box--min-size e-91000-Box-sc-8t9c76-0 efnFkI YHGjum1ZcyUecZHa Box-sc-8t9c76-0 efnFkI YHGjum1ZcyUecZHa"
+                           style="
+                              --box-padding-block-start: var(
+                                 --encore-spacing-tighter-2
+                              );
+                              --box-padding-block-end: var(
+                                 --encore-spacing-tighter-2
+                              );
+                              --box-padding-inline-start: 0;
+                              --box-padding-inline-end: 0;
+                              --box-min-block-size: 32px;
+                              --box-hover-animation-duration: 0ms;
+                              --box-hover-background-color: var(
+                                 --background-tinted-highlight,
+                                 rgba(0, 0, 0, 0.12)
+                              );
+                           "
+                           data-encore-id="listRow"
+                           role="group"
+                           aria-labelledby="listrow-title-spotify:artist:1cYA2rnKwpVYe9iVH3Djjm"
+                           draggable="true"
+                        >
+                           <div
+                              role="button"
+                              aria-disabled="false"
+                              aria-labelledby="listrow-title-spotify:artist:1cYA2rnKwpVYe9iVH3Djjm listrow-subtitle-spotify:artist:1cYA2rnKwpVYe9iVH3Djjm"
+                              aria-describedby="onClickHintspotify:artist:1cYA2rnKwpVYe9iVH3Djjm"
+                              tabindex="0"
+                              class="RowButton-sc-xxkq4e-0 cRPTAY"
+                           ></div>
+                           <div
+                              style="display: none"
+                              id="onClickHintspotify:artist:1cYA2rnKwpVYe9iVH3Djjm"
+                           ></div>
+                           <div class="Areas__HeaderArea-sc-8gfrea-3 TJKQw">
+                              <div
+                                 class="Areas__InteractiveArea-sc-8gfrea-0 Areas__Column-sc-8gfrea-5 bJSfgC jwUvtM"
+                              >
+                                 <a
+                                    draggable="false"
+                                    href="/artist/1cYA2rnKwpVYe9iVH3Djjm"
+                                    >Yuzmv</a
+                                 >
+                                 <p
+                                    class="e-91000-text encore-text-body-small encore-internal-color-text-subdued ListRowDetails__ListRowDetailText-sc-sozu4l-0 hxCObm"
+                                    data-encore-id="listRowSubtitle"
+                                    style="text-transform: capitalize"
+                                    id="listrow-subtitle-spotify:artist:1cYA2rnKwpVYe9iVH3Djjm"
+                                 >
+                                    <span
+                                       class="ListRowDetails__LineClamp-sc-sozu4l-1 hITFAK"
+                                       ><span>Main Artist</span> •
+                                       <span>Lyricist</span> •
+                                       <span>Composer</span></span
+                                    >
+                                 </p>
+                              </div>
+                              <div
+                                 class="Areas__InteractiveArea-sc-8gfrea-0 Areas__TrailingSlot-sc-8gfrea-7 bJSfgC jpzxju"
+                              >
+                                 <button
+                                    class="Button-sc-y0gtbx-0 iEnZvo encore-text-body-small-bold e-91000-button--small"
+                                    data-encore-id="buttonSecondary"
+                                 >
+                                    Unfollow
+                                 </button>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div
+                     class="ax9CMxA763c25wSn lhB5KQbFP8BJIgvI"
+                     style="--section-gap: 8px"
+                  >
+                     <div class="fWHCnIZLtjosK_LG">
+                        <h2
+                           class="e-91000-text encore-text-body-medium-bold encore-internal-color-text-base"
+                           data-encore-id="text"
+                        >
+                           <div class="MWLidDQUomwI27KW">Next in queue</div>
+                        </h2>
+                        <button
+                           class="Button-sc-1dqy6lx-0 gLxfIu encore-text-body-small-bold e-91000-overflow-wrap-anywhere e-91000-button-tertiary--condensed AAYd0kPOMkjMIQD5"
+                           data-encore-id="buttonTertiary"
+                        >
+                           Open queue
+                        </button>
+                     </div>
+                     <ul class="oPf3qKGRkUM3T0bK">
+                        <li
+                           aria-expanded="true"
+                           aria-level="1"
+                           role="row"
+                           class="q8mQFn7r8UYsKdHE"
+                           draggable="true"
+                           aria-posinset="0"
+                        >
+                           <div
+                              class="e-91000-box e-91000-baseline e-91000-box--naked e-91000-box--interactive e-91000-box--browser-default-focus e-91000-box--padding-custom e-91000-box--hover-custom e-91000-box--min-size e-91000-Box-sc-8t9c76-0 dUGCIT Z557o5iO1x0aSAXt q8mQFn7r8UYsKdHE orFyQFu0kG4H73ty Box-sc-8t9c76-0 dUGCIT Z557o5iO1x0aSAXt q8mQFn7r8UYsKdHE orFyQFu0kG4H73ty"
+                              style="
+                                 --box-padding: 8px;
+                                 --box-min-block-size: 56px;
+                                 --box-hover-animation-duration: 0ms;
+                                 --box-hover-background-color: var(
+                                    --background-tinted-highlight,
+                                    rgba(0, 0, 0, 0.12)
+                                 );
+                              "
+                              tabindex="0"
+                              data-encore-id="listRow"
+                              role="group"
+                              aria-labelledby="listrow-title-7257dcae7d0c7112"
+                           >
+                              <div
+                                 role="button"
+                                 aria-disabled="false"
+                                 aria-labelledby="listrow-title-7257dcae7d0c7112 listrow-subtitle-7257dcae7d0c7112"
+                                 aria-describedby="onClickHint7257dcae7d0c7112"
+                                 tabindex="-1"
+                                 class="RowButton-sc-xxkq4e-0 cRPTAY"
+                              ></div>
+                              <div
+                                 style="display: none"
+                                 id="onClickHint7257dcae7d0c7112"
+                              ></div>
+                              <div
+                                 class="Areas__HeaderSideArea-sc-8gfrea-1 ljvfQS"
+                              >
+                                 <div
+                                    class="Areas__HeaderSideAreaFlexContainer-sc-8gfrea-2 hvZiQp"
+                                 >
+                                    <div class="ngY378uYekSqU8ij">
+                                       <div
+                                          class="UWYK6PfFQB893_lp hWU_wiIM1kQv5e8w"
+                                          style="width: 48px; height: 48px"
+                                       >
+                                          <img
+                                             aria-hidden="true"
+                                             draggable="false"
+                                             loading="eager"
+                                             src="https://i.scdn.co/image/ab67616d000011eb5a4ee2925037c6ad160d8cf7"
+                                             data-testid="entity-image"
+                                             alt="Épisode II"
+                                             class="obD7rdENNc2n3fC0 eaeL4RTunr0p3ojT WfGUvErXcmIzJo1c qIwhHcbG780QDz68"
+                                          />
+                                       </div>
+                                       <span
+                                          class="znTd53DrNIcJnJvv K7NGZRkvXDE1F7Qp"
+                                          ><div
+                                             class="pk3lz3TYlskuAfwV"
+                                             role="div"
+                                          >
+                                             <button
+                                                data-testid="play-button"
+                                                class="Button-sc-1dqy6lx-0 kJaumb e-91000-overflow-wrap-anywhere e-91000-button-tertiary--icon-only e-91000-button-tertiary--condensed"
+                                                aria-label="Play Épisode II by Yuzmv"
+                                                data-encore-id="buttonTertiary"
+                                                tabindex="-1"
+                                             >
+                                                <span
+                                                   aria-hidden="true"
+                                                   class="e-91000-button__icon-wrapper"
+                                                   ><svg
+                                                      data-encore-id="icon"
+                                                      role="img"
+                                                      aria-hidden="true"
+                                                      class="e-91000-icon e-91000-baseline"
+                                                      viewBox="0 0 24 24"
+                                                   >
+                                                      <path
+                                                         d="m7.05 3.606 13.49 7.788a.7.7 0 0 1 0 1.212L7.05 20.394A.7.7 0 0 1 6 19.788V4.212a.7.7 0 0 1 1.05-.606"
+                                                      ></path></svg
+                                                ></span>
+                                             </button></div
+                                       ></span>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="Areas__HeaderArea-sc-8gfrea-3 TJKQw">
+                                 <div
+                                    class="Areas__InteractiveArea-sc-8gfrea-0 Areas__Column-sc-8gfrea-5 bJSfgC jwUvtM"
+                                 >
+                                    <p
+                                       class="e-91000-text encore-text-body-medium encore-internal-color-text-base ListRowTitle__ListRowText-sc-1xe2if1-1 eFGzcP"
+                                       data-encore-id="listRowTitle"
+                                       id="listrow-title-7257dcae7d0c7112"
+                                       dir="auto"
+                                    >
+                                       <span
+                                          class="ListRowTitle__LineClamp-sc-1xe2if1-0 jjpOuK"
+                                          >Épisode II</span
+                                       >
+                                    </p>
+                                    <p
+                                       class="e-91000-text encore-text-body-small encore-internal-color-text-subdued ListRowDetails__ListRowDetailText-sc-sozu4l-0 hxCObm"
+                                       data-encore-id="listRowSubtitle"
+                                       id="listrow-subtitle-7257dcae7d0c7112"
+                                       dir="auto"
+                                    >
+                                       <span
+                                          class="e-91000-text encore-text-body-small encore-internal-color-text-subdued UVs_3lWW7Os1tkLM"
+                                          data-encore-id="text"
+                                          ><span class="RIYtmmMdiSkeQC1l"
+                                             ><a
+                                                draggable="false"
+                                                href="/artist/1cYA2rnKwpVYe9iVH3Djjm"
+                                                tabindex="-1"
+                                                >Yuzmv</a
+                                             ></span
+                                          ></span
+                                       >
+                                    </p>
+                                 </div>
+                                 <div
+                                    class="Areas__InteractiveArea-sc-8gfrea-0 Areas__TrailingSlot-sc-8gfrea-7 bJSfgC jpzxju"
+                                 >
+                                    <div class="SUyvyXMHi0LVHJ_y">
+                                       <button
+                                          aria-haspopup="menu"
+                                          data-testid="more-button"
+                                          class="Button-sc-1dqy6lx-0 eugRpk e-91000-overflow-wrap-anywhere e-91000-button-tertiary--icon-only e-91000-button-tertiary--condensed K7NGZRkvXDE1F7Qp"
+                                          aria-label="More options for Épisode II"
+                                          data-encore-id="buttonTertiary"
+                                          tabindex="-1"
+                                       >
+                                          <span
+                                             aria-hidden="true"
+                                             class="e-91000-button__icon-wrapper"
+                                             ><svg
+                                                data-encore-id="icon"
+                                                role="img"
+                                                aria-hidden="true"
+                                                class="e-91000-icon e-91000-baseline"
+                                                style="
+                                                   --encore-icon-height: var(
+                                                      --encore-graphic-size-decorative-smaller
+                                                   );
+                                                   --encore-icon-width: var(
+                                                      --encore-graphic-size-decorative-smaller
+                                                   );
+                                                "
+                                                viewBox="0 0 16 16"
+                                             >
+                                                <path
+                                                   d="M3 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m6.5 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0M16 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"
+                                                ></path></svg
+                                          ></span>
+                                       </button>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                        </li>
+                     </ul>
+                  </div>
+               </div>
+            </div>
+         </div>
+         <div
+            class="os-scrollbar os-scrollbar-horizontal os-theme-spotify os-scrollbar-auto-hide os-scrollbar-handle-interactive os-scrollbar-track-interactive os-scrollbar-cornerless os-scrollbar-unusable os-scrollbar-auto-hide-hidden"
+            style="
+               --os-scroll-percent: 0;
+               --os-viewport-percent: 1;
+               --os-scroll-direction: 0;
+            "
+         >
+            <div class="os-scrollbar-track">
+               <div class="os-scrollbar-handle"></div>
+            </div>
+         </div>
+         <div
+            class="os-scrollbar os-scrollbar-vertical os-theme-spotify os-scrollbar-auto-hide os-scrollbar-handle-interactive os-scrollbar-track-interactive os-scrollbar-cornerless os-scrollbar-visible os-scrollbar-auto-hide-hidden"
+            style="
+               --os-scroll-percent: 0;
+               --os-viewport-percent: 0.3516;
+               --os-scroll-direction: 0;
+            "
+         >
+            <div class="os-scrollbar-track">
+               <div class="os-scrollbar-handle"></div>
+            </div>
+         </div>
+      </div>
+   </div>
+</aside>
