@@ -1,0 +1,48 @@
+// for reference:
+
+/* this is the now playing view: /*
+
+aria-label="Now playing view"
+class="vDYkSjYiSm42esIK NowPlayingView". 
+
+/* and this is the show now playing view button: /*
+
+.wJiY1vDfuci2a4db
+
+/* this is the connect a device that is to stay untouched: /*
+
+aria-label="Connect to a device"
+class="vDYkSjYiSm42esIK Om8mTyZHUvkOhUr1"
+
+/* this is the queue that is to stay untouched: /*
+
+aria-label="Queue"
+class="vDYkSjYiSm42esIK Om8mTyZHUvkOhUr1"
+
+
+// original config:
+
+const styleId = 'lyricsplus-hide-npv-style';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+          .zjCIcN96KsMfWwRo { /* the panel where npv, queue, connect a device are all displayed after clicking on their respective buttons */
+              min-width: 0 !important;
+              max-width: 0 !important;
+              flex-basis: 0 !important;
+              overflow: hidden !important;
+          }
+
+          .wJiY1vDfuci2a4db { /* The "Show Now Playing view" button */
+              display: none !important;
+          }
+
+      `;
+    document.head.appendChild(style);
+  }
+
+// proposed solution:
+/* the above config works perfectly to make the panel fully invisible while track info stays accessible in dom for provider spotify but as said it also breaks queue panel and connect a device panel */
+   check "queue vs connect a device vs npv.txt" for more info on exact structure but the key parts i believe i already outlined in this document.
+   make it so that above style style is only applied to .zjCIcN96KsMfWwRo if .zjCIcN96KsMfWwRo contains the code from which we recognize NowPlayingView. /*
