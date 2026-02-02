@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      15.7
+// @version      15.8
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,7 +13,9 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (15.7): FIX HIDING NOWPLAYINGVIEW
+// RESOLVED (15.8): FIX "QUEUE" AND "CONNECT A DEVICE" PANELS
+
+// RESOLVED (15.7): FIX HIDING "NOWPLAYINGVIEW" PANEL
 
 // RESOLVED (15.6): POPUP RESTORED STATE FIX 
 
@@ -348,10 +350,12 @@
   // Attempt initialization immediately
   initOpenCCConverters();
 
-  /* NowPlayingView logic: Collapsing the `.zjCIcN96KsMfWwRo` parent container to zero width is sufficient to hide the entire NowPlayingView panel.
-      The container is forced to `width: 0`, `min-width: 0`, `max-width: 0`, and `flex-basis: 0` so that it collapses entirely,
-      allowing the rest of the UI to expand and fill the area, eliminating the black gap.
-      The NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching (ProviderSpotify needs it).
+  /* NowPlayingView logic: Using the original `.zjCIcN96KsMfWwRo` container approach.
+      The `.zjCIcN96KsMfWwRo` is the panel where NPV, Queue, and Connect a device are all displayed after clicking their respective buttons.
+      We apply the hiding style ONLY when .zjCIcN96KsMfWwRo contains NowPlayingView (identified by aria-label="Now playing view" or .NowPlayingView class).
+      This ensures Queue and Connect modals remain unaffected while NowPlayingView is hidden.
+      The container is collapsed to zero width, allowing the rest of the UI to expand and fill the area.
+      NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching (ProviderSpotify needs it).
   */
 
   const styleId = 'lyricsplus-hide-npv-style';
@@ -359,9 +363,8 @@
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-          .a_fKt7xvd8od_kEb, /* I kept the parent of .zjCIcN96KsMfWwRo, just in case */
-          .zjCIcN96KsMfWwRo { /* The NowPlayingView panel, which includes the new side NPV button */
-              width: 0 !important;
+          .zjCIcN96KsMfWwRo:has([aria-label="Now playing view"]),
+          .zjCIcN96KsMfWwRo:has(.NowPlayingView) { 
               min-width: 0 !important;
               max-width: 0 !important;
               flex-basis: 0 !important;
@@ -375,53 +378,6 @@
       `;
     document.head.appendChild(style);
   }
-
-
-  /*
-  --- NOTE: Keeping the old version here as backup incase Spotify reverts the new NPV update.
-
-  --- Forcibly hide NowPlayingView and its button in the playback controls menu
-  --- To obtain the trackId and fetch lyrics from the SpotifyProvider, the userscript uses specific selectors that are only present in the DOM while the NowPlayingView is open.
-      This CSS method hides the NowPlayingView from the user interface in a way that allows the rest of the Spotify home UI to seamlessly fill the space it would otherwise
-      occupy, without leaving a black area present. Crucially, it keeps the NowPlayingView and its DOM structure present and accessible to JavaScript (so scripts can still read
-      track info), but makes it invisible and non-interactive to the user.
-  --- The `.NowPlayingView` element is made invisible by setting `opacity: 0` and `pointer-events: none`, but remains in the DOM for selector access.
-      It is positioned absolutely and given a negative z-index, so it does not participate in the normal document flow or block other content.
-      Its flex value is set to `0 0 0%` to ensure it does not reserve any space in the parent flex container.
-      The immediate parents (`.a_fKt7xvd8od_kEb` and `.zjCIcN96KsMfWwRo`) are forced to `width: 0`, `min-width: 0`,
-      `max-width: 0`, and `flex-basis: 0` so that they collapse entirely, allowing the rest of the UI to expand and fill the area, eliminating the black gap.
-      The "Show Now Playing view" button (`.wJiY1vDfuci2a4db`) and the old NPV button in the playback controls (`[data-testid=control-button-npv]`) are hidden from the UI.
-
-      const styleId = 'lyricsplus-hide-npv-style';
-      if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-              .NowPlayingView {
-                  position: absolute !important;
-                  left: 0; top: 0;
-                  width: 100% !important;
-                  height: 100% !important;
-                  opacity: 0 !important;
-                  pointer-events: none !important;
-                  z-index: -1 !important;
-                  flex: 0 0 0% !important;
-              }
-              .oXO9_yYs6JyOwkBn8E4a {
-                  width: 0 !important;
-                  min-width: 0 !important;
-                  max-width: 0 !important;
-                  flex-basis: 0 !important;
-                  overflow: hidden !important;
-              }
-              [data-testid=control-button-npv] {
-                  display: none !important;
-              }
-          `;
-        document.head.appendChild(style);
-      }
-
-  */
 
   // ------------------------
   // Utils.js Functions
