@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      15.8
+// @version      15.9
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,9 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+
+// RESOLVED (15.9): FIXED MOBILE LYRICS MODAL POSITION
 
 // RESOLVED (15.8): FIX "QUEUE" AND "CONNECT A DEVICE" PANELS
 
@@ -3300,19 +3303,7 @@ const Providers = {
         return null;
       }
       const rect = el.getBoundingClientRect();
-      const isMobile = window.innerWidth <= 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-      if (isMobile) {
-        // Subtract 28% from right side only, no left margin
-        const rightMarginPx = rect.width * 0.72;
-        const left = rect.left - 72; // Moves popup 28px outside the left edge
-        const width = rect.width - rightMarginPx + 72; // Compensate to keep right edge same
-        const top = rect.top;
-        const height = rect.height;
-        return { left, top, width, height };
-      } else {
-        return rect;
-      }
+      return rect;
     }
 
     // Usage:
