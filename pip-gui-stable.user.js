@@ -366,13 +366,9 @@
               overflow: hidden !important;
           }
 
-          /*  --- The side NPV button (not needed because it's already hidden by .zjCIcN96KsMfWwRo)
-
-          .wJiY1vDfuci2a4db {
+          .wJiY1vDfuci2a4db { /* The "Show Now Playing view" button */
               display: none !important;
           }
-
-          */
 
       `;
     document.head.appendChild(style);
