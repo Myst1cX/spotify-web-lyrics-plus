@@ -348,10 +348,10 @@
   // Attempt initialization immediately
   initOpenCCConverters();
 
-  /* NowPlayingView logic: Collapsing the `.zjCIcN96KsMfWwRo` parent container to zero width is sufficient to hide the entire NowPlayingView panel.
-      The container is forced to `width: 0`, `min-width: 0`, `max-width: 0`, and `flex-basis: 0` so that it collapses entirely,
-      allowing the rest of the UI to expand and fill the area, eliminating the black gap.
-      The NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching (ProviderSpotify needs it).
+  /* NowPlayingView logic: Using the `.NowPlayingView` class for locale-independent hiding.
+      The `.NowPlayingView` class is unique to the NowPlayingView element and not present on Queue or Connect modals.
+      This approach is locale-independent (doesn't rely on aria-label text) and keeps the DOM accessible for JavaScript.
+      The element is made invisible but remains in the DOM for track information and lyrics fetching (ProviderSpotify needs it).
   */
 
   const styleId = 'lyricsplus-hide-npv-style';
@@ -359,13 +359,15 @@
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-          .a_fKt7xvd8od_kEb, /* I kept the parent of .zjCIcN96KsMfWwRo, just in case */
-          .zjCIcN96KsMfWwRo { /* The NowPlayingView panel, which includes the new side NPV button */
-              width: 0 !important;
-              min-width: 0 !important;
-              max-width: 0 !important;
-              flex-basis: 0 !important;
-              overflow: hidden !important;
+          .NowPlayingView {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              height: 100% !important;
+              opacity: 0 !important;
+              pointer-events: none !important;
+              z-index: -1 !important;
           }
 
           .wJiY1vDfuci2a4db { /* The "Show Now Playing view" button */
