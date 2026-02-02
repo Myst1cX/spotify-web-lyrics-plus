@@ -3300,19 +3300,7 @@ const Providers = {
         return null;
       }
       const rect = el.getBoundingClientRect();
-      const isMobile = window.innerWidth <= 600 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-      if (isMobile) {
-        // Subtract 28% from right side only, no left margin
-        const rightMarginPx = rect.width * 0.72;
-        const left = rect.left - 72; // Moves popup 28px outside the left edge
-        const width = rect.width - rightMarginPx + 72; // Compensate to keep right edge same
-        const top = rect.top;
-        const height = rect.height;
-        return { left, top, width, height };
-      } else {
-        return rect;
-      }
+      return rect;
     }
 
     // Usage:
