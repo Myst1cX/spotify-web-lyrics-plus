@@ -359,8 +359,9 @@
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-          .a_fKt7xvd8od_kEb, /* I kept the parent of .zjCIcN96KsMfWwRo, just in case */
-          .zjCIcN96KsMfWwRo { /* The NowPlayingView panel, which includes the new side NPV button */
+          /* Only hide the container when aria-hidden="true" (NowPlayingView state) */
+          /* When aria-hidden="false", the container contains Queue or Connect modals and should remain visible */
+          .a_fKt7xvd8od_kEb[aria-hidden="true"] {
               width: 0 !important;
               min-width: 0 !important;
               max-width: 0 !important;
