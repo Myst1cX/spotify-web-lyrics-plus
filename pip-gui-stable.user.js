@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      15.6
+// @version      15.7
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (15.7): FIX HIDING NOWPLAYINGVIEW
 
 // RESOLVED (15.6): POPUP RESTORED STATE FIX 
 
@@ -366,13 +368,9 @@
               overflow: hidden !important;
           }
 
-          /*  --- The side NPV button (not needed because it's already hidden by .zjCIcN96KsMfWwRo)
-
-          .wJiY1vDfuci2a4db {
+          .wJiY1vDfuci2a4db { /* The "Show Now Playing view" button */
               display: none !important;
           }
-
-          */
 
       `;
     document.head.appendChild(style);
