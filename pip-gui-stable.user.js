@@ -1916,7 +1916,7 @@ const PLAY_WORDS = [
     style.textContent = `
       #lyrics-plus-musixmatch-modal {
         position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
-        background: rgba(0,0,0,0.7); z-index: 100001; display: flex;
+        background: rgba(0,0,0,0.7); z-index: 10001; display: flex;
         align-items: center; justify-content: center;
       }
       #lyrics-plus-musixmatch-modal-box {
@@ -2896,7 +2896,7 @@ const ProviderGenius = {
     style.textContent = `
       #lyrics-plus-spotify-modal {
         position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
-        background: rgba(0,0,0,0.7); z-index: 100001; display: flex;
+        background: rgba(0,0,0,0.7); z-index: 10001; display: flex;
         align-items: center; justify-content: center;
       }
       #lyrics-plus-spotify-modal-box {
@@ -3374,7 +3374,7 @@ const Providers = {
         borderRadius: "12px",
         boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        zIndex: 100000,
+        zIndex: 9999,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
@@ -3401,7 +3401,7 @@ const Providers = {
           borderRadius: "12px",
           boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
           fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-          zIndex: 100000,
+          zIndex: 9999,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -3427,7 +3427,7 @@ const Providers = {
           borderRadius: "12px",
           boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
           fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-          zIndex: 100000,
+          zIndex: 9999,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -3504,7 +3504,7 @@ const Providers = {
           height: rect.height + "px",
           right: "auto",
           bottom: "auto",
-          zIndex: 100000
+          zIndex: 9999
         });
         savePopupState(popup);
         console.log("✅ [Lyrics+ UI] Position restored to Spotify lyrics container position");
@@ -3517,7 +3517,7 @@ const Providers = {
           top: "auto",
           width: "360px",
           height: "79.5vh",
-          zIndex: 100000
+          zIndex: 9999
         });
         savePopupState(popup);
         console.log("✅ [Lyrics+ UI] Position restored to default position (bottom-right corner)");
@@ -3762,7 +3762,7 @@ const Providers = {
       border: "1px solid #444",
       borderRadius: "8px",
       boxShadow: "0 2px 12px #0009",
-      zIndex: 99999,
+      zIndex: 10000,
       display: "none",
       flexDirection: "column",
       padding: "4px 4px"
