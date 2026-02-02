@@ -348,10 +348,12 @@
   // Attempt initialization immediately
   initOpenCCConverters();
 
-  /* NowPlayingView logic: Collapsing the `.zjCIcN96KsMfWwRo` parent container to zero width is sufficient to hide the entire NowPlayingView panel.
-      The container is forced to `width: 0`, `min-width: 0`, `max-width: 0`, and `flex-basis: 0` so that it collapses entirely,
-      allowing the rest of the UI to expand and fill the area, eliminating the black gap.
-      The NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching (ProviderSpotify needs it).
+  /* NowPlayingView logic: Using the original `.zjCIcN96KsMfWwRo` container approach.
+      The `.zjCIcN96KsMfWwRo` is the panel where NPV, Queue, and Connect a device are all displayed after clicking their respective buttons.
+      We apply the hiding style ONLY when .zjCIcN96KsMfWwRo contains NowPlayingView (identified by aria-label="Now playing view" or .NowPlayingView class).
+      This ensures Queue and Connect modals remain unaffected while NowPlayingView is hidden.
+      The container is collapsed to zero width, allowing the rest of the UI to expand and fill the area.
+      NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching (ProviderSpotify needs it).
   */
 
   const styleId = 'lyricsplus-hide-npv-style';
@@ -359,8 +361,8 @@
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-          .zjCIcN96KsMfWwRo { 
-              width: 0 !important;
+          .zjCIcN96KsMfWwRo:has([aria-label="Now playing view"]),
+          .zjCIcN96KsMfWwRo:has(.NowPlayingView) { 
               min-width: 0 !important;
               max-width: 0 !important;
               flex-basis: 0 !important;
