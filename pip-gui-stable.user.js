@@ -880,6 +880,10 @@
             nextEl.style.opacity = "0.8";
           }
         });
+        // Ensure scroll is at top when no line is active (song start/intro)
+        if (container.scrollTop !== 0) {
+          container.scrollTop = 0;
+        }
         return;
       }
       pElements.forEach((p, idx) => {
@@ -5953,10 +5957,14 @@ const Providers = {
 
     // Reset scroll position to top ONLY for cached lyrics
     // Fresh lyrics naturally start at top, but cached lyrics need explicit reset
+    // Use setTimeout to ensure DOM is fully rendered before scrolling
     if (isFromCache) {
       console.log('⬆️ [Lyrics+ Scroll] Resetting scroll position for cached lyrics. Previous scrollTop:', lyricsContainer.scrollTop);
-      lyricsContainer.scrollTop = 0;
-      console.log('✅ [Lyrics+ Scroll] Scroll position reset to top (scrollTop: 0) for cached lyrics');
+      // Defer scroll reset to next frame to ensure DOM is fully laid out
+      setTimeout(() => {
+        lyricsContainer.scrollTop = 0;
+        console.log('✅ [Lyrics+ Scroll] Scroll position reset to top (scrollTop: 0) for cached lyrics');
+      }, 0);
     } else {
       console.log('ℹ️ [Lyrics+ Scroll] Fresh lyrics loaded, no scroll reset needed (naturally at top)');
     }
@@ -6086,6 +6094,22 @@ const Providers = {
     pollingInterval = setInterval(() => {
       const info = getCurrentTrackInfo();
       if (!info) return;
+      
+      // Prevent false track change detection near the end of the song
+      // Check if we're within the last 2 seconds of the current track
+      const positionEl = document.querySelector('[data-testid="playback-position"]');
+      const durationEl = document.querySelector('[data-testid="playback-duration"]');
+      if (positionEl && durationEl && info.duration > 0) {
+        const currentPos = timeStringToMs(positionEl.textContent);
+        const remaining = info.duration - currentPos;
+        // If less than 2 seconds remaining, don't trigger track change
+        // This prevents false detection when Spotify's DOM updates early on repeat
+        if (remaining < 2000 && remaining > 0) {
+          DEBUG.debug('Polling', `Near end of track (${remaining}ms remaining), skipping track change check`);
+          return;
+        }
+      }
+      
       if (info.id !== currentTrackId) {
         DEBUG.track.changed(currentTrackId, info.id, info);
         currentTrackId = info.id;
