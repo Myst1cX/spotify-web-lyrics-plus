@@ -124,6 +124,7 @@
   let transliterationPresent = false;
   let isShowingSyncedLyrics = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
+  let lyricsCache = {}; // Cache lyrics by track ID to prevent unnecessary API calls on repeat
 
   // ------------------------
   // Constants & Configuration
@@ -140,6 +141,7 @@
   const LIMITS = {
     OPENCC_MAX_RETRIES: 3,            // Max retries for OpenCC initialization
     BUTTON_ADD_MAX_RETRIES: 10,       // Max retries for button injection
+    LYRICS_CACHE_SIZE: 50,            // Max number of tracks to cache
   };
 
   const STORAGE_KEYS = {
@@ -149,6 +151,36 @@
     FONT_SIZE: 'lyricsPlusFontSize',
     CHINESE_CONVERSION: 'lyricsPlusChineseConversion',
   };
+
+  // ------------------------
+  // Lyrics Cache Management
+  // ------------------------
+  function addToLyricsCache(trackId, provider, result) {
+    // Simple cache eviction: if cache is full, remove oldest entry
+    const cacheKeys = Object.keys(lyricsCache);
+    if (cacheKeys.length >= LIMITS.LYRICS_CACHE_SIZE) {
+      // Find and remove the oldest cached entry
+      let oldestKey = null;
+      let oldestTime = Infinity;
+      for (const key of cacheKeys) {
+        if (lyricsCache[key].timestamp < oldestTime) {
+          oldestTime = lyricsCache[key].timestamp;
+          oldestKey = key;
+        }
+      }
+      if (oldestKey) {
+        delete lyricsCache[oldestKey];
+        DEBUG.debug('Cache', `Evicted oldest cache entry: ${oldestKey}`);
+      }
+    }
+    
+    lyricsCache[trackId] = {
+      provider: provider,
+      result: result,
+      timestamp: Date.now()
+    };
+    DEBUG.info('Cache', `Cached lyrics for track: ${trackId} from ${provider} (${cacheKeys.length + 1}/${LIMITS.LYRICS_CACHE_SIZE})`);
+  }
 
   // ------------------------
   // Debug Logging Infrastructure
@@ -5773,7 +5805,22 @@ const Providers = {
     const chineseConvBtn = popup._chineseConvBtn;
 
     const provider = Providers.getCurrent();
-    const result = await provider.findLyrics(info);
+    
+    // Check if we have cached result for this track and provider
+    const cacheKey = info.id;
+    let result;
+    if (lyricsCache[cacheKey] && lyricsCache[cacheKey].provider === Providers.current) {
+      DEBUG.info('Cache', `Using cached result for ${Providers.current} provider`);
+      result = lyricsCache[cacheKey].result;
+    } else {
+      // Fetch fresh lyrics from the provider
+      result = await provider.findLyrics(info);
+      
+      // Cache successful results
+      if (result && !result.error) {
+        addToLyricsCache(cacheKey, Providers.current, result);
+      }
+    }
 
     if (result.error) {
       lyricsContainer.textContent = result.error;
@@ -5923,6 +5970,19 @@ const Providers = {
     DEBUG.info('Autodetect', 'Starting provider autodetection', info);
     const startTime = performance.now();
 
+    // Check if we have cached lyrics for this track
+    const cacheKey = info.id;
+    if (lyricsCache[cacheKey]) {
+      DEBUG.info('Autodetect', `Using cached lyrics for track: ${cacheKey}`);
+      const cached = lyricsCache[cacheKey];
+      Providers.setCurrent(cached.provider);
+      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+      await updateLyricsContent(popup, info);
+      const totalDuration = performance.now() - startTime;
+      DEBUG.info('Autodetect', `Completed from cache in ${totalDuration.toFixed(2)}ms using ${cached.provider}`);
+      return;
+    }
+
     const detectionOrder = [
       { name: "LRCLIB", type: "getSynced" },
       { name: "Spotify", type: "getSynced" },
@@ -5950,6 +6010,9 @@ const Providers = {
           if (lyrics && lyrics.length > 0) {
             DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
             DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
+
+            // Cache the successful result to avoid repeated API calls on song repeat
+            addToLyricsCache(info.id, name, result);
 
             Providers.setCurrent(name);
             if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
