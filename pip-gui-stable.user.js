@@ -5363,11 +5363,18 @@ const Providers = {
      */
     function seekTo(ms) {
       try {
+        // Prevent seeking to exact track end to avoid "ended" state that breaks replay
+        // If seeking within 200ms of duration, cap at duration - 200ms
+        const SEEK_END_BUFFER_MS = 200;
+        
         // --- (a) Try audio.currentTime first ---
         const audio = document.querySelector('audio');
         if (audio && !isNaN(audio.duration) && audio.duration > 0) {
           try {
-            audio.currentTime = ms / 1000;
+            const audioDurMs = audio.duration * 1000;
+            // Apply end buffer to prevent seeking to exact end
+            const safeMs = (ms >= audioDurMs - SEEK_END_BUFFER_MS) ? audioDurMs - SEEK_END_BUFFER_MS : ms;
+            audio.currentTime = safeMs / 1000;
             audio.dispatchEvent(new Event('input', { bubbles: true }));
             audio.dispatchEvent(new Event('change', { bubbles: true }));
             return true;
@@ -5382,8 +5389,10 @@ const Providers = {
           try {
             const max = Number(spotifyRange.max) || 0;
             if (max > 0) {
+              // Apply end buffer to prevent seeking to exact end
+              const safeMs = (ms >= max - SEEK_END_BUFFER_MS) ? max - SEEK_END_BUFFER_MS : ms;
               // Set the value
-              spotifyRange.value = String(clamp(ms, 0, max));
+              spotifyRange.value = String(clamp(safeMs, 0, max));
 
               // Dispatch input and change events
               spotifyRange.dispatchEvent(new Event('input', { bubbles: true }));
@@ -5392,7 +5401,7 @@ const Providers = {
               // Also try pointer events for better compatibility
               // Note: We omit 'view' property as it can cause errors in Firefox extensions
               const rangeRect = spotifyRange.getBoundingClientRect();
-              const percentage = clamp(ms, 0, max) / max;
+              const percentage = clamp(safeMs, 0, max) / max;
               const clientX = rangeRect.left + rangeRect.width * percentage;
               const clientY = rangeRect.top + rangeRect.height / 2;
 
@@ -5469,7 +5478,9 @@ const Providers = {
               }
 
               if (durMs > 0) {
-                const percentage = clamp(ms, 0, durMs) / durMs;
+                // Apply end buffer to prevent seeking to exact end
+                const safeMs = (ms >= durMs - SEEK_END_BUFFER_MS) ? durMs - SEEK_END_BUFFER_MS : ms;
+                const percentage = clamp(safeMs, 0, durMs) / durMs;
                 const clientX = barRect.left + barRect.width * percentage;
                 const clientY = barRect.top + barRect.height / 2;
 
