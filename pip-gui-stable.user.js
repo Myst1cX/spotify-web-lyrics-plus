@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      15.9
+// @version      16.0
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,22 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+
+// RESOLVED (16.0): LYRICS CACHING FEATURE + REPEAT ONE SUPPORT
+// • Automatic caching of lyrics for last 50 songs played
+// • Instant loading from cache (no network delay) for recently played songs
+// • Repeat One detection: When song restarts, lyrics automatically scroll back to beginning
+// • Smart LRU (Least Recently Used) eviction when cache reaches 50 songs
+// • User-friendly console logging for all cache operations
+// • New debug commands: LyricsPlusDebug.getCacheStats() and LyricsPlusDebug.clearCache()
+// • Persists across page reloads and browser restarts via localStorage
+// • ~50-250KB storage total (1-5KB per song)
+
+// RESOLVED (15.9): FIXED REPLAY BUTTON ISSUE AT END OF SONG
+// • Fixed issue where songs with replay enabled would get stuck at the last second
+// • Added 200ms buffer when seeking near track end to prevent "ended" state
+// • Added detailed debug logging to seekTo() function
+// • Created LyricsPlusDebug helper for troubleshooting
 
 // RESOLVED (15.9): FIXED MOBILE LYRICS MODAL POSITION
 
