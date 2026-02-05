@@ -5818,16 +5818,21 @@ const Providers = {
     // Check if we have cached result for this track and provider
     const cacheKey = getCacheKey(info.id, Providers.current);
     let result;
+    let isFromCache = false;
     if (lyricsCache[cacheKey]) {
       DEBUG.info('Cache', `Using cached result for ${Providers.current} provider`);
+      console.log('🔄 [Lyrics+ Cache] Using cached lyrics for track:', info.id, 'Provider:', Providers.current);
       result = lyricsCache[cacheKey].result;
+      isFromCache = true;
     } else {
       // Fetch fresh lyrics from the provider
+      console.log('📥 [Lyrics+ Fetch] Fetching fresh lyrics for track:', info.id, 'Provider:', Providers.current);
       result = await provider.findLyrics(info);
       
       // Cache successful results
       if (result && !result.error) {
         addToLyricsCache(info.id, Providers.current, result);
+        console.log('💾 [Lyrics+ Cache] Cached lyrics for track:', info.id);
       }
     }
 
@@ -5946,9 +5951,15 @@ const Providers = {
       currentUnsyncedLyrics = null;
     }
 
-    // Reset scroll position to top when lyrics are rendered
-    // This ensures songs always start from the beginning, especially important for cached lyrics
-    lyricsContainer.scrollTop = 0;
+    // Reset scroll position to top ONLY for cached lyrics
+    // Fresh lyrics naturally start at top, but cached lyrics need explicit reset
+    if (isFromCache) {
+      console.log('⬆️ [Lyrics+ Scroll] Resetting scroll position for cached lyrics. Previous scrollTop:', lyricsContainer.scrollTop);
+      lyricsContainer.scrollTop = 0;
+      console.log('✅ [Lyrics+ Scroll] Scroll position reset to top (scrollTop: 0) for cached lyrics');
+    } else {
+      console.log('ℹ️ [Lyrics+ Scroll] Fresh lyrics loaded, no scroll reset needed (naturally at top)');
+    }
 
     // Show/hide transliteration button based on data availability
     const transliterationBtn = popup._transliterationToggleBtn;
