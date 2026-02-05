@@ -124,6 +124,8 @@
   let transliterationPresent = false;
   let isShowingSyncedLyrics = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
+  let lastPlaybackPosition = 0;  // Track playback position for repeat detection
+  let lastTrackDuration = 0;    // Track duration for repeat detection
 
   // ------------------------
   // Constants & Configuration
@@ -148,6 +150,132 @@
     TRANSLATOR_VISIBLE: 'lyricsPlusTranslatorVisible',
     FONT_SIZE: 'lyricsPlusFontSize',
     CHINESE_CONVERSION: 'lyricsPlusChineseConversion',
+    LYRICS_CACHE: 'lyricsPlusCache_v1',
+  };
+
+  // ------------------------
+  // Lyrics Cache Module
+  // ------------------------
+  const LyricsCache = {
+    MAX_CACHE_SIZE: 50,  // Maximum number of songs to cache
+    
+    /**
+     * Get all cached lyrics from localStorage
+     * @returns {Object} Cache object with trackId keys
+     */
+    getAll() {
+      try {
+        const cached = localStorage.getItem(STORAGE_KEYS.LYRICS_CACHE);
+        return cached ? JSON.parse(cached) : {};
+      } catch (e) {
+        console.warn('[Lyrics+] ⚠️ Could not load cached lyrics from storage:', e);
+        return {};
+      }
+    },
+    
+    /**
+     * Save cache to localStorage
+     * @param {Object} cache - Cache object to save
+     */
+    saveAll(cache) {
+      try {
+        localStorage.setItem(STORAGE_KEYS.LYRICS_CACHE, JSON.stringify(cache));
+      } catch (e) {
+        console.warn('[Lyrics+] ⚠️ Could not save lyrics to cache:', e);
+      }
+    },
+    
+    /**
+     * Get cached lyrics for a specific track
+     * @param {string} trackId - Spotify track ID
+     * @returns {Object|null} Cached lyrics data or null if not found
+     */
+    get(trackId) {
+      if (!trackId) return null;
+      const cache = this.getAll();
+      const entry = cache[trackId];
+      if (entry) {
+        console.log(`💾 [Lyrics+] Found cached lyrics! Loading instantly without network request...`);
+        DEBUG.info('Cache', `Cache hit for track: ${trackId}`);
+        // Update timestamp to mark as recently used (LRU)
+        entry.timestamp = Date.now();
+        this.saveAll(cache);
+        return entry;
+      }
+      console.log(`🔍 [Lyrics+] No cached lyrics found for this song - fetching from providers...`);
+      DEBUG.debug('Cache', `Cache miss for track: ${trackId}`);
+      return null;
+    },
+    
+    /**
+     * Save lyrics to cache with LRU eviction
+     * @param {string} trackId - Spotify track ID
+     * @param {Object} data - Lyrics data to cache
+     */
+    set(trackId, data) {
+      if (!trackId || !data) return;
+      
+      const cache = this.getAll();
+      
+      // Add/update entry with timestamp
+      cache[trackId] = {
+        ...data,
+        timestamp: Date.now()
+      };
+      
+      // Enforce cache size limit with LRU eviction
+      const entries = Object.entries(cache);
+      if (entries.length > this.MAX_CACHE_SIZE) {
+        // Sort by timestamp (oldest first)
+        entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+        
+        // Remove oldest entries until we're at the limit
+        const toRemove = entries.length - this.MAX_CACHE_SIZE;
+        for (let i = 0; i < toRemove; i++) {
+          delete cache[entries[i][0]];
+          console.log(`💾 [Lyrics+] Removed oldest cached song to make room for new ones (keeping last ${this.MAX_CACHE_SIZE} songs)`);
+          DEBUG.debug('Cache', `Evicted old entry: ${entries[i][0]}`);
+        }
+      }
+      
+      this.saveAll(cache);
+      const cacheSize = Object.keys(cache).length;
+      console.log(`✅ [Lyrics+] Lyrics saved to cache! Now have ${cacheSize} of last ${this.MAX_CACHE_SIZE} songs cached for instant replay`);
+      DEBUG.info('Cache', `Cached lyrics for track: ${trackId}`);
+    },
+    
+    /**
+     * Clear all cached lyrics
+     */
+    clear() {
+      try {
+        localStorage.removeItem(STORAGE_KEYS.LYRICS_CACHE);
+        console.log('🗑️ [Lyrics+] All cached lyrics cleared successfully');
+        DEBUG.info('Cache', 'Cache cleared');
+      } catch (e) {
+        console.warn('[Lyrics+] ⚠️ Could not clear cache:', e);
+      }
+    },
+    
+    /**
+     * Get cache statistics for debugging
+     * @returns {Object} Cache statistics
+     */
+    getStats() {
+      const cache = this.getAll();
+      const entries = Object.entries(cache);
+      return {
+        size: entries.length,
+        maxSize: this.MAX_CACHE_SIZE,
+        entries: entries.map(([id, data]) => ({
+          trackId: id,
+          provider: data.provider,
+          hasSynced: !!data.synced,
+          hasUnsynced: !!data.unsynced,
+          timestamp: new Date(data.timestamp).toISOString()
+        }))
+      };
+    }
   };
 
   // ------------------------
@@ -5783,6 +5911,147 @@ const Providers = {
     }
   }
 
+  /**
+   * Load and display lyrics from cache
+   * @param {HTMLElement} popup - The popup element
+   * @param {Object} info - Track information
+   * @param {Object} cachedData - Cached lyrics data
+   * @returns {boolean} True if successfully loaded from cache
+   */
+  function loadLyricsFromCache(popup, info, cachedData) {
+    if (!popup || !info || !cachedData) return false;
+    
+    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+    if (!lyricsContainer) return false;
+    
+    console.log(`✨ [Lyrics+] Loading lyrics from cache for "${info.title}" by ${info.artist}`);
+    console.log(`   📦 Source: ${cachedData.provider} (previously fetched)`);
+    DEBUG.info('Cache', `Loading lyrics from cache for: ${info.title} - ${info.artist}`);
+    
+    currentLyricsContainer = lyricsContainer;
+    currentSyncedLyrics = cachedData.synced;
+    currentUnsyncedLyrics = cachedData.unsynced;
+    
+    // Reset translation state
+    translationPresent = false;
+    transliterationPresent = false;
+    lastTranslatedLang = null;
+    
+    // Set the provider to the cached one
+    if (cachedData.provider) {
+      Providers.setCurrent(cachedData.provider);
+      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+    }
+    
+    const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
+    const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
+    const chineseConvBtn = popup._chineseConvBtn;
+    
+    // Check if cached lyrics contain Chinese characters
+    const lyrics = cachedData.synced || cachedData.unsynced || [];
+    const hasChineseLyrics = lyrics.some(line => line.text && Utils.containsHanCharacter(line.text));
+    
+    if (hasChineseLyrics) {
+      const allLyricsText = lyrics.map(line => line.text || '').join('');
+      originalChineseScriptType = Utils.detectChineseScriptType(allLyricsText);
+    } else {
+      originalChineseScriptType = null;
+    }
+    
+    // Show/hide Chinese conversion button
+    if (chineseConvBtn) {
+      if (hasChineseLyrics && originalChineseScriptType) {
+        chineseConvBtn.style.display = "inline-flex";
+        if (popup._updateChineseConvBtnText) {
+          popup._updateChineseConvBtnText();
+        }
+      } else {
+        chineseConvBtn.style.display = "none";
+      }
+    }
+    
+    const shouldConvertChinese = isChineseConversionEnabled();
+    const convertText = (text) => {
+      if (shouldConvertChinese && text && Utils.containsHanCharacter(text)) {
+        if (originalChineseScriptType === 'traditional') {
+          return Utils.toSimplifiedChinese(text);
+        } else {
+          return Utils.toTraditionalChinese(text);
+        }
+      }
+      return text;
+    };
+    
+    lyricsContainer.innerHTML = "";
+    
+    const transliterationEnabled = localStorage.getItem(STORAGE_KEYS.TRANSLITERATION_ENABLED) === 'true';
+    let hasTransliterationData = false;
+    
+    if (currentSyncedLyrics) {
+      isShowingSyncedLyrics = true;
+      currentSyncedLyrics.forEach(({ text, transliteration }) => {
+        const p = document.createElement("p");
+        p.textContent = convertText(text);
+        p.style.margin = "0 0 6px 0";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        if (transliteration) {
+          p.setAttribute('data-transliteration-text', transliteration);
+          hasTransliterationData = true;
+        }
+        lyricsContainer.appendChild(p);
+      });
+      highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
+    } else if (currentUnsyncedLyrics) {
+      isShowingSyncedLyrics = false;
+      currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
+        const p = document.createElement("p");
+        p.textContent = convertText(text);
+        p.style.margin = "0 0 6px 0";
+        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
+        p.style.color = "white";
+        p.style.fontWeight = "400";
+        p.style.filter = "blur(0.7px)";
+        p.style.opacity = "0.8";
+        if (transliteration) {
+          p.setAttribute('data-transliteration-text', transliteration);
+          hasTransliterationData = true;
+        }
+        lyricsContainer.appendChild(p);
+      });
+      lyricsContainer.style.overflowY = "auto";
+      lyricsContainer.style.pointerEvents = "";
+      lyricsContainer.classList.remove('hide-scrollbar');
+      lyricsContainer.style.scrollbarWidth = "";
+      lyricsContainer.style.msOverflowStyle = "";
+    }
+    
+    // Show/hide transliteration button
+    const transliterationBtn = popup._transliterationToggleBtn;
+    if (transliterationBtn) {
+      transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
+    }
+    
+    // Show transliteration if enabled
+    if (transliterationEnabled && hasTransliterationData) {
+      showTransliterationInPopup();
+      if (transliterationBtn) {
+        transliterationBtn.title = "Hide transliteration";
+      }
+    }
+    
+    // Show/hide download button
+    if (downloadBtn) {
+      if (lyricsContainer.querySelectorAll('p').length > 0) {
+        downloadBtn.style.display = "inline-flex";
+      } else {
+        downloadBtn.style.display = "none";
+        if (downloadDropdown) downloadDropdown.style.display = "none";
+      }
+    }
+    
+    return true;
+  }
+
   async function updateLyricsContent(popup, info) {
     if (!info) return;
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
@@ -5944,11 +6213,40 @@ const Providers = {
         if (downloadDropdown) downloadDropdown.style.display = "none";
       }
     }
+    
+    // Cache lyrics for future use (repeat one, recent songs)
+    if (currentSyncedLyrics || currentUnsyncedLyrics) {
+      LyricsCache.set(info.id, {
+        provider: Providers.current,
+        synced: currentSyncedLyrics,
+        unsynced: currentUnsyncedLyrics,
+        trackInfo: {
+          title: info.title,
+          artist: info.artist,
+          album: info.album,
+          duration: info.duration
+        }
+      });
+    }
   }
 
   // Change priority order of providers
-  async function autodetectProviderAndLoad(popup, info) {
-    DEBUG.info('Autodetect', 'Starting provider autodetection', info);
+  async function autodetectProviderAndLoad(popup, info, forceRefresh = false) {
+    // Check cache first unless forcing refresh
+    if (!forceRefresh) {
+      const cachedData = LyricsCache.get(info.id);
+      if (cachedData) {
+        const success = loadLyricsFromCache(popup, info, cachedData);
+        if (success) {
+          console.log(`⚡ [Lyrics+] Lyrics loaded instantly from cache (no internet needed!)`);
+          DEBUG.info('Autodetect', `Loaded from cache in <1ms using ${cachedData.provider}`);
+          return;
+        }
+      }
+    }
+    
+    console.log(`🔍 [Lyrics+] Searching for lyrics: "${info.title}" by ${info.artist}`);
+    DEBUG.info('Autodetect', 'Starting provider autodetect', info);
     const startTime = performance.now();
 
     const detectionOrder = [
@@ -6023,13 +6321,49 @@ const Providers = {
     pollingInterval = setInterval(() => {
       const info = getCurrentTrackInfo();
       if (!info) return;
+      
+      // Get current playback position
+      const posEl = document.querySelector('[data-testid="playback-position"]');
+      const currentPosition = posEl ? timeStringToMs(posEl.textContent) : 0;
+      
+      // Detect song restart (for repeat one): same track ID but position reset to near 0
+      // This happens when repeat one is enabled and song ends
+      const RESTART_THRESHOLD_MS = 5000; // If position jumps from >5s to <5s, it's a restart
+      const isRestart = (
+        info.id === currentTrackId &&
+        lastPlaybackPosition > RESTART_THRESHOLD_MS &&
+        currentPosition < RESTART_THRESHOLD_MS
+      );
+      
+      if (isRestart) {
+        console.log(`🔁 [Lyrics+] Song restarted! Repeat One detected for "${info.title}"`);
+        console.log(`   ⏮️ Resetting lyrics scroll to the beginning...`);
+        DEBUG.info('Track', `Song restarted (repeat one): ${info.title} - Position: ${lastPlaybackPosition}ms → ${currentPosition}ms`);
+        
+        // For repeat one, just reset scroll to beginning (lyrics already cached)
+        if (currentLyricsContainer && isShowingSyncedLyrics) {
+          const firstLine = currentLyricsContainer.querySelector('p');
+          if (firstLine) {
+            firstLine.scrollIntoView({ behavior: "smooth", block: "center" });
+            console.log(`   ✅ Lyrics scrolled back to start (cached lyrics, no loading needed!)`);
+            DEBUG.debug('Track', 'Scroll reset to beginning for repeat one');
+          }
+        }
+      }
+      
+      // Track changed to a different song
       if (info.id !== currentTrackId) {
         DEBUG.track.changed(currentTrackId, info.id, info);
         currentTrackId = info.id;
+        lastPlaybackPosition = 0;
+        lastTrackDuration = info.duration || 0;
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
         autodetectProviderAndLoad(popup, info);
       }
+      
+      // Update last position for next iteration
+      lastPlaybackPosition = currentPosition;
 
       // Update all button states using DOM-cloned icons from Spotify's visible buttons
       if (popup && popup._playPauseBtn) {
@@ -6254,6 +6588,19 @@ const Providers = {
       }
       return audio;
     },
+    getCacheStats: () => {
+      const stats = LyricsCache.getStats();
+      console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
+      console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
+      if (stats.entries.length > 0) {
+        console.table(stats.entries);
+      }
+      return stats;
+    },
+    clearCache: () => {
+      LyricsCache.clear();
+      console.log('%c[Lyrics+] Cache cleared successfully', 'color: #1db954; font-weight: bold;');
+    },
     help: () => {
       console.log('%c[Lyrics+ Debug Helper]', 'color: #1db954; font-weight: bold; font-size: 14px;');
       console.log('%cAvailable commands:', 'color: #888; font-weight: bold;');
@@ -6263,6 +6610,8 @@ const Providers = {
       console.log('  %cLyricsPlusDebug.getTrackInfo()%c - Get current track information', 'color: #1db954;', 'color: inherit;');
       console.log('  %cLyricsPlusDebug.getRepeatState()%c - Get repeat button state', 'color: #1db954;', 'color: inherit;');
       console.log('  %cLyricsPlusDebug.getAudioElement()%c - Get audio element info', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.getCacheStats()%c - Get lyrics cache statistics', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.clearCache()%c   - Clear all cached lyrics', 'color: #1db954;', 'color: inherit;');
       console.log('  %cLyricsPlusDebug.help()%c         - Show this help message', 'color: #1db954;', 'color: inherit;');
     }
   };
