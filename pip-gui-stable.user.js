@@ -5818,9 +5818,11 @@ const Providers = {
     // Check if we have cached result for this track and provider
     const cacheKey = getCacheKey(info.id, Providers.current);
     let result;
+    let isFromCache = false;
     if (lyricsCache[cacheKey]) {
       DEBUG.info('Cache', `Using cached result for ${Providers.current} provider`);
       result = lyricsCache[cacheKey].result;
+      isFromCache = true;
     } else {
       // Fetch fresh lyrics from the provider
       result = await provider.findLyrics(info);
@@ -5946,9 +5948,11 @@ const Providers = {
       currentUnsyncedLyrics = null;
     }
 
-    // Reset scroll position to top so lyrics always start from the beginning
-    // This is especially important when lyrics come from cache
-    lyricsContainer.scrollTop = 0;
+    // Reset scroll position to top ONLY for cached lyrics
+    // This ensures cached songs always start from the beginning
+    if (isFromCache) {
+      lyricsContainer.scrollTop = 0;
+    }
 
     // Show/hide transliteration button based on data availability
     const transliterationBtn = popup._transliterationToggleBtn;
