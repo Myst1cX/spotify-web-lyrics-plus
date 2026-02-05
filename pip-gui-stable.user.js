@@ -156,8 +156,11 @@
   // Lyrics Cache Management
   // ------------------------
   function addToLyricsCache(trackId, provider, result) {
-    // Simple cache eviction: if cache is full, remove oldest entry
+    // Cache key includes both track ID and provider to support multiple providers per track
+    const cacheKey = `${trackId}::${provider}`;
     const cacheKeys = Object.keys(lyricsCache);
+    
+    // Simple cache eviction: if cache is full, remove oldest entry
     if (cacheKeys.length >= LIMITS.LYRICS_CACHE_SIZE) {
       // Find and remove the oldest cached entry
       let oldestKey = null;
@@ -174,12 +177,14 @@
       }
     }
     
-    lyricsCache[trackId] = {
+    lyricsCache[cacheKey] = {
+      trackId: trackId,
       provider: provider,
       result: result,
       timestamp: Date.now()
     };
-    DEBUG.info('Cache', `Cached lyrics for track: ${trackId} from ${provider} (${cacheKeys.length + 1}/${LIMITS.LYRICS_CACHE_SIZE})`);
+    const currentCacheSize = Object.keys(lyricsCache).length;
+    DEBUG.info('Cache', `Cached lyrics for track: ${trackId} from ${provider} (${currentCacheSize}/${LIMITS.LYRICS_CACHE_SIZE})`);
   }
 
   // ------------------------
@@ -5807,9 +5812,9 @@ const Providers = {
     const provider = Providers.getCurrent();
     
     // Check if we have cached result for this track and provider
-    const cacheKey = info.id;
+    const cacheKey = `${info.id}::${Providers.current}`;
     let result;
-    if (lyricsCache[cacheKey] && lyricsCache[cacheKey].provider === Providers.current) {
+    if (lyricsCache[cacheKey]) {
       DEBUG.info('Cache', `Using cached result for ${Providers.current} provider`);
       result = lyricsCache[cacheKey].result;
     } else {
@@ -5818,7 +5823,7 @@ const Providers = {
       
       // Cache successful results
       if (result && !result.error) {
-        addToLyricsCache(cacheKey, Providers.current, result);
+        addToLyricsCache(info.id, Providers.current, result);
       }
     }
 
@@ -5970,17 +5975,21 @@ const Providers = {
     DEBUG.info('Autodetect', 'Starting provider autodetection', info);
     const startTime = performance.now();
 
-    // Check if we have cached lyrics for this track
-    const cacheKey = info.id;
-    if (lyricsCache[cacheKey]) {
-      DEBUG.info('Autodetect', `Using cached lyrics for track: ${cacheKey}`);
-      const cached = lyricsCache[cacheKey];
-      Providers.setCurrent(cached.provider);
-      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-      await updateLyricsContent(popup, info);
-      const totalDuration = performance.now() - startTime;
-      DEBUG.info('Autodetect', `Completed from cache in ${totalDuration.toFixed(2)}ms using ${cached.provider}`);
-      return;
+    // Check if we have cached lyrics for this track from any provider
+    // Search for cached results in provider priority order
+    const providerPriority = ["LRCLIB", "Spotify", "KPoe", "Musixmatch", "Genius"];
+    for (const providerName of providerPriority) {
+      const cacheKey = `${info.id}::${providerName}`;
+      if (lyricsCache[cacheKey]) {
+        DEBUG.info('Autodetect', `Using cached lyrics for track from ${providerName}`);
+        const cached = lyricsCache[cacheKey];
+        Providers.setCurrent(cached.provider);
+        if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+        await updateLyricsContent(popup, info);
+        const totalDuration = performance.now() - startTime;
+        DEBUG.info('Autodetect', `Completed from cache in ${totalDuration.toFixed(2)}ms using ${cached.provider}`);
+        return;
+      }
     }
 
     const detectionOrder = [
