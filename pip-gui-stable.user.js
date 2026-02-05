@@ -5946,6 +5946,10 @@ const Providers = {
       currentUnsyncedLyrics = null;
     }
 
+    // Reset scroll position to top so lyrics always start from the beginning
+    // This is especially important when lyrics come from cache
+    lyricsContainer.scrollTop = 0;
+
     // Show/hide transliteration button based on data availability
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
