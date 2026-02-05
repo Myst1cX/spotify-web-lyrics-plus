@@ -5367,6 +5367,8 @@ const Providers = {
         // If seeking within 200ms of duration, cap at duration - 200ms
         const SEEK_END_BUFFER_MS = 200;
         
+        DEBUG.debug('Seekbar', `Seeking to ${ms}ms (${formatMs(ms)})`);
+        
         // --- (a) Try audio.currentTime first ---
         const audio = document.querySelector('audio');
         if (audio && !isNaN(audio.duration) && audio.duration > 0) {
@@ -5374,9 +5376,13 @@ const Providers = {
             const audioDurMs = audio.duration * 1000;
             // Apply end buffer to prevent seeking to exact end
             const safeMs = (ms >= audioDurMs - SEEK_END_BUFFER_MS) ? audioDurMs - SEEK_END_BUFFER_MS : ms;
+            if (safeMs !== ms) {
+              DEBUG.debug('Seekbar', `Applied end buffer: ${ms}ms → ${safeMs}ms to prevent "ended" state`);
+            }
             audio.currentTime = safeMs / 1000;
             audio.dispatchEvent(new Event('input', { bubbles: true }));
             audio.dispatchEvent(new Event('change', { bubbles: true }));
+            DEBUG.debug('Seekbar', `✓ Seeked via audio.currentTime to ${safeMs}ms`);
             return true;
           } catch (e) {
             console.warn('seekTo: Failed to set audio.currentTime', e);
@@ -5391,6 +5397,9 @@ const Providers = {
             if (max > 0) {
               // Apply end buffer to prevent seeking to exact end
               const safeMs = (ms >= max - SEEK_END_BUFFER_MS) ? max - SEEK_END_BUFFER_MS : ms;
+              if (safeMs !== ms) {
+                DEBUG.debug('Seekbar', `Applied end buffer: ${ms}ms → ${safeMs}ms to prevent "ended" state`);
+              }
               // Set the value
               spotifyRange.value = String(clamp(safeMs, 0, max));
 
@@ -5431,6 +5440,7 @@ const Providers = {
                 spotifyRange.dispatchEvent(mouseUpEvent);
               }
 
+              DEBUG.debug('Seekbar', `✓ Seeked via range input to ${safeMs}ms`);
               return true;
             }
           } catch (e) {
@@ -5480,6 +5490,9 @@ const Providers = {
               if (durMs > 0) {
                 // Apply end buffer to prevent seeking to exact end
                 const safeMs = (ms >= durMs - SEEK_END_BUFFER_MS) ? durMs - SEEK_END_BUFFER_MS : ms;
+                if (safeMs !== ms) {
+                  DEBUG.debug('Seekbar', `Applied end buffer: ${ms}ms → ${safeMs}ms to prevent "ended" state`);
+                }
                 const percentage = clamp(safeMs, 0, durMs) / durMs;
                 const clientX = barRect.left + barRect.width * percentage;
                 const clientY = barRect.top + barRect.height / 2;
@@ -5531,6 +5544,7 @@ const Providers = {
                 progressBar.dispatchEvent(mouseUpEvent);
                 progressBar.dispatchEvent(clickEvent);
 
+                DEBUG.debug('Seekbar', `✓ Seeked via progress-bar pointer events to ${safeMs}ms`);
                 return true;
               }
             }
@@ -6199,6 +6213,59 @@ const Providers = {
     }
   };
   ResourceManager.registerWindowListener("resize", windowResizeHandler, 'Popup proportion on window resize');
+
+  // Expose global debug helper for troubleshooting
+  window.LyricsPlusDebug = {
+    enable: () => {
+      DEBUG.enabled = true;
+      console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
+      console.log('%cUse LyricsPlusDebug.disable() to turn off debug logging', 'color: #888;');
+    },
+    disable: () => {
+      DEBUG.enabled = false;
+      console.log('%c[Lyrics+] Debug mode disabled', 'color: #888;');
+    },
+    isEnabled: () => DEBUG.enabled,
+    getTrackInfo: () => {
+      const info = getCurrentTrackInfo();
+      console.log('%c[Lyrics+] Current Track Info:', 'color: #1db954; font-weight: bold;', info);
+      return info;
+    },
+    getRepeatState: () => {
+      const state = getRepeatState();
+      console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
+      return state;
+    },
+    getAudioElement: () => {
+      const audio = document.querySelector('audio');
+      if (audio) {
+        console.log('%c[Lyrics+] Audio Element:', 'color: #1db954; font-weight: bold;', {
+          currentTime: audio.currentTime,
+          duration: audio.duration,
+          paused: audio.paused,
+          ended: audio.ended,
+          readyState: audio.readyState
+        });
+      } else {
+        console.log('%c[Lyrics+] Audio element not found', 'color: #ff0000;');
+      }
+      return audio;
+    },
+    help: () => {
+      console.log('%c[Lyrics+ Debug Helper]', 'color: #1db954; font-weight: bold; font-size: 14px;');
+      console.log('%cAvailable commands:', 'color: #888; font-weight: bold;');
+      console.log('  %cLyricsPlusDebug.enable()%c       - Enable debug logging', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.disable()%c      - Disable debug logging', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.isEnabled()%c    - Check if debug mode is enabled', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.getTrackInfo()%c - Get current track information', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.getRepeatState()%c - Get repeat button state', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.getAudioElement()%c - Get audio element info', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.help()%c         - Show this help message', 'color: #1db954;', 'color: inherit;');
+    }
+  };
+  
+  // Show help on first load
+  console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
 
   init();
 })();
