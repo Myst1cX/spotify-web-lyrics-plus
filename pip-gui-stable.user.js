@@ -5352,6 +5352,23 @@ const Providers = {
     }
 
     /**
+     * applySeekEndBuffer(ms, durationMs, bufferMs)
+     * Prevents seeking to exact track end by applying a buffer.
+     * This avoids the audio "ended" state that conflicts with repeat functionality.
+     * @param {number} ms - Target seek position in milliseconds
+     * @param {number} durationMs - Track duration in milliseconds
+     * @param {number} bufferMs - Buffer size in milliseconds (default 200ms)
+     * @returns {number} Safe seek position
+     */
+    function applySeekEndBuffer(ms, durationMs, bufferMs = 200) {
+      if (ms >= durationMs - bufferMs) {
+        DEBUG.debug('Seekbar', `Applied end buffer: ${ms}ms → ${durationMs - bufferMs}ms to prevent "ended" state`);
+        return durationMs - bufferMs;
+      }
+      return ms;
+    }
+
+    /**
      * seekTo(ms)
      * Attempts to seek Spotify's playback to the specified position in milliseconds.
      * Fallback order:
@@ -5363,8 +5380,6 @@ const Providers = {
      */
     function seekTo(ms) {
       try {
-        // Prevent seeking to exact track end to avoid "ended" state that breaks replay
-        // If seeking within 200ms of duration, cap at duration - 200ms
         const SEEK_END_BUFFER_MS = 200;
         
         DEBUG.debug('Seekbar', `Seeking to ${ms}ms (${formatMs(ms)})`);
@@ -5374,11 +5389,7 @@ const Providers = {
         if (audio && !isNaN(audio.duration) && audio.duration > 0) {
           try {
             const audioDurMs = audio.duration * 1000;
-            // Apply end buffer to prevent seeking to exact end
-            const safeMs = (ms >= audioDurMs - SEEK_END_BUFFER_MS) ? audioDurMs - SEEK_END_BUFFER_MS : ms;
-            if (safeMs !== ms) {
-              DEBUG.debug('Seekbar', `Applied end buffer: ${ms}ms → ${safeMs}ms to prevent "ended" state`);
-            }
+            const safeMs = applySeekEndBuffer(ms, audioDurMs, SEEK_END_BUFFER_MS);
             audio.currentTime = safeMs / 1000;
             audio.dispatchEvent(new Event('input', { bubbles: true }));
             audio.dispatchEvent(new Event('change', { bubbles: true }));
@@ -5395,11 +5406,7 @@ const Providers = {
           try {
             const max = Number(spotifyRange.max) || 0;
             if (max > 0) {
-              // Apply end buffer to prevent seeking to exact end
-              const safeMs = (ms >= max - SEEK_END_BUFFER_MS) ? max - SEEK_END_BUFFER_MS : ms;
-              if (safeMs !== ms) {
-                DEBUG.debug('Seekbar', `Applied end buffer: ${ms}ms → ${safeMs}ms to prevent "ended" state`);
-              }
+              const safeMs = applySeekEndBuffer(ms, max, SEEK_END_BUFFER_MS);
               // Set the value
               spotifyRange.value = String(clamp(safeMs, 0, max));
 
@@ -5488,11 +5495,7 @@ const Providers = {
               }
 
               if (durMs > 0) {
-                // Apply end buffer to prevent seeking to exact end
-                const safeMs = (ms >= durMs - SEEK_END_BUFFER_MS) ? durMs - SEEK_END_BUFFER_MS : ms;
-                if (safeMs !== ms) {
-                  DEBUG.debug('Seekbar', `Applied end buffer: ${ms}ms → ${safeMs}ms to prevent "ended" state`);
-                }
+                const safeMs = applySeekEndBuffer(ms, durMs, SEEK_END_BUFFER_MS);
                 const percentage = clamp(safeMs, 0, durMs) / durMs;
                 const clientX = barRect.left + barRect.width * percentage;
                 const clientY = barRect.top + barRect.height / 2;
