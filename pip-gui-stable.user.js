@@ -124,7 +124,7 @@
   let transliterationPresent = false;
   let isShowingSyncedLyrics = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
-  let lyricsCache = {}; // Cache lyrics by track ID to prevent unnecessary API calls on repeat
+  let lyricsCache = {}; // Cache lyrics by track ID and provider to prevent unnecessary API calls on repeat
 
   // ------------------------
   // Constants & Configuration
