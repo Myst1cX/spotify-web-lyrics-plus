@@ -132,6 +132,7 @@
   let progressInterval = null; // <-- NEW: interval for progress bar updates
   let currentTrackId = null;
   let currentSearchId = null; // Track the current ongoing search to prevent race conditions
+  let searchIdCounter = 0; // Monotonically increasing counter for guaranteed unique search IDs
   let currentSyncedLyrics = null;
   let currentUnsyncedLyrics = null;
   let currentLyricsContainer = null;
@@ -6250,14 +6251,14 @@ const Providers = {
   // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info, forceRefresh = false) {
     // Generate a unique search ID for this search request
-    // Using performance.now() for better precision to avoid collisions in rapid succession
-    const searchId = `${info.id}_${performance.now()}`;
+    // Using both performance.now() and a counter for guaranteed uniqueness
+    const searchId = `${info.id}_${performance.now()}_${++searchIdCounter}`;
     currentSearchId = searchId;
     
     // Helper function to check if this search is still current
     const isSearchStillCurrent = () => {
       if (currentSearchId !== searchId) {
-        DEBUG.info('Autodetect', `Search aborted - newer search started for different track`);
+        DEBUG.info('Autodetect', `Search aborted - newer search has started`);
         return false;
       }
       return true;
