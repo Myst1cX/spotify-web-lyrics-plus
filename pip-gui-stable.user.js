@@ -6248,16 +6248,17 @@ const Providers = {
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
-      // Note: This else branch should rarely/never execute in normal flow
+      // Note: This else branch executes when provider returns data but no lyrics can be extracted
       // Expected provider behavior:
-      //   - If no lyrics found: Return { error: "..." } (handled at line 6128, returns early)
+      //   - If no lyrics found: Return { error: "..." } (handled at line 6143, returns early)
       //   - If lyrics found: Return data object where getSynced/getUnsynced extract lyrics
       // 
       // If we reach here, it means:
-      //   - Provider returned a data object WITHOUT an error property (passed line 6128 check)
+      //   - Provider returned a data object WITHOUT an error property (passed line 6143 check)
       //   - BUT both getSynced(result) and getUnsynced(result) returned null (no lyrics extracted)
-      //   - This is unexpected because provider should have returned { error: "..." } instead
-      console.warn("[Lyrics+ Warning] Unexpected state: Provider returned data without error property, but no lyrics were extracted");
+      //   - This happens when provider filters out placeholder text (e.g., Genius filters "(Instrumental)")
+      console.warn("[Lyrics+ Warning] Provider returned data but no lyrics were extracted (placeholder text filtered)");
+      lyricsContainer.textContent = `No lyrics available for this track from ${Providers.current || 'this provider'}`;
       currentSyncedLyrics = null;
       currentUnsyncedLyrics = null;
     }
