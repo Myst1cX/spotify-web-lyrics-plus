@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.2
+// @version      16.3
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,9 +13,11 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (16.3): UPDATED HANDLING OF INSTRUMENTAL TRACKS FOR GENIUS PROVIDER
+
 // RESOLVED (16.2): FIX LYRIC SOURCE TAB HIGHLIGHTING LOGIC AFTER LYRICS FROM CACHED PROVIDER
 
-// RESOLVED (16.1): PREVENT LYRIC SEARCH WHEN ADVERTISEMENT DETECTED 
+// RESOLVED (16.1): PREVENT LYRIC SEARCH WHEN ADVERTISEMENT DETECTED
 
 // RESOLVED (16.0): LYRICS CACHING FEATURE + REPEAT ONE SUPPORT
 // • Automatic caching of lyrics for last 50 songs played
@@ -39,7 +41,7 @@
 
 // RESOLVED (15.7): FIX HIDING "NOWPLAYINGVIEW" PANEL
 
-// RESOLVED (15.6): POPUP RESTORED STATE FIX 
+// RESOLVED (15.6): POPUP RESTORED STATE FIX
 
 // RESOLVED (15.5): YET ANOTHER KPOE PROVIDER FIX (MORE ACCURATE ERROR HANDLING)
 
@@ -134,12 +136,12 @@
   let pollingInterval = null;
   let progressInterval = null; // <-- NEW: interval for progress bar updates
   let currentTrackId = null;
-  
+
   // Race Condition Prevention (fixes bug where advertisements overwrite song lyrics)
   // See FIX_EXPLANATION.md for detailed explanation
   let currentSearchId = null; // Tracks the ID of the currently active lyrics search
   let searchIdCounter = 0; // Monotonically increasing counter for guaranteed unique search IDs
-  
+
   let currentSyncedLyrics = null;
   let currentUnsyncedLyrics = null;
   let currentLyricsContainer = null;
@@ -183,7 +185,7 @@
   // ------------------------
   const LyricsCache = {
     MAX_CACHE_SIZE: 50,  // Maximum number of songs to cache
-    
+
     /**
      * Get all cached lyrics from localStorage
      * @returns {Object} Cache object with trackId keys
@@ -197,7 +199,7 @@
         return {};
       }
     },
-    
+
     /**
      * Save cache to localStorage
      * @param {Object} cache - Cache object to save
@@ -209,7 +211,7 @@
         console.warn('[Lyrics+] ⚠️ Could not save lyrics to cache:', e);
       }
     },
-    
+
     /**
      * Get cached lyrics for a specific track
      * @param {string} trackId - Spotify track ID
@@ -231,7 +233,7 @@
       DEBUG.debug('Cache', `Cache miss for track: ${trackId}`);
       return null;
     },
-    
+
     /**
      * Save lyrics to cache with LRU eviction
      * @param {string} trackId - Spotify track ID
@@ -239,21 +241,21 @@
      */
     set(trackId, data) {
       if (!trackId || !data) return;
-      
+
       const cache = this.getAll();
-      
+
       // Add/update entry with timestamp
       cache[trackId] = {
         ...data,
         timestamp: Date.now()
       };
-      
+
       // Enforce cache size limit with LRU eviction
       const entries = Object.entries(cache);
       if (entries.length > this.MAX_CACHE_SIZE) {
         // Sort by timestamp (oldest first)
         entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-        
+
         // Remove oldest entries until we're at the limit
         const toRemove = entries.length - this.MAX_CACHE_SIZE;
         for (let i = 0; i < toRemove; i++) {
@@ -262,13 +264,13 @@
           DEBUG.debug('Cache', `Evicted old entry: ${entries[i][0]}`);
         }
       }
-      
+
       this.saveAll(cache);
       const cacheSize = Object.keys(cache).length;
       console.log(`✅ [Lyrics+] Lyrics saved to cache! Now have ${cacheSize} of last ${this.MAX_CACHE_SIZE} songs cached for instant replay`);
       DEBUG.info('Cache', `Cached lyrics for track: ${trackId}`);
     },
-    
+
     /**
      * Clear all cached lyrics
      */
@@ -281,7 +283,7 @@
         console.warn('[Lyrics+] ⚠️ Could not clear cache:', e);
       }
     },
-    
+
     /**
      * Get cache statistics for debugging
      * @returns {Object} Cache statistics
@@ -520,7 +522,7 @@
     style.id = styleId;
     style.textContent = `
           .zjCIcN96KsMfWwRo:has([aria-label="Now playing view"]),
-          .zjCIcN96KsMfWwRo:has(.NowPlayingView) { 
+          .zjCIcN96KsMfWwRo:has(.NowPlayingView) {
               min-width: 0 !important;
               max-width: 0 !important;
               flex-basis: 0 !important;
@@ -895,13 +897,13 @@
    * Detects if a track is a Spotify advertisement.
    * Advertisements typically have "Advertisement" in the artist field.
    * Examples: "Advertisement • 1 of 1", "Advertisement", etc.
-   * 
+   *
    * @param {Object} trackInfo - Track information object with artist field
    * @returns {boolean} - True if track is an advertisement
    */
   function isAdvertisement(trackInfo) {
     if (!trackInfo || !trackInfo.artist) return false;
-    
+
     // Check if artist contains "Advertisement" (case-insensitive)
     const artist = trackInfo.artist.toLowerCase();
     return artist.includes('advertisement');
@@ -1724,7 +1726,7 @@ const PLAY_WORDS = [
         if (!data) return { error: "Track not found in LRCLIB database or no lyrics available" };
         return data;
       } catch (e) {
-        return { error: e.message || "LRCLIB request failed - network error or service unavailable" };
+        return { error: e.message || "LRCLIB fetch failed - network error or service unavailable" };
       }
     },
     getUnsynced(body) {
@@ -1952,7 +1954,7 @@ const PLAY_WORDS = [
         }
         return { error: "Track not found in KPoe database or no lyrics available" };
       } catch (e) {
-        return { error: e.message || "KPoe request failed - network error or service unavailable" };
+        return { error: e.message || "KPoe fetch failed - network error or service unavailable" };
       }
     },
     getUnsynced(body) {
@@ -2406,7 +2408,7 @@ if (data.error) {
 }
 return data;
     } catch (e) {
-      return { error: e.message || "Musixmatch request failed - network error or service unavailable" };
+      return { error: e.message || "Musixmatch fetch failed - network error or service unavailable" };
     }
   },
   getUnsynced: musixmatchGetUnsynced,
@@ -2981,10 +2983,10 @@ const ProviderGenius = {
   async findLyrics(info) {
     try {
       const data = await fetchGeniusLyrics(info);
-      if (!data || data.error) return { error: "No lyrics found for this track from Genius" };
+      if (!data || data.error) return { error: "Genius fetch failed - network error or service unavailable" };
       return data;
     } catch (e) {
-      return { error: e.message || "Genius fetch failed" };
+      return { error: e.message || "Genius fetch failed - network error or service unavailable" };
     }
   },
   getUnsynced(body) {
@@ -2995,12 +2997,15 @@ const ProviderGenius = {
     /we do not have the lyrics for/i,
     /be the first to add the lyrics/i,
     /please check back once the song has been released/i,
-    /add lyrics on genius/i
+    /add lyrics on genius/i,
+    /this song is an instrumental/i
   ];
   if (
     lines.length === 1 &&
     notTranscribedPatterns.some(rx => rx.test(lines[0].text))
   ) {
+    const matchedPattern = notTranscribedPatterns.find(rx => rx.test(lines[0].text));
+    console.log(`[Genius Debug] ⚠ Track has no lyrics or is instrumental - matched pattern: ${matchedPattern} in text: "${lines[0].text}"`);
     return null;
   }
   return lines;
@@ -5550,9 +5555,9 @@ const Providers = {
     function seekTo(ms) {
       try {
         const SEEK_END_BUFFER_MS = 200;
-        
+
         DEBUG.debug('Seekbar', `Seeking to ${ms}ms (${formatMs(ms)})`);
-        
+
         // --- (a) Try audio.currentTime first ---
         const audio = document.querySelector('audio');
         if (audio && !isNaN(audio.duration) && audio.duration > 0) {
@@ -5961,44 +5966,44 @@ const Providers = {
    */
   function loadLyricsFromCache(popup, info, cachedData) {
     if (!popup || !info || !cachedData) return false;
-    
+
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
     if (!lyricsContainer) return false;
-    
+
     console.log(`✨ [Lyrics+] Loading lyrics from cache for "${info.title}" by ${info.artist}`);
     console.log(`   📦 Source: ${cachedData.provider} (previously fetched)`);
     DEBUG.info('Cache', `Loading lyrics from cache for: ${info.title} - ${info.artist}`);
-    
+
     currentLyricsContainer = lyricsContainer;
     currentSyncedLyrics = cachedData.synced;
     currentUnsyncedLyrics = cachedData.unsynced;
-    
+
     // Reset translation state
     translationPresent = false;
     transliterationPresent = false;
     lastTranslatedLang = null;
-    
+
     // Set the provider to the cached one
     if (cachedData.provider) {
       Providers.setCurrent(cachedData.provider);
       if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
     }
-    
+
     const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
     const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
     const chineseConvBtn = popup._chineseConvBtn;
-    
+
     // Check if cached lyrics contain Chinese characters
     const lyrics = cachedData.synced || cachedData.unsynced || [];
     const hasChineseLyrics = lyrics.some(line => line.text && Utils.containsHanCharacter(line.text));
-    
+
     if (hasChineseLyrics) {
       const allLyricsText = lyrics.map(line => line.text || '').join('');
       originalChineseScriptType = Utils.detectChineseScriptType(allLyricsText);
     } else {
       originalChineseScriptType = null;
     }
-    
+
     // Show/hide Chinese conversion button
     if (chineseConvBtn) {
       if (hasChineseLyrics && originalChineseScriptType) {
@@ -6010,7 +6015,7 @@ const Providers = {
         chineseConvBtn.style.display = "none";
       }
     }
-    
+
     const shouldConvertChinese = isChineseConversionEnabled();
     const convertText = (text) => {
       if (shouldConvertChinese && text && Utils.containsHanCharacter(text)) {
@@ -6022,12 +6027,12 @@ const Providers = {
       }
       return text;
     };
-    
+
     lyricsContainer.innerHTML = "";
-    
+
     const transliterationEnabled = localStorage.getItem(STORAGE_KEYS.TRANSLITERATION_ENABLED) === 'true';
     let hasTransliterationData = false;
-    
+
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
       currentSyncedLyrics.forEach(({ text, transliteration }) => {
@@ -6065,13 +6070,13 @@ const Providers = {
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
     }
-    
+
     // Show/hide transliteration button
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
       transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
     }
-    
+
     // Show transliteration if enabled
     if (transliterationEnabled && hasTransliterationData) {
       showTransliterationInPopup();
@@ -6079,7 +6084,7 @@ const Providers = {
         transliterationBtn.title = "Hide transliteration";
       }
     }
-    
+
     // Show/hide download button
     if (downloadBtn) {
       if (lyricsContainer.querySelectorAll('p').length > 0) {
@@ -6089,7 +6094,7 @@ const Providers = {
         if (downloadDropdown) downloadDropdown.style.display = "none";
       }
     }
-    
+
     return true;
   }
 
@@ -6222,7 +6227,7 @@ const Providers = {
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
       if (!lyricsContainer.textContent.trim()) {
-        lyricsContainer.textContent = `No lyrics found for this track from ${Providers.current}`;
+        lyricsContainer.textContent = `Track not found in ${Providers.current} database or no lyrics available`;
       }
       currentSyncedLyrics = null;
       currentUnsyncedLyrics = null;
@@ -6254,7 +6259,7 @@ const Providers = {
         if (downloadDropdown) downloadDropdown.style.display = "none";
       }
     }
-    
+
     // Cache lyrics for future use (repeat one, recent songs)
     if (currentSyncedLyrics || currentUnsyncedLyrics) {
       LyricsCache.set(info.id, {
@@ -6278,19 +6283,19 @@ const Providers = {
       console.log(`📢 [Lyrics+] Advertisement detected - skipping lyrics search`);
       return;
     }
-    
+
     // ═══════════════════════════════════════════════════════════════════════════
     // RACE CONDITION PREVENTION: Search ID Tracking
     // ═══════════════════════════════════════════════════════════════════════════
     // For non-advertisement tracks, we use search ID tracking to handle
     // rapid song changes (e.g., skipping tracks, shuffle, autoplay).
     // ═══════════════════════════════════════════════════════════════════════════
-    
+
     // Generate a unique search ID for this search request
     // Using both performance.now() and a counter for guaranteed uniqueness
     const searchId = `${info.id}_${performance.now()}_${++searchIdCounter}`;
     currentSearchId = searchId;
-    
+
     // Helper function to check if this search is still current
     // Returns false if a newer search has superseded this one
     const isSearchStillCurrent = () => {
@@ -6300,13 +6305,13 @@ const Providers = {
       }
       return true;
     };
-    
+
     // Clear current provider so no provider is highlighted while searching for lyrics
     // This fixes the edge case where cached lyrics from the previous song left a provider
     // highlighted, and the next song's search would show that stale highlight
     Providers.current = null;
     if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
-    
+
     // Check cache first unless forcing refresh
     if (!forceRefresh) {
       const cachedData = LyricsCache.get(info.id);
@@ -6319,7 +6324,7 @@ const Providers = {
         }
       }
     }
-    
+
     console.log(`🔍 [Lyrics+] Searching for lyrics: "${info.title}" by ${info.artist}`);
     DEBUG.info('Autodetect', 'Starting provider autodetect', info);
     const startTime = performance.now();
@@ -6343,7 +6348,7 @@ const Providers = {
 
         const provider = Providers.map[name];
         const result = await provider.findLyrics(info);
-        
+
         // ═══ CHECKPOINT 1: After async provider call ═══
         // While waiting for the provider API response, a new song may have started.
         // Check if we're still the current search. If not, abort to prevent
@@ -6359,7 +6364,7 @@ const Providers = {
             // Found lyrics! But before updating UI, verify we're STILL current.
             // This prevents: Old search finds lyrics after new search already updated UI.
             if (!isSearchStillCurrent()) return;
-            
+
             DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
             DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
 
@@ -6416,11 +6421,11 @@ const Providers = {
     pollingInterval = setInterval(() => {
       const info = getCurrentTrackInfo();
       if (!info) return;
-      
+
       // Get current playback position
       const posEl = document.querySelector('[data-testid="playback-position"]');
       const currentPosition = posEl ? timeStringToMs(posEl.textContent) : 0;
-      
+
       // Detect song restart (for repeat one): same track ID but position reset to near 0
       // This happens when repeat one is enabled and song ends
       const RESTART_THRESHOLD_MS = 5000; // If position jumps from >5s to <5s, it's a restart
@@ -6429,12 +6434,12 @@ const Providers = {
         lastPlaybackPosition > RESTART_THRESHOLD_MS &&
         currentPosition < RESTART_THRESHOLD_MS
       );
-      
+
       if (isRestart) {
         console.log(`🔁 [Lyrics+] Song restarted! Repeat One detected for "${info.title}"`);
         console.log(`   ⏮️ Resetting lyrics scroll to the beginning...`);
         DEBUG.info('Track', `Song restarted (repeat one): ${info.title} - Position: ${lastPlaybackPosition}ms → ${currentPosition}ms`);
-        
+
         // For repeat one, just reset scroll to beginning (lyrics already cached)
         if (currentLyricsContainer && isShowingSyncedLyrics) {
           const firstLine = currentLyricsContainer.querySelector('p');
@@ -6445,7 +6450,7 @@ const Providers = {
           }
         }
       }
-      
+
       // Track changed to a different song
       if (info.id !== currentTrackId) {
         DEBUG.track.changed(currentTrackId, info.id, info);
@@ -6456,7 +6461,7 @@ const Providers = {
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
         autodetectProviderAndLoad(popup, info);
       }
-      
+
       // Update last position for next iteration
       lastPlaybackPosition = currentPosition;
 
@@ -6710,7 +6715,7 @@ const Providers = {
       console.log('  %cLyricsPlusDebug.help()%c         - Show this help message', 'color: #1db954;', 'color: inherit;');
     }
   };
-  
+
   // Show help on first load
   console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
 
