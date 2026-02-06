@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.1
+// @version      16.2
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (16.2): FIX LYRIC SOURCE TAB HIGHLIGHTING LOGIC AFTER LYRICS FROM CACHED PROVIDER
 
 // RESOLVED (16.1): PREVENT LYRIC SEARCH WHEN ADVERTISEMENT DETECTED 
 
@@ -6298,6 +6300,12 @@ const Providers = {
       }
       return true;
     };
+    
+    // Clear current provider so no provider is highlighted while searching for lyrics
+    // This fixes the edge case where cached lyrics from the previous song left a provider
+    // highlighted, and the next song's search would show that stale highlight
+    Providers.current = null;
+    if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
     
     // Check cache first unless forcing refresh
     if (!forceRefresh) {
