@@ -888,6 +888,22 @@
     return 0;
   }
 
+  /**
+   * Detects if a track is a Spotify advertisement.
+   * Advertisements typically have "Advertisement" in the artist field.
+   * Examples: "Advertisement • 1 of 1", "Advertisement", etc.
+   * 
+   * @param {Object} trackInfo - Track information object with artist field
+   * @returns {boolean} - True if track is an advertisement
+   */
+  function isAdvertisement(trackInfo) {
+    if (!trackInfo || !trackInfo.artist) return false;
+    
+    // Check if artist contains "Advertisement" (case-insensitive)
+    const artist = trackInfo.artist.toLowerCase();
+    return artist.includes('advertisement');
+  }
+
   function timeoutPromise(ms) {
     return new Promise((_, reject) => setTimeout(() => reject(new Error("Lyrics not found")), ms));
   }
@@ -6255,21 +6271,36 @@ const Providers = {
   // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info, forceRefresh = false) {
     // ═══════════════════════════════════════════════════════════════════════════
+    // ADVERTISEMENT DETECTION: Skip lyrics search for ads
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Spotify advertisements are detected by checking for "Advertisement" in the
+    // artist field (e.g., "Advertisement • 1 of 1"). We skip searching for lyrics
+    // entirely to avoid unnecessary API calls and prevent race conditions.
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    if (isAdvertisement(info)) {
+      console.log(`📢 [Lyrics+] Advertisement detected - skipping lyrics search`);
+      DEBUG.info('Autodetect', 'Skipping lyrics search for advertisement', info);
+      
+      const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+      if (lyricsContainer) {
+        lyricsContainer.textContent = "Lyrics are not available for advertisements";
+      }
+      
+      // Clear current lyrics and provider
+      currentSyncedLyrics = null;
+      currentUnsyncedLyrics = null;
+      Providers.current = null;
+      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
+      
+      return; // Exit early - no search needed for ads
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
     // RACE CONDITION PREVENTION: Search ID Tracking
     // ═══════════════════════════════════════════════════════════════════════════
-    // Problem: When songs change rapidly (e.g., advertisement interrupts song),
-    // multiple searches run concurrently. The slowest search finishes last and
-    // overwrites UI with outdated results (e.g., "No lyrics found" replaces valid lyrics).
-    //
-    // Solution: Each search gets a unique ID. When a new search starts, it updates
-    // currentSearchId. Old searches check if they're still "current" after each
-    // async operation. If not, they abort silently without touching the UI.
-    //
-    // Example - Advertisement Scenario:
-    //   1. Song search starts (searchId="song_100_1", currentSearchId="song_100_1")
-    //   2. Advertisement plays (searchId="ad_500_2", currentSearchId="ad_500_2")
-    //   3. Ad search finds lyrics → checks currentSearchId matches → updates UI ✓
-    //   4. Song search finishes → checks currentSearchId → doesn't match → aborts ✓
+    // For non-advertisement tracks, we still use search ID tracking to handle
+    // rapid song changes (e.g., skipping tracks, shuffle, autoplay).
     // ═══════════════════════════════════════════════════════════════════════════
     
     // Generate a unique search ID for this search request
