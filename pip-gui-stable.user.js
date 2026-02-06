@@ -1741,7 +1741,13 @@ const PLAY_WORDS = [
     getSynced(body) {
       if (body?.instrumental) return null; // Skip to next provider for instrumental tracks
       if (!body?.syncedLyrics) return null;
-      return Utils.parseLocalLyrics(body.syncedLyrics).synced;
+      const lyrics = Utils.parseLocalLyrics(body.syncedLyrics).synced;
+      const LRCLIB_INSTRUMENTAL_PATTERN = /^\s*\(?\s*instrumental\s*\)?\s*$/i;
+      if (lyrics && lyrics.length === 1 && LRCLIB_INSTRUMENTAL_PATTERN.test(lyrics[0].text)) {
+        console.log(`[LRCLIB Debug] ⚠ Skipping track - single line instrumental marker detected in synced lyrics: "${lyrics[0].text}"`);
+        return null;
+      }
+      return lyrics;
     }
   };
 
