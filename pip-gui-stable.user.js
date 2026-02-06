@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.2
+// @version      16.3
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (16.3): IMPROVED INSTRUMENTAL TRACK CONSOLE LOGGING (LRCLIB, MUSIXMATCH, GENIUS)
 
 // RESOLVED (16.2): FIX LYRIC SOURCE TAB HIGHLIGHTING LOGIC AFTER LYRICS FROM CACHED PROVIDER
 
@@ -1722,6 +1724,10 @@ const PLAY_WORDS = [
           data = await fetchLRCLibLyrics(info, true); // try without album
         }
         if (!data) return { error: "Track not found in LRCLIB database or no lyrics available" };
+        if (data.instrumental) {
+          console.log("[LRCLIB Debug] Track is marked as instrumental - returning error");
+          return { error: "Track is instrumental (no lyrics available)" };
+        }
         return data;
       } catch (e) {
         return { error: e.message || "LRCLIB request failed - network error or service unavailable" };
@@ -2995,12 +3001,20 @@ const ProviderGenius = {
     /we do not have the lyrics for/i,
     /be the first to add the lyrics/i,
     /please check back once the song has been released/i,
-    /add lyrics on genius/i
+    /add lyrics on genius/i,
+    /this song is an instrumental/i
   ];
   if (
     lines.length === 1 &&
     notTranscribedPatterns.some(rx => rx.test(lines[0].text))
   ) {
+    // Log the specific placeholder text detected
+    const matchedText = lines[0].text.toLowerCase();
+    if (matchedText.includes('instrumental')) {
+      console.log("[Genius Debug] ⚠ Track marked as instrumental (no lyrics) - skipping to next provider");
+    } else {
+      console.log("[Genius Debug] ⚠ Track has placeholder text (no actual lyrics) - skipping to next provider");
+    }
     return null;
   }
   return lines;
@@ -6221,9 +6235,10 @@ const Providers = {
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
-      if (!lyricsContainer.textContent.trim()) {
-        lyricsContainer.textContent = `No lyrics found for this track from ${Providers.current}`;
-      }
+      // Note: All providers now return explicit error messages via result.error (handled at line 6117)
+      // This else branch should not execute in normal flow since providers always return errors when no lyrics found
+      // If we reach here, it indicates an unexpected state (provider returned success but no lyrics)
+      console.warn("[Lyrics+ Warning] Unexpected state: Provider returned success but no lyrics available");
       currentSyncedLyrics = null;
       currentUnsyncedLyrics = null;
     }
@@ -6716,4 +6731,5 @@ const Providers = {
 
   init();
 })();
+
 
