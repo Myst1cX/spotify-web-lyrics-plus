@@ -4064,6 +4064,11 @@ const Providers = {
       btn.onclick = async (e) => {
         if (providerClickTimer) return; // already waiting for double-click, skip
         providerClickTimer = setTimeout(async () => {
+          // Abort any ongoing autofetch by invalidating the current search ID
+          // This prevents the autofetch loop from continuing when user manually selects a provider
+          currentSearchId = null;
+          console.log(`🛑 [Lyrics+] User manually selected ${name} provider - aborting any ongoing autofetch`);
+          
           Providers.setCurrent(name);
           updateTabs(tabs);
           await updateLyricsContent(popup, getCurrentTrackInfo());
@@ -5993,6 +5998,24 @@ const Providers = {
     const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
     const chineseConvBtn = popup._chineseConvBtn;
 
+    // Handle cached instrumental tracks
+    if (cachedData.instrumental) {
+      console.log(`🎵 [Lyrics+] Loaded instrumental track from cache (no lyrics)`);
+      lyricsContainer.textContent = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
+      
+      // Hide download and Chinese conversion buttons for instrumental tracks
+      if (downloadBtn) {
+        downloadBtn.style.display = "none";
+        if (downloadDropdown) downloadDropdown.style.display = "none";
+      }
+      if (chineseConvBtn) chineseConvBtn.style.display = "none";
+      
+      const transliterationBtn = popup._transliterationToggleBtn;
+      if (transliterationBtn) transliterationBtn.style.display = "none";
+      
+      return true;
+    }
+
     // Check if cached lyrics contain Chinese characters
     const lyrics = cachedData.synced || cachedData.unsynced || [];
     const hasChineseLyrics = lyrics.some(line => line.text && Utils.containsHanCharacter(line.text));
@@ -6126,6 +6149,38 @@ const Providers = {
       }
       if (downloadDropdown) downloadDropdown.style.display = "none";
       if (chineseConvBtn) chineseConvBtn.style.display = "none";
+      return;
+    }
+
+    // Check if track is marked as instrumental
+    if (result.instrumental) {
+      console.log(`🎵 [Lyrics+] Track is instrumental (no lyrics) - detected by ${Providers.current}`);
+      lyricsContainer.textContent = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
+      
+      // Hide all buttons for instrumental tracks
+      if (downloadBtn) {
+        downloadBtn.style.display = "none";
+        if (downloadDropdown) downloadDropdown.style.display = "none";
+      }
+      if (chineseConvBtn) chineseConvBtn.style.display = "none";
+      
+      const transliterationBtn = popup._transliterationToggleBtn;
+      if (transliterationBtn) transliterationBtn.style.display = "none";
+      
+      // Cache the instrumental status
+      LyricsCache.set(info.id, {
+        provider: Providers.current,
+        synced: null,
+        unsynced: null,
+        instrumental: true,
+        trackInfo: {
+          title: info.title,
+          artist: info.artist,
+          album: info.album,
+          duration: info.duration
+        }
+      });
+      
       return;
     }
 
@@ -6358,6 +6413,42 @@ const Providers = {
         const providerDuration = performance.now() - providerStartTime;
 
         if (result && !result.error) {
+          // Check if track is marked as instrumental by the provider
+          // Instrumental tracks have no lyrics, so we should stop searching and cache this result
+          if (result.instrumental) {
+            if (!isSearchStillCurrent()) return;
+            
+            console.log(`🎵 [Lyrics+] Track is instrumental (no lyrics) - detected by ${name}`);
+            DEBUG.info('Autodetect', `Track marked as instrumental by ${name}`);
+            
+            // Display instrumental message
+            Providers.setCurrent(name);
+            if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+            
+            const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+            if (lyricsContainer) {
+              lyricsContainer.textContent = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
+            }
+            
+            // Cache the instrumental status so we don't keep searching
+            LyricsCache.set(info.id, {
+              provider: name,
+              synced: null,
+              unsynced: null,
+              instrumental: true,
+              trackInfo: {
+                title: info.title,
+                artist: info.artist,
+                album: info.album,
+                duration: info.duration
+              }
+            });
+            
+            const totalDuration = performance.now() - startTime;
+            DEBUG.info('Autodetect', `Completed in ${totalDuration.toFixed(2)}ms - instrumental track detected by ${name}`);
+            return;
+          }
+          
           let lyrics = provider[type](result);
           if (lyrics && lyrics.length > 0) {
             // ═══ CHECKPOINT 2: Before UI update with lyrics ═══
