@@ -6263,6 +6263,13 @@ const Providers = {
       currentUnsyncedLyrics = null;
     }
 
+    // Final safety check: if container is empty or contains only whitespace after all processing
+    // This catches edge cases where error messages might be empty/whitespace or content got cleared somehow
+    if (!lyricsContainer.textContent.trim()) {
+      console.warn("[Lyrics+ Warning] Trim check triggered - container empty or whitespace only after all processing");
+      lyricsContainer.textContent = `No lyrics found for this track from ${Providers.current || 'this provider'}`;
+    }
+
     // Show/hide transliteration button based on data availability
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
