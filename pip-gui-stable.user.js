@@ -1734,12 +1734,24 @@ const PLAY_WORDS = [
     getUnsynced(body) {
       if (body?.instrumental) return null; // Skip to next provider for instrumental tracks
       if (!body?.plainLyrics) return null;
-      return Utils.parseLocalLyrics(body.plainLyrics).unsynced;
+      const lyrics = Utils.parseLocalLyrics(body.plainLyrics).unsynced;
+      // Filter out "(Instrumental)" placeholder text (single line only)
+      if (lyrics && lyrics.length === 1 && /^\s*\(?\s*instrumental\s*\)?\s*$/i.test(lyrics[0].text)) {
+        console.log("[LRCLIB Debug] ⚠ Track has placeholder text '(Instrumental)' - skipping to next provider");
+        return null;
+      }
+      return lyrics;
     },
     getSynced(body) {
       if (body?.instrumental) return null; // Skip to next provider for instrumental tracks
       if (!body?.syncedLyrics) return null;
-      return Utils.parseLocalLyrics(body.syncedLyrics).synced;
+      const lyrics = Utils.parseLocalLyrics(body.syncedLyrics).synced;
+      // Filter out "(Instrumental)" placeholder text (single line only)
+      if (lyrics && lyrics.length === 1 && /^\s*\(?\s*instrumental\s*\)?\s*$/i.test(lyrics[0].text)) {
+        console.log("[LRCLIB Debug] ⚠ Track has placeholder text '(Instrumental)' - skipping to next provider");
+        return null;
+      }
+      return lyrics;
     }
   };
 
