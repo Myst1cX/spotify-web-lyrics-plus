@@ -131,8 +131,12 @@
   let pollingInterval = null;
   let progressInterval = null; // <-- NEW: interval for progress bar updates
   let currentTrackId = null;
-  let currentSearchId = null; // Track the current ongoing search to prevent race conditions
+  
+  // Race Condition Prevention (fixes bug where advertisements overwrite song lyrics)
+  // See FIX_EXPLANATION.md for detailed explanation
+  let currentSearchId = null; // Tracks the ID of the currently active lyrics search
   let searchIdCounter = 0; // Monotonically increasing counter for guaranteed unique search IDs
+  
   let currentSyncedLyrics = null;
   let currentUnsyncedLyrics = null;
   let currentLyricsContainer = null;
@@ -6250,12 +6254,31 @@ const Providers = {
 
   // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info, forceRefresh = false) {
+    // ═══════════════════════════════════════════════════════════════════════════
+    // RACE CONDITION PREVENTION: Search ID Tracking
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Problem: When songs change rapidly (e.g., advertisement interrupts song),
+    // multiple searches run concurrently. The slowest search finishes last and
+    // overwrites UI with outdated results (e.g., "No lyrics found" replaces valid lyrics).
+    //
+    // Solution: Each search gets a unique ID. When a new search starts, it updates
+    // currentSearchId. Old searches check if they're still "current" after each
+    // async operation. If not, they abort silently without touching the UI.
+    //
+    // Example - Advertisement Scenario:
+    //   1. Song search starts (searchId="song_100_1", currentSearchId="song_100_1")
+    //   2. Advertisement plays (searchId="ad_500_2", currentSearchId="ad_500_2")
+    //   3. Ad search finds lyrics → checks currentSearchId matches → updates UI ✓
+    //   4. Song search finishes → checks currentSearchId → doesn't match → aborts ✓
+    // ═══════════════════════════════════════════════════════════════════════════
+    
     // Generate a unique search ID for this search request
     // Using both performance.now() and a counter for guaranteed uniqueness
     const searchId = `${info.id}_${performance.now()}_${++searchIdCounter}`;
     currentSearchId = searchId;
     
     // Helper function to check if this search is still current
+    // Returns false if a newer search has superseded this one
     const isSearchStillCurrent = () => {
       if (currentSearchId !== searchId) {
         DEBUG.info('Autodetect', `Search aborted - newer search has started`);
@@ -6301,7 +6324,10 @@ const Providers = {
         const provider = Providers.map[name];
         const result = await provider.findLyrics(info);
         
-        // Check if this search is still current after the async operation
+        // ═══ CHECKPOINT 1: After async provider call ═══
+        // While waiting for the provider API response, a new song may have started.
+        // Check if we're still the current search. If not, abort to prevent
+        // outdated results from continuing to search and potentially overwriting UI.
         if (!isSearchStillCurrent()) return;
 
         const providerDuration = performance.now() - providerStartTime;
@@ -6309,7 +6335,9 @@ const Providers = {
         if (result && !result.error) {
           let lyrics = provider[type](result);
           if (lyrics && lyrics.length > 0) {
-            // Final check before updating UI - ensure this search is still current
+            // ═══ CHECKPOINT 2: Before UI update with lyrics ═══
+            // Found lyrics! But before updating UI, verify we're STILL current.
+            // This prevents: Old search finds lyrics after new search already updated UI.
             if (!isSearchStillCurrent()) return;
             
             DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
@@ -6337,7 +6365,13 @@ const Providers = {
       }
     }
 
-    // Check if this search is still current before showing "no lyrics found"
+    // ═══ CHECKPOINT 3: Before "No lyrics found" message ═══
+    // Checked all providers, no lyrics found. Before showing error message,
+    // verify we're still current. This is CRITICAL for the advertisement scenario:
+    // - Song search finds nothing after checking all providers
+    // - But advertisement already started and found lyrics
+    // - Without this check, song search would overwrite ad lyrics with "No lyrics found"
+    // With this check: Song search aborts, ad lyrics remain on screen ✓
     if (!isSearchStillCurrent()) return;
 
     // Unselect any provider
