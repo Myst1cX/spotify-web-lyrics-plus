@@ -6272,6 +6272,7 @@ const Providers = {
   async function autodetectProviderAndLoad(popup, info, forceRefresh = false) {
     // Skip lyrics search for advertisements - when ad ends, real song will trigger new search
     if (isAdvertisement(info)) {
+      console.log(`📢 [Lyrics+] Advertisement detected - skipping lyrics search`);
       return;
     }
     
