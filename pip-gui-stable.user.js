@@ -3006,6 +3006,7 @@ const ProviderGenius = {
     lines.length === 1 &&
     notTranscribedPatterns.some(rx => rx.test(lines[0].text))
   ) {
+    console.log("[Genius Debug] ⚠ Track marked as instrumental (no lyrics) - skipping to next provider");
     return null;
   }
   return lines;
