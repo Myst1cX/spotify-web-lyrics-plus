@@ -2984,6 +2984,36 @@ const ProviderGenius = {
     try {
       const data = await fetchGeniusLyrics(info);
       if (!data || data.error) return { error: "Genius fetch failed - network error or service unavailable" };
+      
+      // Check if lyrics indicate instrumental track
+      if (data.plainLyrics) {
+        const lines = parseGeniusLyrics(data.plainLyrics).unsynced;
+        const notTranscribedPatterns = [
+          /lyrics for this song have yet to be transcribed/i,
+          /we do not have the lyrics for/i,
+          /be the first to add the lyrics/i,
+          /please check back once the song has been released/i,
+          /add lyrics on genius/i,
+          /this song is an instrumental/i
+        ];
+        if (
+          lines.length === 1 &&
+          notTranscribedPatterns.some(rx => rx.test(lines[0].text))
+        ) {
+          const matchedPattern = notTranscribedPatterns.find(rx => rx.test(lines[0].text));
+          console.log(`[Genius Debug] ⚠ Track has no lyrics or is instrumental - matched pattern: ${matchedPattern} in text: "${lines[0].text}"`);
+          
+          // Check specifically for instrumental pattern
+          if (/this song is an instrumental/i.test(lines[0].text)) {
+            console.log(`[Genius Debug] ⚠ Detected instrumental track`);
+            return { instrumental: true };
+          }
+          
+          // For other patterns, return null lyrics (will try next provider)
+          return data;
+        }
+      }
+      
       return data;
     } catch (e) {
       return { error: e.message || "Genius fetch failed - network error or service unavailable" };
@@ -2992,22 +3022,6 @@ const ProviderGenius = {
   getUnsynced(body) {
   if (!body?.plainLyrics) return null;
   const lines = parseGeniusLyrics(body.plainLyrics).unsynced;
-  const notTranscribedPatterns = [
-    /lyrics for this song have yet to be transcribed/i,
-    /we do not have the lyrics for/i,
-    /be the first to add the lyrics/i,
-    /please check back once the song has been released/i,
-    /add lyrics on genius/i,
-    /this song is an instrumental/i
-  ];
-  if (
-    lines.length === 1 &&
-    notTranscribedPatterns.some(rx => rx.test(lines[0].text))
-  ) {
-    const matchedPattern = notTranscribedPatterns.find(rx => rx.test(lines[0].text));
-    console.log(`[Genius Debug] ⚠ Track has no lyrics or is instrumental - matched pattern: ${matchedPattern} in text: "${lines[0].text}"`);
-    return null;
-  }
   return lines;
 },
   getSynced() {
