@@ -1722,6 +1722,10 @@ const PLAY_WORDS = [
           data = await fetchLRCLibLyrics(info, true); // try without album
         }
         if (!data) return { error: "Track not found in LRCLIB database or no lyrics available" };
+        if (data.instrumental) {
+          console.log("[LRCLIB Debug] Track is marked as instrumental - returning error");
+          return { error: "Track is instrumental (no lyrics available)" };
+        }
         return data;
       } catch (e) {
         return { error: e.message || "LRCLIB request failed - network error or service unavailable" };
@@ -6221,9 +6225,8 @@ const Providers = {
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
-      if (!lyricsContainer.textContent.trim()) {
-        lyricsContainer.textContent = `No lyrics found for this track from ${Providers.current}`;
-      }
+      // Note: All providers now return explicit error messages via result.error (handled at line 6117)
+      // This else branch should not execute in normal flow since providers always return errors when no lyrics found
       currentSyncedLyrics = null;
       currentUnsyncedLyrics = null;
     }
