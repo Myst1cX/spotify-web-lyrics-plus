@@ -6250,8 +6250,18 @@ const Providers = {
   // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info, forceRefresh = false) {
     // Generate a unique search ID for this search request
-    const searchId = `${info.id}_${Date.now()}`;
+    // Using performance.now() for better precision to avoid collisions in rapid succession
+    const searchId = `${info.id}_${performance.now()}`;
     currentSearchId = searchId;
+    
+    // Helper function to check if this search is still current
+    const isSearchStillCurrent = () => {
+      if (currentSearchId !== searchId) {
+        DEBUG.info('Autodetect', `Search aborted - newer search started for different track`);
+        return false;
+      }
+      return true;
+    };
     
     // Check cache first unless forcing refresh
     if (!forceRefresh) {
@@ -6291,10 +6301,7 @@ const Providers = {
         const result = await provider.findLyrics(info);
         
         // Check if this search is still current after the async operation
-        if (currentSearchId !== searchId) {
-          DEBUG.info('Autodetect', `Search aborted - newer search started for different track`);
-          return;
-        }
+        if (!isSearchStillCurrent()) return;
 
         const providerDuration = performance.now() - providerStartTime;
 
@@ -6302,10 +6309,7 @@ const Providers = {
           let lyrics = provider[type](result);
           if (lyrics && lyrics.length > 0) {
             // Final check before updating UI - ensure this search is still current
-            if (currentSearchId !== searchId) {
-              DEBUG.info('Autodetect', `Search aborted - newer search started for different track`);
-              return;
-            }
+            if (!isSearchStillCurrent()) return;
             
             DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
             DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
@@ -6333,10 +6337,7 @@ const Providers = {
     }
 
     // Check if this search is still current before showing "no lyrics found"
-    if (currentSearchId !== searchId) {
-      DEBUG.info('Autodetect', `Search aborted - newer search started for different track`);
-      return;
-    }
+    if (!isSearchStillCurrent()) return;
 
     // Unselect any provider
     Providers.current = null;
