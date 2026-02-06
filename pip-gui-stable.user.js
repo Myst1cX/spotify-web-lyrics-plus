@@ -6299,6 +6299,12 @@ const Providers = {
       return true;
     };
     
+    // Clear current provider so no provider is highlighted while searching for lyrics
+    // This fixes the edge case where cached lyrics from the previous song left a provider
+    // highlighted, and the next song's search would show that stale highlight
+    Providers.current = null;
+    if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
+    
     // Check cache first unless forcing refresh
     if (!forceRefresh) {
       const cachedData = LyricsCache.get(info.id);
