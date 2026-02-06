@@ -1730,7 +1730,13 @@ const PLAY_WORDS = [
     getUnsynced(body) {
       if (body?.instrumental) return null; // Skip to next provider for instrumental tracks
       if (!body?.plainLyrics) return null;
-      return Utils.parseLocalLyrics(body.plainLyrics).unsynced;
+      const lyrics = Utils.parseLocalLyrics(body.plainLyrics).unsynced;
+      const LRCLIB_INSTRUMENTAL_PATTERN = /^\s*\(?\s*instrumental\s*\)?\s*$/i;
+      if (lyrics && lyrics.length === 1 && LRCLIB_INSTRUMENTAL_PATTERN.test(lyrics[0].text)) {
+        console.log(`[LRCLIB Debug] ⚠ Skipping track - single line instrumental marker detected: "${lyrics[0].text}"`);
+        return null;
+      }
+      return lyrics;
     },
     getSynced(body) {
       if (body?.instrumental) return null; // Skip to next provider for instrumental tracks
@@ -2995,12 +3001,15 @@ const ProviderGenius = {
     /we do not have the lyrics for/i,
     /be the first to add the lyrics/i,
     /please check back once the song has been released/i,
-    /add lyrics on genius/i
+    /add lyrics on genius/i,
+    /this song is an instrumental/i
   ];
   if (
     lines.length === 1 &&
     notTranscribedPatterns.some(rx => rx.test(lines[0].text))
   ) {
+    const matchedPattern = notTranscribedPatterns.find(rx => rx.test(lines[0].text));
+    console.log(`[Genius Debug] ⚠ Skipping track - matched pattern: ${matchedPattern} in text: "${lines[0].text}"`);
     return null;
   }
   return lines;
