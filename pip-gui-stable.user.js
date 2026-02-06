@@ -3005,37 +3005,45 @@ const ProviderGenius = {
     try {
       const data = await fetchGeniusLyrics(info);
       if (!data || data.error) return { error: "No lyrics found in Genius database" };
+      
+      // Check for instrumental/placeholder text patterns early (in findLyrics)
+      // This ensures proper error reporting when provider is manually selected
+      if (data.plainLyrics) {
+        const lines = parseGeniusLyrics(data.plainLyrics).unsynced;
+        const notTranscribedPatterns = [
+          /lyrics for this song have yet to be transcribed/i,
+          /we do not have the lyrics for/i,
+          /be the first to add the lyrics/i,
+          /please check back once the song has been released/i,
+          /add lyrics on genius/i,
+          /this song is an instrumental/i
+        ];
+        if (
+          lines.length === 1 &&
+          notTranscribedPatterns.some(rx => rx.test(lines[0].text))
+        ) {
+          // Log the specific placeholder text detected
+          const matchedText = lines[0].text.toLowerCase();
+          if (matchedText.includes('instrumental')) {
+            console.log("[Genius Debug] ⚠ Track marked as instrumental (no lyrics) - skipping to next provider");
+            return { error: "Track is instrumental (no lyrics available)" };
+          } else {
+            console.log("[Genius Debug] ⚠ Track has placeholder text (no actual lyrics) - skipping to next provider");
+            return { error: "Track has placeholder text (no actual lyrics yet)" };
+          }
+        }
+      }
+      
       return data;
     } catch (e) {
       return { error: e.message || "Genius fetch failed" };
     }
   },
   getUnsynced(body) {
-  if (!body?.plainLyrics) return null;
-  const lines = parseGeniusLyrics(body.plainLyrics).unsynced;
-  const notTranscribedPatterns = [
-    /lyrics for this song have yet to be transcribed/i,
-    /we do not have the lyrics for/i,
-    /be the first to add the lyrics/i,
-    /please check back once the song has been released/i,
-    /add lyrics on genius/i,
-    /this song is an instrumental/i
-  ];
-  if (
-    lines.length === 1 &&
-    notTranscribedPatterns.some(rx => rx.test(lines[0].text))
-  ) {
-    // Log the specific placeholder text detected
-    const matchedText = lines[0].text.toLowerCase();
-    if (matchedText.includes('instrumental')) {
-      console.log("[Genius Debug] ⚠ Track marked as instrumental (no lyrics) - skipping to next provider");
-    } else {
-      console.log("[Genius Debug] ⚠ Track has placeholder text (no actual lyrics) - skipping to next provider");
-    }
-    return null;
-  }
-  return lines;
-},
+    if (!body?.plainLyrics) return null;
+    const lines = parseGeniusLyrics(body.plainLyrics).unsynced;
+    return lines;
+  },
   getSynced() {
     return null;
   },
