@@ -1726,8 +1726,8 @@ const PLAY_WORDS = [
         let data = await fetchLRCLibLyrics(info, false);
         // Check if first attempt returned an error or no lyrics
         if (!data || data.error || (!data.syncedLyrics && !data.plainLyrics)) {
-          // If it was a 404 or rate limit error, try without album
-          if (!data?.error || data.error.includes("Track not found")) {
+          // Only retry without album if it was a 404 error (not found), not other errors like rate limits
+          if (!data?.error || data.error === "Track not found in LRCLIB database") {
             data = await fetchLRCLibLyrics(info, true); // try without album
           }
         }
