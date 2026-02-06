@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.3
+// @version      16.4
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -12,6 +12,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (16.4) QUICK LRCLIB INSTRUMENTAL TRACK BEHAVIOR FIX
 
 // RESOLVED (16.3): IMPROVED INSTRUMENTAL TRACK CONSOLE LOGGING (LRCLIB, MUSIXMATCH, GENIUS)
 
@@ -1716,6 +1718,9 @@ const PLAY_WORDS = [
     return null;
   }
 }
+  // LRCLIB provider
+  const LRCLIB_INSTRUMENTAL_PATTERN = /^\s*\(?\s*instrumental\s*\)?\s*$/i;
+  
   const ProviderLRCLIB = {
     async findLyrics(info) {
       try {
@@ -1736,12 +1741,24 @@ const PLAY_WORDS = [
     getUnsynced(body) {
       if (body?.instrumental) return null; // Skip to next provider for instrumental tracks
       if (!body?.plainLyrics) return null;
-      return Utils.parseLocalLyrics(body.plainLyrics).unsynced;
+      const lyrics = Utils.parseLocalLyrics(body.plainLyrics).unsynced;
+      // Filter out "(Instrumental)" placeholder text (single line only)
+      if (lyrics && lyrics.length === 1 && LRCLIB_INSTRUMENTAL_PATTERN.test(lyrics[0].text)) {
+        console.log("[LRCLIB Debug] ⚠ Track has placeholder text '(Instrumental)' - skipping to next provider");
+        return null;
+      }
+      return lyrics;
     },
     getSynced(body) {
       if (body?.instrumental) return null; // Skip to next provider for instrumental tracks
       if (!body?.syncedLyrics) return null;
-      return Utils.parseLocalLyrics(body.syncedLyrics).synced;
+      const lyrics = Utils.parseLocalLyrics(body.syncedLyrics).synced;
+      // Filter out "(Instrumental)" placeholder text (single line only)
+      if (lyrics && lyrics.length === 1 && LRCLIB_INSTRUMENTAL_PATTERN.test(lyrics[0].text)) {
+        console.log("[LRCLIB Debug] ⚠ Track has placeholder text '(Instrumental)' - skipping to next provider");
+        return null;
+      }
+      return lyrics;
     }
   };
 
@@ -6737,6 +6754,3 @@ const Providers = {
 
   init();
 })();
-
-
-
