@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.3
+// @version      16.4
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,7 +13,9 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (16.3): UPDATED HANDLING OF INSTRUMENTAL TRACKS FOR GENIUS PROVIDER
+// RESOLVED (16.4): ABORT LYRICS AUTOFETCH WHEN MANUALLY SELECTING A PROVIDER + SIMPLIFIED ERROR MESSAGES
+
+// RESOLVED (16.3): UPDATED HANDLING OF INSTRUMENTAL TRACKS
 
 // RESOLVED (16.2): FIX LYRIC SOURCE TAB HIGHLIGHTING LOGIC AFTER LYRICS FROM CACHED PROVIDER
 
@@ -1723,10 +1725,10 @@ const PLAY_WORDS = [
         if (!data || (!data.syncedLyrics && !data.plainLyrics)) {
           data = await fetchLRCLibLyrics(info, true); // try without album
         }
-        if (!data) return { error: "Track not found in LRCLIB database or no lyrics available" };
+        if (!data) return { error: "No lyrics available from LRCLIB" };
         return data;
       } catch (e) {
-        return { error: e.message || "LRCLIB fetch failed - network error or service unavailable" };
+        return { error: "LRCLIB request failed - network error" };
       }
     },
     getUnsynced(body) {
@@ -1952,9 +1954,9 @@ const PLAY_WORDS = [
         if (lastError) {
           return { error: lastError };
         }
-        return { error: "Track not found in KPoe database or no lyrics available" };
+        return { error: "No lyrics available from KPoe" };
       } catch (e) {
-        return { error: e.message || "KPoe fetch failed - network error or service unavailable" };
+        return { error: "KPoe request failed - network error" };
       }
     },
     getUnsynced(body) {
@@ -2302,7 +2304,7 @@ async function fetchMusixmatchLyrics(songInfo) {
 
     if (track.instrumental) {
       console.log("[Musixmatch Debug] ⚠ Track marked as instrumental (no lyrics)");
-      return { error: "Track is instrumental (no lyrics available)" };
+      return { instrumental: true };
     }
 
     // Step 2: Fetch synced lyrics via subtitles.get
@@ -2366,10 +2368,10 @@ async function fetchMusixmatchLyrics(songInfo) {
     }
 
     console.log("[Musixmatch Debug] ✗ No lyrics found in any format");
-    return { error: "No lyrics available for this track from Musixmatch" };
+    return { error: "No lyrics available from Musixmatch" };
   } catch (e) {
     console.error("[Musixmatch Debug] ✗ Fetch error:", e.message || e);
-    return { error: `Musixmatch request failed: ${e.message || 'Network error'}` };
+    return { error: "Musixmatch request failed - network error" };
   }
 }
 
@@ -2397,18 +2399,18 @@ const ProviderMusixmatch = {
     try {
       const data = await fetchMusixmatchLyrics(info);
       if (!data) {
-  return { error: "Track not found in Musixmatch database or no lyrics available" };
+  return { error: "No lyrics available from Musixmatch" };
 }
 if (data.error) {
   // If the error is about missing token, show that instead
   if (data.error.includes("Double click on the Musixmatch provider")) {
     return { error: data.error };
   }
-  return { error: "Track not found in Musixmatch database or no lyrics available" };
+  return { error: "No lyrics available from Musixmatch" };
 }
 return data;
     } catch (e) {
-      return { error: e.message || "Musixmatch fetch failed - network error or service unavailable" };
+      return { error: "Musixmatch request failed - network error" };
     }
   },
   getUnsynced: musixmatchGetUnsynced,
@@ -2964,7 +2966,7 @@ async function fetchGeniusLyrics(info) {
 
   console.log("[Genius Debug] ✗✗✗ No lyrics found after trying all title variants and pages");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  return { error: "Lyrics not found on Genius" };
+  return { error: "No lyrics available from Genius" };
 }
 
 function parseGeniusLyrics(raw) {
@@ -2983,31 +2985,52 @@ const ProviderGenius = {
   async findLyrics(info) {
     try {
       const data = await fetchGeniusLyrics(info);
-      if (!data || data.error) return { error: "Genius fetch failed - network error or service unavailable" };
+      if (!data || data.error) return { error: "Genius request failed - network error" };
+
+      // Check if lyrics indicate no lyrics available or instrumental track
+      if (data.plainLyrics) {
+        const lines = parseGeniusLyrics(data.plainLyrics).unsynced;
+
+        // Patterns for tracks where lyrics aren't transcribed yet
+        const notTranscribedPatterns = [
+          /lyrics for this song have yet to be transcribed/i,
+          /we do not have the lyrics for/i,
+          /be the first to add the lyrics/i,
+          /please check back once the song has been released/i,
+          /add lyrics on genius/i
+        ];
+
+        // Patterns for instrumental tracks
+        const instrumentalTrackPatterns = [
+          /this song is an instrumental/i
+        ];
+
+        if (lines.length === 1) {
+          // Check for instrumental tracks first
+          const instrumentalMatch = instrumentalTrackPatterns.find(rx => rx.test(lines[0].text));
+          if (instrumentalMatch) {
+            console.log(`[Genius Debug] ⚠ Track is instrumental - matched pattern: ${instrumentalMatch} in text: "${lines[0].text}"`);
+            return { instrumental: true };
+          }
+
+          // Check for not transcribed patterns
+          const notTranscribedMatch = notTranscribedPatterns.find(rx => rx.test(lines[0].text));
+          if (notTranscribedMatch) {
+            console.log(`[Genius Debug] ⚠ No lyrics available for this track - matched pattern: ${notTranscribedMatch} in text: "${lines[0].text}"`);
+            // For not transcribed patterns, return data unchanged (will try next provider)
+            return data;
+          }
+        }
+      }
+
       return data;
     } catch (e) {
-      return { error: e.message || "Genius fetch failed - network error or service unavailable" };
+      return { error: "Genius request failed - network error" };
     }
   },
   getUnsynced(body) {
   if (!body?.plainLyrics) return null;
   const lines = parseGeniusLyrics(body.plainLyrics).unsynced;
-  const notTranscribedPatterns = [
-    /lyrics for this song have yet to be transcribed/i,
-    /we do not have the lyrics for/i,
-    /be the first to add the lyrics/i,
-    /please check back once the song has been released/i,
-    /add lyrics on genius/i,
-    /this song is an instrumental/i
-  ];
-  if (
-    lines.length === 1 &&
-    notTranscribedPatterns.some(rx => rx.test(lines[0].text))
-  ) {
-    const matchedPattern = notTranscribedPatterns.find(rx => rx.test(lines[0].text));
-    console.log(`[Genius Debug] ⚠ Track has no lyrics or is instrumental - matched pattern: ${matchedPattern} in text: "${lines[0].text}"`);
-    return null;
-  }
   return lines;
 },
   getSynced() {
@@ -3276,14 +3299,14 @@ const ProviderSpotify = {
       // Adapt to your UI's expected data shape:
       if (!data || !data.lyrics || !data.lyrics.lines || !data.lyrics.lines.length) {
         console.log("[Spotify Debug] ✗ No lyric lines in API response");
-        return { error: "Track not found or no lyrics available from Spotify" };
+        return { error: "No lyrics available from Spotify" };
       }
 
       console.log(`[Spotify Debug] ✓ Lyrics found! Type: ${data.lyrics.syncType}, Lines: ${data.lyrics.lines.length}, Language: ${data.lyrics.language || 'unknown'}`);
       return data.lyrics;
     } catch (e) {
       console.error("[Spotify Debug] ✗ Fetch error:", e.message || e);
-      return { error: `Spotify lyrics request failed: ${e.message || 'Network error'}` };
+      return { error: "Spotify request failed - network error" };
     }
   },
 
@@ -4064,6 +4087,11 @@ const Providers = {
       btn.onclick = async (e) => {
         if (providerClickTimer) return; // already waiting for double-click, skip
         providerClickTimer = setTimeout(async () => {
+          // Abort any ongoing autofetch by invalidating the current search ID
+          // This prevents the autofetch loop from continuing when user manually selects a provider
+          currentSearchId = null;
+          console.log(`🛑 [Lyrics+] User manually selected ${name} provider - aborting any ongoing autofetch`);
+
           Providers.setCurrent(name);
           updateTabs(tabs);
           await updateLyricsContent(popup, getCurrentTrackInfo());
@@ -5958,6 +5986,47 @@ const Providers = {
   }
 
   /**
+   * Helper function to hide UI buttons for instrumental tracks
+   * @param {HTMLElement} popup - The popup element
+   */
+  function hideButtonsForInstrumental(popup) {
+    const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
+    const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
+    const chineseConvBtn = popup._chineseConvBtn;
+    const transliterationBtn = popup._transliterationToggleBtn;
+
+    if (downloadBtn) {
+      downloadBtn.style.display = "none";
+      if (downloadDropdown) downloadDropdown.style.display = "none";
+    }
+    if (chineseConvBtn) chineseConvBtn.style.display = "none";
+    if (transliterationBtn) transliterationBtn.style.display = "none";
+  }
+
+  /**
+   * Helper function to cache instrumental track data
+   * @param {string} trackId - Track ID
+   * @param {string} provider - Provider name that detected instrumental
+   * @param {Object} trackInfo - Track information
+   */
+  function cacheInstrumentalTrack(trackId, provider, trackInfo) {
+    LyricsCache.set(trackId, {
+      provider: null,  // No specific provider since instrumental means no lyrics from any source
+      synced: null,
+      unsynced: null,
+      instrumental: true,
+      error: "♪ Instrumental Track ♪\n\nThis track has no lyrics",
+      trackInfo: {
+        title: trackInfo.title,
+        artist: trackInfo.artist,
+        album: trackInfo.album,
+        duration: trackInfo.duration
+      }
+    });
+    console.log(`✅ [Lyrics+] Instrumental track cached (detected by ${provider}) - will show "no lyrics" message on future plays`);
+  }
+
+  /**
    * Load and display lyrics from cache
    * @param {HTMLElement} popup - The popup element
    * @param {Object} info - Track information
@@ -6118,6 +6187,17 @@ const Providers = {
     const provider = Providers.getCurrent();
     const result = await provider.findLyrics(info);
 
+    // Check if track is marked as instrumental - convert to error
+    if (result.instrumental) {
+      console.log(`🎵 [Lyrics+] Track is instrumental (no lyrics) - detected by ${Providers.current}`);
+      result.error = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
+      // Cache the instrumental status before proceeding to error handling
+      cacheInstrumentalTrack(info.id, Providers.current, info);
+      // Clear provider highlighting since instrumental means no lyrics from any source
+      Providers.current = null;
+      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
+    }
+
     if (result.error) {
       lyricsContainer.textContent = result.error;
       if (downloadBtn) {
@@ -6227,7 +6307,7 @@ const Providers = {
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
       if (!lyricsContainer.textContent.trim()) {
-        lyricsContainer.textContent = `Track not found in ${Providers.current} database or no lyrics available`;
+        lyricsContainer.textContent = `No lyrics available from ${Providers.current}`;
       }
       currentSyncedLyrics = null;
       currentUnsyncedLyrics = null;
@@ -6316,6 +6396,26 @@ const Providers = {
     if (!forceRefresh) {
       const cachedData = LyricsCache.get(info.id);
       if (cachedData) {
+        // Handle cached instrumental tracks - display error message
+        if (cachedData.instrumental && cachedData.error) {
+          console.log(`🎵 [Lyrics+] Loaded instrumental track from cache - no lyrics available`);
+          DEBUG.info('Autodetect', `Loaded instrumental from cache in <1ms`);
+
+          // Clear provider highlighting
+          Providers.current = null;
+          if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
+
+          // Display error message
+          const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+          if (lyricsContainer) {
+            lyricsContainer.textContent = cachedData.error;
+          }
+
+          // Hide buttons
+          hideButtonsForInstrumental(popup);
+          return;
+        }
+
         const success = loadLyricsFromCache(popup, info, cachedData);
         if (success) {
           console.log(`⚡ [Lyrics+] Lyrics loaded instantly from cache (no internet needed!)`);
@@ -6358,6 +6458,36 @@ const Providers = {
         const providerDuration = performance.now() - providerStartTime;
 
         if (result && !result.error) {
+          // Check if track is marked as instrumental by the provider
+          // Instrumental tracks have no lyrics, so we should stop searching and cache this result
+          if (result.instrumental) {
+            if (!isSearchStillCurrent()) return;
+
+            console.log(`🎵 [Lyrics+] Track is instrumental (no lyrics) - detected by ${name}`);
+            DEBUG.info('Autodetect', `Track marked as instrumental by ${name}`);
+
+            // Convert instrumental to an error result
+            result.error = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
+
+            // Hide buttons and cache the instrumental status
+            hideButtonsForInstrumental(popup);
+            cacheInstrumentalTrack(info.id, name, info);
+
+            // Don't highlight any provider since instrumental means no lyrics from any source
+            Providers.current = null;
+            if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
+
+            // Display error message through the standard error path
+            const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+            if (lyricsContainer) {
+              lyricsContainer.textContent = result.error;
+            }
+
+            const totalDuration = performance.now() - startTime;
+            DEBUG.info('Autodetect', `Completed in ${totalDuration.toFixed(2)}ms - instrumental track detected by ${name}`);
+            return;
+          }
+
           let lyrics = provider[type](result);
           if (lyrics && lyrics.length > 0) {
             // ═══ CHECKPOINT 2: Before UI update with lyrics ═══
@@ -6404,7 +6534,7 @@ const Providers = {
     if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
 
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-    if (lyricsContainer) lyricsContainer.textContent = "No lyrics were found for this track from any of the available providers";
+    if (lyricsContainer) lyricsContainer.textContent = "No lyrics found from any provider";
     currentSyncedLyrics = null;
     currentLyricsContainer = lyricsContainer;
     // Reset translation state when no lyrics are found
