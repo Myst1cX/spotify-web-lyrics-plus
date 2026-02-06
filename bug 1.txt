@@ -1,0 +1,414 @@
+// the relevant console log is below
+// issue: our script correctly found synced lyrics and displayed them, all good. but it seems it continued in the background with searching other providers and once it went thru all others, determined no lyrics found and updated lyric modal's lyric container with the no lyrics message.
+// what we need to do: deeply check the code. we want the lyric modal to stop auto searching other providers if lyric source already found. (note in the case of providers where you have multiple attempts for finding lyrics thru different request types, you have to leave logic as is - with kpoe as documented, we prefer a certain lyric type as chosen but still need to go thru all 5 attempts. and with genius as you see we have various attempts, a whole logic which at the end determines acceptable lrc source if multiple lyric possibilites are found).
+
+🔍 [Lyrics+] Searching for lyrics: "Miss Dior" by Stefan Costea, Pitariu George Spotify Lyrics+ Stable.user.js:6651:13
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2003:11
+[LRCLIB Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2004:11
+[LRCLIB Debug] Input info: 
+Object { artist: "Stefan Costea, Pitariu George", title: "Miss Dior", album: "", duration: 152000 }
+Spotify Lyrics+ Stable.user.js:2005:11
+[LRCLIB Debug] Searching WITH album parameter Spotify Lyrics+ Stable.user.js:2011:11
+[LRCLIB Debug] Including duration: 152 seconds Spotify Lyrics+ Stable.user.js:2030:13
+[LRCLIB Debug] Request URL: https://lrclib.net/api/get?artist_name=Stefan%20Costea%2C%20Pitariu%20George&track_name=Miss%20Dior&duration=152 Spotify Lyrics+ Stable.user.js:2034:11
+[LRCLIB Debug] Response status: 404 Not Found Spotify Lyrics+ Stable.user.js:2044:13
+[LRCLIB Debug] ✗ Track not found in LRCLIB database Spotify Lyrics+ Stable.user.js:2048:17
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2003:11
+[LRCLIB Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2004:11
+[LRCLIB Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify", album: "", duration: 24000 }
+Spotify Lyrics+ Stable.user.js:2005:11
+[LRCLIB Debug] Searching WITHOUT album parameter Spotify Lyrics+ Stable.user.js:2011:11
+[LRCLIB Debug] Retrying without album (fallback search) Spotify Lyrics+ Stable.user.js:2023:13
+[LRCLIB Debug] Including duration: 24 seconds Spotify Lyrics+ Stable.user.js:2030:13
+[LRCLIB Debug] Request URL: https://lrclib.net/api/get?artist_name=Advertisement%20%E2%80%A2%201%20of%201&track_name=Spotify&duration=24 Spotify Lyrics+ Stable.user.js:2034:11
+[LRCLIB Debug] Response status: 200 OK Spotify Lyrics+ Stable.user.js:2044:13
+[LRCLIB Debug] Response data: 
+Object { hasPlainLyrics: true, hasSyncedLyrics: true, isInstrumental: false, duration: 153 }
+Spotify Lyrics+ Stable.user.js:2058:13
+[LRCLIB Debug] ✓ Lyrics found! Type: Synced Spotify Lyrics+ Stable.user.js:2068:15
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2003:11
+[LRCLIB Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2004:11
+[LRCLIB Debug] Input info: 
+Object { artist: "Stefan Costea, Pitariu George", title: "Miss Dior", album: "", duration: 152000 }
+Spotify Lyrics+ Stable.user.js:2005:11
+[LRCLIB Debug] Searching WITH album parameter Spotify Lyrics+ Stable.user.js:2011:11
+[LRCLIB Debug] Including duration: 152 seconds Spotify Lyrics+ Stable.user.js:2030:13
+[LRCLIB Debug] Request URL: https://lrclib.net/api/get?artist_name=Stefan%20Costea%2C%20Pitariu%20George&track_name=Miss%20Dior&duration=152 Spotify Lyrics+ Stable.user.js:2034:11
+[LRCLIB Debug] Response status: 404 Not Found Spotify Lyrics+ Stable.user.js:2044:13
+[LRCLIB Debug] ✗ Track not found in LRCLIB database Spotify Lyrics+ Stable.user.js:2048:17
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:3559:13
+[Spotify Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:3560:13
+[Spotify Debug] Input info: 
+Object { trackId: null, title: "Spotify", artist: "Advertisement • 1 of 1" }
+Spotify Lyrics+ Stable.user.js:3561:13
+[Spotify Debug] ✓ Token found (length: 400 characters) Spotify Lyrics+ Stable.user.js:3573:13
+[Spotify Debug] ✗ No trackId provided in song info Spotify Lyrics+ Stable.user.js:3576:15
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2261:19
+[KPoe Debug] Attempt 1/5: Raw data with album Spotify Lyrics+ Stable.user.js:2262:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2106:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2107:13
+[KPoe Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify", album: "", duration: 24, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2108:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Spotify&artist=Advertisement%20%E2%80%A2%201%20of%201&duration=24 Spotify Lyrics+ Stable.user.js:2130:13
+[LRCLIB Debug] Response status: 200 OK Spotify Lyrics+ Stable.user.js:2044:13
+[LRCLIB Debug] Response data: 
+Object { hasPlainLyrics: true, hasSyncedLyrics: true, isInstrumental: false, duration: 153 }
+Spotify Lyrics+ Stable.user.js:2058:13
+[LRCLIB Debug] ✓ Lyrics found! Type: Synced Spotify Lyrics+ Stable.user.js:2068:15
+📝 [Lyrics+ UI] Transliteration button visibility updated: HIDDEN (no transliteration data) Spotify Lyrics+ Stable.user.js:6597:15
+📝 [Lyrics+ UI] Download button shown (lyrics loaded successfully) Spotify Lyrics+ Stable.user.js:6612:17
+✅ [Lyrics+] Lyrics saved to cache! Now have 26 of last 50 songs cached for instant replay Spotify Lyrics+ Stable.user.js:646:15
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2134:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2139:19
+[KPoe Debug] ✗ Error on attempt 1: Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2277:21
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2261:19
+[KPoe Debug] Attempt 2/5: Raw data without album (sometimes album metadata is wrong) Spotify Lyrics+ Stable.user.js:2262:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2106:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2107:13
+[KPoe Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify", album: "", duration: 24, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2108:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Spotify&artist=Advertisement%20%E2%80%A2%201%20of%201&duration=24 Spotify Lyrics+ Stable.user.js:2130:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2134:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2139:19
+[KPoe Debug] ✗ Error on attempt 2: Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2277:21
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2261:19
+[KPoe Debug] Attempt 3/5: Normalized artist, raw title Spotify Lyrics+ Stable.user.js:2262:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2106:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2107:13
+[KPoe Debug] Input info: 
+Object { artist: "Advertisement 1 of 1", title: "Spotify", album: "", duration: 24, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2108:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Spotify&artist=Advertisement%201%20of%201&duration=24 Spotify Lyrics+ Stable.user.js:2130:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2134:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2139:19
+[KPoe Debug] ✗ Error on attempt 3: Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2277:21
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2261:19
+[KPoe Debug] Attempt 4/5: Raw artist, normalized title Spotify Lyrics+ Stable.user.js:2262:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2106:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2107:13
+[KPoe Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify", album: "", duration: 24, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2108:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Spotify&artist=Advertisement%20%E2%80%A2%201%20of%201&duration=24 Spotify Lyrics+ Stable.user.js:2130:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2134:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2139:19
+[KPoe Debug] ✗ Error on attempt 4: Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2277:21
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2261:19
+[KPoe Debug] Attempt 5/5: Fully normalized data Spotify Lyrics+ Stable.user.js:2262:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2106:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2107:13
+[KPoe Debug] Input info: 
+Object { artist: "Advertisement 1 of 1", title: "Spotify", album: "", duration: 24, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2108:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Spotify&artist=Advertisement%201%20of%201&duration=24 Spotify Lyrics+ Stable.user.js:2130:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2134:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2139:19
+[KPoe Debug] ✗ Error on attempt 5: Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2277:21
+[KPoe Debug] ✗ All 5 attempts failed Spotify Lyrics+ Stable.user.js:2310:17
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2602:11
+[Musixmatch Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2603:11
+[Musixmatch Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify" }
+Spotify Lyrics+ Stable.user.js:2604:11
+[Musixmatch Debug] ✓ Token found (length: 52 characters) Spotify Lyrics+ Stable.user.js:2614:11
+[Musixmatch Debug] Step 1: Fetching track info Spotify Lyrics+ Stable.user.js:2621:11
+[Musixmatch Debug] Track URL: https://apic-desktop.musixmatch.com/ws/1.1/matcher.track.get?q_track=Spotify&q_artist=Advertisement%20%E2%80%A2%201%20of%201&format=json&usertoken=***TOKEN***&app_id=web-desktop-app-v1.0 Spotify Lyrics+ Stable.user.js:2622:11
+[Musixmatch Debug] Track response status: 200 Spotify Lyrics+ Stable.user.js:2633:13
+[Musixmatch Debug] ✗ No track data in response Spotify Lyrics+ Stable.user.js:2651:15
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2003:11
+[LRCLIB Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2004:11
+[LRCLIB Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify", album: "", duration: 24000 }
+Spotify Lyrics+ Stable.user.js:2005:11
+[LRCLIB Debug] Searching WITH album parameter Spotify Lyrics+ Stable.user.js:2011:11
+[LRCLIB Debug] Including duration: 24 seconds Spotify Lyrics+ Stable.user.js:2030:13
+[LRCLIB Debug] Request URL: https://lrclib.net/api/get?artist_name=Advertisement%20%E2%80%A2%201%20of%201&track_name=Spotify&duration=24 Spotify Lyrics+ Stable.user.js:2034:11
+[LRCLIB Debug] Response status: 404 Not Found Spotify Lyrics+ Stable.user.js:2044:13
+[LRCLIB Debug] ✗ Track not found in LRCLIB database Spotify Lyrics+ Stable.user.js:2048:17
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2003:11
+[LRCLIB Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2004:11
+[LRCLIB Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify", album: "", duration: 24000 }
+Spotify Lyrics+ Stable.user.js:2005:11
+[LRCLIB Debug] Searching WITHOUT album parameter Spotify Lyrics+ Stable.user.js:2011:11
+[LRCLIB Debug] Retrying without album (fallback search) Spotify Lyrics+ Stable.user.js:2023:13
+[LRCLIB Debug] Including duration: 24 seconds Spotify Lyrics+ Stable.user.js:2030:13
+[LRCLIB Debug] Request URL: https://lrclib.net/api/get?artist_name=Advertisement%20%E2%80%A2%201%20of%201&track_name=Spotify&duration=24 Spotify Lyrics+ Stable.user.js:2034:11
+🌐 [Lyrics+ Translation] Translate button clicked, target language: en Spotify Lyrics+ Stable.user.js:4498:15
+[LRCLIB Debug] Response status: 404 Not Found Spotify Lyrics+ Stable.user.js:2044:13
+[LRCLIB Debug] ✗ Track not found in LRCLIB database Spotify Lyrics+ Stable.user.js:2048:17
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:3559:13
+[Spotify Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:3560:13
+[Spotify Debug] Input info: 
+Object { trackId: null, title: "Spotify", artist: "Advertisement • 1 of 1" }
+Spotify Lyrics+ Stable.user.js:3561:13
+[Spotify Debug] ✓ Token found (length: 400 characters) Spotify Lyrics+ Stable.user.js:3573:13
+[Spotify Debug] ✗ No trackId provided in song info Spotify Lyrics+ Stable.user.js:3576:15
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2261:19
+[KPoe Debug] Attempt 1/5: Raw data with album Spotify Lyrics+ Stable.user.js:2262:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2106:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2107:13
+[KPoe Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify", album: "", duration: 24, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2108:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Spotify&artist=Advertisement%20%E2%80%A2%201%20of%201&duration=24 Spotify Lyrics+ Stable.user.js:2130:13
+⏩ [Lyrics+ Seekbar] User seeked to position: 0:00 2 Spotify Lyrics+ Stable.user.js:6201:15
+🔁 [Lyrics+] Song restarted! Repeat One detected for "Miss Dior" Spotify Lyrics+ Stable.user.js:6742:17
+   ⏮️ Resetting lyrics scroll to the beginning... Spotify Lyrics+ Stable.user.js:6743:17
+   ✅ Lyrics scrolled back to start (cached lyrics, no loading needed!) Spotify Lyrics+ Stable.user.js:6751:21
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2134:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2139:19
+[KPoe Debug] ✗ Error on attempt 1: Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2277:21
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2261:19
+[KPoe Debug] Attempt 2/5: Raw data without album (sometimes album metadata is wrong) Spotify Lyrics+ Stable.user.js:2262:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2106:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2107:13
+[KPoe Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify", album: "", duration: 24, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2108:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Spotify&artist=Advertisement%20%E2%80%A2%201%20of%201&duration=24 Spotify Lyrics+ Stable.user.js:2130:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2134:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2139:19
+[KPoe Debug] ✗ Error on attempt 2: Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2277:21
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2261:19
+[KPoe Debug] Attempt 3/5: Normalized artist, raw title Spotify Lyrics+ Stable.user.js:2262:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2106:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2107:13
+[KPoe Debug] Input info: 
+Object { artist: "Advertisement 1 of 1", title: "Spotify", album: "", duration: 24, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2108:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Spotify&artist=Advertisement%201%20of%201&duration=24 Spotify Lyrics+ Stable.user.js:2130:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2134:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2139:19
+[KPoe Debug] ✗ Error on attempt 3: Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2277:21
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2261:19
+[KPoe Debug] Attempt 4/5: Raw artist, normalized title Spotify Lyrics+ Stable.user.js:2262:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2106:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2107:13
+[KPoe Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify", album: "", duration: 24, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2108:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Spotify&artist=Advertisement%20%E2%80%A2%201%20of%201&duration=24 Spotify Lyrics+ Stable.user.js:2130:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2134:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2139:19
+[KPoe Debug] ✗ Error on attempt 4: Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2277:21
+[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2261:19
+[KPoe Debug] Attempt 5/5: Fully normalized data Spotify Lyrics+ Stable.user.js:2262:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2106:13
+[KPoe Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2107:13
+[KPoe Debug] Input info: 
+Object { artist: "Advertisement 1 of 1", title: "Spotify", album: "", duration: 24, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2108:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=Spotify&artist=Advertisement%201%20of%201&duration=24 Spotify Lyrics+ Stable.user.js:2130:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2134:15
+[KPoe Debug] ✗ Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2139:19
+[KPoe Debug] ✗ Error on attempt 5: Track not found in KPoe database Spotify Lyrics+ Stable.user.js:2277:21
+[KPoe Debug] ✗ All 5 attempts failed Spotify Lyrics+ Stable.user.js:2310:17
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2602:11
+[Musixmatch Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2603:11
+[Musixmatch Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify" }
+Spotify Lyrics+ Stable.user.js:2604:11
+[Musixmatch Debug] ✓ Token found (length: 52 characters) Spotify Lyrics+ Stable.user.js:2614:11
+[Musixmatch Debug] Step 1: Fetching track info Spotify Lyrics+ Stable.user.js:2621:11
+[Musixmatch Debug] Track URL: https://apic-desktop.musixmatch.com/ws/1.1/matcher.track.get?q_track=Spotify&q_artist=Advertisement%20%E2%80%A2%201%20of%201&format=json&usertoken=***TOKEN***&app_id=web-desktop-app-v1.0 Spotify Lyrics+ Stable.user.js:2622:11
+[Musixmatch Debug] Track response status: 200 Spotify Lyrics+ Stable.user.js:2633:13
+[Musixmatch Debug] ✗ No track data in response Spotify Lyrics+ Stable.user.js:2651:15
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2780:11
+[Genius Debug] Starting lyrics search Spotify Lyrics+ Stable.user.js:2781:11
+[Genius Debug] Input info: 
+Object { artist: "Advertisement • 1 of 1", title: "Spotify", album: "", duration: 24000 }
+Spotify Lyrics+ Stable.user.js:2782:11
+[Genius Debug] Title variants to try: 
+Array [ "Spotify" ]
+Spotify Lyrics+ Stable.user.js:2795:11
+[Genius Debug] Trying title variant: "Spotify" → cleaned: "" Spotify Lyrics+ Stable.user.js:2972:13
+[Genius Debug] Page 1: Searching with query: "Advertisement • 1 of 1 " Spotify Lyrics+ Stable.user.js:2977:15
+[Genius Debug] URL: https://genius.com/api/search/multi?per_page=5&page=1&q=Advertisement%20%E2%80%A2%201%20of%201%20 Spotify Lyrics+ Stable.user.js:2978:15
+[Genius Debug] Page 1: Received 5 song results Spotify Lyrics+ Stable.user.js:3000:17
+[Genius Debug]   Result 1: 
+Object { title: "Eps1.0_hellofriend.mov (Script)", artist: "Mr. Robot", url: "https://genius.com/Mr-robot-eps10-hellofriendmov-script-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 2: 
+Object { title: "RFP for Municipal Code Printing, Sales, Web Hosting, and Editing Supplementation Services", artist: "City of Chicago", url: "https://genius.com/City-of-chicago-rfp-for-municipal-code-printing-sales-web-hosting-and-editing-supplementation-services-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 3: 
+Object { title: "Male baboon responses to experimental manipulations of loud “wahoo calls”: testing an honest signal of fighting ability", artist: "Dawn. M. Kitchen, D. L. Cheney, A. L. Engh, J. Fischer, L. R. Moscovice, R. M. Seyfarth", url: "https://genius.com/Dawn-m-kitchen-d-l-cheney-a-l-engh-j-fischer-l-r-moscovice-r-m-seyfarth-male-baboon-responses-to-experimental-manipulations-of-loud-wahoo-calls-testing-an-honest-signal-of-fighting-ability-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 4: 
+Object { title: "Bunpeiris", artist: "B. UPUL N. PEIRIS [ bunpeiris]", url: "https://genius.com/B-upul-n-peiris-bunpeiris-bunpeiris-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 5: 
+Object { title: "SCP-1224", artist: "The SCP Foundation", url: "https://genius.com/The-scp-foundation-scp-1224-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug] Target (Spotify) normalization: 
+Object { originalArtist: "Advertisement • 1 of 1", normalizedArtists: (1) […], originalTitle: "Spotify", cleanedTitle: "Spotify", normalizedTitle: "spotify", hasVersionKeywords: false }
+Spotify Lyrics+ Stable.user.js:3018:17
+[Genius Debug] Match threshold for 1 artist(s): 8 Spotify Lyrics+ Stable.user.js:3031:17
+[Genius Debug]     ⊗ Skipping "Eps1.0_hellofriend.mov (Script)" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "RFP for Municipal Code Printing, Sales, Web Hosting, and Editing Supplementation Services" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Male baboon responses to experimental manipulations of loud “wahoo calls”: testing an honest signal of fighting ability" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Bunpeiris" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "SCP-1224" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]   No suitable match found on page 1 (bestScore: -Infinity, threshold: 8) Spotify Lyrics+ Stable.user.js:3199:19
+[Genius Debug] Page 2: Searching with query: "Advertisement • 1 of 1 " Spotify Lyrics+ Stable.user.js:2977:15
+[Genius Debug] URL: https://genius.com/api/search/multi?per_page=5&page=2&q=Advertisement%20%E2%80%A2%201%20of%201%20 Spotify Lyrics+ Stable.user.js:2978:15
+[Genius Debug] Page 2: Received 7 song results Spotify Lyrics+ Stable.user.js:3000:17
+[Genius Debug]   Result 1: 
+Object { title: "Canto III: “Blue Jeans”", artist: "Colson Lin", url: "https://genius.com/Colson-lin-canto-iii-blue-jeans-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 2: 
+Object { title: "Vermont Statutes, Title 7: Alcoholic Beverages", artist: "The Vermont State Legislature", url: "https://genius.com/The-vermont-state-legislature-vermont-statutes-title-7-alcoholic-beverages-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 3: 
+Object { title: "Canto III: “Blue Jeans”", artist: "Colson Lin", url: "https://genius.com/Colson-lin-canto-iii-blue-jeans-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 4: 
+Object { title: "Vermont Statutes, Title 7: Alcoholic Beverages", artist: "The Vermont State Legislature", url: "https://genius.com/The-vermont-state-legislature-vermont-statutes-title-7-alcoholic-beverages-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 5: 
+Object { title: "Capitalism and Schizophrenia", artist: "Jonah Peretti", url: "https://genius.com/Jonah-peretti-capitalism-and-schizophrenia-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 6: 
+Object { title: "Sample Contract with City of Chicago", artist: "City of Chicago", url: "https://genius.com/City-of-chicago-sample-contract-with-city-of-chicago-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 7: 
+Object { title: "The Principia Discordia", artist: "Omar Khayyam Ravenhurst and Malcalypse the Younger", url: "https://genius.com/Omar-khayyam-ravenhurst-and-malcalypse-the-younger-the-principia-discordia-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug] Target (Spotify) normalization: 
+Object { originalArtist: "Advertisement • 1 of 1", normalizedArtists: (1) […], originalTitle: "Spotify", cleanedTitle: "Spotify", normalizedTitle: "spotify", hasVersionKeywords: false }
+Spotify Lyrics+ Stable.user.js:3018:17
+[Genius Debug] Match threshold for 1 artist(s): 8 Spotify Lyrics+ Stable.user.js:3031:17
+[Genius Debug]     ⊗ Skipping "Canto III: “Blue Jeans”" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Vermont Statutes, Title 7: Alcoholic Beverages" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Canto III: “Blue Jeans”" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Vermont Statutes, Title 7: Alcoholic Beverages" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Capitalism and Schizophrenia" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Sample Contract with City of Chicago" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "The Principia Discordia" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]   No suitable match found on page 2 (bestScore: -Infinity, threshold: 8) Spotify Lyrics+ Stable.user.js:3199:19
+[Genius Debug] Page 3: Searching with query: "Advertisement • 1 of 1 " Spotify Lyrics+ Stable.user.js:2977:15
+[Genius Debug] URL: https://genius.com/api/search/multi?per_page=5&page=3&q=Advertisement%20%E2%80%A2%201%20of%201%20 Spotify Lyrics+ Stable.user.js:2978:15
+[Genius Debug] Page 3: Received 8 song results Spotify Lyrics+ Stable.user.js:3000:17
+[Genius Debug]   Result 1: 
+Object { title: "Bin Laden’s Bookshelf", artist: "United States Government", url: "https://genius.com/United-states-government-bin-ladens-bookshelf-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 2: 
+Object { title: "The Society of the Spectacle - Chapter One: Separation Perfected", artist: "Guy Debord", url: "https://genius.com/Guy-debord-the-society-of-the-spectacle-chapter-one-separation-perfected-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 3: 
+Object { title: "Series Seed Investment Agreement", artist: "Ted Wang", url: "https://genius.com/Ted-wang-series-seed-investment-agreement-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 4: 
+Object { title: "Bin Laden’s Bookshelf", artist: "United States Government", url: "https://genius.com/United-states-government-bin-ladens-bookshelf-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 5: 
+Object { title: "The Society of the Spectacle - Chapter One: Separation Perfected", artist: "Guy Debord", url: "https://genius.com/Guy-debord-the-society-of-the-spectacle-chapter-one-separation-perfected-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 6: 
+Object { title: "Series Seed Investment Agreement", artist: "Ted Wang", url: "https://genius.com/Ted-wang-series-seed-investment-agreement-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 7: 
+Object { title: "Folk-lore of Shakespeare - Chapter VIII. Plants", artist: "T.F. Thiselton Dyer", url: "https://genius.com/Tf-thiselton-dyer-folk-lore-of-shakespeare-chapter-viii-plants-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 8: 
+Object { title: "Alexander v. Lafayette Crime Stoppers, Inc.", artist: "Louisiana Court of Appeal, Third Circuit", url: "https://genius.com/Louisiana-court-of-appeal-third-circuit-alexander-v-lafayette-crime-stoppers-inc-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug] Target (Spotify) normalization: 
+Object { originalArtist: "Advertisement • 1 of 1", normalizedArtists: (1) […], originalTitle: "Spotify", cleanedTitle: "Spotify", normalizedTitle: "spotify", hasVersionKeywords: false }
+Spotify Lyrics+ Stable.user.js:3018:17
+[Genius Debug] Match threshold for 1 artist(s): 8 Spotify Lyrics+ Stable.user.js:3031:17
+[Genius Debug]     ⊗ Skipping "Bin Laden’s Bookshelf" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "The Society of the Spectacle - Chapter One: Separation Perfected" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Series Seed Investment Agreement" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Bin Laden’s Bookshelf" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "The Society of the Spectacle - Chapter One: Separation Perfected" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Series Seed Investment Agreement" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Folk-lore of Shakespeare - Chapter VIII. Plants" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Alexander v. Lafayette Crime Stoppers, Inc." - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]   No suitable match found on page 3 (bestScore: -Infinity, threshold: 8) Spotify Lyrics+ Stable.user.js:3199:19
+[Genius Debug] Page 4: Searching with query: "Advertisement • 1 of 1 " Spotify Lyrics+ Stable.user.js:2977:15
+[Genius Debug] URL: https://genius.com/api/search/multi?per_page=5&page=4&q=Advertisement%20%E2%80%A2%201%20of%201%20 Spotify Lyrics+ Stable.user.js:2978:15
+[Genius Debug] Page 4: Received 8 song results Spotify Lyrics+ Stable.user.js:3000:17
+[Genius Debug]   Result 1: 
+Object { title: "Passenger Transport Regulation 2007 - Special Provisions Relating to Taxi Cabs", artist: "NSW State Government", url: "https://genius.com/Nsw-state-government-passenger-transport-regulation-2007-special-provisions-relating-to-taxi-cabs-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 2: 
+Object { title: "“Mandate for Change,” or Business as Usual", artist: "Noam Chomsky", url: "https://genius.com/Noam-chomsky-mandate-for-change-or-business-as-usual-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 3: 
+Object { title: "The Real History of the Rosicrucians - Chapter II. The Prophecy of Paracelsus, and The Universal Reformation of the Whole Wide World", artist: "Arthur Edward Waite", url: "https://genius.com/Arthur-edward-waite-the-real-history-of-the-rosicrucians-chapter-ii-the-prophecy-of-paracelsus-and-the-universal-reformation-of-the-whole-wide-world-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 4: 
+Object { title: "Passenger Transport Regulation 2007 - Special Provisions Relating to Taxi Cabs", artist: "NSW State Government", url: "https://genius.com/Nsw-state-government-passenger-transport-regulation-2007-special-provisions-relating-to-taxi-cabs-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 5: 
+Object { title: "“Mandate for Change,” or Business as Usual", artist: "Noam Chomsky", url: "https://genius.com/Noam-chomsky-mandate-for-change-or-business-as-usual-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 6: 
+Object { title: "The Real History of the Rosicrucians - Chapter II. The Prophecy of Paracelsus, and The Universal Reformation of the Whole Wide World", artist: "Arthur Edward Waite", url: "https://genius.com/Arthur-edward-waite-the-real-history-of-the-rosicrucians-chapter-ii-the-prophecy-of-paracelsus-and-the-universal-reformation-of-the-whole-wide-world-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 7: 
+Object { title: "Title VII of the Civil Rights Act of 1964, as amdended (42 U.S.C. 2000e, et seq.)", artist: "United States Congress", url: "https://genius.com/United-states-congress-title-vii-of-the-civil-rights-act-of-1964-as-amdended-42-usc-2000e-et-seq-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 8: 
+Object { title: "State of the Union 1897", artist: "William McKinley", url: "https://genius.com/William-mckinley-state-of-the-union-1897-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug] Target (Spotify) normalization: 
+Object { originalArtist: "Advertisement • 1 of 1", normalizedArtists: (1) […], originalTitle: "Spotify", cleanedTitle: "Spotify", normalizedTitle: "spotify", hasVersionKeywords: false }
+Spotify Lyrics+ Stable.user.js:3018:17
+[Genius Debug] Match threshold for 1 artist(s): 8 Spotify Lyrics+ Stable.user.js:3031:17
+[Genius Debug]     ⊗ Skipping "Passenger Transport Regulation 2007 - Special Provisions Relating to Taxi Cabs" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "“Mandate for Change,” or Business as Usual" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "The Real History of the Rosicrucians - Chapter II. The Prophecy of Paracelsus, and The Universal Reformation of the Whole Wide World" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Passenger Transport Regulation 2007 - Special Provisions Relating to Taxi Cabs" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "“Mandate for Change,” or Business as Usual" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "The Real History of the Rosicrucians - Chapter II. The Prophecy of Paracelsus, and The Universal Reformation of the Whole Wide World" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Title VII of the Civil Rights Act of 1964, as amdended (42 U.S.C. 2000e, et seq.)" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "State of the Union 1897" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]   No suitable match found on page 4 (bestScore: -Infinity, threshold: 8) Spotify Lyrics+ Stable.user.js:3199:19
+[Genius Debug] Page 5: Searching with query: "Advertisement • 1 of 1 " Spotify Lyrics+ Stable.user.js:2977:15
+[Genius Debug] URL: https://genius.com/api/search/multi?per_page=5&page=5&q=Advertisement%20%E2%80%A2%201%20of%201%20 Spotify Lyrics+ Stable.user.js:2978:15
+[Genius Debug] Page 5: Received 8 song results Spotify Lyrics+ Stable.user.js:3000:17
+[Genius Debug]   Result 1: 
+Object { title: "Hertz Corp. v. Friend", artist: "Supreme Court of the United States", url: "https://genius.com/Supreme-court-of-the-united-states-hertz-corp-v-friend-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 2: 
+Object { title: "SCP-3299", artist: "The SCP Foundation", url: "https://genius.com/The-scp-foundation-scp-3299-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 3: 
+Object { title: "Preventing Real Online Threats to Economic Creativity and Theft of Intellectual Property Act of 2011", artist: "112th Congress, 2011–2013", url: "https://genius.com/112th-congress-20112013-preventing-real-online-threats-to-economic-creativity-and-theft-of-intellectual-property-act-of-2011-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 4: 
+Object { title: "Hertz Corp. v. Friend", artist: "Supreme Court of the United States", url: "https://genius.com/Supreme-court-of-the-united-states-hertz-corp-v-friend-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 5: 
+Object { title: "SCP-3299", artist: "The SCP Foundation", url: "https://genius.com/The-scp-foundation-scp-3299-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 6: 
+Object { title: "Preventing Real Online Threats to Economic Creativity and Theft of Intellectual Property Act of 2011", artist: "112th Congress, 2011–2013", url: "https://genius.com/112th-congress-20112013-preventing-real-online-threats-to-economic-creativity-and-theft-of-intellectual-property-act-of-2011-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 7: 
+Object { title: "“What’s Wrong With Equal Rights for Women”", artist: "Phyllis Schlafly", url: "https://genius.com/Phyllis-schlafly-whats-wrong-with-equal-rights-for-women-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug]   Result 8: 
+Object { title: "The American Yawp, Chapter Two (Colliding Cultures)", artist: "Joseph Locke and Ben Wright, eds.", url: "https://genius.com/Joseph-locke-and-ben-wright-eds-the-american-yawp-chapter-two-colliding-cultures-annotated" }
+Spotify Lyrics+ Stable.user.js:3003:19
+[Genius Debug] Target (Spotify) normalization: 
+Object { originalArtist: "Advertisement • 1 of 1", normalizedArtists: (1) […], originalTitle: "Spotify", cleanedTitle: "Spotify", normalizedTitle: "spotify", hasVersionKeywords: false }
+Spotify Lyrics+ Stable.user.js:3018:17
+[Genius Debug] Match threshold for 1 artist(s): 8 Spotify Lyrics+ Stable.user.js:3031:17
+[Genius Debug]     ⊗ Skipping "Hertz Corp. v. Friend" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "SCP-3299" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Preventing Real Online Threats to Economic Creativity and Theft of Intellectual Property Act of 2011" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Hertz Corp. v. Friend" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "SCP-3299" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "Preventing Real Online Threats to Economic Creativity and Theft of Intellectual Property Act of 2011" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "“What’s Wrong With Equal Rights for Women”" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]     ⊗ Skipping "The American Yawp, Chapter Two (Colliding Cultures)" - translation page or non-simple URL Spotify Lyrics+ Stable.user.js:3042:21
+[Genius Debug]   No suitable match found on page 5 (bestScore: -Infinity, threshold: 8) Spotify Lyrics+ Stable.user.js:3199:19
+[Genius Debug] ✗✗✗ No lyrics found after trying all title variants and pages Spotify Lyrics+ Stable.user.js:3325:11
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:3326:11
