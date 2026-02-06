@@ -1694,7 +1694,7 @@ const PLAY_WORDS = [
         return { error: "Rate limit exceeded - too many requests" };
       } else {
         console.log(`[LRCLIB Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
-        return { error: `Request failed (HTTP ${response.status})` };
+        return { error: `LRCLIB request failed - server error (HTTP ${response.status})` };
       }
     }
 
