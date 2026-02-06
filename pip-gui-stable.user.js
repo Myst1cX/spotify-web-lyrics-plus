@@ -2999,7 +2999,8 @@ const ProviderGenius = {
     /we do not have the lyrics for/i,
     /be the first to add the lyrics/i,
     /please check back once the song has been released/i,
-    /add lyrics on genius/i
+    /add lyrics on genius/i,
+    /this song is an instrumental/i
   ];
   if (
     lines.length === 1 &&
