@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.4
+// @version      16.4.fixing
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -6252,16 +6252,9 @@ const Providers = {
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
-      // Note: This else branch should rarely/never execute in normal flow
-      // Expected provider behavior:
-      //   - If no lyrics found: Return { error: "..." } (handled at line 6128, returns early)
-      //   - If lyrics found: Return data object where getSynced/getUnsynced extract lyrics
-      // 
-      // If we reach here, it means:
-      //   - Provider returned a data object WITHOUT an error property (passed line 6128 check)
-      //   - BUT both getSynced(result) and getUnsynced(result) returned null (no lyrics extracted)
-      //   - This is unexpected because provider should have returned { error: "..." } instead
-      console.warn("[Lyrics+ Warning] Unexpected state: Provider returned data without error property, but no lyrics were extracted");
+      if (!lyricsContainer.textContent.trim()) {
+        lyricsContainer.textContent = `No lyrics found for this track from ${Providers.current}`;
+      }
       currentSyncedLyrics = null;
       currentUnsyncedLyrics = null;
     }
@@ -6754,3 +6747,4 @@ const Providers = {
 
   init();
 })();
+
