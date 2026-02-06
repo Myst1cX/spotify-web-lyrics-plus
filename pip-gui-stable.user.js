@@ -6265,8 +6265,9 @@ const Providers = {
 
     // Final safety check: if container is empty or contains only whitespace after all processing
     // This catches edge cases where error messages might be empty/whitespace or content got cleared somehow
-    if (!lyricsContainer.textContent.trim()) {
-      console.warn("[Lyrics+ Warning] Trim check triggered - container empty or whitespace only after all processing");
+    // Check both textContent (for text-based content) and children (for element-based content like <p> tags)
+    if (!lyricsContainer.textContent.trim() && lyricsContainer.children.length === 0) {
+      console.warn("[Lyrics+ Warning] Trim check triggered - container empty (no text and no child elements) after all processing");
       lyricsContainer.textContent = `No lyrics found for this track from ${Providers.current || 'this provider'}`;
     }
 
