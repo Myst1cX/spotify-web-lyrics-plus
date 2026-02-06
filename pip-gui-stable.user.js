@@ -1714,6 +1714,9 @@ const PLAY_WORDS = [
     return null;
   }
 }
+  // LRCLIB provider
+  const LRCLIB_INSTRUMENTAL_PATTERN = /^\s*\(?\s*instrumental\s*\)?\s*$/i;
+  
   const ProviderLRCLIB = {
     async findLyrics(info) {
       try {
@@ -1736,7 +1739,7 @@ const PLAY_WORDS = [
       if (!body?.plainLyrics) return null;
       const lyrics = Utils.parseLocalLyrics(body.plainLyrics).unsynced;
       // Filter out "(Instrumental)" placeholder text (single line only)
-      if (lyrics && lyrics.length === 1 && /^\s*\(?\s*instrumental\s*\)?\s*$/i.test(lyrics[0].text)) {
+      if (lyrics && lyrics.length === 1 && LRCLIB_INSTRUMENTAL_PATTERN.test(lyrics[0].text)) {
         console.log("[LRCLIB Debug] ⚠ Track has placeholder text '(Instrumental)' - skipping to next provider");
         return null;
       }
@@ -1747,7 +1750,7 @@ const PLAY_WORDS = [
       if (!body?.syncedLyrics) return null;
       const lyrics = Utils.parseLocalLyrics(body.syncedLyrics).synced;
       // Filter out "(Instrumental)" placeholder text (single line only)
-      if (lyrics && lyrics.length === 1 && /^\s*\(?\s*instrumental\s*\)?\s*$/i.test(lyrics[0].text)) {
+      if (lyrics && lyrics.length === 1 && LRCLIB_INSTRUMENTAL_PATTERN.test(lyrics[0].text)) {
         console.log("[LRCLIB Debug] ⚠ Track has placeholder text '(Instrumental)' - skipping to next provider");
         return null;
       }
