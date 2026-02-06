@@ -6227,6 +6227,8 @@ const Providers = {
       lyricsContainer.style.msOverflowStyle = "";
       // Note: All providers now return explicit error messages via result.error (handled at line 6117)
       // This else branch should not execute in normal flow since providers always return errors when no lyrics found
+      // If we reach here, it indicates an unexpected state (provider returned success but no lyrics)
+      console.warn("[Lyrics+ Warning] Unexpected state: Provider returned success but no lyrics available");
       currentSyncedLyrics = null;
       currentUnsyncedLyrics = null;
     }
