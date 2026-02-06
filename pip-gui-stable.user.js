@@ -1728,15 +1728,10 @@ const PLAY_WORDS = [
         if (!data) return { error: "No lyrics available from LRCLIB" };
         return data;
       } catch (e) {
-        // Differentiate between network issues and other errors
-        const errorMsg = e.message || String(e);
-        if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-          return { error: "LRCLIB request failed - check your internet connection" };
-        } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
-          return { error: "LRCLIB request timed out - server may be slow or unavailable" };
-        } else {
-          return { error: "LRCLIB request failed - service may be unavailable" };
-        }
+        // Catch block handles network errors, CORS issues, timeouts, or connection failures
+        // These are distinct from HTTP error responses (404, 500, etc.) which are handled above
+        console.error("[LRCLIB Debug] ✗ Exception caught:", e);
+        return { error: "LRCLIB request failed - connection error or service unreachable" };
       }
     },
     getUnsynced(body) {
@@ -1964,15 +1959,10 @@ const PLAY_WORDS = [
         }
         return { error: "No lyrics available from KPoe" };
       } catch (e) {
-        // Differentiate between network issues and other errors
-        const errorMsg = e.message || String(e);
-        if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-          return { error: "KPoe request failed - check your internet connection" };
-        } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
-          return { error: "KPoe request timed out - server may be slow or unavailable" };
-        } else {
-          return { error: "KPoe request failed - service may be unavailable" };
-        }
+        // Catch block handles network errors, CORS issues, timeouts, or connection failures
+        // These are distinct from HTTP error responses (404, 500, etc.) which are handled above
+        console.error("[KPoe Debug] ✗ Exception caught:", e);
+        return { error: "KPoe request failed - connection error or service unreachable" };
       }
     },
     getUnsynced(body) {
@@ -2387,15 +2377,9 @@ async function fetchMusixmatchLyrics(songInfo) {
     return { error: "No lyrics available from Musixmatch" };
   } catch (e) {
     console.error("[Musixmatch Debug] ✗ Fetch error:", e.message || e);
-    // Differentiate between network issues and other errors
-    const errorMsg = e.message || String(e);
-    if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-      return { error: "Musixmatch request failed - check your internet connection" };
-    } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
-      return { error: "Musixmatch request timed out - server may be slow or unavailable" };
-    } else {
-      return { error: "Musixmatch request failed - service may be unavailable" };
-    }
+    // Catch block handles network errors, CORS issues, timeouts, or connection failures
+    // These are distinct from HTTP error responses (404, 401, etc.) which are handled above
+    return { error: "Musixmatch request failed - connection error or service unreachable" };
   }
 }
 
@@ -2434,15 +2418,9 @@ if (data.error) {
 }
 return data;
     } catch (e) {
-      // Differentiate between network issues and other errors
-      const errorMsg = e.message || String(e);
-      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-        return { error: "Musixmatch request failed - check your internet connection" };
-      } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
-        return { error: "Musixmatch request timed out - server may be slow or unavailable" };
-      } else {
-        return { error: "Musixmatch request failed - service may be unavailable" };
-      }
+      // Catch block handles network errors, CORS issues, timeouts, or connection failures
+      // These are distinct from HTTP error responses (404, 401, etc.) which are handled above
+      return { error: "Musixmatch request failed - connection error or service unreachable" };
     }
   },
   getUnsynced: musixmatchGetUnsynced,
@@ -3018,15 +2996,9 @@ const ProviderGenius = {
     try {
       const data = await fetchGeniusLyrics(info);
       if (!data || data.error) {
-        // Differentiate between network issues and other errors
-        const errorMsg = data?.error || "Unknown error";
-        if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-          return { error: "Genius request failed - check your internet connection" };
-        } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
-          return { error: "Genius request timed out - server may be slow or unavailable" };
-        } else {
-          return { error: "Genius request failed - service may be unavailable" };
-        }
+        // Catch block handles network errors, CORS issues, timeouts, or connection failures
+        // This is distinct from the song not being found (which returns data.error from fetchGeniusLyrics)
+        return { error: "Genius request failed - connection error or service unreachable" };
       }
 
       // Check if lyrics indicate no lyrics available or instrumental track
@@ -3067,15 +3039,10 @@ const ProviderGenius = {
 
       return data;
     } catch (e) {
-      // Differentiate between network issues and other errors
-      const errorMsg = e.message || String(e);
-      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-        return { error: "Genius request failed - check your internet connection" };
-      } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
-        return { error: "Genius request timed out - server may be slow or unavailable" };
-      } else {
-        return { error: "Genius request failed - service may be unavailable" };
-      }
+      // Catch block handles network errors, CORS issues, timeouts, or connection failures
+      // These are distinct from HTTP error responses (404, etc.) which are handled above
+      console.error("[Genius Debug] ✗ Exception caught:", e);
+      return { error: "Genius request failed - connection error or service unreachable" };
     }
   },
   getUnsynced(body) {
@@ -3356,15 +3323,9 @@ const ProviderSpotify = {
       return data.lyrics;
     } catch (e) {
       console.error("[Spotify Debug] ✗ Fetch error:", e.message || e);
-      // Differentiate between network issues and other errors
-      const errorMsg = e.message || String(e);
-      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-        return { error: "Spotify request failed - check your internet connection" };
-      } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
-        return { error: "Spotify request timed out - server may be slow or unavailable" };
-      } else {
-        return { error: "Spotify request failed - service may be unavailable" };
-      }
+      // Catch block handles network errors, CORS issues, timeouts, or connection failures
+      // These are distinct from HTTP error responses (404, 403, etc.) which are handled above
+      return { error: "Spotify request failed - connection error or service unreachable" };
     }
   },
 
