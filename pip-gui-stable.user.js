@@ -1688,12 +1688,14 @@ const PLAY_WORDS = [
     if (!response.ok) {
       if (response.status === 404) {
         console.log("[LRCLIB Debug] ✗ Track not found in LRCLIB database");
+        return { error: "Track not found in LRCLIB database" };
       } else if (response.status === 429) {
         console.log("[LRCLIB Debug] ✗ Rate limit exceeded - too many requests");
+        return { error: "Rate limit exceeded - too many requests" };
       } else {
         console.log(`[LRCLIB Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+        return { error: `Request failed (HTTP ${response.status})` };
       }
-      return null;
     }
 
     const data = await response.json();
@@ -1722,10 +1724,16 @@ const PLAY_WORDS = [
     async findLyrics(info) {
       try {
         let data = await fetchLRCLibLyrics(info, false);
-        if (!data || (!data.syncedLyrics && !data.plainLyrics)) {
-          data = await fetchLRCLibLyrics(info, true); // try without album
+        // Check if first attempt returned an error or no lyrics
+        if (!data || data.error || (!data.syncedLyrics && !data.plainLyrics)) {
+          // If it was a 404 or rate limit error, try without album
+          if (!data?.error || data.error.includes("Track not found")) {
+            data = await fetchLRCLibLyrics(info, true); // try without album
+          }
         }
+        // If still no data or error, return appropriate message
         if (!data) return { error: "No lyrics available from LRCLIB" };
+        if (data.error) return data; // Return the specific error (404, rate limit, etc.)
         return data;
       } catch (e) {
         // Catch block handles network errors, CORS issues, timeouts, or connection failures
@@ -2376,9 +2384,9 @@ async function fetchMusixmatchLyrics(songInfo) {
     console.log("[Musixmatch Debug] ✗ No lyrics found in any format");
     return { error: "No lyrics available from Musixmatch" };
   } catch (e) {
-    console.error("[Musixmatch Debug] ✗ Fetch error:", e.message || e);
     // Catch block handles network errors, CORS issues, timeouts, or connection failures
     // These are distinct from HTTP error responses (404, 401, etc.) which are handled above
+    console.error("[Musixmatch Debug] ✗ Exception caught:", e);
     return { error: "Musixmatch request failed - connection error or service unreachable" };
   }
 }
@@ -2420,6 +2428,7 @@ return data;
     } catch (e) {
       // Catch block handles network errors, CORS issues, timeouts, or connection failures
       // These are distinct from HTTP error responses (404, 401, etc.) which are handled above
+      console.error("[Musixmatch Debug] ✗ Exception caught:", e);
       return { error: "Musixmatch request failed - connection error or service unreachable" };
     }
   },
@@ -2996,8 +3005,6 @@ const ProviderGenius = {
     try {
       const data = await fetchGeniusLyrics(info);
       if (!data || data.error) {
-        // Catch block handles network errors, CORS issues, timeouts, or connection failures
-        // This is distinct from the song not being found (which returns data.error from fetchGeniusLyrics)
         return { error: "Genius request failed - connection error or service unreachable" };
       }
 
@@ -3285,8 +3292,8 @@ const ProviderSpotify = {
           return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
         }
         if (res.status === 404) {
-          console.log("[Spotify Debug] ✗ Track not found or no lyrics available");
-          return { error: "Track not found or no lyrics available from Spotify" };
+          console.log("[Spotify Debug] ✗ Track not found in Spotify database");
+          return { error: "Track not found in Spotify database" };
         }
         if (res.status === 403) {
           console.log("[Spotify Debug] ✗ Access forbidden - check token permissions");
@@ -3322,9 +3329,9 @@ const ProviderSpotify = {
       console.log(`[Spotify Debug] ✓ Lyrics found! Type: ${data.lyrics.syncType}, Lines: ${data.lyrics.lines.length}, Language: ${data.lyrics.language || 'unknown'}`);
       return data.lyrics;
     } catch (e) {
-      console.error("[Spotify Debug] ✗ Fetch error:", e.message || e);
       // Catch block handles network errors, CORS issues, timeouts, or connection failures
       // These are distinct from HTTP error responses (404, 403, etc.) which are handled above
+      console.error("[Spotify Debug] ✗ Exception caught:", e);
       return { error: "Spotify request failed - connection error or service unreachable" };
     }
   },
