@@ -3009,7 +3009,12 @@ const ProviderGenius = {
       // Check for instrumental/placeholder text patterns early (in findLyrics)
       // This ensures proper error reporting when provider is manually selected
       if (data.plainLyrics) {
-        const lines = parseGeniusLyrics(data.plainLyrics).unsynced;
+        const parsed = parseGeniusLyrics(data.plainLyrics);
+        const lines = parsed.unsynced;
+        
+        // Cache parsed lyrics to avoid redundant parsing in getUnsynced
+        data._parsedLyrics = lines;
+        
         const notTranscribedPatterns = [
           /lyrics for this song have yet to be transcribed/i,
           /we do not have the lyrics for/i,
@@ -3041,7 +3046,8 @@ const ProviderGenius = {
   },
   getUnsynced(body) {
     if (!body?.plainLyrics) return null;
-    const lines = parseGeniusLyrics(body.plainLyrics).unsynced;
+    // Use cached parsed lyrics if available (set in findLyrics)
+    const lines = body._parsedLyrics || parseGeniusLyrics(body.plainLyrics).unsynced;
     return lines;
   },
   getSynced() {
