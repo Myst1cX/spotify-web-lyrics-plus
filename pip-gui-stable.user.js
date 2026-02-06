@@ -2400,17 +2400,14 @@ const ProviderMusixmatch = {
   async findLyrics(info) {
     try {
       const data = await fetchMusixmatchLyrics(info);
-      if (!data) {
-  return { error: "No lyrics available from Musixmatch" };
-}
-if (data.error) {
-  // If the error is about missing token, show that instead
-  if (data.error.includes("Double click on the Musixmatch provider")) {
-    return { error: data.error };
-  }
-  return { error: "No lyrics available from Musixmatch" };
-}
-return data;
+      if (!data || data.error) {
+        // If the error is about missing token, show that instead
+        if (data?.error?.includes("Double click on the Musixmatch provider")) {
+          return { error: data.error };
+        }
+        return { error: "No lyrics available from Musixmatch" };
+      }
+      return data;
     } catch (e) {
       return { error: "Musixmatch request failed - connection error or service unreachable" };
     }
@@ -2987,12 +2984,13 @@ const ProviderGenius = {
   async findLyrics(info) {
     try {
       const data = await fetchGeniusLyrics(info);
-      if (!data) {
-        return { error: "Genius request failed - connection error or service unreachable" };
-      }
       // If data has an error from the fetch function aka was unable to parse or fetch from Genius, return as is ("No lyrics available from Genius")
-      if (data.error) {
-        return data;
+      // or if no data at all, return connection error
+      if (!data || data.error) {
+        if (data?.error) {
+          return data;
+        }
+        return { error: "Genius request failed - connection error or service unreachable" };
       }
 
       // Check if lyrics indicate no lyrics available or instrumental track
