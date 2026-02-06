@@ -131,6 +131,7 @@
   let pollingInterval = null;
   let progressInterval = null; // <-- NEW: interval for progress bar updates
   let currentTrackId = null;
+  let currentSearchId = null; // Track the current ongoing search to prevent race conditions
   let currentSyncedLyrics = null;
   let currentUnsyncedLyrics = null;
   let currentLyricsContainer = null;
@@ -6248,6 +6249,10 @@ const Providers = {
 
   // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info, forceRefresh = false) {
+    // Generate a unique search ID for this search request
+    const searchId = `${info.id}_${Date.now()}`;
+    currentSearchId = searchId;
+    
     // Check cache first unless forcing refresh
     if (!forceRefresh) {
       const cachedData = LyricsCache.get(info.id);
@@ -6284,12 +6289,24 @@ const Providers = {
 
         const provider = Providers.map[name];
         const result = await provider.findLyrics(info);
+        
+        // Check if this search is still current after the async operation
+        if (currentSearchId !== searchId) {
+          DEBUG.info('Autodetect', `Search aborted - newer search started for different track`);
+          return;
+        }
 
         const providerDuration = performance.now() - providerStartTime;
 
         if (result && !result.error) {
           let lyrics = provider[type](result);
           if (lyrics && lyrics.length > 0) {
+            // Final check before updating UI - ensure this search is still current
+            if (currentSearchId !== searchId) {
+              DEBUG.info('Autodetect', `Search aborted - newer search started for different track`);
+              return;
+            }
+            
             DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
             DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
 
@@ -6313,6 +6330,12 @@ const Providers = {
         // Without this try-catch, an error would skip the remaining providers and stop the loop.
         DEBUG.provider.failure(name, type, error);
       }
+    }
+
+    // Check if this search is still current before showing "no lyrics found"
+    if (currentSearchId !== searchId) {
+      DEBUG.info('Autodetect', `Search aborted - newer search started for different track`);
+      return;
     }
 
     // Unselect any provider
