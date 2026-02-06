@@ -3004,8 +3004,12 @@ const ProviderGenius = {
   async findLyrics(info) {
     try {
       const data = await fetchGeniusLyrics(info);
-      if (!data || data.error) {
+      if (!data) {
         return { error: "Genius request failed - connection error or service unreachable" };
+      }
+      // If data has an error from the fetch function, return it as-is
+      if (data.error) {
+        return data;
       }
 
       // Check if lyrics indicate no lyrics available or instrumental track
