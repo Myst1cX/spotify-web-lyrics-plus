@@ -5963,6 +5963,45 @@ const Providers = {
   }
 
   /**
+   * Helper function to hide UI buttons for instrumental tracks
+   * @param {HTMLElement} popup - The popup element
+   */
+  function hideButtonsForInstrumental(popup) {
+    const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
+    const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
+    const chineseConvBtn = popup._chineseConvBtn;
+    const transliterationBtn = popup._transliterationToggleBtn;
+    
+    if (downloadBtn) {
+      downloadBtn.style.display = "none";
+      if (downloadDropdown) downloadDropdown.style.display = "none";
+    }
+    if (chineseConvBtn) chineseConvBtn.style.display = "none";
+    if (transliterationBtn) transliterationBtn.style.display = "none";
+  }
+
+  /**
+   * Helper function to cache instrumental track data
+   * @param {string} trackId - Track ID
+   * @param {string} provider - Provider name
+   * @param {Object} trackInfo - Track information
+   */
+  function cacheInstrumentalTrack(trackId, provider, trackInfo) {
+    LyricsCache.set(trackId, {
+      provider: provider,
+      synced: null,
+      unsynced: null,
+      instrumental: true,
+      trackInfo: {
+        title: trackInfo.title,
+        artist: trackInfo.artist,
+        album: trackInfo.album,
+        duration: trackInfo.duration
+      }
+    });
+  }
+
+  /**
    * Load and display lyrics from cache
    * @param {HTMLElement} popup - The popup element
    * @param {Object} info - Track information
@@ -6002,17 +6041,7 @@ const Providers = {
     if (cachedData.instrumental) {
       console.log(`🎵 [Lyrics+] Loaded instrumental track from cache (no lyrics)`);
       lyricsContainer.textContent = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
-      
-      // Hide download and Chinese conversion buttons for instrumental tracks
-      if (downloadBtn) {
-        downloadBtn.style.display = "none";
-        if (downloadDropdown) downloadDropdown.style.display = "none";
-      }
-      if (chineseConvBtn) chineseConvBtn.style.display = "none";
-      
-      const transliterationBtn = popup._transliterationToggleBtn;
-      if (transliterationBtn) transliterationBtn.style.display = "none";
-      
+      hideButtonsForInstrumental(popup);
       return true;
     }
 
@@ -6156,31 +6185,8 @@ const Providers = {
     if (result.instrumental) {
       console.log(`🎵 [Lyrics+] Track is instrumental (no lyrics) - detected by ${Providers.current}`);
       lyricsContainer.textContent = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
-      
-      // Hide all buttons for instrumental tracks
-      if (downloadBtn) {
-        downloadBtn.style.display = "none";
-        if (downloadDropdown) downloadDropdown.style.display = "none";
-      }
-      if (chineseConvBtn) chineseConvBtn.style.display = "none";
-      
-      const transliterationBtn = popup._transliterationToggleBtn;
-      if (transliterationBtn) transliterationBtn.style.display = "none";
-      
-      // Cache the instrumental status
-      LyricsCache.set(info.id, {
-        provider: Providers.current,
-        synced: null,
-        unsynced: null,
-        instrumental: true,
-        trackInfo: {
-          title: info.title,
-          artist: info.artist,
-          album: info.album,
-          duration: info.duration
-        }
-      });
-      
+      hideButtonsForInstrumental(popup);
+      cacheInstrumentalTrack(info.id, Providers.current, info);
       return;
     }
 
@@ -6430,19 +6436,9 @@ const Providers = {
               lyricsContainer.textContent = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
             }
             
-            // Cache the instrumental status so we don't keep searching
-            LyricsCache.set(info.id, {
-              provider: name,
-              synced: null,
-              unsynced: null,
-              instrumental: true,
-              trackInfo: {
-                title: info.title,
-                artist: info.artist,
-                album: info.album,
-                duration: info.duration
-              }
-            });
+            // Hide buttons and cache the instrumental status
+            hideButtonsForInstrumental(popup);
+            cacheInstrumentalTrack(info.id, name, info);
             
             const totalDuration = performance.now() - startTime;
             DEBUG.info('Autodetect', `Completed in ${totalDuration.toFixed(2)}ms - instrumental track detected by ${name}`);
