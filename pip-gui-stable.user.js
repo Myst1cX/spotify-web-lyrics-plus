@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.0
+// @version      16.1
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (16.1): PREVENT LYRIC SEARCH WHEN ADVERTISEMENT DETECTED 
 
 // RESOLVED (16.0): LYRICS CACHING FEATURE + REPEAT ONE SUPPORT
 // • Automatic caching of lyrics for last 50 songs played
@@ -131,6 +132,12 @@
   let pollingInterval = null;
   let progressInterval = null; // <-- NEW: interval for progress bar updates
   let currentTrackId = null;
+  
+  // Race Condition Prevention (fixes bug where advertisements overwrite song lyrics)
+  // See FIX_EXPLANATION.md for detailed explanation
+  let currentSearchId = null; // Tracks the ID of the currently active lyrics search
+  let searchIdCounter = 0; // Monotonically increasing counter for guaranteed unique search IDs
+  
   let currentSyncedLyrics = null;
   let currentUnsyncedLyrics = null;
   let currentLyricsContainer = null;
@@ -880,6 +887,22 @@
     if (parts.length === 2) return (parts[0] * 60 + parts[1]) * 1000;
     if (parts.length === 3) return (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1000;
     return 0;
+  }
+
+  /**
+   * Detects if a track is a Spotify advertisement.
+   * Advertisements typically have "Advertisement" in the artist field.
+   * Examples: "Advertisement • 1 of 1", "Advertisement", etc.
+   * 
+   * @param {Object} trackInfo - Track information object with artist field
+   * @returns {boolean} - True if track is an advertisement
+   */
+  function isAdvertisement(trackInfo) {
+    if (!trackInfo || !trackInfo.artist) return false;
+    
+    // Check if artist contains "Advertisement" (case-insensitive)
+    const artist = trackInfo.artist.toLowerCase();
+    return artist.includes('advertisement');
   }
 
   function timeoutPromise(ms) {
@@ -6248,6 +6271,34 @@ const Providers = {
 
   // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info, forceRefresh = false) {
+    // Skip lyrics search for advertisements - when ad ends, real song will trigger new search
+    if (isAdvertisement(info)) {
+      console.log(`📢 [Lyrics+] Advertisement detected - skipping lyrics search`);
+      return;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // RACE CONDITION PREVENTION: Search ID Tracking
+    // ═══════════════════════════════════════════════════════════════════════════
+    // For non-advertisement tracks, we use search ID tracking to handle
+    // rapid song changes (e.g., skipping tracks, shuffle, autoplay).
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    // Generate a unique search ID for this search request
+    // Using both performance.now() and a counter for guaranteed uniqueness
+    const searchId = `${info.id}_${performance.now()}_${++searchIdCounter}`;
+    currentSearchId = searchId;
+    
+    // Helper function to check if this search is still current
+    // Returns false if a newer search has superseded this one
+    const isSearchStillCurrent = () => {
+      if (currentSearchId !== searchId) {
+        DEBUG.info('Autodetect', `Search aborted - newer search has started`);
+        return false;
+      }
+      return true;
+    };
+    
     // Check cache first unless forcing refresh
     if (!forceRefresh) {
       const cachedData = LyricsCache.get(info.id);
@@ -6284,12 +6335,23 @@ const Providers = {
 
         const provider = Providers.map[name];
         const result = await provider.findLyrics(info);
+        
+        // ═══ CHECKPOINT 1: After async provider call ═══
+        // While waiting for the provider API response, a new song may have started.
+        // Check if we're still the current search. If not, abort to prevent
+        // outdated results from continuing to search and potentially overwriting UI.
+        if (!isSearchStillCurrent()) return;
 
         const providerDuration = performance.now() - providerStartTime;
 
         if (result && !result.error) {
           let lyrics = provider[type](result);
           if (lyrics && lyrics.length > 0) {
+            // ═══ CHECKPOINT 2: Before UI update with lyrics ═══
+            // Found lyrics! But before updating UI, verify we're STILL current.
+            // This prevents: Old search finds lyrics after new search already updated UI.
+            if (!isSearchStillCurrent()) return;
+            
             DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
             DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
 
@@ -6314,6 +6376,15 @@ const Providers = {
         DEBUG.provider.failure(name, type, error);
       }
     }
+
+    // ═══ CHECKPOINT 3: Before "No lyrics found" message ═══
+    // Checked all providers, no lyrics found. Before showing error message,
+    // verify we're still current. This is CRITICAL for the advertisement scenario:
+    // - Song search finds nothing after checking all providers
+    // - But advertisement already started and found lyrics
+    // - Without this check, song search would overwrite ad lyrics with "No lyrics found"
+    // With this check: Song search aborts, ad lyrics remain on screen ✓
+    if (!isSearchStillCurrent()) return;
 
     // Unselect any provider
     Providers.current = null;
