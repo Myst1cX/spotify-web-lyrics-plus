@@ -5983,12 +5983,12 @@ const Providers = {
   /**
    * Helper function to cache instrumental track data
    * @param {string} trackId - Track ID
-   * @param {string} provider - Provider name
+   * @param {string} provider - Provider name that detected instrumental
    * @param {Object} trackInfo - Track information
    */
   function cacheInstrumentalTrack(trackId, provider, trackInfo) {
     LyricsCache.set(trackId, {
-      provider: provider,
+      provider: null,  // No specific provider since instrumental means no lyrics from any source
       synced: null,
       unsynced: null,
       instrumental: true,
@@ -5999,6 +5999,7 @@ const Providers = {
         duration: trackInfo.duration
       }
     });
+    console.log(`✅ [Lyrics+] Instrumental track cached (detected by ${provider}) - will show "no lyrics" message on future plays`);
   }
 
   /**
@@ -6039,9 +6040,12 @@ const Providers = {
 
     // Handle cached instrumental tracks
     if (cachedData.instrumental) {
-      console.log(`🎵 [Lyrics+] Loaded instrumental track from cache (no lyrics)`);
-      lyricsContainer.textContent = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
+      console.log(`🎵 [Lyrics+] Loaded instrumental track from cache - no lyrics available`);
+      lyricsContainer.textContent = "No lyrics were found for this track from any of the available providers";
       hideButtonsForInstrumental(popup);
+      // Don't highlight any provider tab since instrumental means checked all and found nothing
+      Providers.current = null;
+      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
       return true;
     }
 
@@ -6184,9 +6188,12 @@ const Providers = {
     // Check if track is marked as instrumental
     if (result.instrumental) {
       console.log(`🎵 [Lyrics+] Track is instrumental (no lyrics) - detected by ${Providers.current}`);
-      lyricsContainer.textContent = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
+      lyricsContainer.textContent = "No lyrics were found for this track from any of the available providers";
       hideButtonsForInstrumental(popup);
       cacheInstrumentalTrack(info.id, Providers.current, info);
+      // Don't highlight any provider since instrumental means no lyrics from any source
+      Providers.current = null;
+      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
       return;
     }
 
@@ -6427,18 +6434,19 @@ const Providers = {
             console.log(`🎵 [Lyrics+] Track is instrumental (no lyrics) - detected by ${name}`);
             DEBUG.info('Autodetect', `Track marked as instrumental by ${name}`);
             
-            // Display instrumental message
-            Providers.setCurrent(name);
-            if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-            
+            // Show the same message as when no providers have lyrics
             const lyricsContainer = popup.querySelector("#lyrics-plus-content");
             if (lyricsContainer) {
-              lyricsContainer.textContent = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
+              lyricsContainer.textContent = "No lyrics were found for this track from any of the available providers";
             }
             
             // Hide buttons and cache the instrumental status
             hideButtonsForInstrumental(popup);
             cacheInstrumentalTrack(info.id, name, info);
+            
+            // Don't highlight any provider since instrumental means no lyrics from any source
+            Providers.current = null;
+            if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
             
             const totalDuration = performance.now() - startTime;
             DEBUG.info('Autodetect', `Completed in ${totalDuration.toFixed(2)}ms - instrumental track detected by ${name}`);
