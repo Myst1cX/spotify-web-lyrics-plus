@@ -1,5 +1,5 @@
 // the relevant console log is below
-// issue: our script correctly found synced lyrics and displayed them, all good. but it seems it continued in the background with searching other providers and once it went thru all others, determined no lyrics found and updated lyric modal's lyric container with the no lyrics message.
+// issue: our script (pip gui stable user.js) correctly found synced lyrics and displayed them, all good. but it seems it continued in the background with searching other providers and once it went thru all others, determined no lyrics found and updated lyric modal's lyric container with the no lyrics message.
 // what we need to do: deeply check the code. we want the lyric modal to stop auto searching other providers if lyric source already found. (note in the case of providers where you have multiple attempts for finding lyrics thru different request types, you have to leave logic as is - with kpoe as documented, we prefer a certain lyric type as chosen but still need to go thru all 5 attempts. and with genius as you see we have various attempts, a whole logic which at the end determines acceptable lrc source if multiple lyric possibilites are found).
 // is it occuring because of the script detecting "Advertisement" as another song?
 // even if thats likely, consider all possibilities, check all of the code before jumping to conclusions. update me with the findings, before jumping to fixing the bug.
@@ -414,4 +414,5 @@ Spotify Lyrics+ Stable.user.js:3018:17
 [Genius Debug]   No suitable match found on page 5 (bestScore: -Infinity, threshold: 8) Spotify Lyrics+ Stable.user.js:3199:19
 [Genius Debug] ✗✗✗ No lyrics found after trying all title variants and pages Spotify Lyrics+ Stable.user.js:3325:11
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:3326:11
+
 
