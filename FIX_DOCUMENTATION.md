@@ -1,47 +1,64 @@
-# Race Condition Fix Documentation
+# Advertisement & Race Condition Fix Documentation
 
-This directory contains documentation explaining the race condition fix that prevents advertisements and song changes from overwriting lyrics in the UI.
+This directory contains documentation explaining the two-layer fix that prevents advertisements and rapid song changes from causing lyrics display issues.
 
 ## 📚 Documentation Files
 
 ### [QUICK_SUMMARY.md](./QUICK_SUMMARY.md) - **Start Here!** 
 Quick overview with visual timelines and easy-to-understand examples.
-- Before/after comparison
+- Before/after comparison showing both approaches
 - Visual timeline diagrams  
-- 3-step explanation
-- Real-world example table
+- Advertisement detection explanation
+- Race condition backup explanation
+- Real-world examples
 - Perfect for understanding the basics
 
 ### [FIX_EXPLANATION.md](./FIX_EXPLANATION.md) - **Technical Deep Dive**
 Comprehensive technical documentation for developers.
 - Detailed problem analysis from bug1.txt
-- Step-by-step race condition explanation
-- Coverage of all three validation checkpoints
+- Step-by-step explanation of advertisement detection
+- Race condition handling for rapid song changes
 - Complete advertisement scenario walkthrough
-- Why the fix is correct and guaranteed to work
+- Why the two-layer approach is optimal
 
 ### Code Comments - **Implementation Details**
 Enhanced inline comments in `pip-gui-stable.user.js`:
-- Line 133-135: State variables with explanatory comments
-- Line 6251-6280: Extensive header comment explaining the problem and solution
-- Line 6323-6324: Checkpoint 1 - After async provider call
-- Line 6331-6334: Checkpoint 2 - Before UI update with lyrics
-- Line 6364-6371: Checkpoint 3 - Before "No lyrics found" message
+- Line 891-907: `isAdvertisement()` function with documentation
+- Line 133-136: State variables with explanatory comments
+- Line 6272-6297: Advertisement detection and early return
+- Line 6299-6319: Race condition prevention for non-ads
+- Line 6338-6340: Checkpoint 1 - After async provider call
+- Line 6346-6349: Checkpoint 2 - Before UI update with lyrics
+- Line 6379-6386: Checkpoint 3 - Before "No lyrics found" message
 
 ## 🎯 Quick Answers
 
 ### What does this fix achieve?
-Prevents outdated lyrics searches from updating the UI by tracking which search is "current" and aborting superseded searches.
+**Two-layer protection:**
+1. **Primary:** Skips lyrics search entirely for advertisements (detects "Advertisement" in artist field)
+2. **Backup:** Prevents outdated searches from updating UI during rapid song changes (search ID tracking)
 
 ### How is the advertisement situation combatted?
-When an ad interrupts a song search:
+**NEW APPROACH (Simpler & Better):**
+1. Detect advertisement by checking artist field for "Advertisement"
+2. Skip lyrics search entirely - no API calls
+3. Show message: "Lyrics are not available for advertisements"
+4. Exit immediately - no race condition possible!
+
+**OLD APPROACH (Still used as backup for rapid song changes):**
 1. Ad search overwrites `currentSearchId` 
 2. Old song search detects it's outdated
 3. Old search aborts without touching UI
-4. Only ad search (being "current") updates UI
+4. Only current search updates UI
+
+### Why is advertisement detection better?
+- ✅ **Simpler** - Prevents problem at source
+- ✅ **More efficient** - No wasted API calls on ads
+- ✅ **Clearer UX** - Explicit message about ads
+- ✅ **Better performance** - Exit immediately
 
 ### Does it work for other scenarios?
-Yes! Handles any rapid song change: skipping tracks, shuffle, autoplay, etc.
+Yes! Race condition protection still handles rapid song changes: skipping tracks, shuffle, autoplay, etc.
 
 ## 🔍 The Bug (From bug1.txt)
 
@@ -53,9 +70,25 @@ Yes! Handles any rapid song change: skipping tracks, shuffle, autoplay, etc.
 
 **Root cause:** Multiple async searches running concurrently, slowest search "wins" and overwrites UI.
 
-## ✅ The Solution
+## ✅ The Solution (Two Layers)
 
-**Search ID Tracking:**
+### Layer 1: Advertisement Detection (PRIMARY)
+```javascript
+// Detect advertisements by artist field
+function isAdvertisement(trackInfo) {
+  if (!trackInfo || !trackInfo.artist) return false;
+  return trackInfo.artist.toLowerCase().includes('advertisement');
+}
+
+// Skip search entirely for ads
+if (isAdvertisement(info)) {
+  console.log(`📢 Advertisement detected - skipping lyrics search`);
+  lyricsContainer.textContent = "Lyrics are not available for advertisements";
+  return; // No search, no API calls, no race condition!
+}
+```
+
+### Layer 2: Search ID Tracking (BACKUP for rapid song changes)
 ```javascript
 // Each search gets unique ID
 const searchId = `${trackId}_${timestamp}_${counter}`;
@@ -65,7 +98,7 @@ currentSearchId = searchId;
 if (currentSearchId !== searchId) return; // Abort if outdated
 ```
 
-**Three validation checkpoints:**
+**Validation checkpoints (for non-ads only):**
 1. After each async provider call
 2. Before updating UI with found lyrics  
 3. Before showing "No lyrics found" message
