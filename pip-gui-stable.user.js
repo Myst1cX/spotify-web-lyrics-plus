@@ -6270,36 +6270,15 @@ const Providers = {
 
   // Change priority order of providers
   async function autodetectProviderAndLoad(popup, info, forceRefresh = false) {
-    // ═══════════════════════════════════════════════════════════════════════════
-    // ADVERTISEMENT DETECTION: Skip lyrics search for ads
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Spotify advertisements are detected by checking for "Advertisement" in the
-    // artist field (e.g., "Advertisement • 1 of 1"). We skip searching for lyrics
-    // entirely to avoid unnecessary API calls and prevent race conditions.
-    // ═══════════════════════════════════════════════════════════════════════════
-    
+    // Skip lyrics search for advertisements - when ad ends, real song will trigger new search
     if (isAdvertisement(info)) {
-      console.log(`📢 [Lyrics+] Advertisement detected - skipping lyrics search`);
-      DEBUG.info('Autodetect', 'Skipping lyrics search for advertisement', info);
-      
-      const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-      if (lyricsContainer) {
-        lyricsContainer.textContent = "Lyrics are not available for advertisements";
-      }
-      
-      // Clear current lyrics and provider
-      currentSyncedLyrics = null;
-      currentUnsyncedLyrics = null;
-      Providers.current = null;
-      if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
-      
-      return; // Exit early - no search needed for ads
+      return;
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
     // RACE CONDITION PREVENTION: Search ID Tracking
     // ═══════════════════════════════════════════════════════════════════════════
-    // For non-advertisement tracks, we still use search ID tracking to handle
+    // For non-advertisement tracks, we use search ID tracking to handle
     // rapid song changes (e.g., skipping tracks, shuffle, autoplay).
     // ═══════════════════════════════════════════════════════════════════════════
     
