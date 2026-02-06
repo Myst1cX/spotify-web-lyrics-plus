@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.4
+// @version      16.5
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,9 +13,11 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (16.5): SPLIT GENIUS FETCH ERROR MESSAGE INTO TWO (DUE TO CONNECTION ERROR/SERVICE UNAVAILABILITY AND DUE TO LACK OF LYRICS)
+
 // RESOLVED (16.4): ABORT LYRICS AUTOFETCH WHEN MANUALLY SELECTING A PROVIDER + SIMPLIFIED ERROR MESSAGES
 
-// RESOLVED (16.3): UPDATED HANDLING OF INSTRUMENTAL TRACKS
+// RESOLVED (16.3): UPDATED HANDLING OF INSTRUMENTAL TRACKS FOR GENIUS PROVIDER
 
 // RESOLVED (16.2): FIX LYRIC SOURCE TAB HIGHLIGHTING LOGIC AFTER LYRICS FROM CACHED PROVIDER
 
@@ -1728,7 +1730,7 @@ const PLAY_WORDS = [
         if (!data) return { error: "No lyrics available from LRCLIB" };
         return data;
       } catch (e) {
-        return { error: "LRCLIB request failed - network error" };
+        return { error: "LRCLIB request failed - connection error or service unreachable" };
       }
     },
     getUnsynced(body) {
@@ -1956,7 +1958,7 @@ const PLAY_WORDS = [
         }
         return { error: "No lyrics available from KPoe" };
       } catch (e) {
-        return { error: "KPoe request failed - network error" };
+        return { error: "KPoe request failed - connection error or service unreachable" };
       }
     },
     getUnsynced(body) {
@@ -2371,7 +2373,7 @@ async function fetchMusixmatchLyrics(songInfo) {
     return { error: "No lyrics available from Musixmatch" };
   } catch (e) {
     console.error("[Musixmatch Debug] ✗ Fetch error:", e.message || e);
-    return { error: "Musixmatch request failed - network error" };
+    return { error: "Musixmatch request failed - connection error or service unreachable" };
   }
 }
 
@@ -2410,7 +2412,7 @@ if (data.error) {
 }
 return data;
     } catch (e) {
-      return { error: "Musixmatch request failed - network error" };
+      return { error: "Musixmatch request failed - connection error or service unreachable" };
     }
   },
   getUnsynced: musixmatchGetUnsynced,
@@ -2985,7 +2987,13 @@ const ProviderGenius = {
   async findLyrics(info) {
     try {
       const data = await fetchGeniusLyrics(info);
-      if (!data || data.error) return { error: "Genius request failed - network error" };
+      if (!data) {
+        return { error: "Genius request failed - connection error or service unreachable" };
+      }
+      // If data has an error from the fetch function aka was unable to parse or fetch from Genius, return as is ("No lyrics available from Genius")
+      if (data.error) {
+        return data;
+      }
 
       // Check if lyrics indicate no lyrics available or instrumental track
       if (data.plainLyrics) {
@@ -3025,7 +3033,7 @@ const ProviderGenius = {
 
       return data;
     } catch (e) {
-      return { error: "Genius request failed - network error" };
+      return { error: "Genius request failed - connection error or service unreachable" };
     }
   },
   getUnsynced(body) {
@@ -3306,7 +3314,7 @@ const ProviderSpotify = {
       return data.lyrics;
     } catch (e) {
       console.error("[Spotify Debug] ✗ Fetch error:", e.message || e);
-      return { error: "Spotify request failed - network error" };
+      return { error: "Spotify request failed - connection error or service unreachable" };
     }
   },
 
