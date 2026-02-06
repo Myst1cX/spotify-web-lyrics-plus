@@ -2981,7 +2981,7 @@ const ProviderGenius = {
   async findLyrics(info) {
     try {
       const data = await fetchGeniusLyrics(info);
-      if (!data || data.error) return { error: "No lyrics found for this track from Genius" };
+      if (!data || data.error) return { error: "No lyrics found in Genius database" };
       return data;
     } catch (e) {
       return { error: e.message || "Genius fetch failed" };
@@ -6716,3 +6716,4 @@ const Providers = {
 
   init();
 })();
+
