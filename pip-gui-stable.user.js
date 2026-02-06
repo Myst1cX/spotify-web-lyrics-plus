@@ -1728,7 +1728,15 @@ const PLAY_WORDS = [
         if (!data) return { error: "No lyrics available from LRCLIB" };
         return data;
       } catch (e) {
-        return { error: "LRCLIB request failed - network error" };
+        // Differentiate between network issues and other errors
+        const errorMsg = e.message || String(e);
+        if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+          return { error: "LRCLIB request failed - check your internet connection" };
+        } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+          return { error: "LRCLIB request timed out - server may be slow or unavailable" };
+        } else {
+          return { error: "LRCLIB request failed - service may be unavailable" };
+        }
       }
     },
     getUnsynced(body) {
@@ -1956,7 +1964,15 @@ const PLAY_WORDS = [
         }
         return { error: "No lyrics available from KPoe" };
       } catch (e) {
-        return { error: "KPoe request failed - network error" };
+        // Differentiate between network issues and other errors
+        const errorMsg = e.message || String(e);
+        if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+          return { error: "KPoe request failed - check your internet connection" };
+        } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+          return { error: "KPoe request timed out - server may be slow or unavailable" };
+        } else {
+          return { error: "KPoe request failed - service may be unavailable" };
+        }
       }
     },
     getUnsynced(body) {
@@ -2371,7 +2387,15 @@ async function fetchMusixmatchLyrics(songInfo) {
     return { error: "No lyrics available from Musixmatch" };
   } catch (e) {
     console.error("[Musixmatch Debug] ✗ Fetch error:", e.message || e);
-    return { error: "Musixmatch request failed - network error" };
+    // Differentiate between network issues and other errors
+    const errorMsg = e.message || String(e);
+    if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+      return { error: "Musixmatch request failed - check your internet connection" };
+    } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+      return { error: "Musixmatch request timed out - server may be slow or unavailable" };
+    } else {
+      return { error: "Musixmatch request failed - service may be unavailable" };
+    }
   }
 }
 
@@ -2410,7 +2434,15 @@ if (data.error) {
 }
 return data;
     } catch (e) {
-      return { error: "Musixmatch request failed - network error" };
+      // Differentiate between network issues and other errors
+      const errorMsg = e.message || String(e);
+      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+        return { error: "Musixmatch request failed - check your internet connection" };
+      } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+        return { error: "Musixmatch request timed out - server may be slow or unavailable" };
+      } else {
+        return { error: "Musixmatch request failed - service may be unavailable" };
+      }
     }
   },
   getUnsynced: musixmatchGetUnsynced,
@@ -2985,7 +3017,17 @@ const ProviderGenius = {
   async findLyrics(info) {
     try {
       const data = await fetchGeniusLyrics(info);
-      if (!data || data.error) return { error: "Genius request failed - network error" };
+      if (!data || data.error) {
+        // Differentiate between network issues and other errors
+        const errorMsg = data?.error || "Unknown error";
+        if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+          return { error: "Genius request failed - check your internet connection" };
+        } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+          return { error: "Genius request timed out - server may be slow or unavailable" };
+        } else {
+          return { error: "Genius request failed - service may be unavailable" };
+        }
+      }
 
       // Check if lyrics indicate no lyrics available or instrumental track
       if (data.plainLyrics) {
@@ -3025,7 +3067,15 @@ const ProviderGenius = {
 
       return data;
     } catch (e) {
-      return { error: "Genius request failed - network error" };
+      // Differentiate between network issues and other errors
+      const errorMsg = e.message || String(e);
+      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+        return { error: "Genius request failed - check your internet connection" };
+      } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+        return { error: "Genius request timed out - server may be slow or unavailable" };
+      } else {
+        return { error: "Genius request failed - service may be unavailable" };
+      }
     }
   },
   getUnsynced(body) {
@@ -3306,7 +3356,15 @@ const ProviderSpotify = {
       return data.lyrics;
     } catch (e) {
       console.error("[Spotify Debug] ✗ Fetch error:", e.message || e);
-      return { error: "Spotify request failed - network error" };
+      // Differentiate between network issues and other errors
+      const errorMsg = e.message || String(e);
+      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+        return { error: "Spotify request failed - check your internet connection" };
+      } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+        return { error: "Spotify request timed out - server may be slow or unavailable" };
+      } else {
+        return { error: "Spotify request failed - service may be unavailable" };
+      }
     }
   },
 
