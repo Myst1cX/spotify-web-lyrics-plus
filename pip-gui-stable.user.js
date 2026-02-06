@@ -6240,34 +6240,16 @@ const Providers = {
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
-    } else {
-      isShowingSyncedLyrics = false;
-      // Always allow user scroll for unsynced or empty
-      lyricsContainer.style.overflowY = "auto";
-      lyricsContainer.style.pointerEvents = "";
-      lyricsContainer.classList.remove('hide-scrollbar');
-      lyricsContainer.style.scrollbarWidth = "";
-      lyricsContainer.style.msOverflowStyle = "";
-      // Note: This else branch executes when provider returns data but no lyrics can be extracted
-      // Expected provider behavior:
-      //   - If no lyrics found: Return { error: "..." } (handled at line 6143, returns early)
-      //   - If lyrics found: Return data object where getSynced/getUnsynced extract lyrics
-      // 
-      // If we reach here, it means:
-      //   - Provider returned a data object WITHOUT an error property (passed line 6143 check)
-      //   - BUT both getSynced(result) and getUnsynced(result) returned null (no lyrics extracted)
-      //   - This happens when provider filters out placeholder text (e.g., Genius filters "(Instrumental)")
-      console.warn("[Lyrics+ Warning] Provider returned data but no lyrics were extracted (placeholder text filtered)");
-      lyricsContainer.textContent = `No lyrics available for this track from ${Providers.current || 'this provider'}`;
-      currentSyncedLyrics = null;
-      currentUnsyncedLyrics = null;
     }
 
     // Final safety check: if container is empty or contains only whitespace after all processing
-    // This catches edge cases where error messages might be empty/whitespace or content got cleared somehow
+    // This catches edge cases including:
+    //   - Provider error messages that are empty/whitespace
+    //   - Provider filtered all placeholder text (e.g., Genius filters "(Instrumental)")
+    //   - Container somehow got cleared unexpectedly
     // Check both textContent (for text-based content) and children (for element-based content like <p> tags)
     if (!lyricsContainer.textContent.trim() && lyricsContainer.children.length === 0) {
-      console.warn("[Lyrics+ Warning] Trim check triggered - container empty (no text and no child elements) after all processing");
+      console.warn("[Lyrics+ Warning] Trim check triggered - container empty after all processing (filtered content or empty error message)");
       lyricsContainer.textContent = `No lyrics found for this track from ${Providers.current || 'this provider'}`;
     }
 
