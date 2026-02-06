@@ -3006,15 +3006,9 @@ const ProviderGenius = {
       const data = await fetchGeniusLyrics(info);
       if (!data || data.error) return { error: "No lyrics found in Genius database" };
       
-      // Check for instrumental/placeholder text patterns early (in findLyrics)
-      // This ensures proper error reporting when provider is manually selected
+      // Check for instrumental/placeholder patterns to return proper error
       if (data.plainLyrics) {
-        const parsed = parseGeniusLyrics(data.plainLyrics);
-        const lines = parsed.unsynced;
-        
-        // Cache parsed lyrics to avoid redundant parsing in getUnsynced
-        data._parsedLyrics = lines;
-        
+        const lines = parseGeniusLyrics(data.plainLyrics).unsynced;
         const notTranscribedPatterns = [
           /lyrics for this song have yet to be transcribed/i,
           /we do not have the lyrics for/i,
@@ -3023,19 +3017,11 @@ const ProviderGenius = {
           /add lyrics on genius/i,
           /this song is an instrumental/i
         ];
-        if (
-          lines.length === 1 &&
-          notTranscribedPatterns.some(rx => rx.test(lines[0].text))
-        ) {
-          // Log the specific placeholder text detected
-          const matchedText = lines[0].text.toLowerCase();
-          if (matchedText.includes('instrumental')) {
-            console.log("[Genius Debug] ⚠ Track marked as instrumental (no lyrics) - skipping to next provider");
-            return { error: "Track is instrumental (no lyrics available)" };
-          } else {
-            console.log("[Genius Debug] ⚠ Track has placeholder text (no actual lyrics) - skipping to next provider");
-            return { error: "Track has placeholder text (no actual lyrics yet)" };
-          }
+        
+        if (lines.length === 1 && notTranscribedPatterns.some(rx => rx.test(lines[0].text))) {
+          const isInstrumental = lines[0].text.toLowerCase().includes('instrumental');
+          console.log(`[Genius Debug] ⚠ Track ${isInstrumental ? 'is instrumental' : 'has placeholder text'} - skipping to next provider`);
+          return { error: isInstrumental ? "Track is instrumental (no lyrics available)" : "Track has placeholder text (no actual lyrics yet)" };
         }
       }
       
@@ -3046,9 +3032,7 @@ const ProviderGenius = {
   },
   getUnsynced(body) {
     if (!body?.plainLyrics) return null;
-    // Use cached parsed lyrics if available (set in findLyrics)
-    const lines = body._parsedLyrics || parseGeniusLyrics(body.plainLyrics).unsynced;
-    return lines;
+    return parseGeniusLyrics(body.plainLyrics).unsynced;
   },
   getSynced() {
     return null;
