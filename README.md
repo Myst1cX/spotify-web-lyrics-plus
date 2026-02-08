@@ -141,9 +141,9 @@
 ## Credits
 
 > 1. **Lyrics from** [LRCLIB](https://lrclib.net/), [KPoe](https://github.com/ibratabian17/KPoe), [Genius](https://genius.com/), [Musixmatch](https://musixmatch.com/)
-> 2. **Live Translation from** [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
-> 3. **Chinese Conversion via open.cc from** [Spotify Lyrics: Trad ⇄ Simplified](https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified)
-> 4. **Powered by** [Spotify](https://open.spotify.com/).
+> 2. **Third part libraries and utilities used** [spicetify_lyrics-plus: Providers.js](https://github.com/spicetify/cli/blob/main/CustomApps/lyrics-plus/Providers.js), [spicetify_lyrics-plus: ProviderLRCLIB.js](https://github.com/spicetify/cli/blob/main/CustomApps/lyrics-plus/ProviderLRCLIB.js), [spicetify_lyrics-plus: ProviderMusixmatch.js](https://github.com/spicetify/cli/blob/main/CustomApps/lyrics-plus/ProviderMusixmatch.js), [spicetify_lyrics-plus: ProviderGenius.js](https://github.com/spicetify/cli/blob/main/CustomApps/lyrics-plus/ProviderGenius.js), [cuzi: Spotify Genius Lyrics (userscript), version 23.6.15](https://greasyfork.org/en/scripts/377439-spotify-genius-lyrics?version=1602852), [cvzi: GeniusLyrics.js (library), version 5.6.15](https://github.com/cvzi/genius-lyrics-userscript/blob/1f77b8e56ae8254bf4a1b27654ed459116f35502/GeniusLyrics.js), [Natoune: SpotifyMobileLyricsAPI](https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src/fetchers.ts), 
+> 3. **Live Translation from** [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
+> 4. **Chinese Conversion via open.cc from** [Spotify Lyrics: Trad ⇄ Simplified](https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified)
 
 ## License
 
