@@ -148,7 +148,7 @@
 > [cvzi/GeniusLyrics.js library (v5.6.15)](https://github.com/cvzi/genius-lyrics-userscript/blob/1f77b8e56ae8254bf4a1b27654ed459116f35502/GeniusLyrics.js),
 > [Natoune/SpotifyMobileLyricsAPI](https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src/fetchers.ts), [ibratabian17/YouLyPlus](https://github.com/search?q=repo%3Aibratabian17%2FYouLyPlus+kpoe&type=code)
 > 4. **Live Translation from** [raicigi/Cigi Spotify Translator (v1.0)](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
-> 5. **Chinese Conversion via open.cc (now using full.js instead of only t2cn.js) from** [holsoma/Spotify Lyrics: Trad ⇄ Simplified (v1.0.0)](https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified)
+> 5. **Chinese Conversion via open.cc (now using full.js instead of only t2cn.js) from** [holsoma/Spotify Lyrics: Trad ⇄ Simplified (v1.1.0)](https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified)
 
 ## License
 
