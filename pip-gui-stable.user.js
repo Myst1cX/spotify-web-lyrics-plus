@@ -351,6 +351,7 @@
       return {
         size: entries.length,
         safetyLimit: this.CACHE_ENTRY_SAFETY_LIMIT,
+        maxSize: this.CACHE_ENTRY_SAFETY_LIMIT,  // Backward compatibility alias
         totalBytes: totalBytes,
         maxBytes: this.MAX_BYTES,
         totalKB: Math.round(totalBytes / 1024),
