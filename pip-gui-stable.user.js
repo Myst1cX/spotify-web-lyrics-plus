@@ -6911,6 +6911,11 @@ const Providers = {
 
   // Show help on first load
   console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
+  
+  // Verify LyricsPlusDebug is globally accessible
+  if (typeof window.LyricsPlusDebug !== 'undefined') {
+    console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available globally', 'color: #888;');
+  }
 
   // Register menu command for clearing cache from userscript manager
   if (typeof GM_registerMenuCommand !== 'undefined') {
@@ -6925,7 +6930,8 @@ const Providers = {
     });
     console.log('%c[Lyrics+] ✅ Menu command registered! Click your userscript manager icon → "Clear Lyrics Cache"', 'color: #1db954; font-weight: bold;');
   } else {
-    console.log('%c[Lyrics+] ⚠️ GM_registerMenuCommand not available. Use LyricsPlusDebug.clearCache() to clear cache.', 'color: #ff9800;');
+    console.log('%c[Lyrics+] ⚠️ GM_registerMenuCommand not available. Alternative: Use console commands.', 'color: #ff9800;');
+    console.log('%c   Try: %cLyricsPlusDebug.clearCache()%c or %cLyricsPlusDebug.help()', 'color: #888;', 'color: #1db954;', 'color: #888;', 'color: #1db954;');
   }
 
   init();
