@@ -6903,6 +6903,9 @@ const Providers = {
       console.log('  %cLyricsPlusDebug.getCacheStats()%c - Get lyrics cache statistics', 'color: #1db954;', 'color: inherit;');
       console.log('  %cLyricsPlusDebug.clearCache()%c   - Clear all cached lyrics', 'color: #1db954;', 'color: inherit;');
       console.log('  %cLyricsPlusDebug.help()%c         - Show this help message', 'color: #1db954;', 'color: inherit;');
+      console.log('');
+      console.log('%c💡 TIP: You can also clear cache from your userscript manager menu!', 'color: #1db954;');
+      console.log('%c   Click the userscript manager icon → "Clear Lyrics Cache"', 'color: #888;');
     }
   };
 
@@ -6920,6 +6923,9 @@ const Providers = {
         alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.`);
       }
     });
+    console.log('%c[Lyrics+] ✅ Menu command registered! Click your userscript manager icon → "Clear Lyrics Cache"', 'color: #1db954; font-weight: bold;');
+  } else {
+    console.log('%c[Lyrics+] ⚠️ GM_registerMenuCommand not available. Use LyricsPlusDebug.clearCache() to clear cache.', 'color: #ff9800;');
   }
 
   init();
