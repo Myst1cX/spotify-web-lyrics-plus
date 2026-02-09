@@ -189,6 +189,7 @@
   // ------------------------
   const LyricsCache = {
     MAX_CACHE_SIZE: 50,  // Maximum number of songs to cache
+    MAX_BYTES: 6 * 1024 * 1024,  // Maximum cache size in bytes (6 MB)
 
     /**
      * Get all cached lyrics from localStorage
@@ -239,7 +240,7 @@
     },
 
     /**
-     * Save lyrics to cache with LRU eviction
+     * Save lyrics to cache with LRU eviction (count and byte-based)
      * @param {string} trackId - Spotify track ID
      * @param {Object} data - Lyrics data to cache
      */
@@ -254,25 +255,50 @@
         timestamp: Date.now()
       };
 
-      // Enforce cache size limit with LRU eviction
-      const entries = Object.entries(cache);
-      if (entries.length > this.MAX_CACHE_SIZE) {
-        // Sort by timestamp (oldest first)
-        entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+      // Build array of entries with their sizes
+      const entriesWithSize = Object.entries(cache).map(([key, entry]) => {
+        const size = new Blob([JSON.stringify(entry)]).size;
+        return { key, entry, size };
+      });
 
-        // Remove oldest entries until we're at the limit
-        const toRemove = entries.length - this.MAX_CACHE_SIZE;
-        for (let i = 0; i < toRemove; i++) {
-          delete cache[entries[i][0]];
-          console.log(`💾 [Lyrics+] Removed oldest cached song to make room for new ones (keeping last ${this.MAX_CACHE_SIZE} songs)`);
-          DEBUG.debug('Cache', `Evicted old entry: ${entries[i][0]}`);
-        }
+      // Sort by timestamp (oldest first)
+      entriesWithSize.sort((a, b) => a.entry.timestamp - b.entry.timestamp);
+
+      // Track total bytes and evict oldest entries if needed
+      let totalBytes = 0;
+      const remainingEntries = [];
+      
+      for (const item of entriesWithSize) {
+        totalBytes += item.size;
+        remainingEntries.push(item);
       }
 
-      this.saveAll(cache);
-      const cacheSize = Object.keys(cache).length;
-      console.log(`✅ [Lyrics+] Lyrics saved to cache! Now have ${cacheSize} of last ${this.MAX_CACHE_SIZE} songs cached for instant replay`);
-      DEBUG.info('Cache', `Cached lyrics for track: ${trackId}`);
+      // Evict oldest entries while exceeding limits
+      let evictedCount = 0;
+      while (remainingEntries.length > this.MAX_CACHE_SIZE || totalBytes > this.MAX_BYTES) {
+        if (remainingEntries.length === 0) break;
+        const evicted = remainingEntries.shift();
+        totalBytes -= evicted.size;
+        evictedCount++;
+        DEBUG.debug('Cache', `Evicted old entry: ${evicted.key} (size: ${evicted.size} bytes)`);
+      }
+
+      // Reconstruct cache from remaining entries
+      const newCache = {};
+      for (const item of remainingEntries) {
+        newCache[item.key] = item.entry;
+      }
+
+      this.saveAll(newCache);
+      const cacheSize = Object.keys(newCache).length;
+      const totalKB = Math.round(totalBytes / 1024);
+      const maxKB = Math.round(this.MAX_BYTES / 1024);
+      
+      if (evictedCount > 0) {
+        console.log(`💾 [Lyrics+] Removed ${evictedCount} oldest cached song(s) to stay within limits (${this.MAX_CACHE_SIZE} songs, ${maxKB} KB)`);
+      }
+      console.log(`✅ [Lyrics+] Lyrics saved to cache! Now have ${cacheSize} songs (${totalKB} KB of ${maxKB} KB) cached for instant replay`);
+      DEBUG.info('Cache', `Cached lyrics for track: ${trackId}, total size: ${totalKB} KB`);
     },
 
     /**
@@ -295,16 +321,30 @@
     getStats() {
       const cache = this.getAll();
       const entries = Object.entries(cache);
-      return {
-        size: entries.length,
-        maxSize: this.MAX_CACHE_SIZE,
-        entries: entries.map(([id, data]) => ({
+      
+      // Calculate total bytes
+      let totalBytes = 0;
+      const entriesWithDetails = entries.map(([id, data]) => {
+        const size = new Blob([JSON.stringify(data)]).size;
+        totalBytes += size;
+        return {
           trackId: id,
           provider: data.provider,
           hasSynced: !!data.synced,
           hasUnsynced: !!data.unsynced,
-          timestamp: new Date(data.timestamp).toISOString()
-        }))
+          timestamp: new Date(data.timestamp).toISOString(),
+          sizeBytes: size
+        };
+      });
+      
+      return {
+        size: entries.length,
+        maxSize: this.MAX_CACHE_SIZE,
+        totalBytes: totalBytes,
+        maxBytes: this.MAX_BYTES,
+        totalKB: Math.round(totalBytes / 1024),
+        maxKB: Math.round(this.MAX_BYTES / 1024),
+        entries: entriesWithDetails
       };
     }
   };
