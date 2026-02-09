@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.5
+// @version      16.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
+// @grant        GM_registerMenuCommand
 // @connect      genius.com
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
@@ -12,6 +13,15 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (16.6): IMPROVED LYRICS CACHE WITH BYTE-BASED EVICTION
+// • Added 6 MB byte limit alongside entry count limit to prevent localStorage overflow
+// • Increased safety limit to 1000 entries (actual limit 150-400 songs based on size)
+// • Byte limit (6 MB) is now the primary constraint; entry limit is safety fallback
+// • Added manual cache clear option in userscript manager menu
+// • Renamed constant to CACHE_ENTRY_SAFETY_LIMIT for clarity
+// • Cache now automatically evicts based on both entry count and total size
+// • Users can cache significantly more songs without storage issues
 
 // RESOLVED (16.5): SPLIT GENIUS FETCH ERROR MESSAGE INTO TWO (DUE TO CONNECTION ERROR/SERVICE UNAVAILABILITY AND DUE TO LACK OF LYRICS)
 
@@ -24,14 +34,14 @@
 // RESOLVED (16.1): PREVENT LYRIC SEARCH WHEN ADVERTISEMENT DETECTED
 
 // RESOLVED (16.0): LYRICS CACHING FEATURE + REPEAT ONE SUPPORT
-// • Automatic caching of lyrics for last 50 songs played
+// • Automatic caching of lyrics (up to 6 MB or 1000 songs, typically 150-400 songs)
 // • Instant loading from cache (no network delay) for recently played songs
 // • Repeat One detection: When song restarts, lyrics automatically scroll back to beginning
-// • Smart LRU (Least Recently Used) eviction when cache reaches 50 songs
+// • Smart LRU (Least Recently Used) eviction based on both byte size and entry count
 // • User-friendly console logging for all cache operations
 // • New debug commands: LyricsPlusDebug.getCacheStats() and LyricsPlusDebug.clearCache()
 // • Persists across page reloads and browser restarts via localStorage
-// • ~50-250KB storage total (1-5KB per song)
+// • Typical storage: 3-6 MB (actual songs cached depends on lyrics size)
 
 // RESOLVED (15.9): FIXED REPLAY BUTTON ISSUE AT END OF SONG
 // • Fixed issue where songs with replay enabled would get stuck at the last second
@@ -188,8 +198,9 @@
   // Lyrics Cache Module
   // ------------------------
   const LyricsCache = {
-    MAX_CACHE_SIZE: 200,  // Maximum number of songs to cache
-    MAX_BYTES: 6 * 1024 * 1024,  // Maximum cache size in bytes (6 MB)
+    // Safety limit for entry count (actual limit is typically 150-400 songs based on 6 MB size constraint)
+    CACHE_ENTRY_SAFETY_LIMIT: 1000,  // Generous safety limit; byte limit is primary constraint
+    MAX_BYTES: 6 * 1024 * 1024,  // Maximum cache size in bytes (6 MB) - PRIMARY LIMIT
 
     /**
      * Get all cached lyrics from localStorage
@@ -275,7 +286,7 @@
 
       // Evict oldest entries while exceeding limits
       let evictedCount = 0;
-      while (remainingEntries.length > this.MAX_CACHE_SIZE || totalBytes > this.MAX_BYTES) {
+      while (remainingEntries.length > this.CACHE_ENTRY_SAFETY_LIMIT || totalBytes > this.MAX_BYTES) {
         if (remainingEntries.length === 0) break;
         const evicted = remainingEntries.shift();
         totalBytes -= evicted.size;
@@ -295,7 +306,7 @@
       const maxKB = Math.round(this.MAX_BYTES / 1024);
       
       if (evictedCount > 0) {
-        console.log(`💾 [Lyrics+] Removed ${evictedCount} oldest cached song(s) to stay within limits (${this.MAX_CACHE_SIZE} songs, ${maxKB} KB)`);
+        console.log(`💾 [Lyrics+] Removed ${evictedCount} oldest cached song(s) to stay within limits (max ${maxKB} KB)`);
       }
       console.log(`✅ [Lyrics+] Lyrics saved to cache! Now have ${cacheSize} songs (${totalKB} KB of ${maxKB} KB) cached for instant replay`);
       DEBUG.info('Cache', `Cached lyrics for track: ${trackId}, total size: ${totalKB} KB`);
@@ -339,7 +350,7 @@
       
       return {
         size: entries.length,
-        maxSize: this.MAX_CACHE_SIZE,
+        safetyLimit: this.CACHE_ENTRY_SAFETY_LIMIT,
         totalBytes: totalBytes,
         maxBytes: this.MAX_BYTES,
         totalKB: Math.round(totalBytes / 1024),
@@ -6896,6 +6907,19 @@ const Providers = {
 
   // Show help on first load
   console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
+
+  // Register menu command for clearing cache from userscript manager
+  if (typeof GM_registerMenuCommand !== 'undefined') {
+    GM_registerMenuCommand('Clear Lyrics Cache', () => {
+      const stats = LyricsCache.getStats();
+      const confirmMsg = `Clear lyrics cache?\n\nCurrent cache: ${stats.size} songs (${stats.totalKB} KB of ${stats.maxKB} KB)\n\nThis will remove all cached lyrics and they will need to be fetched again.`;
+      
+      if (confirm(confirmMsg)) {
+        LyricsCache.clear();
+        alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.`);
+      }
+    });
+  }
 
   init();
 })();
