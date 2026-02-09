@@ -188,7 +188,7 @@
   // Lyrics Cache Module
   // ------------------------
   const LyricsCache = {
-    MAX_CACHE_SIZE: 50,  // Maximum number of songs to cache
+    MAX_CACHE_SIZE: 200,  // Maximum number of songs to cache
     MAX_BYTES: 6 * 1024 * 1024,  // Maximum cache size in bytes (6 MB)
 
     /**
