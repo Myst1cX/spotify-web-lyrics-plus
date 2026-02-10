@@ -6863,17 +6863,19 @@ const Providers = {
       console.log('  1. Copy the command from the "🗑️ Remove" column');
       console.log('  2. Paste it in the console and press Enter');
       console.log('%cExample:', 'color: #888;');
-      console.log(`  removeCachedLyrics("${stats.entries[0].trackId}")`);
+      console.log(`  removeCachedLyrics("${entriesWithRemove[0].trackId}")`);
       
-      // Make the remove function globally accessible from console
-      window.removeCachedLyrics = (trackId) => {
-        if (LyricsCache.delete(trackId)) {
-          console.log('%c✅ Successfully removed cached lyrics!', 'color: #1db954; font-weight: bold;');
-          console.log('Run the cache stats command again to see updated list.');
-        } else {
-          console.log('%c❌ Failed to remove cached lyrics', 'color: #e22134; font-weight: bold;');
-        }
-      };
+      // Make the remove function globally accessible from console (only once)
+      if (!window.removeCachedLyrics) {
+        window.removeCachedLyrics = (trackId) => {
+          if (LyricsCache.delete(trackId)) {
+            console.log('%c✅ Successfully removed cached lyrics!', 'color: #1db954; font-weight: bold;');
+            console.log('Run the cache stats command again to see updated list.');
+          } else {
+            console.log('%c❌ Failed to remove cached lyrics', 'color: #e22134; font-weight: bold;');
+          }
+        };
+      }
     }
     
     alert('Cache statistics have been logged to the console. Press F12 to view.');
