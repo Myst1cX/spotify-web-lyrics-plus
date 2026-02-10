@@ -6844,7 +6844,9 @@ const Providers = {
   ResourceManager.registerWindowListener("resize", windowResizeHandler, 'Popup proportion on window resize');
 
   // Expose global debug helper for troubleshooting
-  window.LyricsPlusDebug = {
+  // Use unsafeWindow to expose to page's actual window (not userscript sandbox)
+  const globalWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+  globalWindow.LyricsPlusDebug = {
     enable: () => {
       DEBUG.enabled = true;
       console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
@@ -6915,7 +6917,7 @@ const Providers = {
   console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
   
   // Verify LyricsPlusDebug is globally accessible
-  if (typeof window.LyricsPlusDebug !== 'undefined') {
+  if (typeof globalWindow.LyricsPlusDebug !== 'undefined') {
     console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available globally', 'color: #888;');
   }
 

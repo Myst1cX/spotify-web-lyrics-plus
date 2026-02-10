@@ -6792,7 +6792,9 @@ const Providers = {
   ResourceManager.registerWindowListener("resize", windowResizeHandler, 'Popup proportion on window resize');
 
   // Expose global debug helper for troubleshooting
-  window.LyricsPlusDebug = {
+  // Use unsafeWindow to expose to page's actual window (not userscript sandbox)
+  const globalWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+  globalWindow.LyricsPlusDebug = {
     enable: () => {
       DEBUG.enabled = true;
       console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
