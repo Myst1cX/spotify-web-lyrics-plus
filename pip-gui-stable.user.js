@@ -6916,20 +6916,42 @@ const Providers = {
   // Assign to both window and unsafeWindow for maximum compatibility
   // window = accessible within content world
   // unsafeWindow = accessible from page world and browser console
-  window.LyricsPlusDebug = debugHelper;
-  if (typeof unsafeWindow !== 'undefined' && unsafeWindow !== null) {
-    unsafeWindow.LyricsPlusDebug = debugHelper;
+  // globalThis = universal fallback (works everywhere)
+  try {
+    window.LyricsPlusDebug = debugHelper;
+    if (typeof unsafeWindow !== 'undefined' && unsafeWindow !== null) {
+      unsafeWindow.LyricsPlusDebug = debugHelper;
+    }
+    if (typeof globalThis !== 'undefined') {
+      globalThis.LyricsPlusDebug = debugHelper;
+    }
+  } catch (e) {
+    console.error('[Lyrics+] Failed to expose LyricsPlusDebug:', e);
   }
 
   // Show help on first load
   console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
   
   // Verify LyricsPlusDebug is globally accessible
+  const exposureStatus = [];
   if (typeof window.LyricsPlusDebug !== 'undefined') {
+    exposureStatus.push('window');
     console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available in window scope', 'color: #888;');
   }
   if (typeof unsafeWindow !== 'undefined' && typeof unsafeWindow.LyricsPlusDebug !== 'undefined') {
+    exposureStatus.push('unsafeWindow');
     console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available in unsafeWindow scope', 'color: #888;');
+  }
+  if (typeof globalThis !== 'undefined' && typeof globalThis.LyricsPlusDebug !== 'undefined') {
+    exposureStatus.push('globalThis');
+    console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available in globalThis scope', 'color: #888;');
+  }
+  
+  if (exposureStatus.length === 0) {
+    console.error('%c[Lyrics+] ⚠️ WARNING: LyricsPlusDebug could not be exposed to any scope!', 'color: #ff0000; font-weight: bold;');
+    console.error('[Lyrics+] This is a critical error. Please report this issue with your browser and userscript manager details.');
+  } else {
+    console.log(`%c[Lyrics+] LyricsPlusDebug exposed via: ${exposureStatus.join(', ')}`, 'color: #888;');
   }
 
   // Register menu command for clearing cache from userscript manager
