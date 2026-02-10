@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.6
+// @version      16.8
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
-// @match        *://open.spotify.com/*
+// @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
+// @grant        GM_registerMenuCommand
 // @connect      genius.com
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
@@ -12,6 +13,20 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (16.8): MOVED DEBUG COMMANDS TO MENU COMMANDS
+// • Debug commands now available only via userscript menu (enable, disable, getTrackInfo, getRepeatState, getAudioElement, getCacheStats, clearCache)
+// • Removed console-based LyricsPlusDebug API to reduce global scope pollution
+// • Fixed grammar: "Now 1 song cached" instead of "Now 1 songs cached"
+
+// RESOLVED (16.7): IMPROVED LYRICS CACHE WITH BYTE-BASED EVICTION
+// • Added 6 MB byte limit alongside entry count limit to prevent localStorage overflow
+// • Increased safety limit to 1000 entries (actual limit 150-400 songs based on size)
+// • Byte limit (6 MB) is now the primary constraint; entry limit is safety fallback
+// • Added manual cache clear option in userscript manager menu
+// • Renamed constant to CACHE_ENTRY_SAFETY_LIMIT for clarity
+// • Cache now automatically evicts based on both entry count and total size
+// • Users can cache significantly more songs without storage issues
 
 // RESOLVED (16.6): FIXED THE @MATCH PATTERN (VIOLENT MONKEY DID NOT CONSIDER THE USERSCRIPT AS A MATCHED SCRIPT FOR THE SITE
 
@@ -26,20 +41,20 @@
 // RESOLVED (16.1): PREVENT LYRIC SEARCH WHEN ADVERTISEMENT DETECTED
 
 // RESOLVED (16.0): LYRICS CACHING FEATURE + REPEAT ONE SUPPORT
-// • Automatic caching of lyrics for last 50 songs played
+// • Automatic caching of lyrics (up to 6 MB or 1000 songs, typically 150-400 songs)
 // • Instant loading from cache (no network delay) for recently played songs
 // • Repeat One detection: When song restarts, lyrics automatically scroll back to beginning
-// • Smart LRU (Least Recently Used) eviction when cache reaches 50 songs
+// • Smart LRU (Least Recently Used) eviction based on both byte size and entry count
 // • User-friendly console logging for all cache operations
-// • New debug commands: LyricsPlusDebug.getCacheStats() and LyricsPlusDebug.clearCache()
+// • Debug menu commands for cache operations (getCacheStats and clearCache now available via userscript menu from v16.8 onwards)
 // • Persists across page reloads and browser restarts via localStorage
-// • ~50-250KB storage total (1-5KB per song)
+// • Typical storage: 3-6 MB (actual songs cached depends on lyrics size)
 
 // RESOLVED (15.9): FIXED REPLAY BUTTON ISSUE AT END OF SONG
 // • Fixed issue where songs with replay enabled would get stuck at the last second
 // • Added 200ms buffer when seeking near track end to prevent "ended" state
 // • Added detailed debug logging to seekTo() function
-// • Created LyricsPlusDebug helper for troubleshooting
+// • Created debug helper for troubleshooting (menu commands available via userscrpt menu from v16.8 onwards)
 
 // RESOLVED (15.9): FIXED MOBILE LYRICS MODAL POSITION
 
@@ -190,7 +205,9 @@
   // Lyrics Cache Module
   // ------------------------
   const LyricsCache = {
-    MAX_CACHE_SIZE: 50,  // Maximum number of songs to cache
+    // Safety limit for entry count (actual limit is typically 150-400 songs based on 6 MB size constraint)
+    CACHE_ENTRY_SAFETY_LIMIT: 1000,  // Generous safety limit; byte limit is primary constraint
+    MAX_BYTES: 6 * 1024 * 1024,  // Maximum cache size in bytes (6 MB) - PRIMARY LIMIT
 
     /**
      * Get all cached lyrics from localStorage
@@ -241,7 +258,7 @@
     },
 
     /**
-     * Save lyrics to cache with LRU eviction
+     * Save lyrics to cache with LRU eviction (count and byte-based)
      * @param {string} trackId - Spotify track ID
      * @param {Object} data - Lyrics data to cache
      */
@@ -256,25 +273,51 @@
         timestamp: Date.now()
       };
 
-      // Enforce cache size limit with LRU eviction
-      const entries = Object.entries(cache);
-      if (entries.length > this.MAX_CACHE_SIZE) {
-        // Sort by timestamp (oldest first)
-        entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+      // Build array of entries with their sizes
+      const entriesWithSize = Object.entries(cache).map(([key, entry]) => {
+        const size = new Blob([JSON.stringify(entry)]).size;
+        return { key, entry, size };
+      });
 
-        // Remove oldest entries until we're at the limit
-        const toRemove = entries.length - this.MAX_CACHE_SIZE;
-        for (let i = 0; i < toRemove; i++) {
-          delete cache[entries[i][0]];
-          console.log(`💾 [Lyrics+] Removed oldest cached song to make room for new ones (keeping last ${this.MAX_CACHE_SIZE} songs)`);
-          DEBUG.debug('Cache', `Evicted old entry: ${entries[i][0]}`);
-        }
+      // Sort by timestamp (oldest first)
+      entriesWithSize.sort((a, b) => a.entry.timestamp - b.entry.timestamp);
+
+      // Track total bytes and evict oldest entries if needed
+      let totalBytes = 0;
+      const remainingEntries = [];
+      
+      for (const item of entriesWithSize) {
+        totalBytes += item.size;
+        remainingEntries.push(item);
       }
 
-      this.saveAll(cache);
-      const cacheSize = Object.keys(cache).length;
-      console.log(`✅ [Lyrics+] Lyrics saved to cache! Now have ${cacheSize} of last ${this.MAX_CACHE_SIZE} songs cached for instant replay`);
-      DEBUG.info('Cache', `Cached lyrics for track: ${trackId}`);
+      // Evict oldest entries while exceeding limits
+      let evictedCount = 0;
+      while (remainingEntries.length > this.CACHE_ENTRY_SAFETY_LIMIT || totalBytes > this.MAX_BYTES) {
+        if (remainingEntries.length === 0) break;
+        const evicted = remainingEntries.shift();
+        totalBytes -= evicted.size;
+        evictedCount++;
+        DEBUG.debug('Cache', `Evicted old entry: ${evicted.key} (size: ${evicted.size} bytes)`);
+      }
+
+      // Reconstruct cache from remaining entries
+      const newCache = {};
+      for (const item of remainingEntries) {
+        newCache[item.key] = item.entry;
+      }
+
+      this.saveAll(newCache);
+      const cacheSize = Object.keys(newCache).length;
+      const totalKB = Math.round(totalBytes / 1024);
+      const maxKB = Math.round(this.MAX_BYTES / 1024);
+      
+      if (evictedCount > 0) {
+        console.log(`💾 [Lyrics+] Removed ${evictedCount} oldest cached song(s) to stay within limits (max ${maxKB} KB)`);
+      }
+      const songWord = cacheSize === 1 ? 'song' : 'songs';
+      console.log(`✅ [Lyrics+] Lyrics saved to cache! Now have ${cacheSize} ${songWord} (${totalKB} KB of ${maxKB} KB) cached for instant replay`);
+      DEBUG.info('Cache', `Cached lyrics for track: ${trackId}, total size: ${totalKB} KB`);
     },
 
     /**
@@ -297,16 +340,31 @@
     getStats() {
       const cache = this.getAll();
       const entries = Object.entries(cache);
-      return {
-        size: entries.length,
-        maxSize: this.MAX_CACHE_SIZE,
-        entries: entries.map(([id, data]) => ({
+      
+      // Calculate total bytes
+      let totalBytes = 0;
+      const entriesWithDetails = entries.map(([id, data]) => {
+        const size = new Blob([JSON.stringify(data)]).size;
+        totalBytes += size;
+        return {
           trackId: id,
           provider: data.provider,
           hasSynced: !!data.synced,
           hasUnsynced: !!data.unsynced,
-          timestamp: new Date(data.timestamp).toISOString()
-        }))
+          timestamp: new Date(data.timestamp).toISOString(),
+          sizeBytes: size
+        };
+      });
+      
+      return {
+        size: entries.length,
+        safetyLimit: this.CACHE_ENTRY_SAFETY_LIMIT,
+        maxSize: this.CACHE_ENTRY_SAFETY_LIMIT,  // Backward compatibility alias
+        totalBytes: totalBytes,
+        maxBytes: this.MAX_BYTES,
+        totalKB: Math.round(totalBytes / 1024),
+        maxKB: Math.round(this.MAX_BYTES / 1024),
+        entries: entriesWithDetails
       };
     }
   };
@@ -6791,74 +6849,67 @@ const Providers = {
   };
   ResourceManager.registerWindowListener("resize", windowResizeHandler, 'Popup proportion on window resize');
 
-  // Expose global debug helper for troubleshooting
-  window.LyricsPlusDebug = {
-    enable: () => {
-      DEBUG.enabled = true;
-      console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
-      console.log('%cUse LyricsPlusDebug.disable() to turn off debug logging', 'color: #888;');
-    },
-    disable: () => {
-      DEBUG.enabled = false;
-      console.log('%c[Lyrics+] Debug mode disabled', 'color: #888;');
-    },
-    isEnabled: () => DEBUG.enabled,
-    getTrackInfo: () => {
-      const info = getCurrentTrackInfo();
-      console.log('%c[Lyrics+] Current Track Info:', 'color: #1db954; font-weight: bold;', info);
-      return info;
-    },
-    getRepeatState: () => {
-      const state = getRepeatState();
-      console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
-      return state;
-    },
-    getAudioElement: () => {
-      const audio = document.querySelector('audio');
-      if (audio) {
-        console.log('%c[Lyrics+] Audio Element:', 'color: #1db954; font-weight: bold;', {
-          currentTime: audio.currentTime,
-          duration: audio.duration,
-          paused: audio.paused,
-          ended: audio.ended,
-          readyState: audio.readyState
-        });
-      } else {
-        console.log('%c[Lyrics+] Audio element not found', 'color: #ff0000;');
-      }
-      return audio;
-    },
-    getCacheStats: () => {
-      const stats = LyricsCache.getStats();
-      console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
-      console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
-      if (stats.entries.length > 0) {
-        console.table(stats.entries);
-      }
-      return stats;
-    },
-    clearCache: () => {
+  // Register menu commands for debug functions
+  GM_registerMenuCommand('Debug: Clear Cache', () => {
+    const stats = LyricsCache.getStats();
+    const confirmMsg = `Clear lyrics cache?\n\nCurrent cache: ${stats.size} songs (${stats.totalKB} KB of ${stats.maxKB} KB)\n\nThis will remove all cached lyrics and they will need to be fetched again.`;
+    
+    if (confirm(confirmMsg)) {
       LyricsCache.clear();
-      console.log('%c[Lyrics+] Cache cleared successfully', 'color: #1db954; font-weight: bold;');
-    },
-    help: () => {
-      console.log('%c[Lyrics+ Debug Helper]', 'color: #1db954; font-weight: bold; font-size: 14px;');
-      console.log('%cAvailable commands:', 'color: #888; font-weight: bold;');
-      console.log('  %cLyricsPlusDebug.enable()%c       - Enable debug logging', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.disable()%c      - Disable debug logging', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.isEnabled()%c    - Check if debug mode is enabled', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getTrackInfo()%c - Get current track information', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getRepeatState()%c - Get repeat button state', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getAudioElement()%c - Get audio element info', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getCacheStats()%c - Get lyrics cache statistics', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.clearCache()%c   - Clear all cached lyrics', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.help()%c         - Show this help message', 'color: #1db954;', 'color: inherit;');
+      alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.`);
     }
-  };
-
-  // Show help on first load
-  console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
+  });
+  
+  GM_registerMenuCommand('Debug: Get Cache Stats', () => {
+    const stats = LyricsCache.getStats();
+    console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
+    console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
+    if (stats.entries.length > 0) {
+      console.table(stats.entries);
+    }
+    alert('Cache statistics have been logged to the console. Press F12 to view.');
+  });
+  
+  GM_registerMenuCommand('Debug: Get Track Info', () => {
+    const info = getCurrentTrackInfo();
+    console.log('%c[Lyrics+] Current Track Info:', 'color: #1db954; font-weight: bold;', info);
+    alert('Track information has been logged to the console. Press F12 to view.');
+  });
+  
+  GM_registerMenuCommand('Debug: Get Repeat State', () => {
+    const state = getRepeatState();
+    console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
+    alert('Repeat state has been logged to the console. Press F12 to view.');
+  });
+  
+  GM_registerMenuCommand('Debug: Get Audio Element', () => {
+    const audio = document.querySelector('audio');
+    if (audio) {
+      console.log('%c[Lyrics+] Audio Element:', 'color: #1db954; font-weight: bold;', {
+        currentTime: audio.currentTime,
+        duration: audio.duration,
+        paused: audio.paused,
+        ended: audio.ended,
+        readyState: audio.readyState
+      });
+      alert('Audio element info has been logged to the console. Press F12 to view.');
+    } else {
+      console.log('%c[Lyrics+] Audio element not found', 'color: #ff0000;');
+      alert('⚠️ Audio element not found.');
+    }
+  });
+  
+  GM_registerMenuCommand('Debug: Enable', () => {
+    DEBUG.enabled = true;
+    console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
+    alert('✅ Debug mode enabled! Check console for detailed logging.');
+  });
+  
+  GM_registerMenuCommand('Debug: Disable', () => {
+    DEBUG.enabled = false;
+    console.log('%c[Lyrics+] Debug mode disabled', 'color: #888;');
+    alert('Debug mode disabled.');
+  });
 
   init();
 })();
-
