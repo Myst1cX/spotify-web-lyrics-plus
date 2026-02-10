@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.5
+// @version      16.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
-// @match        https://open.spotify.com/*
+// @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      genius.com
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
@@ -12,6 +12,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (16.6): FIXED THE @MATCH PATTERN (VIOLENT MONKEY DID NOT CONSIDER THE USERSCRIPT AS A MATCHED SCRIPT FOR THE SITE
 
 // RESOLVED (16.5): SPLIT GENIUS FETCH ERROR MESSAGE INTO TWO (DUE TO CONNECTION ERROR/SERVICE UNAVAILABILITY AND DUE TO LACK OF LYRICS)
 
@@ -6859,3 +6861,4 @@ const Providers = {
 
   init();
 })();
+
