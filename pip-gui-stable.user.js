@@ -6844,9 +6844,9 @@ const Providers = {
   ResourceManager.registerWindowListener("resize", windowResizeHandler, 'Popup proportion on window resize');
 
   // Expose global debug helper for troubleshooting
-  // Use unsafeWindow to ensure it's accessible from the browser console
-  const globalScope = (typeof unsafeWindow !== 'undefined' && unsafeWindow !== null) ? unsafeWindow : window;
-  globalScope.LyricsPlusDebug = {
+  // With @inject-into auto, expose to both window (content world) and unsafeWindow (page world)
+  // This ensures accessibility from browser console regardless of injection context
+  const debugHelper = {
     enable: () => {
       DEBUG.enabled = true;
       console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
@@ -6913,12 +6913,23 @@ const Providers = {
     }
   };
 
+  // Assign to both window and unsafeWindow for maximum compatibility
+  // window = accessible within content world
+  // unsafeWindow = accessible from page world and browser console
+  window.LyricsPlusDebug = debugHelper;
+  if (typeof unsafeWindow !== 'undefined' && unsafeWindow !== null) {
+    unsafeWindow.LyricsPlusDebug = debugHelper;
+  }
+
   // Show help on first load
   console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
   
   // Verify LyricsPlusDebug is globally accessible
-  if (typeof globalScope.LyricsPlusDebug !== 'undefined') {
-    console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available globally', 'color: #888;');
+  if (typeof window.LyricsPlusDebug !== 'undefined') {
+    console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available in window scope', 'color: #888;');
+  }
+  if (typeof unsafeWindow !== 'undefined' && typeof unsafeWindow.LyricsPlusDebug !== 'undefined') {
+    console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available in unsafeWindow scope', 'color: #888;');
   }
 
   // Register menu command for clearing cache from userscript manager
