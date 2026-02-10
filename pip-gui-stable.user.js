@@ -5,7 +5,6 @@
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        none
-// @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
@@ -130,6 +129,40 @@
 
 (function () {
   'use strict';
+
+  // ------------------------
+  // Dynamic Library Loading
+  // ------------------------
+  // Load OpenCC library dynamically into page context
+  // This avoids @require directive which forces content script context
+  function loadOpenCCLibrary() {
+    return new Promise((resolve, reject) => {
+      // Check if already loaded
+      if (typeof window.OpenCC !== 'undefined') {
+        console.log('[Lyrics+] OpenCC library already loaded');
+        resolve();
+        return;
+      }
+
+      // Create script element to load OpenCC into page context
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js';
+      script.async = true;
+      
+      script.onload = () => {
+        console.log('[Lyrics+] OpenCC library loaded successfully');
+        resolve();
+      };
+      
+      script.onerror = (error) => {
+        console.error('[Lyrics+] Failed to load OpenCC library:', error);
+        reject(error);
+      };
+
+      // Inject script into page
+      (document.head || document.documentElement).appendChild(script);
+    });
+  }
 
   // ------------------------
   // State Variables
@@ -508,8 +541,6 @@
       DEBUG.error('OpenCC', 'Initialization error:', e);
     }
   }
-  // Attempt initialization immediately
-  initOpenCCConverters();
 
   /* NowPlayingView logic: Using the original `.zjCIcN96KsMfWwRo` container approach.
       The `.zjCIcN96KsMfWwRo` is the panel where NPV, Queue, and Connect a device are all displayed after clicking their respective buttons.
@@ -6853,5 +6884,17 @@ const Providers = {
   // Show help on first load
   console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
 
-  init();
+  // Load OpenCC library dynamically, then initialize
+  loadOpenCCLibrary()
+    .then(() => {
+      // Initialize OpenCC converters after library is loaded
+      initOpenCCConverters();
+      // Start main initialization
+      init();
+    })
+    .catch((error) => {
+      console.error('[Lyrics+] Failed to load OpenCC library, continuing without Chinese conversion support:', error);
+      // Continue without OpenCC - script will work but Chinese conversion won't
+      init();
+    });
 })();
