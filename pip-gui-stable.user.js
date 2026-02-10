@@ -4137,6 +4137,7 @@ const Providers = {
       btn.style.overflow = "hidden";
       btn.style.textOverflow = "ellipsis";
       btn.style.whiteSpace = "nowrap";
+      btn.style.boxSizing = "border-box";
 
       btn.onclick = async (e) => {
         if (providerClickTimer) return; // already waiting for double-click, skip
