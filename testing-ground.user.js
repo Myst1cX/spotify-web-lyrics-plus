@@ -15,8 +15,9 @@
 // ==/UserScript==
 
 // RESOLVED (16.8.test): MOVED DEBUG COMMANDS TO MENU COMMANDS
-// • All debug commands now available only via userscript menu (enable, disable, getTrackInfo, getRepeatState, getAudioElement, getCacheStats, clearCache)
+// • All debug commands now available only via userscript menu (enable, disable, getTrackInfo, getRepeatState, getCacheStats, clearCache)
 // • Removed console-based LyricsPlusDebug API to reduce global scope pollution
+// • Audio element fallbacks kept for compatibility but getAudioElement command removed (element doesn't exist in modern Spotify)
 // • Fixed grammar: "Now 1 song cached" instead of "Now 1 songs cached"
 
 // RESOLVED (16.7.test): IMPROVED LYRICS CACHE WITH BYTE-BASED EVICTION
@@ -6880,23 +6881,6 @@ const Providers = {
     const state = getRepeatState();
     console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
     alert('Repeat state has been logged to the console. Press F12 to view.');
-  });
-  
-  GM_registerMenuCommand('Debug: Get Audio Element', () => {
-    const audio = document.querySelector('audio');
-    if (audio) {
-      console.log('%c[Lyrics+] Audio Element:', 'color: #1db954; font-weight: bold;', {
-        currentTime: audio.currentTime,
-        duration: audio.duration,
-        paused: audio.paused,
-        ended: audio.ended,
-        readyState: audio.readyState
-      });
-      alert('Audio element info has been logged to the console. Press F12 to view.');
-    } else {
-      console.log('%c[Lyrics+] Audio element not found', 'color: #ff0000;');
-      alert('⚠️ Audio element not found.');
-    }
   });
   
   GM_registerMenuCommand('Debug: Enable', () => {
