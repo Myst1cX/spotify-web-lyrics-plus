@@ -3678,9 +3678,7 @@ const Providers = {
       justifyContent: "center",
       alignItems: "center",
       userSelect: "none",
-      padding: "0 2px",
-      marginLeft: "2px",
-      marginRight: "2px"
+      padding: "0 2px"
     });
     console.log("✅ [Lyrics+ UI] Restore default position button created");
     btnReset.innerHTML = `
@@ -3839,7 +3837,6 @@ const Providers = {
     translationToggleBtn.textContent = "🌐";
     translationToggleBtn.title = "Show/hide translation controls";
     Object.assign(translationToggleBtn.style, {
-      marginRight: "6px",
       cursor: "pointer",
       background: "none",
       border: "none",
@@ -3853,7 +3850,6 @@ const Providers = {
     transliterationToggleBtn.textContent = "🔡";
     transliterationToggleBtn.title = "Show transliteration";
     Object.assign(transliterationToggleBtn.style, {
-      marginRight: "6px",
       cursor: "pointer",
       background: "none",
       border: "none",
@@ -3872,7 +3868,6 @@ const Providers = {
     chineseConvBtn.textContent = "繁→简"; // Default, will be updated based on detected script
     chineseConvBtn.title = "Convert Chinese script";
     Object.assign(chineseConvBtn.style, {
-      marginRight: "6px",
       cursor: "pointer",
       background: "none",
       border: "none",
@@ -3925,8 +3920,6 @@ const Providers = {
     const downloadBtn = document.createElement("button");
     downloadBtn.title = "Download lyrics";
     Object.assign(downloadBtn.style, {
-      marginLeft: "0px",
-      marginRight: "2px",
       background: "none",
       color: "#fff",
       border: "none",
@@ -4056,7 +4049,6 @@ const Providers = {
     // --- Font Size Selector ---
     const fontSizeSelect = document.createElement("select");
     fontSizeSelect.title = "Change lyrics font size";
-    fontSizeSelect.style.marginRight = "2px";
     fontSizeSelect.style.cursor = "pointer";
     fontSizeSelect.style.background = "#121212";
     fontSizeSelect.style.border = "none";
@@ -4084,7 +4076,6 @@ const Providers = {
     const offsetToggleBtn = document.createElement("button");
     offsetToggleBtn.textContent = "⚙️";
     offsetToggleBtn.title = "Show/hide timing offset";
-    offsetToggleBtn.style.marginRight = "6px";
     offsetToggleBtn.style.cursor = "pointer";
     offsetToggleBtn.style.background = "none";
     offsetToggleBtn.style.border = "none";
@@ -4109,6 +4100,7 @@ const Providers = {
     const buttonGroup = document.createElement("div");
     buttonGroup.style.display = "flex";
     buttonGroup.style.alignItems = "center";
+    buttonGroup.style.gap = "6px";
     buttonGroup.appendChild(downloadBtnWrapper);
     buttonGroup.appendChild(fontSizeSelect);
     buttonGroup.appendChild(btnReset);
