@@ -3869,10 +3869,11 @@ const Providers = {
       cursor: "pointer",
       background: "none",
       border: "none",
+      borderRadius: "5px",
       color: "white",
       fontSize: "16px",
       lineHeight: "1",
-      padding: "0 4px 0 0",
+      padding: "0 4px",
       display: "none", // Hidden by default, shown when Chinese lyrics are present
     });
     chineseConvBtn.onmouseenter = () => { chineseConvBtn.style.background = "#222"; };
