@@ -4100,7 +4100,7 @@ const Providers = {
     const buttonGroup = document.createElement("div");
     buttonGroup.style.display = "flex";
     buttonGroup.style.alignItems = "center";
-    buttonGroup.style.gap = "6px";
+    buttonGroup.style.gap = "4px";
     buttonGroup.appendChild(downloadBtnWrapper);
     buttonGroup.appendChild(fontSizeSelect);
     buttonGroup.appendChild(btnReset);
