@@ -118,28 +118,21 @@ The script includes debug commands accessible via the browser console. These com
 - `LyricsPlusDebug.getCacheStats()` - Get lyrics cache statistics
 - `LyricsPlusDebug.clearCache()` - Clear all cached lyrics
 
-**If you get "ReferenceError: LyricsPlusDebug is not defined":**
-
-This error means the script hasn't fully loaded yet. This is **not a bug** - it's normal behavior when:
-1. The page is still loading
-2. The userscript hasn't executed yet
-3. You're not on `https://open.spotify.com/*` (script only runs on Spotify Web)
-4. The userscript is disabled in your userscript manager
-5. There was an error earlier in the script preventing it from loading
-
-**To verify the script loaded successfully:**
+**Verify the debug helper loaded:**
 1. Open the browser console (F12)
 2. Look for these messages:
    - ✅ `[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.`
    - ✅ `[Lyrics+] ✓ LyricsPlusDebug is available globally`
-3. If you see these, the debug commands are ready to use
-4. If you don't see these messages, try:
-   - Reloading the page (Ctrl+Shift+R or Cmd+Shift+R)
-   - Checking that your userscript manager is enabled
-   - Verifying you're on the Spotify Web Player (`open.spotify.com`)
-   - Looking for any error messages in the console
+3. If you see these messages, the debug commands are ready to use
 
-For a detailed explanation of this error, see [REFERENCE_ERROR_ANALYSIS.md](REFERENCE_ERROR_ANALYSIS.md). 
+**If you still get "ReferenceError: LyricsPlusDebug is not defined":**
+- Make sure you have the latest version of the script (v16.6.test or newer)
+- The issue was fixed by moving LyricsPlusDebug initialization earlier in the script
+- Try reinstalling the userscript if you're using an older cached version
+- Verify you're on `https://open.spotify.com/*` (script only runs on Spotify Web)
+- Check that your userscript manager is enabled
+
+For a detailed technical explanation, see [REFERENCE_ERROR_ANALYSIS.md](REFERENCE_ERROR_ANALYSIS.md). 
   
 * * * 
 
