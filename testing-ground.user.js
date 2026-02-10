@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Testing
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.7.test
+// @version      16.8.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,11 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/testing-ground.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/testing-ground.user.js
 // ==/UserScript==
+
+// RESOLVED (16.8.test): MOVED DEBUG COMMANDS TO MENU COMMANDS
+// • All debug commands now available only via userscript menu (enable, disable, getTrackInfo, getRepeatState, getAudioElement, getCacheStats, clearCache)
+// • Removed console-based LyricsPlusDebug API to reduce global scope pollution
+// • Fixed grammar: "Now 1 song cached" instead of "Now 1 songs cached"
 
 // RESOLVED (16.7.test): IMPROVED LYRICS CACHE WITH BYTE-BASED EVICTION
 // • Added 6 MB byte limit alongside entry count limit to prevent localStorage overflow
@@ -41,7 +46,7 @@
 // • Repeat One detection: When song restarts, lyrics automatically scroll back to beginning
 // • Smart LRU (Least Recently Used) eviction based on both byte size and entry count
 // • User-friendly console logging for all cache operations
-// • New debug commands: LyricsPlusDebug.getCacheStats() and LyricsPlusDebug.clearCache()
+// • Debug menu commands for cache operations (getCacheStats and clearCache available via userscript menu in v16.8.test+)
 // • Persists across page reloads and browser restarts via localStorage
 // • Typical storage: 3-6 MB (actual songs cached depends on lyrics size)
 
@@ -49,7 +54,7 @@
 // • Fixed issue where songs with replay enabled would get stuck at the last second
 // • Added 200ms buffer when seeking near track end to prevent "ended" state
 // • Added detailed debug logging to seekTo() function
-// • Created LyricsPlusDebug helper for troubleshooting
+// • Created debug helper for troubleshooting (menu commands available in v16.8.test+)
 
 // RESOLVED (15.9): FIXED MOBILE LYRICS MODAL POSITION
 
@@ -310,7 +315,8 @@
       if (evictedCount > 0) {
         console.log(`💾 [Lyrics+] Removed ${evictedCount} oldest cached song(s) to stay within limits (max ${maxKB} KB)`);
       }
-      console.log(`✅ [Lyrics+] Lyrics saved to cache! Now have ${cacheSize} songs (${totalKB} KB of ${maxKB} KB) cached for instant replay`);
+      const songWord = cacheSize === 1 ? 'song' : 'songs';
+      console.log(`✅ [Lyrics+] Lyrics saved to cache! Now have ${cacheSize} ${songWord} (${totalKB} KB of ${maxKB} KB) cached for instant replay`);
       DEBUG.info('Cache', `Cached lyrics for track: ${trackId}, total size: ${totalKB} KB`);
     },
 
@@ -6843,134 +6849,67 @@ const Providers = {
   };
   ResourceManager.registerWindowListener("resize", windowResizeHandler, 'Popup proportion on window resize');
 
-  // Expose global debug helper for troubleshooting
-  window.LyricsPlusDebug = {
-    enable: () => {
-      DEBUG.enabled = true;
-      console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
-      console.log('%cUse LyricsPlusDebug.disable() to turn off debug logging', 'color: #888;');
-    },
-    disable: () => {
-      DEBUG.enabled = false;
-      console.log('%c[Lyrics+] Debug mode disabled', 'color: #888;');
-    },
-    isEnabled: () => DEBUG.enabled,
-    getTrackInfo: () => {
-      const info = getCurrentTrackInfo();
-      console.log('%c[Lyrics+] Current Track Info:', 'color: #1db954; font-weight: bold;', info);
-      return info;
-    },
-    getRepeatState: () => {
-      const state = getRepeatState();
-      console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
-      return state;
-    },
-    getAudioElement: () => {
-      const audio = document.querySelector('audio');
-      if (audio) {
-        console.log('%c[Lyrics+] Audio Element:', 'color: #1db954; font-weight: bold;', {
-          currentTime: audio.currentTime,
-          duration: audio.duration,
-          paused: audio.paused,
-          ended: audio.ended,
-          readyState: audio.readyState
-        });
-      } else {
-        console.log('%c[Lyrics+] Audio element not found', 'color: #ff0000;');
-      }
-      return audio;
-    },
-    getCacheStats: () => {
-      const stats = LyricsCache.getStats();
-      console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
-      console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
-      if (stats.entries.length > 0) {
-        console.table(stats.entries);
-      }
-      return stats;
-    },
-    clearCache: () => {
-      LyricsCache.clear();
-      console.log('%c[Lyrics+] Cache cleared successfully', 'color: #1db954; font-weight: bold;');
-    },
-    help: () => {
-      console.log('%c[Lyrics+ Debug Helper]', 'color: #1db954; font-weight: bold; font-size: 14px;');
-      console.log('%cAvailable commands:', 'color: #888; font-weight: bold;');
-      console.log('  %cLyricsPlusDebug.enable()%c       - Enable debug logging', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.disable()%c      - Disable debug logging', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.isEnabled()%c    - Check if debug mode is enabled', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getTrackInfo()%c - Get current track information', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getRepeatState()%c - Get repeat button state', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getAudioElement()%c - Get audio element info', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getCacheStats()%c - Get lyrics cache statistics', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.clearCache()%c   - Clear all cached lyrics', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.help()%c         - Show this help message', 'color: #1db954;', 'color: inherit;');
-      console.log('');
-      console.log('%c💡 TIP: Use typeof check if script may not be fully loaded:', 'color: #1db954;');
-      console.log('%c   if (typeof LyricsPlusDebug !== "undefined") {', 'color: #888;');
-      console.log('%c     LyricsPlusDebug.getCacheStats();', 'color: #888;');
-      console.log('%c   }', 'color: #888;');
-      console.log('');
-      console.log('%c💡 TIP: You can also use menu commands from your userscript manager!', 'color: #1db954;');
-      console.log('%c   Click the userscript manager icon for quick access to debug functions.', 'color: #888;');
-    }
-  };
-
-  // Show help on first load
-  console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
-  
-  // Verify LyricsPlusDebug is globally accessible
-  if (typeof window.LyricsPlusDebug !== 'undefined') {
-    console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available globally', 'color: #888;');
-  }
-
   // Register menu commands for debug functions
-  if (typeof GM_registerMenuCommand !== 'undefined') {
-    GM_registerMenuCommand('Clear Lyrics Cache', () => {
-      if (typeof LyricsPlusDebug !== 'undefined' && typeof LyricsCache !== 'undefined') {
-        const stats = LyricsCache.getStats();
-        const confirmMsg = `Clear lyrics cache?\n\nCurrent cache: ${stats.size} songs (${stats.totalKB} KB of ${stats.maxKB} KB)\n\nThis will remove all cached lyrics and they will need to be fetched again.`;
-        
-        if (confirm(confirmMsg)) {
-          LyricsCache.clear();
-          alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.`);
-        }
-      }
-    });
+  GM_registerMenuCommand('Debug: Clear Cache', () => {
+    const stats = LyricsCache.getStats();
+    const confirmMsg = `Clear lyrics cache?\n\nCurrent cache: ${stats.size} songs (${stats.totalKB} KB of ${stats.maxKB} KB)\n\nThis will remove all cached lyrics and they will need to be fetched again.`;
     
-    GM_registerMenuCommand('Get Cache Stats', () => {
-      if (typeof LyricsPlusDebug !== 'undefined') {
-        LyricsPlusDebug.getCacheStats();
-        alert('Cache statistics have been logged to the console. Press F12 to view.');
-      }
-    });
-    
-    GM_registerMenuCommand('Get Track Info', () => {
-      if (typeof LyricsPlusDebug !== 'undefined') {
-        LyricsPlusDebug.getTrackInfo();
-        alert('Track information has been logged to the console. Press F12 to view.');
-      }
-    });
-    
-    GM_registerMenuCommand('Enable Debug Mode', () => {
-      if (typeof LyricsPlusDebug !== 'undefined') {
-        LyricsPlusDebug.enable();
-        alert('✅ Debug mode enabled! Check console for detailed logging.');
-      }
-    });
-    
-    GM_registerMenuCommand('Disable Debug Mode', () => {
-      if (typeof LyricsPlusDebug !== 'undefined') {
-        LyricsPlusDebug.disable();
-        alert('Debug mode disabled.');
-      }
-    });
-    
-    console.log('%c[Lyrics+] ✅ Menu commands registered! Click your userscript manager icon for debug options.', 'color: #1db954; font-weight: bold;');
-  } else {
-    console.log('%c[Lyrics+] ⚠️ GM_registerMenuCommand not available. Alternative: Use console commands.', 'color: #ff9800;');
-    console.log('%c   Try: %cif (typeof LyricsPlusDebug !== "undefined") { LyricsPlusDebug.help(); }', 'color: #888;', 'color: #1db954;');
-  }
+    if (confirm(confirmMsg)) {
+      LyricsCache.clear();
+      alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.`);
+    }
+  });
+  
+  GM_registerMenuCommand('Debug: Get Cache Stats', () => {
+    const stats = LyricsCache.getStats();
+    console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
+    console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
+    if (stats.entries.length > 0) {
+      console.table(stats.entries);
+    }
+    alert('Cache statistics have been logged to the console. Press F12 to view.');
+  });
+  
+  GM_registerMenuCommand('Debug: Get Track Info', () => {
+    const info = getCurrentTrackInfo();
+    console.log('%c[Lyrics+] Current Track Info:', 'color: #1db954; font-weight: bold;', info);
+    alert('Track information has been logged to the console. Press F12 to view.');
+  });
+  
+  GM_registerMenuCommand('Debug: Get Repeat State', () => {
+    const state = getRepeatState();
+    console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
+    alert('Repeat state has been logged to the console. Press F12 to view.');
+  });
+  
+  GM_registerMenuCommand('Debug: Get Audio Element', () => {
+    const audio = document.querySelector('audio');
+    if (audio) {
+      console.log('%c[Lyrics+] Audio Element:', 'color: #1db954; font-weight: bold;', {
+        currentTime: audio.currentTime,
+        duration: audio.duration,
+        paused: audio.paused,
+        ended: audio.ended,
+        readyState: audio.readyState
+      });
+      alert('Audio element info has been logged to the console. Press F12 to view.');
+    } else {
+      console.log('%c[Lyrics+] Audio element not found', 'color: #ff0000;');
+      alert('⚠️ Audio element not found.');
+    }
+  });
+  
+  GM_registerMenuCommand('Debug: Enable', () => {
+    DEBUG.enabled = true;
+    console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
+    alert('✅ Debug mode enabled! Check console for detailed logging.');
+  });
+  
+  GM_registerMenuCommand('Debug: Disable', () => {
+    DEBUG.enabled = false;
+    console.log('%c[Lyrics+] Debug mode disabled', 'color: #888;');
+    alert('Debug mode disabled.');
+  });
 
   init();
 })();
