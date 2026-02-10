@@ -3875,8 +3875,14 @@ const Providers = {
       padding: "0 4px 0 0",
       display: "none", // Hidden by default, shown when Chinese lyrics are present
     });
-    chineseConvBtn.onmouseenter = () => { chineseConvBtn.style.background = "#222"; };
-    chineseConvBtn.onmouseleave = () => { chineseConvBtn.style.background = "none"; };
+    chineseConvBtn.onmouseenter = () => { 
+      chineseConvBtn.style.background = "#222"; 
+      chineseConvBtn.style.padding = "0 4px"; 
+    };
+    chineseConvBtn.onmouseleave = () => { 
+      chineseConvBtn.style.background = "none"; 
+      chineseConvBtn.style.padding = "0 4px 0 0"; 
+    };
 
     // Helper to update button text based on original script type and conversion state
     // For Traditional lyrics (繁): "繁→简" (convert) / "繁←简" (revert)
