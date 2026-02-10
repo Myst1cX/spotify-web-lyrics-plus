@@ -6906,8 +6906,13 @@ const Providers = {
       console.log('  %cLyricsPlusDebug.clearCache()%c   - Clear all cached lyrics', 'color: #1db954;', 'color: inherit;');
       console.log('  %cLyricsPlusDebug.help()%c         - Show this help message', 'color: #1db954;', 'color: inherit;');
       console.log('');
-      console.log('%c💡 TIP: You can also clear cache from your userscript manager menu!', 'color: #1db954;');
-      console.log('%c   Click the userscript manager icon → "Clear Lyrics Cache"', 'color: #888;');
+      console.log('%c💡 TIP: Use typeof check if script may not be fully loaded:', 'color: #1db954;');
+      console.log('%c   if (typeof LyricsPlusDebug !== "undefined") {', 'color: #888;');
+      console.log('%c     LyricsPlusDebug.getCacheStats();', 'color: #888;');
+      console.log('%c   }', 'color: #888;');
+      console.log('');
+      console.log('%c💡 TIP: You can also use menu commands from your userscript manager!', 'color: #1db954;');
+      console.log('%c   Click the userscript manager icon for quick access to debug functions.', 'color: #888;');
     }
   };
 
@@ -6919,21 +6924,52 @@ const Providers = {
     console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available globally', 'color: #888;');
   }
 
-  // Register menu command for clearing cache from userscript manager
+  // Register menu commands for debug functions
   if (typeof GM_registerMenuCommand !== 'undefined') {
     GM_registerMenuCommand('Clear Lyrics Cache', () => {
-      const stats = LyricsCache.getStats();
-      const confirmMsg = `Clear lyrics cache?\n\nCurrent cache: ${stats.size} songs (${stats.totalKB} KB of ${stats.maxKB} KB)\n\nThis will remove all cached lyrics and they will need to be fetched again.`;
-      
-      if (confirm(confirmMsg)) {
-        LyricsCache.clear();
-        alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.`);
+      if (typeof LyricsPlusDebug !== 'undefined' && typeof LyricsCache !== 'undefined') {
+        const stats = LyricsCache.getStats();
+        const confirmMsg = `Clear lyrics cache?\n\nCurrent cache: ${stats.size} songs (${stats.totalKB} KB of ${stats.maxKB} KB)\n\nThis will remove all cached lyrics and they will need to be fetched again.`;
+        
+        if (confirm(confirmMsg)) {
+          LyricsCache.clear();
+          alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.`);
+        }
       }
     });
-    console.log('%c[Lyrics+] ✅ Menu command registered! Click your userscript manager icon → "Clear Lyrics Cache"', 'color: #1db954; font-weight: bold;');
+    
+    GM_registerMenuCommand('Get Cache Stats', () => {
+      if (typeof LyricsPlusDebug !== 'undefined') {
+        LyricsPlusDebug.getCacheStats();
+        alert('Cache statistics have been logged to the console. Press F12 to view.');
+      }
+    });
+    
+    GM_registerMenuCommand('Get Track Info', () => {
+      if (typeof LyricsPlusDebug !== 'undefined') {
+        LyricsPlusDebug.getTrackInfo();
+        alert('Track information has been logged to the console. Press F12 to view.');
+      }
+    });
+    
+    GM_registerMenuCommand('Enable Debug Mode', () => {
+      if (typeof LyricsPlusDebug !== 'undefined') {
+        LyricsPlusDebug.enable();
+        alert('✅ Debug mode enabled! Check console for detailed logging.');
+      }
+    });
+    
+    GM_registerMenuCommand('Disable Debug Mode', () => {
+      if (typeof LyricsPlusDebug !== 'undefined') {
+        LyricsPlusDebug.disable();
+        alert('Debug mode disabled.');
+      }
+    });
+    
+    console.log('%c[Lyrics+] ✅ Menu commands registered! Click your userscript manager icon for debug options.', 'color: #1db954; font-weight: bold;');
   } else {
     console.log('%c[Lyrics+] ⚠️ GM_registerMenuCommand not available. Alternative: Use console commands.', 'color: #ff9800;');
-    console.log('%c   Try: %cLyricsPlusDebug.clearCache()%c or %cLyricsPlusDebug.help()', 'color: #888;', 'color: #1db954;', 'color: #888;', 'color: #1db954;');
+    console.log('%c   Try: %cif (typeof LyricsPlusDebug !== "undefined") { LyricsPlusDebug.help(); }', 'color: #888;', 'color: #1db954;');
   }
 
   init();
