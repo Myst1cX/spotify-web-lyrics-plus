@@ -297,16 +297,32 @@
     getStats() {
       const cache = this.getAll();
       const entries = Object.entries(cache);
-      return {
-        size: entries.length,
-        maxSize: this.MAX_CACHE_SIZE,
-        entries: entries.map(([id, data]) => ({
+      
+      // Calculate total bytes
+      let totalBytes = 0;
+      const entriesWithDetails = entries.map(([id, data]) => {
+        const size = new Blob([JSON.stringify(data)]).size;
+        totalBytes += size;
+        return {
           trackId: id,
           provider: data.provider,
           hasSynced: !!data.synced,
           hasUnsynced: !!data.unsynced,
-          timestamp: new Date(data.timestamp).toISOString()
-        }))
+          timestamp: new Date(data.timestamp).toISOString(),
+          sizeBytes: size
+        };
+      });
+      
+      // Calculate max KB based on typical 1-5KB per song
+      const maxKB = this.MAX_CACHE_SIZE * 5; // Estimated max KB (5KB per song)
+      
+      return {
+        size: entries.length,
+        maxSize: this.MAX_CACHE_SIZE,
+        totalBytes: totalBytes,
+        totalKB: Math.round(totalBytes / 1024),
+        maxKB: maxKB,
+        entries: entriesWithDetails
       };
     }
   };
