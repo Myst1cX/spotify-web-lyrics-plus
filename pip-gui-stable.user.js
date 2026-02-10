@@ -4576,6 +4576,34 @@ const Providers = {
     controlsToggleWrapper.appendChild(controlsToggleLabel);
     controlsToggleWrapper.appendChild(controlsToggleCheckbox);
 
+    // Add AMOLED theme toggle as a separate settings row
+    const amoledToggleWrapper = document.createElement("div");
+    amoledToggleWrapper.id = "lyrics-plus-amoled-toggle-wrapper";
+    amoledToggleWrapper.style.display = "flex";
+    amoledToggleWrapper.style.alignItems = "center";
+    amoledToggleWrapper.style.justifyContent = "space-between";
+    amoledToggleWrapper.style.padding = "8px 12px";
+    amoledToggleWrapper.style.background = "#121212";
+    amoledToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
+    amoledToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
+    amoledToggleWrapper.style.overflow = "hidden";
+
+    const amoledToggleLabel = document.createElement("div");
+    amoledToggleLabel.textContent = "Theme: AMOLED";
+    amoledToggleLabel.style.color = "#fff";
+    amoledToggleLabel.style.fontSize = "15px";
+
+    const amoledToggleCheckbox = document.createElement("input");
+    amoledToggleCheckbox.type = "checkbox";
+    amoledToggleCheckbox.id = "lyrics-plus-amoled-toggle-settings";
+    amoledToggleCheckbox.className = "lyrics-plus-checkbox";
+    amoledToggleCheckbox.style.cursor = "pointer";
+
+    console.log("✅ [Lyrics+ Settings] AMOLED theme toggle created (Theme: AMOLED)");
+
+    amoledToggleWrapper.appendChild(amoledToggleLabel);
+    amoledToggleWrapper.appendChild(amoledToggleCheckbox);
+
     // Playback Controls Bar
     const controlsBar = document.createElement("div");
     Object.assign(controlsBar.style, {
@@ -4610,6 +4638,10 @@ const Providers = {
     let tabsVisible = localStorage.getItem('lyricsPlusTabsVisible');
     if (tabsVisible === null) tabsVisible = true;
     else tabsVisible = JSON.parse(tabsVisible);
+
+    let amoledThemeEnabled = localStorage.getItem('lyricsPlusAmoledTheme');
+    if (amoledThemeEnabled === null) amoledThemeEnabled = false;
+    else amoledThemeEnabled = JSON.parse(amoledThemeEnabled);
 
     const OFFSET_WRAPPER_PADDING = "8px 12px";
 
@@ -4670,6 +4702,10 @@ const Providers = {
         controlsToggleWrapper.style.pointerEvents = "";
         controlsToggleWrapper.style.padding = "8px 12px";
         controlsToggleWrapper.style.borderBottom = "1px solid #333";
+        amoledToggleWrapper.style.maxHeight = "50px";
+        amoledToggleWrapper.style.pointerEvents = "";
+        amoledToggleWrapper.style.padding = "8px 12px";
+        amoledToggleWrapper.style.borderBottom = "1px solid #333";
       } else {
         offsetWrapper.style.maxHeight = "0";
         offsetWrapper.style.pointerEvents = "none";
@@ -4687,7 +4723,38 @@ const Providers = {
         controlsToggleWrapper.style.pointerEvents = "none";
         controlsToggleWrapper.style.padding = "0 12px";
         controlsToggleWrapper.style.borderBottom = "none";
+        amoledToggleWrapper.style.maxHeight = "0";
+        amoledToggleWrapper.style.pointerEvents = "none";
+        amoledToggleWrapper.style.padding = "0 12px";
+        amoledToggleWrapper.style.borderBottom = "none";
       }
+    }
+
+    function applyAmoledTheme(enabled) {
+      const bgColor = enabled ? "#000" : "#121212";
+      
+      // Update all popup modal backgrounds
+      popup.style.backgroundColor = bgColor;
+      headerWrapper.style.backgroundColor = bgColor;
+      translatorWrapper.style.background = bgColor;
+      tabsToggleWrapper.style.background = bgColor;
+      seekbarToggleWrapper.style.background = bgColor;
+      controlsToggleWrapper.style.background = bgColor;
+      amoledToggleWrapper.style.background = bgColor;
+      offsetWrapper.style.background = bgColor;
+      lyricsContainer.style.backgroundColor = bgColor;
+      controlsBar.style.backgroundColor = bgColor;
+      
+      // Update dropdown menu backgrounds
+      syncOption.style.background = bgColor;
+      unsyncOption.style.background = bgColor;
+      fontSizeSelect.style.background = bgColor;
+      
+      // Update mouseleave handlers for dropdown options to use correct background
+      syncOption.onmouseleave = () => { syncOption.style.background = bgColor; syncOption.style.color = "#fff"; };
+      unsyncOption.onmouseleave = () => { unsyncOption.style.background = bgColor; unsyncOption.style.color = "#fff"; };
+      
+      console.log("🎨 [Lyrics+ Theme] AMOLED theme", enabled ? "ENABLED" : "DISABLED");
     }
 
     offsetToggleBtn.onclick = () => {
@@ -4713,6 +4780,14 @@ const Providers = {
       console.log("📝 [Lyrics+ Settings] Playback controls visibility toggled:", controlsVisible ? "SHOWN" : "HIDDEN");
     };
 
+    // AMOLED theme checkbox change handler (in settings)
+    amoledToggleCheckbox.onchange = () => {
+      amoledThemeEnabled = amoledToggleCheckbox.checked;
+      localStorage.setItem('lyricsPlusAmoledTheme', JSON.stringify(amoledThemeEnabled));
+      applyAmoledTheme(amoledThemeEnabled);
+      console.log("📝 [Lyrics+ Settings] AMOLED theme toggled:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
+    };
+
     // Apply initial visibility states
     applyOffsetVisibility(offsetVisible);
     applyControlsVisibility(controlsVisible);
@@ -4724,8 +4799,13 @@ const Providers = {
     // Initialize checkboxes state
     seekbarToggleCheckbox.checked = seekbarVisible;
     controlsToggleCheckbox.checked = controlsVisible;
+    amoledToggleCheckbox.checked = amoledThemeEnabled;
     console.log("📝 [Lyrics+ Settings] Seekbar initial state:", seekbarVisible ? "SHOWN" : "HIDDEN");
     console.log("📝 [Lyrics+ Settings] Playback controls initial state:", controlsVisible ? "SHOWN" : "HIDDEN");
+    console.log("📝 [Lyrics+ Settings] AMOLED theme initial state:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
+
+    // Apply initial AMOLED theme
+    applyAmoledTheme(amoledThemeEnabled);
 
     // Initialize and handle tabs toggle checkbox in settings
     tabsToggleCheckbox.checked = tabsVisible;
@@ -5082,6 +5162,7 @@ const Providers = {
     popup.appendChild(tabsToggleWrapper);
     popup.appendChild(seekbarToggleWrapper);
     popup.appendChild(controlsToggleWrapper);
+    popup.appendChild(amoledToggleWrapper);
     popup.appendChild(offsetWrapper);
     popup.appendChild(lyricsContainer);
     popup.appendChild(controlsBar);
