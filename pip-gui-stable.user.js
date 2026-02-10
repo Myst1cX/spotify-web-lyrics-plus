@@ -6876,7 +6876,7 @@ const Providers = {
   // Register menu commands for debug functions
   if (typeof GM_registerMenuCommand !== 'undefined') {
     GM_registerMenuCommand('Clear Lyrics Cache', () => {
-      if (typeof LyricsPlusDebug !== 'undefined') {
+      if (typeof LyricsPlusDebug !== 'undefined' && typeof LyricsCache !== 'undefined') {
         const stats = LyricsCache.getStats();
         const confirmMsg = `Clear lyrics cache?\n\nCurrent cache: ${stats.size} songs (${stats.totalKB} KB of ${stats.maxKB} KB)\n\nThis will remove all cached lyrics and they will need to be fetched again.`;
         
