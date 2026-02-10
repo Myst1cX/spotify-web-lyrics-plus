@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.9
+// @version      17.0
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -14,9 +14,12 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (17.0): ADJUSTED SPACING BETWEEN HEADER BUTTONS AND BETWEEN LYRIC SOURCE TABS. 
+// • REMOVED "ONMOUSEENTER" GRAY HOVER HIGHLIGHTING OF HEADER BUTTONS (of btnReset, downloadBtn, chineseConvBtn)
+
 // RESOLVED (16.9): REMOVED AUDIO ELEMENT FALLBACKS (audio element doesn't exist in Spotify Web Player)
-// • subsequently removed the getAudioElement command 
-  
+// • subsequently removed the getAudioElement command
+
 // RESOLVED (16.8): MOVED DEBUG COMMANDS TO MENU COMMANDS
 // • Debug commands now available only via userscript menu (enable, disable, getTrackInfo, getRepeatState, getAudioElement, getCacheStats, clearCache)
 // • Removed console-based LyricsPlusDebug API to reduce global scope pollution
@@ -288,7 +291,7 @@
       // Track total bytes and evict oldest entries if needed
       let totalBytes = 0;
       const remainingEntries = [];
-      
+
       for (const item of entriesWithSize) {
         totalBytes += item.size;
         remainingEntries.push(item);
@@ -314,7 +317,7 @@
       const cacheSize = Object.keys(newCache).length;
       const totalKB = Math.round(totalBytes / 1024);
       const maxKB = Math.round(this.MAX_BYTES / 1024);
-      
+
       if (evictedCount > 0) {
         console.log(`💾 [Lyrics+] Removed ${evictedCount} oldest cached song(s) to stay within limits (max ${maxKB} KB)`);
       }
@@ -343,7 +346,7 @@
     getStats() {
       const cache = this.getAll();
       const entries = Object.entries(cache);
-      
+
       // Calculate total bytes
       let totalBytes = 0;
       const entriesWithDetails = entries.map(([id, data]) => {
@@ -358,7 +361,7 @@
           sizeBytes: size
         };
       });
-      
+
       return {
         size: entries.length,
         safetyLimit: this.CACHE_ENTRY_SAFETY_LIMIT,
@@ -3677,10 +3680,7 @@ const Providers = {
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      userSelect: "none",
-      padding: "0 2px",
-      marginLeft: "2px",
-      marginRight: "2px"
+      userSelect: "none"
     });
     console.log("✅ [Lyrics+ UI] Restore default position button created");
     btnReset.innerHTML = `
@@ -3690,8 +3690,6 @@ const Providers = {
     </g>
   </svg>
 `;
-    btnReset.onmouseenter = () => { btnReset.style.background = "#222"; };
-    btnReset.onmouseleave = () => { btnReset.style.background = "none"; };
 
     // Default Position and Size of the Popup Gui
     btnReset.onclick = () => {
@@ -3823,7 +3821,6 @@ const Providers = {
       userSelect: "auto",
       height: "32px",
       display: "flex",
-      padding: "0 2px",
       alignItems: "center",
       justifyContent: "center",
       boxSizing: "border-box",
@@ -3839,7 +3836,6 @@ const Providers = {
     translationToggleBtn.textContent = "🌐";
     translationToggleBtn.title = "Show/hide translation controls";
     Object.assign(translationToggleBtn.style, {
-      marginRight: "6px",
       cursor: "pointer",
       background: "none",
       border: "none",
@@ -3853,7 +3849,6 @@ const Providers = {
     transliterationToggleBtn.textContent = "🔡";
     transliterationToggleBtn.title = "Show transliteration";
     Object.assign(transliterationToggleBtn.style, {
-      marginRight: "6px",
       cursor: "pointer",
       background: "none",
       border: "none",
@@ -3872,17 +3867,17 @@ const Providers = {
     chineseConvBtn.textContent = "繁→简"; // Default, will be updated based on detected script
     chineseConvBtn.title = "Convert Chinese script";
     Object.assign(chineseConvBtn.style, {
-      marginRight: "6px",
       cursor: "pointer",
       background: "none",
       border: "none",
       color: "white",
       fontSize: "16px",
       lineHeight: "1",
+      padding: "0 4px 0 0", // (top, right, bottom, left)
+      /* Manually fixing the spacing between chineseConvBtn and btnReset: set to 4px on the right, so it no longer borders on translationToggleBtn
+         Spacing left unchanged on the left - btnReset already spacing similar to chineseConvBtn's of 4px applied from before */
       display: "none", // Hidden by default, shown when Chinese lyrics are present
     });
-    chineseConvBtn.onmouseenter = () => { chineseConvBtn.style.background = "#222"; };
-    chineseConvBtn.onmouseleave = () => { chineseConvBtn.style.background = "none"; };
 
     // Helper to update button text based on original script type and conversion state
     // For Traditional lyrics (繁): "繁→简" (convert) / "繁←简" (revert)
@@ -3925,13 +3920,10 @@ const Providers = {
     const downloadBtn = document.createElement("button");
     downloadBtn.title = "Download lyrics";
     Object.assign(downloadBtn.style, {
-      marginLeft: "0px",
-      marginRight: "2px",
       background: "none",
       color: "#fff",
       border: "none",
       borderRadius: "5px",
-      padding: "0 2px",
       cursor: "pointer",
       width: "28px",
       height: "28px",
@@ -3941,8 +3933,6 @@ const Providers = {
       transition: "none",
       position: "relative"
     });
-    downloadBtn.onmouseenter = () => { downloadBtn.style.background = "#222"; };
-    downloadBtn.onmouseleave = () => { downloadBtn.style.background = "none"; };
 
     downloadBtn.innerHTML = `
   <svg id="lyrics-download-svg" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#fff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" style="display:block;">
@@ -4056,7 +4046,6 @@ const Providers = {
     // --- Font Size Selector ---
     const fontSizeSelect = document.createElement("select");
     fontSizeSelect.title = "Change lyrics font size";
-    fontSizeSelect.style.marginRight = "2px";
     fontSizeSelect.style.cursor = "pointer";
     fontSizeSelect.style.background = "#121212";
     fontSizeSelect.style.border = "none";
@@ -4084,7 +4073,6 @@ const Providers = {
     const offsetToggleBtn = document.createElement("button");
     offsetToggleBtn.textContent = "⚙️";
     offsetToggleBtn.title = "Show/hide timing offset";
-    offsetToggleBtn.style.marginRight = "6px";
     offsetToggleBtn.style.cursor = "pointer";
     offsetToggleBtn.style.background = "none";
     offsetToggleBtn.style.border = "none";
@@ -4109,6 +4097,7 @@ const Providers = {
     const buttonGroup = document.createElement("div");
     buttonGroup.style.display = "flex";
     buttonGroup.style.alignItems = "center";
+    buttonGroup.style.gap = "4px";
     buttonGroup.appendChild(downloadBtnWrapper);
     buttonGroup.appendChild(fontSizeSelect);
     buttonGroup.appendChild(btnReset);
@@ -4134,6 +4123,7 @@ const Providers = {
       const btn = document.createElement("button");
       btn.textContent = name;
       btn.style.flex = "1";
+      btn.style.minWidth = "0";
       btn.style.padding = "6px";
       btn.style.borderRadius = "6px";
       btn.style.border = "none";
@@ -4141,6 +4131,10 @@ const Providers = {
       btn.style.backgroundColor = (Providers.current === name) ? "#1aa34a" : "#333";
       btn.style.color = "#e0e0e0";
       btn.style.fontWeight = "600";
+      btn.style.overflow = "hidden";
+      btn.style.textOverflow = "ellipsis";
+      btn.style.whiteSpace = "nowrap";
+      btn.style.boxSizing = "border-box";
 
       btn.onclick = async (e) => {
         if (providerClickTimer) return; // already waiting for double-click, skip
@@ -6810,13 +6804,13 @@ const Providers = {
   GM_registerMenuCommand('Debug: Clear Cache', () => {
     const stats = LyricsCache.getStats();
     const confirmMsg = `Clear lyrics cache?\n\nCurrent cache: ${stats.size} songs (${stats.totalKB} KB of ${stats.maxKB} KB)\n\nThis will remove all cached lyrics and they will need to be fetched again.`;
-    
+
     if (confirm(confirmMsg)) {
       LyricsCache.clear();
       alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.`);
     }
   });
-  
+
   GM_registerMenuCommand('Debug: Get Cache Stats', () => {
     const stats = LyricsCache.getStats();
     console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
@@ -6829,7 +6823,7 @@ const Providers = {
     'Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.'
   );
 });
-  
+
   GM_registerMenuCommand('Debug: Get Track Info', () => {
     const info = getCurrentTrackInfo();
     console.log('%c[Lyrics+] Current Track Info:', 'color: #1db954; font-weight: bold;', info);
@@ -6838,7 +6832,7 @@ const Providers = {
     'Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.'
   );
 });
-  
+
   GM_registerMenuCommand('Debug: Get Repeat State', () => {
     const state = getRepeatState();
     console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
@@ -6847,7 +6841,7 @@ const Providers = {
     'Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.'
   );
 });
-  
+
   GM_registerMenuCommand('Debug: Enable', () => {
     DEBUG.enabled = true;
     console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
@@ -6856,7 +6850,7 @@ const Providers = {
     'Open DevTools (Press F12 or Right click and Inspect), then select the Debug tab under Console for detailed logging.'
   );
 });
-  
+
   GM_registerMenuCommand('Debug: Disable', () => {
     DEBUG.enabled = false;
     console.log('%c[Lyrics+] Debug mode disabled', 'color: #888;');
@@ -6865,5 +6859,4 @@ const Providers = {
 
   init();
 })();
-
 
