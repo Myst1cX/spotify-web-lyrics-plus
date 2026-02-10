@@ -5,7 +5,6 @@
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
-// @grant        GM_registerMenuCommand
 // @connect      genius.com
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
@@ -6917,22 +6916,9 @@ const Providers = {
     console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available globally', 'color: #888;');
   }
 
-  // Register menu command for clearing cache from userscript manager
-  if (typeof GM_registerMenuCommand !== 'undefined') {
-    GM_registerMenuCommand('Clear Lyrics Cache', () => {
-      const stats = LyricsCache.getStats();
-      const confirmMsg = `Clear lyrics cache?\n\nCurrent cache: ${stats.size} songs (${stats.totalKB} KB of ${stats.maxKB} KB)\n\nThis will remove all cached lyrics and they will need to be fetched again.`;
-      
-      if (confirm(confirmMsg)) {
-        LyricsCache.clear();
-        alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.`);
-      }
-    });
-    console.log('%c[Lyrics+] ✅ Menu command registered! Click your userscript manager icon → "Clear Lyrics Cache"', 'color: #1db954; font-weight: bold;');
-  } else {
-    console.log('%c[Lyrics+] ⚠️ GM_registerMenuCommand not available. Alternative: Use console commands.', 'color: #ff9800;');
-    console.log('%c   Try: %cLyricsPlusDebug.clearCache()%c or %cLyricsPlusDebug.help()', 'color: #888;', 'color: #1db954;', 'color: #888;', 'color: #1db954;');
-  }
+  // Cache can be cleared via console commands
+  console.log('%c[Lyrics+] 💡 To clear lyrics cache, use console commands:', 'color: #1db954; font-weight: bold;');
+  console.log('%c   Try: %cLyricsPlusDebug.clearCache()%c or %cLyricsPlusDebug.help()', 'color: #888;', 'color: #1db954;', 'color: #888;', 'color: #1db954;');
 
   init();
 })();
