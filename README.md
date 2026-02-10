@@ -99,7 +99,47 @@
 
 ## Troubleshooting
 
-> **Lyrics out of sync?** Adjust the timing offset for perfect sync. 
+> **Lyrics out of sync?** Adjust the timing offset for perfect sync.
+
+* * *
+
+> **Using Debug Commands (LyricsPlusDebug)?**
+
+The script includes debug commands accessible via the browser console. These commands help troubleshoot issues with the lyrics extension.
+
+**Available Commands:**
+- `LyricsPlusDebug.help()` - Show all available commands
+- `LyricsPlusDebug.enable()` - Enable debug logging
+- `LyricsPlusDebug.disable()` - Disable debug logging
+- `LyricsPlusDebug.isEnabled()` - Check if debug mode is enabled
+- `LyricsPlusDebug.getTrackInfo()` - Get current track information
+- `LyricsPlusDebug.getRepeatState()` - Get repeat button state
+- `LyricsPlusDebug.getAudioElement()` - Get audio element info
+- `LyricsPlusDebug.getCacheStats()` - Get lyrics cache statistics
+- `LyricsPlusDebug.clearCache()` - Clear all cached lyrics
+
+**If you get "ReferenceError: LyricsPlusDebug is not defined":**
+
+This error means the script hasn't fully loaded yet. This is **not a bug** - it's normal behavior when:
+1. The page is still loading
+2. The userscript hasn't executed yet
+3. You're not on `https://open.spotify.com/*` (script only runs on Spotify Web)
+4. The userscript is disabled in your userscript manager
+5. There was an error earlier in the script preventing it from loading
+
+**To verify the script loaded successfully:**
+1. Open the browser console (F12)
+2. Look for these messages:
+   - ✅ `[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.`
+   - ✅ `[Lyrics+] ✓ LyricsPlusDebug is available globally`
+3. If you see these, the debug commands are ready to use
+4. If you don't see these messages, try:
+   - Reloading the page (Ctrl+Shift+R or Cmd+Shift+R)
+   - Checking that your userscript manager is enabled
+   - Verifying you're on the Spotify Web Player (`open.spotify.com`)
+   - Looking for any error messages in the console
+
+For a detailed explanation of this error, see [REFERENCE_ERROR_ANALYSIS.md](REFERENCE_ERROR_ANALYSIS.md). 
   
 * * * 
 
