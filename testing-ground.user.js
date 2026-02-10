@@ -4,8 +4,7 @@
 // @version      16.6.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
-// @grant        GM_xmlhttpRequest
-// @connect      genius.com
+// @grant        none
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
@@ -2673,22 +2672,20 @@ async function fetchGeniusLyrics(info) {
       console.log(`[Genius Debug] URL: ${searchUrl}`);
 
       try {
-        const searchRes = await new Promise((resolve, reject) => {
-          GM_xmlhttpRequest({
-            method: "GET",
-            url: searchUrl,
-            headers: {
-              Accept: "application/json",
-              "User-Agent": navigator.userAgent,
-            },
-            onload: resolve,
-            onerror: reject,
-            ontimeout: reject,
-            timeout: 5000,
-          });
+        const searchRes = await fetch(searchUrl, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "User-Agent": navigator.userAgent,
+          },
+          signal: AbortSignal.timeout(5000),
         });
 
-        const searchJson = JSON.parse(searchRes.responseText);
+        if (!searchRes.ok) {
+          throw new Error(`HTTP error! status: ${searchRes.status}`);
+        }
+
+        const searchJson = await searchRes.json();
         const hits = searchJson?.response?.sections?.flatMap(s => s.hits) || [];
         const songHits = hits.filter(h => h.type === "song");
 
@@ -2899,22 +2896,21 @@ async function fetchGeniusLyrics(info) {
         console.log(`[Genius Debug] Fetching lyrics from: ${song.url}`);
 
 
-        const htmlRes = await new Promise((resolve, reject) => {
-          GM_xmlhttpRequest({
-            method: "GET",
-            url: song.url,
-            headers: {
-              Accept: "text/html",
-              "User-Agent": navigator.userAgent,
-            },
-            onload: resolve,
-            onerror: reject,
-            ontimeout: reject,
-            timeout: 5000,
-          });
+        const htmlRes = await fetch(song.url, {
+          method: "GET",
+          headers: {
+            Accept: "text/html",
+            "User-Agent": navigator.userAgent,
+          },
+          signal: AbortSignal.timeout(5000),
         });
 
-        const doc = new DOMParser().parseFromString(htmlRes.responseText, "text/html");
+        if (!htmlRes.ok) {
+          throw new Error(`HTTP error! status: ${htmlRes.status}`);
+        }
+
+        const htmlText = await htmlRes.text();
+        const doc = new DOMParser().parseFromString(htmlText, "text/html");
 
         const lyricsRoot = [...doc.querySelectorAll('div')].find(el =>
           [...el.classList].some(cls => cls.includes('Lyrics__Root'))
