@@ -6862,8 +6862,12 @@ const Providers = {
       console.log('%c💡 To remove a cached entry:', 'color: #1db954; font-weight: bold;');
       console.log('  1. Copy the command from the "🗑️ Remove" column');
       console.log('  2. Paste it in the console and press Enter');
-      console.log('%cExample:', 'color: #888;');
-      console.log(`  removeCachedLyrics("${entriesWithRemove[0].trackId}")`);
+      
+      // Show example only if we have entries
+      if (entriesWithRemove.length > 0) {
+        console.log('%cExample:', 'color: #888;');
+        console.log(`  removeCachedLyrics("${entriesWithRemove[0].trackId}")`);
+      }
       
       // Make the remove function globally accessible from console (only once)
       if (!window.removeCachedLyrics) {
