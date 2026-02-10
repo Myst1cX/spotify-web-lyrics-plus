@@ -14,7 +14,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.0): ADJUSTED SPACING BETWEEN HEADER BUTTONS AND BETWEEN LYRIC SOURCE TABS. 
+// RESOLVED (17.0): ADJUSTED SPACING BETWEEN HEADER BUTTONS AND BETWEEN LYRIC SOURCE TABS (improves UI in cases of resizing)
 // • REMOVED "ONMOUSEENTER" GRAY HOVER HIGHLIGHTING OF HEADER BUTTONS (of btnReset, downloadBtn, chineseConvBtn)
 
 // RESOLVED (16.9): REMOVED AUDIO ELEMENT FALLBACKS (audio element doesn't exist in Spotify Web Player)
@@ -6859,4 +6859,5 @@ const Providers = {
 
   init();
 })();
+
 
