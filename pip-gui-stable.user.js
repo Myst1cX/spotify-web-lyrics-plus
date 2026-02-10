@@ -324,6 +324,35 @@
     },
 
     /**
+     * Delete a specific cached lyrics entry
+     * @param {string} trackId - Spotify track ID to remove from cache
+     * @returns {boolean} True if entry was deleted, false if not found
+     */
+    delete(trackId) {
+      if (!trackId) {
+        console.warn('[Lyrics+] ⚠️ No trackId provided for deletion');
+        return false;
+      }
+      
+      try {
+        const cache = this.getAll();
+        if (cache[trackId]) {
+          delete cache[trackId];
+          this.saveAll(cache);
+          console.log(`🗑️ [Lyrics+] Removed cached lyrics for track: ${trackId}`);
+          DEBUG.info('Cache', `Deleted cache entry: ${trackId}`);
+          return true;
+        } else {
+          console.warn(`[Lyrics+] ⚠️ Track ${trackId} not found in cache`);
+          return false;
+        }
+      } catch (e) {
+        console.warn('[Lyrics+] ⚠️ Could not delete cache entry:', e);
+        return false;
+      }
+    },
+
+    /**
      * Clear all cached lyrics
      */
     clear() {
@@ -6821,9 +6850,32 @@ const Providers = {
     const stats = LyricsCache.getStats();
     console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
     console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
+    
     if (stats.entries.length > 0) {
-      console.table(stats.entries);
+      // Add interactive remove buttons for each cached entry
+      const entriesWithRemove = stats.entries.map(entry => ({
+        ...entry,
+        '🗑️ Remove': `removeCachedLyrics("${entry.trackId}")`
+      }));
+      
+      console.table(entriesWithRemove);
+      console.log('%c💡 To remove a cached entry:', 'color: #1db954; font-weight: bold;');
+      console.log('  1. Copy the command from the "🗑️ Remove" column');
+      console.log('  2. Paste it in the console and press Enter');
+      console.log('%cExample:', 'color: #888;');
+      console.log(`  removeCachedLyrics("${stats.entries[0].trackId}")`);
+      
+      // Make the remove function globally accessible from console
+      window.removeCachedLyrics = (trackId) => {
+        if (LyricsCache.delete(trackId)) {
+          console.log('%c✅ Successfully removed cached lyrics!', 'color: #1db954; font-weight: bold;');
+          console.log('Run the cache stats command again to see updated list.');
+        } else {
+          console.log('%c❌ Failed to remove cached lyrics', 'color: #e22134; font-weight: bold;');
+        }
+      };
     }
+    
     alert('Cache statistics have been logged to the console. Press F12 to view.');
   });
   
