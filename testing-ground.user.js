@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Testing
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      16.6.test
+// @version      16.7.test
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        https://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -14,7 +14,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/testing-ground.user.js
 // ==/UserScript==
 
-// RESOLVED (16.6.test): IMPROVED LYRICS CACHE WITH BYTE-BASED EVICTION
+// RESOLVED (16.7.test): IMPROVED LYRICS CACHE WITH BYTE-BASED EVICTION
 // • Added 6 MB byte limit alongside entry count limit to prevent localStorage overflow
 // • Increased safety limit to 1000 entries (actual limit 150-400 songs based on size)
 // • Byte limit (6 MB) is now the primary constraint; entry limit is safety fallback
@@ -22,6 +22,8 @@
 // • Renamed constant to CACHE_ENTRY_SAFETY_LIMIT for clarity
 // • Cache now automatically evicts based on both entry count and total size
 // • Users can cache significantly more songs without storage issues
+
+// RESOLVED (16.6): FIXED THE @MATCH PATTERN (VIOLENT MONKEY DID NOT CONSIDER THE USERSCRIPT AS A MATCHED SCRIPT FOR THE SITE
 
 // RESOLVED (16.5): SPLIT GENIUS FETCH ERROR MESSAGE INTO TWO (DUE TO CONNECTION ERROR/SERVICE UNAVAILABILITY AND DUE TO LACK OF LYRICS)
 
