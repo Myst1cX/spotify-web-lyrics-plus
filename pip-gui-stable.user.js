@@ -6824,25 +6824,25 @@ const Providers = {
     if (stats.entries.length > 0) {
       console.table(stats.entries);
     }
-    alert('Cache statistics have been logged to the console. Press F12 to view.');
+    alert('Cache statistics have been logged to the console. Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.');
   });
   
   GM_registerMenuCommand('Debug: Get Track Info', () => {
     const info = getCurrentTrackInfo();
     console.log('%c[Lyrics+] Current Track Info:', 'color: #1db954; font-weight: bold;', info);
-    alert('Track information has been logged to the console. Press F12 to view.');
+    alert('Track information has been logged to the console. Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.');
   });
   
   GM_registerMenuCommand('Debug: Get Repeat State', () => {
     const state = getRepeatState();
     console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
-    alert('Repeat state has been logged to the console. Press F12 to view.');
+    alert('Repeat state has been logged to the console. Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.');
   });
   
   GM_registerMenuCommand('Debug: Enable', () => {
     DEBUG.enabled = true;
     console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
-    alert('✅ Debug mode enabled! Check console for detailed logging.');
+    alert('✅ Debug mode enabled! Open DevTools (Press F12 or Right click and Inspect), then select the Debug tab under Console for detailed logging.');
   });
   
   GM_registerMenuCommand('Debug: Disable', () => {
@@ -6853,3 +6853,4 @@ const Providers = {
 
   init();
 })();
+
