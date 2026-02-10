@@ -1691,6 +1691,86 @@ const PLAY_WORDS = [
   }
 
   // ------------------------
+  // Debug Helper (Global)
+  // ------------------------
+  // Expose global debug helper for troubleshooting
+  // This is defined early so it's available immediately when script loads
+  window.LyricsPlusDebug = {
+    enable: () => {
+      DEBUG.enabled = true;
+      console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
+      console.log('%cUse LyricsPlusDebug.disable() to turn off debug logging', 'color: #888;');
+    },
+    disable: () => {
+      DEBUG.enabled = false;
+      console.log('%c[Lyrics+] Debug mode disabled', 'color: #888;');
+    },
+    isEnabled: () => DEBUG.enabled,
+    getTrackInfo: () => {
+      const info = getCurrentTrackInfo();
+      console.log('%c[Lyrics+] Current Track Info:', 'color: #1db954; font-weight: bold;', info);
+      return info;
+    },
+    getRepeatState: () => {
+      const state = getRepeatState();
+      console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
+      return state;
+    },
+    getAudioElement: () => {
+      const audio = document.querySelector('audio');
+      if (audio) {
+        console.log('%c[Lyrics+] Audio Element:', 'color: #1db954; font-weight: bold;', {
+          currentTime: audio.currentTime,
+          duration: audio.duration,
+          paused: audio.paused,
+          ended: audio.ended,
+          readyState: audio.readyState
+        });
+      } else {
+        console.log('%c[Lyrics+] Audio element not found', 'color: #ff0000;');
+      }
+      return audio;
+    },
+    getCacheStats: () => {
+      const stats = LyricsCache.getStats();
+      console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
+      console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
+      if (stats.entries.length > 0) {
+        console.table(stats.entries);
+      }
+      return stats;
+    },
+    clearCache: () => {
+      LyricsCache.clear();
+      console.log('%c[Lyrics+] Cache cleared successfully', 'color: #1db954; font-weight: bold;');
+    },
+    help: () => {
+      console.log('%c[Lyrics+ Debug Helper]', 'color: #1db954; font-weight: bold; font-size: 14px;');
+      console.log('%cAvailable commands:', 'color: #888; font-weight: bold;');
+      console.log('  %cLyricsPlusDebug.enable()%c       - Enable debug logging', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.disable()%c      - Disable debug logging', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.isEnabled()%c    - Check if debug mode is enabled', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.getTrackInfo()%c - Get current track information', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.getRepeatState()%c - Get repeat button state', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.getAudioElement()%c - Get audio element info', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.getCacheStats()%c - Get lyrics cache statistics', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.clearCache()%c   - Clear all cached lyrics', 'color: #1db954;', 'color: inherit;');
+      console.log('  %cLyricsPlusDebug.help()%c         - Show this help message', 'color: #1db954;', 'color: inherit;');
+      console.log('');
+      console.log('%c💡 TIP: You can also clear cache from your userscript manager menu!', 'color: #1db954;');
+      console.log('%c   Click the userscript manager icon → "Clear Lyrics Cache"', 'color: #888;');
+    }
+  };
+
+  // Show help on first load
+  console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
+  
+  // Verify LyricsPlusDebug is globally accessible
+  if (typeof window.LyricsPlusDebug !== 'undefined') {
+    console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available globally', 'color: #888;');
+  }
+
+  // ------------------------
   // Providers and Fetchers
   // ------------------------
 
@@ -6840,82 +6920,6 @@ const Providers = {
     }
   };
   ResourceManager.registerWindowListener("resize", windowResizeHandler, 'Popup proportion on window resize');
-
-  // Expose global debug helper for troubleshooting
-  window.LyricsPlusDebug = {
-    enable: () => {
-      DEBUG.enabled = true;
-      console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
-      console.log('%cUse LyricsPlusDebug.disable() to turn off debug logging', 'color: #888;');
-    },
-    disable: () => {
-      DEBUG.enabled = false;
-      console.log('%c[Lyrics+] Debug mode disabled', 'color: #888;');
-    },
-    isEnabled: () => DEBUG.enabled,
-    getTrackInfo: () => {
-      const info = getCurrentTrackInfo();
-      console.log('%c[Lyrics+] Current Track Info:', 'color: #1db954; font-weight: bold;', info);
-      return info;
-    },
-    getRepeatState: () => {
-      const state = getRepeatState();
-      console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
-      return state;
-    },
-    getAudioElement: () => {
-      const audio = document.querySelector('audio');
-      if (audio) {
-        console.log('%c[Lyrics+] Audio Element:', 'color: #1db954; font-weight: bold;', {
-          currentTime: audio.currentTime,
-          duration: audio.duration,
-          paused: audio.paused,
-          ended: audio.ended,
-          readyState: audio.readyState
-        });
-      } else {
-        console.log('%c[Lyrics+] Audio element not found', 'color: #ff0000;');
-      }
-      return audio;
-    },
-    getCacheStats: () => {
-      const stats = LyricsCache.getStats();
-      console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
-      console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
-      if (stats.entries.length > 0) {
-        console.table(stats.entries);
-      }
-      return stats;
-    },
-    clearCache: () => {
-      LyricsCache.clear();
-      console.log('%c[Lyrics+] Cache cleared successfully', 'color: #1db954; font-weight: bold;');
-    },
-    help: () => {
-      console.log('%c[Lyrics+ Debug Helper]', 'color: #1db954; font-weight: bold; font-size: 14px;');
-      console.log('%cAvailable commands:', 'color: #888; font-weight: bold;');
-      console.log('  %cLyricsPlusDebug.enable()%c       - Enable debug logging', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.disable()%c      - Disable debug logging', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.isEnabled()%c    - Check if debug mode is enabled', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getTrackInfo()%c - Get current track information', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getRepeatState()%c - Get repeat button state', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getAudioElement()%c - Get audio element info', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.getCacheStats()%c - Get lyrics cache statistics', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.clearCache()%c   - Clear all cached lyrics', 'color: #1db954;', 'color: inherit;');
-      console.log('  %cLyricsPlusDebug.help()%c         - Show this help message', 'color: #1db954;', 'color: inherit;');
-      console.log('');
-      console.log('%c💡 TIP: You can also clear cache from your userscript manager menu!', 'color: #1db954;');
-      console.log('%c   Click the userscript manager icon → "Clear Lyrics Cache"', 'color: #888;');
-    }
-  };
-
-  // Show help on first load
-  console.log('%c[Lyrics+] Debug helper loaded! Type LyricsPlusDebug.help() for commands.', 'color: #1db954;');
-  
-  // Verify LyricsPlusDebug is globally accessible
-  if (typeof window.LyricsPlusDebug !== 'undefined') {
-    console.log('%c[Lyrics+] ✓ LyricsPlusDebug is available globally', 'color: #888;');
-  }
 
   // Register menu command for clearing cache from userscript manager
   if (typeof GM_registerMenuCommand !== 'undefined') {
