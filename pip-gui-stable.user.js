@@ -3677,8 +3677,7 @@ const Providers = {
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      userSelect: "none",
-      padding: "0 2px"
+      userSelect: "none"
     });
     console.log("✅ [Lyrics+ UI] Restore default position button created");
     btnReset.innerHTML = `
