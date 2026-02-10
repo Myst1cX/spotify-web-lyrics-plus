@@ -15,9 +15,8 @@
 // ==/UserScript==
 
 // RESOLVED (16.8.test): MOVED DEBUG COMMANDS TO MENU COMMANDS
-// • All debug commands now available only via userscript menu (enable, disable, getTrackInfo, getRepeatState, getCacheStats, clearCache)
+// • All debug commands now available only via userscript menu (enable, disable, getTrackInfo, getRepeatState, getAudioElement, getCacheStats, clearCache)
 // • Removed console-based LyricsPlusDebug API to reduce global scope pollution
-// • Removed getAudioElement command and audio element fallbacks (audio element doesn't exist in Spotify Web Player)
 // • Fixed grammar: "Now 1 song cached" instead of "Now 1 songs cached"
 
 // RESOLVED (16.7.test): IMPROVED LYRICS CACHE WITH BYTE-BASED EVICTION
@@ -925,6 +924,15 @@
       }
     }
 
+    // Fallback: try audio element duration
+    if (duration <= 0) {
+      const audio = document.querySelector('audio');
+      if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+        duration = audio.duration * 1000;
+        DEBUG.debug('Track', 'Duration obtained from audio element');
+      }
+    }
+
     const trackInfo = {
       id: `${title}-${artist}`,
       title,
@@ -993,6 +1001,10 @@
       if (labelMeansPause(label)) return true; // "Pause" means music is playing
       if (labelMeansPlay(label)) return false; // "Play" means music is paused/stopped
     }
+
+    // Fallback: use <audio> element if available
+    const audio = document.querySelector('audio');
+    if (audio) return !audio.paused;
 
     // Default: assume not playing
     return false;
@@ -5338,7 +5350,7 @@ const Providers = {
     // --- DYNAMIC PROGRESS BAR: PROGRESS UPDATES AND SEEKING LOGIC ---
     // This section implements robust detection and seeking for Spotify's progress bar,
     // supporting both CSS-driven progress bars (using --progress-bar-transform) and
-    // native range inputs, with fallback to visible position/duration text.
+    // native range inputs, with fallback to visible position/duration text or audio element.
 
     // No interpolation - we just read directly from Spotify's DOM every 100ms.
     // If Spotify's DOM updates slowly, we show what Spotify shows. This avoids
@@ -5495,6 +5507,14 @@ const Providers = {
             }
           }
 
+          // Fallback for duration: try audio.duration
+          if (durMs <= 0) {
+            const audio = document.querySelector('audio');
+            if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+              durMs = audio.duration * 1000;
+            }
+          }
+
           // Fallback for duration: try getCurrentTrackInfo().duration
           if (durMs <= 0) {
             const trackInfo = getCurrentTrackInfo();
@@ -5543,6 +5563,14 @@ const Providers = {
               const trackInfo = getCurrentTrackInfo();
               if (trackInfo && trackInfo.duration > 0) {
                 durMs = trackInfo.duration;
+              }
+            }
+
+            // Fallback: try audio.duration
+            if (durMs <= 0) {
+              const audio = document.querySelector('audio');
+              if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+                durMs = audio.duration * 1000;
               }
             }
 
@@ -5614,8 +5642,9 @@ const Providers = {
      * seekTo(ms)
      * Attempts to seek Spotify's playback to the specified position in milliseconds.
      * Fallback order:
-     *   (a) Hidden/native range input value + dispatch input/change + pointer events
-     *   (b) Emulate pointer/mouse events on CSS progress-bar handle (last resort)
+     *   (a) audio.currentTime - direct audio element control
+     *   (b) Hidden/native range input value + dispatch input/change + pointer events
+     *   (c) Emulate pointer/mouse events on CSS progress-bar handle (last resort)
      * @param {number} ms - Target position in milliseconds
      * @returns {boolean} Whether seeking was attempted
      */
@@ -5625,7 +5654,23 @@ const Providers = {
 
         DEBUG.debug('Seekbar', `Seeking to ${ms}ms (${formatMs(ms)})`);
 
-        // --- (a) Try hidden/native range input ---
+        // --- (a) Try audio.currentTime first ---
+        const audio = document.querySelector('audio');
+        if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+          try {
+            const audioDurMs = audio.duration * 1000;
+            const safeMs = applySeekEndBuffer(ms, audioDurMs, SEEK_END_BUFFER_MS);
+            audio.currentTime = safeMs / 1000;
+            audio.dispatchEvent(new Event('input', { bubbles: true }));
+            audio.dispatchEvent(new Event('change', { bubbles: true }));
+            DEBUG.debug('Seekbar', `✓ Seeked via audio.currentTime to ${safeMs}ms`);
+            return true;
+          } catch (e) {
+            console.warn('seekTo: Failed to set audio.currentTime', e);
+          }
+        }
+
+        // --- (b) Try hidden/native range input ---
         const spotifyRange = findSpotifyRangeInput();
         if (spotifyRange) {
           try {
@@ -5680,7 +5725,7 @@ const Providers = {
           }
         }
 
-        // --- (b) Emulate pointer events on CSS progress-bar handle (last resort) ---
+        // --- (c) Emulate pointer events on CSS progress-bar handle (last resort) ---
         const progressBar = document.querySelector('[data-testid="progress-bar"]');
         if (progressBar) {
           try {
@@ -6835,6 +6880,23 @@ const Providers = {
     const state = getRepeatState();
     console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
     alert('Repeat state has been logged to the console. Press F12 to view.');
+  });
+  
+  GM_registerMenuCommand('Debug: Get Audio Element', () => {
+    const audio = document.querySelector('audio');
+    if (audio) {
+      console.log('%c[Lyrics+] Audio Element:', 'color: #1db954; font-weight: bold;', {
+        currentTime: audio.currentTime,
+        duration: audio.duration,
+        paused: audio.paused,
+        ended: audio.ended,
+        readyState: audio.readyState
+      });
+      alert('Audio element info has been logged to the console. Press F12 to view.');
+    } else {
+      console.log('%c[Lyrics+] Audio element not found', 'color: #ff0000;');
+      alert('⚠️ Audio element not found.');
+    }
   });
   
   GM_registerMenuCommand('Debug: Enable', () => {
