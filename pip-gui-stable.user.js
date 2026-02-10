@@ -4126,6 +4126,7 @@ const Providers = {
       const btn = document.createElement("button");
       btn.textContent = name;
       btn.style.flex = "1";
+      btn.style.minWidth = "0";
       btn.style.padding = "6px";
       btn.style.borderRadius = "6px";
       btn.style.border = "none";
@@ -4133,6 +4134,9 @@ const Providers = {
       btn.style.backgroundColor = (Providers.current === name) ? "#1aa34a" : "#333";
       btn.style.color = "#e0e0e0";
       btn.style.fontWeight = "600";
+      btn.style.overflow = "hidden";
+      btn.style.textOverflow = "ellipsis";
+      btn.style.whiteSpace = "nowrap";
 
       btn.onclick = async (e) => {
         if (providerClickTimer) return; // already waiting for double-click, skip
