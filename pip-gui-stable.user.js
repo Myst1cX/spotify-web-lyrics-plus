@@ -3973,8 +3973,15 @@ const Providers = {
       fontSize: "14px",
       borderRadius: "5px"
     });
+    
+    // Helper function to get current background color based on theme
+    const getCurrentBgColor = () => {
+      const themeEnabled = JSON.parse(localStorage.getItem('lyricsPlusAmoledTheme') || 'false');
+      return themeEnabled ? "#000" : "#121212";
+    };
+    
     syncOption.onmouseenter = () => { syncOption.style.background = "#333"; syncOption.style.color = "#fff"; };
-    syncOption.onmouseleave = () => { syncOption.style.background = "#121212"; syncOption.style.color = "#fff"; };
+    syncOption.onmouseleave = () => { syncOption.style.background = getCurrentBgColor(); syncOption.style.color = "#fff"; };
 
     const unsyncOption = document.createElement("button");
     unsyncOption.textContent = "Unsynced";
@@ -3989,7 +3996,7 @@ const Providers = {
       borderRadius: "5px"
     });
     unsyncOption.onmouseenter = () => { unsyncOption.style.background = "#333"; unsyncOption.style.color = "#fff"; };
-    unsyncOption.onmouseleave = () => { unsyncOption.style.background = "#121212"; unsyncOption.style.color = "#fff"; };
+    unsyncOption.onmouseleave = () => { unsyncOption.style.background = getCurrentBgColor(); unsyncOption.style.color = "#fff"; };
 
     downloadDropdown.appendChild(syncOption);
     downloadDropdown.appendChild(unsyncOption);
@@ -4749,10 +4756,6 @@ const Providers = {
       syncOption.style.background = bgColor;
       unsyncOption.style.background = bgColor;
       fontSizeSelect.style.background = bgColor;
-      
-      // Update mouseleave handlers for dropdown options to use correct background
-      syncOption.onmouseleave = () => { syncOption.style.background = bgColor; syncOption.style.color = "#fff"; };
-      unsyncOption.onmouseleave = () => { unsyncOption.style.background = bgColor; unsyncOption.style.color = "#fff"; };
       
       console.log("🎨 [Lyrics+ Theme] AMOLED theme", enabled ? "ENABLED" : "DISABLED");
     }
