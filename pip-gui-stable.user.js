@@ -4576,6 +4576,34 @@ const Providers = {
     controlsToggleWrapper.appendChild(controlsToggleLabel);
     controlsToggleWrapper.appendChild(controlsToggleCheckbox);
 
+    // Add AMOLED theme toggle as a separate settings row
+    const themeToggleWrapper = document.createElement("div");
+    themeToggleWrapper.id = "lyrics-plus-theme-toggle-wrapper";
+    themeToggleWrapper.style.display = "flex";
+    themeToggleWrapper.style.alignItems = "center";
+    themeToggleWrapper.style.justifyContent = "space-between";
+    themeToggleWrapper.style.padding = "8px 12px";
+    themeToggleWrapper.style.background = "#121212";
+    themeToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
+    themeToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
+    themeToggleWrapper.style.overflow = "hidden";
+
+    const themeToggleLabel = document.createElement("div");
+    themeToggleLabel.textContent = "Theme: AMOLED";
+    themeToggleLabel.style.color = "#fff";
+    themeToggleLabel.style.fontSize = "15px";
+
+    const themeToggleCheckbox = document.createElement("input");
+    themeToggleCheckbox.type = "checkbox";
+    themeToggleCheckbox.id = "lyrics-plus-theme-toggle-settings";
+    themeToggleCheckbox.className = "lyrics-plus-checkbox";
+    themeToggleCheckbox.style.cursor = "pointer";
+
+    console.log("✅ [Lyrics+ Settings] Theme toggle created (Theme: AMOLED)");
+
+    themeToggleWrapper.appendChild(themeToggleLabel);
+    themeToggleWrapper.appendChild(themeToggleCheckbox);
+
     // Playback Controls Bar
     const controlsBar = document.createElement("div");
     Object.assign(controlsBar.style, {
@@ -4610,6 +4638,10 @@ const Providers = {
     let tabsVisible = localStorage.getItem('lyricsPlusTabsVisible');
     if (tabsVisible === null) tabsVisible = true;
     else tabsVisible = JSON.parse(tabsVisible);
+
+    let amoledThemeEnabled = localStorage.getItem('lyricsPlusTheme');
+    if (amoledThemeEnabled === null) amoledThemeEnabled = false;
+    else amoledThemeEnabled = JSON.parse(amoledThemeEnabled);
 
     const OFFSET_WRAPPER_PADDING = "8px 12px";
 
@@ -4670,6 +4702,10 @@ const Providers = {
         controlsToggleWrapper.style.pointerEvents = "";
         controlsToggleWrapper.style.padding = "8px 12px";
         controlsToggleWrapper.style.borderBottom = "1px solid #333";
+        themeToggleWrapper.style.maxHeight = "50px";
+        themeToggleWrapper.style.pointerEvents = "";
+        themeToggleWrapper.style.padding = "8px 12px";
+        themeToggleWrapper.style.borderBottom = "1px solid #333";
       } else {
         offsetWrapper.style.maxHeight = "0";
         offsetWrapper.style.pointerEvents = "none";
@@ -4687,6 +4723,69 @@ const Providers = {
         controlsToggleWrapper.style.pointerEvents = "none";
         controlsToggleWrapper.style.padding = "0 12px";
         controlsToggleWrapper.style.borderBottom = "none";
+        themeToggleWrapper.style.maxHeight = "0";
+        themeToggleWrapper.style.pointerEvents = "none";
+        themeToggleWrapper.style.padding = "0 12px";
+        themeToggleWrapper.style.borderBottom = "none";
+      }
+    }
+
+    function applyAmoledTheme(enabled) {
+      const bgColor = enabled ? "#000" : "#121212";
+      
+      // Main popup
+      popup.style.backgroundColor = bgColor;
+      
+      // Header
+      headerWrapper.style.backgroundColor = bgColor;
+      
+      // Translator wrapper
+      translatorWrapper.style.background = bgColor;
+      
+      // Tabs toggle wrapper
+      tabsToggleWrapper.style.background = bgColor;
+      
+      // Seekbar toggle wrapper
+      seekbarToggleWrapper.style.background = bgColor;
+      
+      // Controls toggle wrapper
+      controlsToggleWrapper.style.background = bgColor;
+      
+      // Theme toggle wrapper
+      themeToggleWrapper.style.background = bgColor;
+      
+      // Offset wrapper
+      offsetWrapper.style.background = bgColor;
+      
+      // Lyrics container
+      lyricsContainer.style.backgroundColor = bgColor;
+      
+      // Controls bar
+      controlsBar.style.backgroundColor = bgColor;
+      
+      // Progress wrapper
+      if (progressWrapper) {
+        progressWrapper.style.backgroundColor = bgColor;
+      }
+      
+      // Font size select
+      if (fontSizeSelect) {
+        fontSizeSelect.style.background = bgColor;
+      }
+      
+      // Sync/Unsync options in download menu
+      const syncOpt = document.getElementById('lyrics-plus-download-sync');
+      if (syncOpt) {
+        syncOpt.style.background = bgColor;
+        syncOpt.onmouseenter = () => { syncOpt.style.background = enabled ? "#1a1a1a" : "#333"; syncOpt.style.color = "#fff"; };
+        syncOpt.onmouseleave = () => { syncOpt.style.background = bgColor; syncOpt.style.color = "#fff"; };
+      }
+      
+      const unsyncOpt = document.getElementById('lyrics-plus-download-unsync');
+      if (unsyncOpt) {
+        unsyncOpt.style.background = bgColor;
+        unsyncOpt.onmouseenter = () => { unsyncOpt.style.background = enabled ? "#1a1a1a" : "#333"; unsyncOpt.style.color = "#fff"; };
+        unsyncOpt.onmouseleave = () => { unsyncOpt.style.background = bgColor; unsyncOpt.style.color = "#fff"; };
       }
     }
 
@@ -4713,10 +4812,19 @@ const Providers = {
       console.log("📝 [Lyrics+ Settings] Playback controls visibility toggled:", controlsVisible ? "SHOWN" : "HIDDEN");
     };
 
+    // Theme toggle checkbox change handler (in settings)
+    themeToggleCheckbox.onchange = () => {
+      amoledThemeEnabled = themeToggleCheckbox.checked;
+      localStorage.setItem('lyricsPlusTheme', JSON.stringify(amoledThemeEnabled));
+      applyAmoledTheme(amoledThemeEnabled);
+      console.log("📝 [Lyrics+ Settings] AMOLED theme toggled:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
+    };
+
     // Apply initial visibility states
     applyOffsetVisibility(offsetVisible);
     applyControlsVisibility(controlsVisible);
     applyTabsVisibility(tabsVisible);
+    applyAmoledTheme(amoledThemeEnabled);
 
     // Set initial button titles based on visibility states
     offsetToggleBtn.title = offsetVisible ? "Hide timing offset" : "Show timing offset";
@@ -4724,8 +4832,10 @@ const Providers = {
     // Initialize checkboxes state
     seekbarToggleCheckbox.checked = seekbarVisible;
     controlsToggleCheckbox.checked = controlsVisible;
+    themeToggleCheckbox.checked = amoledThemeEnabled;
     console.log("📝 [Lyrics+ Settings] Seekbar initial state:", seekbarVisible ? "SHOWN" : "HIDDEN");
     console.log("📝 [Lyrics+ Settings] Playback controls initial state:", controlsVisible ? "SHOWN" : "HIDDEN");
+    console.log("📝 [Lyrics+ Settings] AMOLED theme initial state:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
 
     // Initialize and handle tabs toggle checkbox in settings
     tabsToggleCheckbox.checked = tabsVisible;
@@ -5082,6 +5192,7 @@ const Providers = {
     popup.appendChild(tabsToggleWrapper);
     popup.appendChild(seekbarToggleWrapper);
     popup.appendChild(controlsToggleWrapper);
+    popup.appendChild(themeToggleWrapper);
     popup.appendChild(offsetWrapper);
     popup.appendChild(lyricsContainer);
     popup.appendChild(controlsBar);
