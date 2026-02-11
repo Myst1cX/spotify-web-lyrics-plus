@@ -6817,6 +6817,9 @@ const Providers = {
     
     if (savedTheme) {
       document.body.classList.add('lyrics-plus-amoled-theme');
+      console.log("🎨 [Lyrics+ Init] AMOLED theme applied on page load");
+    } else {
+      console.log("🎨 [Lyrics+ Init] Default theme active (AMOLED disabled)");
     }
     
     addButton();
