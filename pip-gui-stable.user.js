@@ -155,6 +155,12 @@
 (function () {
   'use strict';
 
+  // Apply AMOLED theme early if enabled in localStorage
+  const savedTheme = localStorage.getItem('lyricsPlusTheme');
+  if (savedTheme === 'true') {
+    document.body.classList.add('lyrics-plus-amoled-theme');
+  }
+
   // ------------------------
   // State Variables
   // ------------------------
