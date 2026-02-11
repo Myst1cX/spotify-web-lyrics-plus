@@ -4646,6 +4646,12 @@ const Providers = {
     if (amoledThemeEnabled === null) amoledThemeEnabled = false;
     else amoledThemeEnabled = JSON.parse(amoledThemeEnabled);
 
+    // Theme color constants
+    const THEME_COLOR_DEFAULT = "#121212";
+    const THEME_COLOR_AMOLED = "#000";
+    const THEME_HOVER_DEFAULT = "#333";
+    const THEME_HOVER_AMOLED = "#1a1a1a";
+
     const OFFSET_WRAPPER_PADDING = "8px 12px";
 
     // Helper functions to apply visibility states (reduces duplication)
@@ -4734,8 +4740,8 @@ const Providers = {
     }
 
     function applyAmoledTheme(enabled) {
-      const bgColor = enabled ? "#000" : "#121212";
-      const hoverColor = enabled ? "#1a1a1a" : "#333";
+      const bgColor = enabled ? THEME_COLOR_AMOLED : THEME_COLOR_DEFAULT;
+      const hoverColor = enabled ? THEME_HOVER_AMOLED : THEME_HOVER_DEFAULT;
       
       // Main popup
       popup.style.backgroundColor = bgColor;
