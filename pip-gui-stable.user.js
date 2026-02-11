@@ -3644,6 +3644,7 @@ const Providers = {
 
     // Header with title and close button - drag handle
     const headerWrapper = document.createElement("div");
+    headerWrapper.id = "lyrics-plus-header-wrapper";
     Object.assign(headerWrapper.style, {
       padding: "12px",
       borderBottom: "1px solid #333",
@@ -4048,6 +4049,7 @@ const Providers = {
 
     // --- Font Size Selector ---
     const fontSizeSelect = document.createElement("select");
+    fontSizeSelect.id = "lyrics-plus-font-size-select";
     fontSizeSelect.title = "Change lyrics font size";
     fontSizeSelect.style.cursor = "pointer";
     fontSizeSelect.style.background = "#121212";
@@ -4744,42 +4746,73 @@ const Providers = {
       const hoverColor = enabled ? THEME_HOVER_AMOLED : THEME_HOVER_DEFAULT;
       
       // Main popup
-      popup.style.backgroundColor = bgColor;
+      const popup = document.getElementById('lyrics-plus-popup');
+      if (popup) {
+        popup.style.backgroundColor = bgColor;
+      }
       
       // Header
-      headerWrapper.style.backgroundColor = bgColor;
+      const headerWrapper = document.getElementById('lyrics-plus-header-wrapper');
+      if (headerWrapper) {
+        headerWrapper.style.backgroundColor = bgColor;
+      }
       
       // Translator wrapper
-      translatorWrapper.style.background = bgColor;
+      const translatorWrapper = document.getElementById('lyrics-plus-translator-wrapper');
+      if (translatorWrapper) {
+        translatorWrapper.style.background = bgColor;
+      }
       
       // Tabs toggle wrapper
-      tabsToggleWrapper.style.background = bgColor;
+      const tabsToggleWrapper = document.getElementById('lyrics-plus-tabs-toggle-wrapper');
+      if (tabsToggleWrapper) {
+        tabsToggleWrapper.style.background = bgColor;
+      }
       
       // Seekbar toggle wrapper
-      seekbarToggleWrapper.style.background = bgColor;
+      const seekbarToggleWrapper = document.getElementById('lyrics-plus-seekbar-toggle-wrapper');
+      if (seekbarToggleWrapper) {
+        seekbarToggleWrapper.style.background = bgColor;
+      }
       
       // Controls toggle wrapper
-      controlsToggleWrapper.style.background = bgColor;
+      const controlsToggleWrapper = document.getElementById('lyrics-plus-controls-toggle-wrapper');
+      if (controlsToggleWrapper) {
+        controlsToggleWrapper.style.background = bgColor;
+      }
       
       // Theme toggle wrapper
-      themeToggleWrapper.style.background = bgColor;
+      const themeToggleWrapper = document.getElementById('lyrics-plus-theme-toggle-wrapper');
+      if (themeToggleWrapper) {
+        themeToggleWrapper.style.background = bgColor;
+      }
       
       // Offset wrapper
-      offsetWrapper.style.background = bgColor;
+      const offsetWrapper = document.getElementById('lyrics-plus-offset-wrapper');
+      if (offsetWrapper) {
+        offsetWrapper.style.background = bgColor;
+      }
       
       // Lyrics container
-      lyricsContainer.style.backgroundColor = bgColor;
+      const lyricsContainer = document.getElementById('lyrics-plus-content');
+      if (lyricsContainer) {
+        lyricsContainer.style.backgroundColor = bgColor;
+      }
       
       // Controls bar
-      controlsBar.style.backgroundColor = bgColor;
+      const controlsBar = document.getElementById('lyrics-plus-controls-bar');
+      if (controlsBar) {
+        controlsBar.style.backgroundColor = bgColor;
+      }
       
       // Progress wrapper
-      const progressWrapperEl = document.getElementById('lyrics-plus-progress-wrapper');
-      if (progressWrapperEl) {
-        progressWrapperEl.style.backgroundColor = bgColor;
+      const progressWrapper = document.getElementById('lyrics-plus-progress-wrapper');
+      if (progressWrapper) {
+        progressWrapper.style.backgroundColor = bgColor;
       }
       
       // Font size select
+      const fontSizeSelect = document.getElementById('lyrics-plus-font-size-select');
       if (fontSizeSelect) {
         fontSizeSelect.style.background = bgColor;
       }
