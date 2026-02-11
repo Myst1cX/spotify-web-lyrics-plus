@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.1
+// @version      17.2
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,10 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.2): GENIUS PROVIDER FIX
+// • For not transcribed patterns, return error to prevent caching the transcribed pattern as lyrics
+// • return { error: "No lyrics available from Genius" };
 
 // RESOLVED (17.1): ADDITION OF AMOLED THEME TOGGLE
 
@@ -3080,7 +3084,7 @@ const ProviderGenius = {
           const notTranscribedMatch = notTranscribedPatterns.find(rx => rx.test(lines[0].text));
           if (notTranscribedMatch) {
             console.log(`[Genius Debug] ⚠ No lyrics available for this track - matched pattern: ${notTranscribedMatch} in text: "${lines[0].text}"`);
-            // For not transcribed patterns, return error to prevent caching the transcribed pattern
+            // For not transcribed patterns, return error to prevent caching the transcribed pattern as lyrics
             return { error: "No lyrics available from Genius" };
           }
         }
@@ -6977,4 +6981,5 @@ const Providers = {
 
   init();
 })();
+
 
