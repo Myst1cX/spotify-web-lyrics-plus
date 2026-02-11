@@ -155,12 +155,6 @@
 (function () {
   'use strict';
 
-  // Apply AMOLED theme early if enabled in localStorage
-  const savedTheme = localStorage.getItem('lyricsPlusTheme');
-  if (savedTheme === 'true') {
-    document.body.classList.add('lyrics-plus-amoled-theme');
-  }
-
   // ------------------------
   // State Variables
   // ------------------------
@@ -6816,6 +6810,12 @@ const Providers = {
   buttonInjectionObserver.observe(document.body, { childList: true, subtree: true });
 
   function init() {
+    // Apply AMOLED theme if enabled in localStorage
+    const savedTheme = localStorage.getItem('lyricsPlusTheme');
+    if (savedTheme === 'true') {
+      document.body.classList.add('lyrics-plus-amoled-theme');
+    }
+    
     addButton();
   }
 
