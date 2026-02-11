@@ -4781,7 +4781,6 @@ const Providers = {
     // Function to apply theme colors
     function applyTheme(isAmoled) {
       const bgColor = isAmoled ? "#000" : "#121212";
-      const progressBgColor = isAmoled ? "#000" : "#111";
       
       // Main popup background
       popup.style.backgroundColor = bgColor;
@@ -4819,9 +4818,9 @@ const Providers = {
         fontSizeSelect.style.background = bgColor;
       }
       
-      // Progress wrapper (seekbar)
+      // Progress wrapper (seekbar) - same as everything else
       if (progressWrapper) {
-        progressWrapper.style.background = progressBgColor;
+        progressWrapper.style.background = bgColor;
       }
       
       console.log("🎨 [Lyrics+ Theme] Applied theme:", isAmoled ? "AMOLED (pure black)" : "Default (dark gray)");
@@ -5069,7 +5068,7 @@ const Providers = {
     progressWrapper.style.gap = "8px";
     progressWrapper.style.padding = "8px 12px";
     progressWrapper.style.borderTop = "1px solid #222";
-    progressWrapper.style.background = "#111";
+    progressWrapper.style.background = "#121212";
     progressWrapper.style.boxSizing = "border-box";
     progressWrapper.style.transition = "max-height 0.3s, padding 0.3s, opacity 0.3s";
     progressWrapper.style.overflow = "hidden";
@@ -5190,6 +5189,9 @@ const Providers = {
     popup.appendChild(lyricsContainer);
     popup.appendChild(controlsBar);
     popup.appendChild(progressWrapper);
+
+    // Apply theme after all elements are created (including progressWrapper)
+    applyTheme(amoledTheme);
 
     const container = document.querySelector('.main-view-container');
     if (container) {
