@@ -2265,6 +2265,12 @@ btnSave.onclick = () => {
   modal.appendChild(box);
   document.body.appendChild(modal);
 
+  // Apply current theme to modal
+  const amoledThemeEnabled = localStorage.getItem('lyricsPlusTheme');
+  if (amoledThemeEnabled === 'true') {
+    box.style.background = "#000";
+  }
+
   // Focus input for fast paste
   input.focus();
 }
@@ -3276,6 +3282,12 @@ const ProviderGenius = {
 
   modal.appendChild(box);
   document.body.appendChild(modal);
+
+  // Apply current theme to modal
+  const amoledThemeEnabled = localStorage.getItem('lyricsPlusTheme');
+  if (amoledThemeEnabled === 'true') {
+    box.style.background = "#000";
+  }
 
   // Focus input for fast paste
   input.focus();
@@ -4594,7 +4606,7 @@ const Providers = {
     themeToggleWrapper.style.overflow = "hidden";
 
     const themeToggleLabel = document.createElement("div");
-    themeToggleLabel.textContent = "Theme: AMOLED";
+    themeToggleLabel.textContent = "Enable AMOLED theme";
     themeToggleLabel.style.color = "#fff";
     themeToggleLabel.style.fontSize = "15px";
 
@@ -4604,7 +4616,7 @@ const Providers = {
     themeToggleCheckbox.className = "lyrics-plus-checkbox";
     themeToggleCheckbox.style.cursor = "pointer";
 
-    console.log("✅ [Lyrics+ Settings] Theme toggle created (Theme: AMOLED)");
+    console.log("✅ [Lyrics+ Settings] Theme toggle created (Enable AMOLED theme)");
 
     themeToggleWrapper.appendChild(themeToggleLabel);
     themeToggleWrapper.appendChild(themeToggleCheckbox);
@@ -4744,6 +4756,7 @@ const Providers = {
     function applyAmoledTheme(enabled) {
       const bgColor = enabled ? THEME_COLOR_AMOLED : THEME_COLOR_DEFAULT;
       const hoverColor = enabled ? THEME_HOVER_AMOLED : THEME_HOVER_DEFAULT;
+      const modalBgColor = enabled ? THEME_COLOR_AMOLED : "#181818";
       
       // Main popup
       const popup = document.getElementById('lyrics-plus-popup');
@@ -4836,6 +4849,18 @@ const Providers = {
         unsyncOpt.style.background = bgColor;
         unsyncOpt.onmouseenter = () => { unsyncOpt.style.background = hoverColor; unsyncOpt.style.color = "#fff"; };
         unsyncOpt.onmouseleave = () => { unsyncOpt.style.background = bgColor; unsyncOpt.style.color = "#fff"; };
+      }
+      
+      // Musixmatch token modal
+      const musixmatchModalBox = document.getElementById('lyrics-plus-musixmatch-modal-box');
+      if (musixmatchModalBox) {
+        musixmatchModalBox.style.background = modalBgColor;
+      }
+      
+      // Spotify token modal
+      const spotifyModalBox = document.getElementById('lyrics-plus-spotify-modal-box');
+      if (spotifyModalBox) {
+        spotifyModalBox.style.background = modalBgColor;
       }
     }
 
