@@ -4774,8 +4774,9 @@ const Providers = {
       controlsBar.style.backgroundColor = bgColor;
       
       // Progress wrapper
-      if (progressWrapper) {
-        progressWrapper.style.backgroundColor = bgColor;
+      const progressWrapperEl = document.getElementById('lyrics-plus-progress-wrapper');
+      if (progressWrapperEl) {
+        progressWrapperEl.style.backgroundColor = bgColor;
       }
       
       // Font size select
