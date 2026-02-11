@@ -3080,8 +3080,8 @@ const ProviderGenius = {
           const notTranscribedMatch = notTranscribedPatterns.find(rx => rx.test(lines[0].text));
           if (notTranscribedMatch) {
             console.log(`[Genius Debug] ⚠ No lyrics available for this track - matched pattern: ${notTranscribedMatch} in text: "${lines[0].text}"`);
-            // For not transcribed patterns, return data unchanged (will try next provider)
-            return data;
+            // Return error to prevent caching and allow trying next provider
+            return { error: "Lyrics not yet transcribed on Genius" };
           }
         }
       }
