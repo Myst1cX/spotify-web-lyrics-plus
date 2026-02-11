@@ -2265,12 +2265,6 @@ btnSave.onclick = () => {
   modal.appendChild(box);
   document.body.appendChild(modal);
 
-  // Apply current theme to modal
-  const amoledThemeEnabled = localStorage.getItem('lyricsPlusTheme');
-  if (amoledThemeEnabled === 'true') {
-    box.style.background = "#000";
-  }
-
   // Focus input for fast paste
   input.focus();
 }
@@ -3282,12 +3276,6 @@ const ProviderGenius = {
 
   modal.appendChild(box);
   document.body.appendChild(modal);
-
-  // Apply current theme to modal
-  const amoledThemeEnabled = localStorage.getItem('lyricsPlusTheme');
-  if (amoledThemeEnabled === 'true') {
-    box.style.background = "#000";
-  }
 
   // Focus input for fast paste
   input.focus();
@@ -4754,113 +4742,11 @@ const Providers = {
     }
 
     function applyAmoledTheme(enabled) {
-      const bgColor = enabled ? THEME_COLOR_AMOLED : THEME_COLOR_DEFAULT;
-      const hoverColor = enabled ? THEME_HOVER_AMOLED : THEME_HOVER_DEFAULT;
-      const modalBgColor = enabled ? THEME_COLOR_AMOLED : "#181818";
-      
-      // Main popup
-      const popup = document.getElementById('lyrics-plus-popup');
-      if (popup) {
-        popup.style.backgroundColor = bgColor;
-      }
-      
-      // Header
-      const headerWrapper = document.getElementById('lyrics-plus-header-wrapper');
-      if (headerWrapper) {
-        headerWrapper.style.backgroundColor = bgColor;
-      }
-      
-      // Translator wrapper
-      const translatorWrapper = document.getElementById('lyrics-plus-translator-wrapper');
-      if (translatorWrapper) {
-        translatorWrapper.style.background = bgColor;
-      }
-      
-      // Tabs toggle wrapper
-      const tabsToggleWrapper = document.getElementById('lyrics-plus-tabs-toggle-wrapper');
-      if (tabsToggleWrapper) {
-        tabsToggleWrapper.style.background = bgColor;
-      }
-      
-      // Seekbar toggle wrapper
-      const seekbarToggleWrapper = document.getElementById('lyrics-plus-seekbar-toggle-wrapper');
-      if (seekbarToggleWrapper) {
-        seekbarToggleWrapper.style.background = bgColor;
-      }
-      
-      // Controls toggle wrapper
-      const controlsToggleWrapper = document.getElementById('lyrics-plus-controls-toggle-wrapper');
-      if (controlsToggleWrapper) {
-        controlsToggleWrapper.style.background = bgColor;
-      }
-      
-      // Theme toggle wrapper
-      const themeToggleWrapper = document.getElementById('lyrics-plus-theme-toggle-wrapper');
-      if (themeToggleWrapper) {
-        themeToggleWrapper.style.background = bgColor;
-      }
-      
-      // Offset wrapper
-      const offsetWrapper = document.getElementById('lyrics-plus-offset-wrapper');
-      if (offsetWrapper) {
-        offsetWrapper.style.background = bgColor;
-      }
-      
-      // Lyrics container
-      const lyricsContainer = document.getElementById('lyrics-plus-content');
-      if (lyricsContainer) {
-        lyricsContainer.style.backgroundColor = bgColor;
-      }
-      
-      // Controls bar
-      const controlsBar = document.getElementById('lyrics-plus-controls-bar');
-      if (controlsBar) {
-        controlsBar.style.backgroundColor = bgColor;
-      }
-      
-      // Progress wrapper
-      const progressWrapper = document.getElementById('lyrics-plus-progress-wrapper');
-      if (progressWrapper) {
-        progressWrapper.style.backgroundColor = bgColor;
-      }
-      
-      // Font size select
-      const fontSizeSelect = document.getElementById('lyrics-plus-font-size-select');
-      if (fontSizeSelect) {
-        fontSizeSelect.style.background = bgColor;
-      }
-      
-      // Download dropdown
-      const downloadDropdown = document.getElementById('lyrics-plus-download-dropdown');
-      if (downloadDropdown) {
-        downloadDropdown.style.backgroundColor = bgColor;
-      }
-      
-      // Sync/Unsync options in download menu
-      const syncOpt = document.getElementById('lyrics-plus-download-sync');
-      if (syncOpt) {
-        syncOpt.style.background = bgColor;
-        syncOpt.onmouseenter = () => { syncOpt.style.background = hoverColor; syncOpt.style.color = "#fff"; };
-        syncOpt.onmouseleave = () => { syncOpt.style.background = bgColor; syncOpt.style.color = "#fff"; };
-      }
-      
-      const unsyncOpt = document.getElementById('lyrics-plus-download-unsync');
-      if (unsyncOpt) {
-        unsyncOpt.style.background = bgColor;
-        unsyncOpt.onmouseenter = () => { unsyncOpt.style.background = hoverColor; unsyncOpt.style.color = "#fff"; };
-        unsyncOpt.onmouseleave = () => { unsyncOpt.style.background = bgColor; unsyncOpt.style.color = "#fff"; };
-      }
-      
-      // Musixmatch token modal
-      const musixmatchModalBox = document.getElementById('lyrics-plus-musixmatch-modal-box');
-      if (musixmatchModalBox) {
-        musixmatchModalBox.style.background = modalBgColor;
-      }
-      
-      // Spotify token modal
-      const spotifyModalBox = document.getElementById('lyrics-plus-spotify-modal-box');
-      if (spotifyModalBox) {
-        spotifyModalBox.style.background = modalBgColor;
+      // Apply theme by toggling a CSS class on body - much more efficient!
+      if (enabled) {
+        document.body.classList.add('lyrics-plus-amoled-theme');
+      } else {
+        document.body.classList.remove('lyrics-plus-amoled-theme');
       }
     }
 
@@ -5241,6 +5127,38 @@ const Providers = {
       .lyrics-plus-checkbox:focus {
         outline: none;
         box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.3);
+      }
+      
+      /* AMOLED Theme CSS - Applied once to parent container */
+      .lyrics-plus-amoled-theme #lyrics-plus-popup,
+      .lyrics-plus-amoled-theme #lyrics-plus-header-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-translator-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-tabs-toggle-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-seekbar-toggle-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-controls-toggle-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-theme-toggle-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-offset-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-content,
+      .lyrics-plus-amoled-theme #lyrics-plus-controls-bar,
+      .lyrics-plus-amoled-theme #lyrics-plus-progress-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-font-size-select,
+      .lyrics-plus-amoled-theme #lyrics-plus-download-dropdown,
+      .lyrics-plus-amoled-theme #lyrics-plus-download-sync,
+      .lyrics-plus-amoled-theme #lyrics-plus-download-unsync {
+        background: #000 !important;
+        background-color: #000 !important;
+      }
+      
+      /* Modal theme */
+      .lyrics-plus-amoled-theme #lyrics-plus-musixmatch-modal-box,
+      .lyrics-plus-amoled-theme #lyrics-plus-spotify-modal-box {
+        background: #000 !important;
+      }
+      
+      /* Hover states for AMOLED theme */
+      .lyrics-plus-amoled-theme #lyrics-plus-download-sync:hover,
+      .lyrics-plus-amoled-theme #lyrics-plus-download-unsync:hover {
+        background: #1a1a1a !important;
       }
     `;
     document.head.appendChild(checkboxStyle);
