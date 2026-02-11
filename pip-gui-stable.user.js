@@ -6811,8 +6811,11 @@ const Providers = {
 
   function init() {
     // Apply AMOLED theme if enabled in localStorage
-    const savedTheme = localStorage.getItem('lyricsPlusTheme');
-    if (savedTheme === 'true') {
+    let savedTheme = localStorage.getItem('lyricsPlusTheme');
+    if (savedTheme === null) savedTheme = false;
+    else savedTheme = JSON.parse(savedTheme);
+    
+    if (savedTheme) {
       document.body.classList.add('lyrics-plus-amoled-theme');
     }
     
