@@ -6809,8 +6809,8 @@ const Providers = {
   ResourceManager.registerObserver(buttonInjectionObserver, 'Global button injection (document.body)');
   buttonInjectionObserver.observe(document.body, { childList: true, subtree: true });
 
-  function init() {
-    // Apply AMOLED theme if enabled in localStorage
+  // Apply AMOLED theme if enabled in localStorage
+  function applyInitialTheme() {
     let savedTheme = localStorage.getItem('lyricsPlusTheme');
     if (savedTheme === null) savedTheme = false;
     else savedTheme = JSON.parse(savedTheme);
@@ -6821,7 +6821,10 @@ const Providers = {
     } else {
       console.log("🎨 [Lyrics+ Init] Default theme active (AMOLED disabled)");
     }
-    
+  }
+  applyInitialTheme();
+
+  function init() {
     addButton();
   }
 
