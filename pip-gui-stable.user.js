@@ -3574,7 +3574,7 @@ const Providers = {
         height: pos.height + "px",
         minWidth: "360px",
         minHeight: "240px",
-        backgroundColor: "#000",
+        backgroundColor: "#121212",
         color: "white",
         borderRadius: "12px",
         boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
@@ -3601,7 +3601,7 @@ const Providers = {
           height: rect.height + "px",
           minWidth: "360px",
           minHeight: "240px",
-          backgroundColor: "#000",
+          backgroundColor: "#121212",
           color: "white",
           borderRadius: "12px",
           boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
@@ -3627,7 +3627,7 @@ const Providers = {
           height: "79.5vh",
           minWidth: "360px",
           minHeight: "240px",
-          backgroundColor: "#000",
+          backgroundColor: "#121212",
           color: "white",
           borderRadius: "12px",
           boxShadow: "0 0 20px rgba(0, 0, 0, 0.9)",
@@ -3647,7 +3647,7 @@ const Providers = {
     Object.assign(headerWrapper.style, {
       padding: "12px",
       borderBottom: "1px solid #333",
-      backgroundColor: "#000",
+      backgroundColor: "#121212",
       zIndex: 10,
       cursor: "move",
       userSelect: "none",
@@ -3950,7 +3950,7 @@ const Providers = {
       top: "110%",
       left: "0",
       minWidth: "90px",
-      backgroundColor: "#000",
+      backgroundColor: "#121212",
       border: "1px solid #444",
       borderRadius: "8px",
       boxShadow: "0 2px 12px #0009",
@@ -3964,7 +3964,7 @@ const Providers = {
     const syncOption = document.createElement("button");
     syncOption.textContent = "Synced";
     Object.assign(syncOption.style, {
-      background: "#000",
+      background: "#121212",
       color: "#fff",
       border: "none",
       padding: "8px 10px",
@@ -3974,12 +3974,12 @@ const Providers = {
       borderRadius: "5px"
     });
     syncOption.onmouseenter = () => { syncOption.style.background = "#333"; syncOption.style.color = "#fff"; };
-    syncOption.onmouseleave = () => { syncOption.style.background = "#000"; syncOption.style.color = "#fff"; };
+    syncOption.onmouseleave = () => { syncOption.style.background = "#121212"; syncOption.style.color = "#fff"; };
 
     const unsyncOption = document.createElement("button");
     unsyncOption.textContent = "Unsynced";
     Object.assign(unsyncOption.style, {
-      background: "#000",
+      background: "#121212",
       color: "#fff",
       border: "none",
       padding: "8px 10px",
@@ -3989,7 +3989,7 @@ const Providers = {
       borderRadius: "5px"
     });
     unsyncOption.onmouseenter = () => { unsyncOption.style.background = "#333"; unsyncOption.style.color = "#fff"; };
-    unsyncOption.onmouseleave = () => { unsyncOption.style.background = "#000"; unsyncOption.style.color = "#fff"; };
+    unsyncOption.onmouseleave = () => { unsyncOption.style.background = "#121212"; unsyncOption.style.color = "#fff"; };
 
     downloadDropdown.appendChild(syncOption);
     downloadDropdown.appendChild(unsyncOption);
@@ -4047,7 +4047,7 @@ const Providers = {
     const fontSizeSelect = document.createElement("select");
     fontSizeSelect.title = "Change lyrics font size";
     fontSizeSelect.style.cursor = "pointer";
-    fontSizeSelect.style.background = "#000";
+    fontSizeSelect.style.background = "#121212";
     fontSizeSelect.style.border = "none";
     fontSizeSelect.style.color = "white";
     fontSizeSelect.style.fontSize = "14px";
@@ -4183,7 +4183,7 @@ const Providers = {
       whiteSpace: "pre-wrap",
       fontSize: "22px",
       lineHeight: "1.5",
-      backgroundColor: "#000",
+      backgroundColor: "#121212",
       userSelect: "text",
       textAlign: "center",
     });
@@ -4293,7 +4293,7 @@ const Providers = {
     const translatorWrapper = document.createElement("div");
     translatorWrapper.id = "lyrics-plus-translator-wrapper";
     translatorWrapper.style.display = "block";
-    translatorWrapper.style.background = "#000";
+    translatorWrapper.style.background = "#121212";
     translatorWrapper.style.borderBottom = "none"; // Will be set to "1px solid #333" if visible
     translatorWrapper.style.padding = "8px 12px";
     translatorWrapper.style.transition = "max-height 0.3s, padding 0.3s";
@@ -4359,7 +4359,7 @@ const Providers = {
     offsetWrapper.style.alignItems = "center";
     offsetWrapper.style.justifyContent = "space-between";
     offsetWrapper.style.padding = "8px 12px";
-    offsetWrapper.style.background = "#000";
+    offsetWrapper.style.background = "#121212";
     offsetWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     offsetWrapper.style.fontSize = "15px";
     offsetWrapper.style.width = "100%";
@@ -4499,7 +4499,7 @@ const Providers = {
     tabsToggleWrapper.style.alignItems = "center";
     tabsToggleWrapper.style.justifyContent = "space-between";
     tabsToggleWrapper.style.padding = "8px 12px";
-    tabsToggleWrapper.style.background = "#000";
+    tabsToggleWrapper.style.background = "#121212";
     tabsToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     tabsToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     tabsToggleWrapper.style.overflow = "hidden";
@@ -4527,7 +4527,7 @@ const Providers = {
     seekbarToggleWrapper.style.alignItems = "center";
     seekbarToggleWrapper.style.justifyContent = "space-between";
     seekbarToggleWrapper.style.padding = "8px 12px";
-    seekbarToggleWrapper.style.background = "#000";
+    seekbarToggleWrapper.style.background = "#121212";
     seekbarToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     seekbarToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     seekbarToggleWrapper.style.overflow = "hidden";
@@ -4555,7 +4555,7 @@ const Providers = {
     controlsToggleWrapper.style.alignItems = "center";
     controlsToggleWrapper.style.justifyContent = "space-between";
     controlsToggleWrapper.style.padding = "8px 12px";
-    controlsToggleWrapper.style.background = "#000";
+    controlsToggleWrapper.style.background = "#121212";
     controlsToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
     controlsToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
     controlsToggleWrapper.style.overflow = "hidden";
@@ -4585,7 +4585,7 @@ const Providers = {
       gap: "8px",
       padding: "8px 12px",
       borderTop: "1px solid #333",
-      backgroundColor: "#000",
+      backgroundColor: "#121212",
       userSelect: "none",
     });
 
@@ -4966,7 +4966,7 @@ const Providers = {
     progressWrapper.style.gap = "8px";
     progressWrapper.style.padding = "8px 12px";
     progressWrapper.style.borderTop = "1px solid #222";
-    progressWrapper.style.background = "#000";
+    progressWrapper.style.background = "#111";
     progressWrapper.style.boxSizing = "border-box";
     progressWrapper.style.transition = "max-height 0.3s, padding 0.3s, opacity 0.3s";
     progressWrapper.style.overflow = "hidden";
