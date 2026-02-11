@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.0
+// @version      17.1
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.1): ADDITION OF AMOLED THEME TOGGLE
 
 // RESOLVED (17.0): ADJUSTED SPACING BETWEEN HEADER BUTTONS AND BETWEEN LYRIC SOURCE TABS (improves UI in cases of resizing)
 // • REMOVED "ONMOUSEENTER" GRAY HOVER HIGHLIGHTING OF HEADER BUTTONS (of btnReset, downloadBtn, chineseConvBtn)
@@ -3644,6 +3646,7 @@ const Providers = {
 
     // Header with title and close button - drag handle
     const headerWrapper = document.createElement("div");
+    headerWrapper.id = "lyrics-plus-header-wrapper";
     Object.assign(headerWrapper.style, {
       padding: "12px",
       borderBottom: "1px solid #333",
@@ -3944,6 +3947,7 @@ const Providers = {
 
     // Dropdown menu for download types
     const downloadDropdown = document.createElement("div");
+    downloadDropdown.id = "lyrics-plus-download-dropdown";
     downloadBtn._dropdown = downloadDropdown;
     Object.assign(downloadDropdown.style, {
       position: "absolute",
@@ -3962,6 +3966,7 @@ const Providers = {
     downloadDropdown.tabIndex = -1;
 
     const syncOption = document.createElement("button");
+    syncOption.id = "lyrics-plus-download-sync";
     syncOption.textContent = "Synced";
     Object.assign(syncOption.style, {
       background: "#121212",
@@ -3977,6 +3982,7 @@ const Providers = {
     syncOption.onmouseleave = () => { syncOption.style.background = "#121212"; syncOption.style.color = "#fff"; };
 
     const unsyncOption = document.createElement("button");
+    unsyncOption.id = "lyrics-plus-download-unsync";
     unsyncOption.textContent = "Unsynced";
     Object.assign(unsyncOption.style, {
       background: "#121212",
@@ -4045,6 +4051,7 @@ const Providers = {
 
     // --- Font Size Selector ---
     const fontSizeSelect = document.createElement("select");
+    fontSizeSelect.id = "lyrics-plus-font-size-select";
     fontSizeSelect.title = "Change lyrics font size";
     fontSizeSelect.style.cursor = "pointer";
     fontSizeSelect.style.background = "#121212";
@@ -4576,6 +4583,34 @@ const Providers = {
     controlsToggleWrapper.appendChild(controlsToggleLabel);
     controlsToggleWrapper.appendChild(controlsToggleCheckbox);
 
+    // Add AMOLED theme toggle as a separate settings row
+    const themeToggleWrapper = document.createElement("div");
+    themeToggleWrapper.id = "lyrics-plus-theme-toggle-wrapper";
+    themeToggleWrapper.style.display = "flex";
+    themeToggleWrapper.style.alignItems = "center";
+    themeToggleWrapper.style.justifyContent = "space-between";
+    themeToggleWrapper.style.padding = "8px 12px";
+    themeToggleWrapper.style.background = "#121212";
+    themeToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
+    themeToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
+    themeToggleWrapper.style.overflow = "hidden";
+
+    const themeToggleLabel = document.createElement("div");
+    themeToggleLabel.textContent = "Enable AMOLED theme";
+    themeToggleLabel.style.color = "#fff";
+    themeToggleLabel.style.fontSize = "15px";
+
+    const themeToggleCheckbox = document.createElement("input");
+    themeToggleCheckbox.type = "checkbox";
+    themeToggleCheckbox.id = "lyrics-plus-theme-toggle-settings";
+    themeToggleCheckbox.className = "lyrics-plus-checkbox";
+    themeToggleCheckbox.style.cursor = "pointer";
+
+    console.log("✅ [Lyrics+ Settings] Theme toggle created (Enable AMOLED theme)");
+
+    themeToggleWrapper.appendChild(themeToggleLabel);
+    themeToggleWrapper.appendChild(themeToggleCheckbox);
+
     // Playback Controls Bar
     const controlsBar = document.createElement("div");
     Object.assign(controlsBar.style, {
@@ -4610,6 +4645,16 @@ const Providers = {
     let tabsVisible = localStorage.getItem('lyricsPlusTabsVisible');
     if (tabsVisible === null) tabsVisible = true;
     else tabsVisible = JSON.parse(tabsVisible);
+
+    let amoledThemeEnabled = localStorage.getItem('lyricsPlusTheme');
+    if (amoledThemeEnabled === null) amoledThemeEnabled = false;
+    else amoledThemeEnabled = JSON.parse(amoledThemeEnabled);
+
+    // Theme color constants
+    const THEME_COLOR_DEFAULT = "#121212";
+    const THEME_COLOR_AMOLED = "#000";
+    const THEME_HOVER_DEFAULT = "#333";
+    const THEME_HOVER_AMOLED = "#1a1a1a";
 
     const OFFSET_WRAPPER_PADDING = "8px 12px";
 
@@ -4670,6 +4715,10 @@ const Providers = {
         controlsToggleWrapper.style.pointerEvents = "";
         controlsToggleWrapper.style.padding = "8px 12px";
         controlsToggleWrapper.style.borderBottom = "1px solid #333";
+        themeToggleWrapper.style.maxHeight = "50px";
+        themeToggleWrapper.style.pointerEvents = "";
+        themeToggleWrapper.style.padding = "8px 12px";
+        themeToggleWrapper.style.borderBottom = "1px solid #333";
       } else {
         offsetWrapper.style.maxHeight = "0";
         offsetWrapper.style.pointerEvents = "none";
@@ -4687,6 +4736,19 @@ const Providers = {
         controlsToggleWrapper.style.pointerEvents = "none";
         controlsToggleWrapper.style.padding = "0 12px";
         controlsToggleWrapper.style.borderBottom = "none";
+        themeToggleWrapper.style.maxHeight = "0";
+        themeToggleWrapper.style.pointerEvents = "none";
+        themeToggleWrapper.style.padding = "0 12px";
+        themeToggleWrapper.style.borderBottom = "none";
+      }
+    }
+
+    function applyAmoledTheme(enabled) {
+      // Apply theme by toggling a CSS class on body - much more efficient!
+      if (enabled) {
+        document.body.classList.add('lyrics-plus-amoled-theme');
+      } else {
+        document.body.classList.remove('lyrics-plus-amoled-theme');
       }
     }
 
@@ -4713,10 +4775,19 @@ const Providers = {
       console.log("📝 [Lyrics+ Settings] Playback controls visibility toggled:", controlsVisible ? "SHOWN" : "HIDDEN");
     };
 
+    // Theme toggle checkbox change handler (in settings)
+    themeToggleCheckbox.onchange = () => {
+      amoledThemeEnabled = themeToggleCheckbox.checked;
+      localStorage.setItem('lyricsPlusTheme', JSON.stringify(amoledThemeEnabled));
+      applyAmoledTheme(amoledThemeEnabled);
+      console.log("📝 [Lyrics+ Settings] AMOLED theme toggled:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
+    };
+
     // Apply initial visibility states
     applyOffsetVisibility(offsetVisible);
     applyControlsVisibility(controlsVisible);
     applyTabsVisibility(tabsVisible);
+    applyAmoledTheme(amoledThemeEnabled);
 
     // Set initial button titles based on visibility states
     offsetToggleBtn.title = offsetVisible ? "Hide timing offset" : "Show timing offset";
@@ -4724,8 +4795,10 @@ const Providers = {
     // Initialize checkboxes state
     seekbarToggleCheckbox.checked = seekbarVisible;
     controlsToggleCheckbox.checked = controlsVisible;
+    themeToggleCheckbox.checked = amoledThemeEnabled;
     console.log("📝 [Lyrics+ Settings] Seekbar initial state:", seekbarVisible ? "SHOWN" : "HIDDEN");
     console.log("📝 [Lyrics+ Settings] Playback controls initial state:", controlsVisible ? "SHOWN" : "HIDDEN");
+    console.log("📝 [Lyrics+ Settings] AMOLED theme initial state:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
 
     // Initialize and handle tabs toggle checkbox in settings
     tabsToggleCheckbox.checked = tabsVisible;
@@ -5057,6 +5130,38 @@ const Providers = {
         outline: none;
         box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.3);
       }
+      
+      /* AMOLED Theme CSS - Applied once to parent container */
+      .lyrics-plus-amoled-theme #lyrics-plus-popup,
+      .lyrics-plus-amoled-theme #lyrics-plus-header-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-translator-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-tabs-toggle-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-seekbar-toggle-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-controls-toggle-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-theme-toggle-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-offset-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-content,
+      .lyrics-plus-amoled-theme #lyrics-plus-controls-bar,
+      .lyrics-plus-amoled-theme #lyrics-plus-progress-wrapper,
+      .lyrics-plus-amoled-theme #lyrics-plus-font-size-select,
+      .lyrics-plus-amoled-theme #lyrics-plus-download-dropdown,
+      .lyrics-plus-amoled-theme #lyrics-plus-download-sync,
+      .lyrics-plus-amoled-theme #lyrics-plus-download-unsync {
+        background: #000 !important;
+        background-color: #000 !important;
+      }
+      
+      /* Modal theme */
+      .lyrics-plus-amoled-theme #lyrics-plus-musixmatch-modal-box,
+      .lyrics-plus-amoled-theme #lyrics-plus-spotify-modal-box {
+        background: #000 !important;
+      }
+      
+      /* Hover states for AMOLED theme */
+      .lyrics-plus-amoled-theme #lyrics-plus-download-sync:hover,
+      .lyrics-plus-amoled-theme #lyrics-plus-download-unsync:hover {
+        background: #1a1a1a !important;
+      }
     `;
     document.head.appendChild(checkboxStyle);
 
@@ -5082,6 +5187,7 @@ const Providers = {
     popup.appendChild(tabsToggleWrapper);
     popup.appendChild(seekbarToggleWrapper);
     popup.appendChild(controlsToggleWrapper);
+    popup.appendChild(themeToggleWrapper);
     popup.appendChild(offsetWrapper);
     popup.appendChild(lyricsContainer);
     popup.appendChild(controlsBar);
@@ -6706,6 +6812,18 @@ const Providers = {
   buttonInjectionObserver.observe(document.body, { childList: true, subtree: true });
 
   function init() {
+    // Apply AMOLED theme if enabled in localStorage
+    let savedTheme = localStorage.getItem('lyricsPlusTheme');
+    if (savedTheme === null) savedTheme = false;
+    else savedTheme = JSON.parse(savedTheme);
+    
+    if (savedTheme) {
+      document.body.classList.add('lyrics-plus-amoled-theme');
+      console.log("🎨 [Lyrics+ Init] AMOLED theme applied on page load");
+    } else {
+      console.log("🎨 [Lyrics+ Init] Default theme active (AMOLED disabled)");
+    }
+    
     addButton();
   }
 
@@ -6859,5 +6977,3 @@ const Providers = {
 
   init();
 })();
-
-
