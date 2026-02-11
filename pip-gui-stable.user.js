@@ -4576,6 +4576,34 @@ const Providers = {
     controlsToggleWrapper.appendChild(controlsToggleLabel);
     controlsToggleWrapper.appendChild(controlsToggleCheckbox);
 
+    // Add AMOLED theme toggle as a separate settings row
+    const themeToggleWrapper = document.createElement("div");
+    themeToggleWrapper.id = "lyrics-plus-theme-toggle-wrapper";
+    themeToggleWrapper.style.display = "flex";
+    themeToggleWrapper.style.alignItems = "center";
+    themeToggleWrapper.style.justifyContent = "space-between";
+    themeToggleWrapper.style.padding = "8px 12px";
+    themeToggleWrapper.style.background = "#121212";
+    themeToggleWrapper.style.borderBottom = "none"; // Will be set by applyOffsetVisibility
+    themeToggleWrapper.style.transition = "max-height 0.3s, padding 0.3s";
+    themeToggleWrapper.style.overflow = "hidden";
+
+    const themeToggleLabel = document.createElement("div");
+    themeToggleLabel.textContent = "Theme: AMOLED (pure black)";
+    themeToggleLabel.style.color = "#fff";
+    themeToggleLabel.style.fontSize = "15px";
+
+    const themeToggleCheckbox = document.createElement("input");
+    themeToggleCheckbox.type = "checkbox";
+    themeToggleCheckbox.id = "lyrics-plus-theme-toggle";
+    themeToggleCheckbox.className = "lyrics-plus-checkbox";
+    themeToggleCheckbox.style.cursor = "pointer";
+
+    console.log("✅ [Lyrics+ Settings] Theme toggle created (AMOLED theme)");
+
+    themeToggleWrapper.appendChild(themeToggleLabel);
+    themeToggleWrapper.appendChild(themeToggleCheckbox);
+
     // Playback Controls Bar
     const controlsBar = document.createElement("div");
     Object.assign(controlsBar.style, {
@@ -4670,6 +4698,10 @@ const Providers = {
         controlsToggleWrapper.style.pointerEvents = "";
         controlsToggleWrapper.style.padding = "8px 12px";
         controlsToggleWrapper.style.borderBottom = "1px solid #333";
+        themeToggleWrapper.style.maxHeight = "50px";
+        themeToggleWrapper.style.pointerEvents = "";
+        themeToggleWrapper.style.padding = "8px 12px";
+        themeToggleWrapper.style.borderBottom = "1px solid #333";
       } else {
         offsetWrapper.style.maxHeight = "0";
         offsetWrapper.style.pointerEvents = "none";
@@ -4687,6 +4719,10 @@ const Providers = {
         controlsToggleWrapper.style.pointerEvents = "none";
         controlsToggleWrapper.style.padding = "0 12px";
         controlsToggleWrapper.style.borderBottom = "none";
+        themeToggleWrapper.style.maxHeight = "0";
+        themeToggleWrapper.style.pointerEvents = "none";
+        themeToggleWrapper.style.padding = "0 12px";
+        themeToggleWrapper.style.borderBottom = "none";
       }
     }
 
@@ -4735,6 +4771,73 @@ const Providers = {
       localStorage.setItem('lyricsPlusTabsVisible', JSON.stringify(tabsVisible));
       applyTabsVisibility(tabsVisible);
       console.log("📝 [Lyrics+ Settings] Tabs visibility toggled:", tabsVisible ? "SHOWN" : "HIDDEN");
+    };
+
+    // Theme system: Load and apply theme preference
+    let amoledTheme = localStorage.getItem('lyricsPlusTheme');
+    if (amoledTheme === null) amoledTheme = false;
+    else amoledTheme = JSON.parse(amoledTheme);
+
+    // Function to apply theme colors
+    function applyTheme(isAmoled) {
+      const bgColor = isAmoled ? "#000" : "#121212";
+      const progressBgColor = isAmoled ? "#000" : "#111";
+      
+      // Main popup background
+      popup.style.backgroundColor = bgColor;
+      
+      // Header and wrappers
+      headerWrapper.style.backgroundColor = bgColor;
+      lyricsContainer.style.backgroundColor = bgColor;
+      translatorWrapper.style.background = bgColor;
+      offsetWrapper.style.background = bgColor;
+      tabsToggleWrapper.style.background = bgColor;
+      seekbarToggleWrapper.style.background = bgColor;
+      controlsToggleWrapper.style.background = bgColor;
+      themeToggleWrapper.style.background = bgColor;
+      controlsBar.style.backgroundColor = bgColor;
+      
+      // Download dropdown
+      const downloadDropdown = popup.querySelector('button[title="Download lyrics"]')?._dropdown;
+      if (downloadDropdown) {
+        downloadDropdown.style.backgroundColor = bgColor;
+        const syncOption = downloadDropdown.children[0];
+        const unsyncOption = downloadDropdown.children[1];
+        if (syncOption) {
+          syncOption.style.background = bgColor;
+          syncOption.onmouseleave = () => { syncOption.style.background = bgColor; syncOption.style.color = "#fff"; };
+        }
+        if (unsyncOption) {
+          unsyncOption.style.background = bgColor;
+          unsyncOption.onmouseleave = () => { unsyncOption.style.background = bgColor; unsyncOption.style.color = "#fff"; };
+        }
+      }
+      
+      // Font size selector
+      const fontSizeSelect = popup.querySelector('select[title="Change lyrics font size"]');
+      if (fontSizeSelect) {
+        fontSizeSelect.style.background = bgColor;
+      }
+      
+      // Progress wrapper (seekbar)
+      if (progressWrapper) {
+        progressWrapper.style.background = progressBgColor;
+      }
+      
+      console.log("🎨 [Lyrics+ Theme] Applied theme:", isAmoled ? "AMOLED (pure black)" : "Default (dark gray)");
+    }
+
+    // Initialize theme checkbox and apply initial theme
+    themeToggleCheckbox.checked = amoledTheme;
+    applyTheme(amoledTheme);
+    console.log("📝 [Lyrics+ Settings] Theme initial state:", amoledTheme ? "AMOLED" : "Default");
+
+    // Theme checkbox change handler
+    themeToggleCheckbox.onchange = () => {
+      amoledTheme = themeToggleCheckbox.checked;
+      localStorage.setItem('lyricsPlusTheme', JSON.stringify(amoledTheme));
+      applyTheme(amoledTheme);
+      console.log("📝 [Lyrics+ Settings] Theme toggled:", amoledTheme ? "AMOLED" : "Default");
     };
 
     // Create Spotify-style control buttons
@@ -5082,6 +5185,7 @@ const Providers = {
     popup.appendChild(tabsToggleWrapper);
     popup.appendChild(seekbarToggleWrapper);
     popup.appendChild(controlsToggleWrapper);
+    popup.appendChild(themeToggleWrapper);
     popup.appendChild(offsetWrapper);
     popup.appendChild(lyricsContainer);
     popup.appendChild(controlsBar);
