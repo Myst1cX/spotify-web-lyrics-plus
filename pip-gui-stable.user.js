@@ -3944,6 +3944,7 @@ const Providers = {
 
     // Dropdown menu for download types
     const downloadDropdown = document.createElement("div");
+    downloadDropdown.id = "lyrics-plus-download-dropdown";
     downloadBtn._dropdown = downloadDropdown;
     Object.assign(downloadDropdown.style, {
       position: "absolute",
@@ -3962,6 +3963,7 @@ const Providers = {
     downloadDropdown.tabIndex = -1;
 
     const syncOption = document.createElement("button");
+    syncOption.id = "lyrics-plus-download-sync";
     syncOption.textContent = "Synced";
     Object.assign(syncOption.style, {
       background: "#121212",
@@ -3977,6 +3979,7 @@ const Providers = {
     syncOption.onmouseleave = () => { syncOption.style.background = "#121212"; syncOption.style.color = "#fff"; };
 
     const unsyncOption = document.createElement("button");
+    unsyncOption.id = "lyrics-plus-download-unsync";
     unsyncOption.textContent = "Unsynced";
     Object.assign(unsyncOption.style, {
       background: "#121212",
@@ -4732,6 +4735,7 @@ const Providers = {
 
     function applyAmoledTheme(enabled) {
       const bgColor = enabled ? "#000" : "#121212";
+      const hoverColor = enabled ? "#1a1a1a" : "#333";
       
       // Main popup
       popup.style.backgroundColor = bgColor;
@@ -4773,18 +4777,24 @@ const Providers = {
         fontSizeSelect.style.background = bgColor;
       }
       
+      // Download dropdown
+      const downloadDropdown = document.getElementById('lyrics-plus-download-dropdown');
+      if (downloadDropdown) {
+        downloadDropdown.style.backgroundColor = bgColor;
+      }
+      
       // Sync/Unsync options in download menu
       const syncOpt = document.getElementById('lyrics-plus-download-sync');
       if (syncOpt) {
         syncOpt.style.background = bgColor;
-        syncOpt.onmouseenter = () => { syncOpt.style.background = enabled ? "#1a1a1a" : "#333"; syncOpt.style.color = "#fff"; };
+        syncOpt.onmouseenter = () => { syncOpt.style.background = hoverColor; syncOpt.style.color = "#fff"; };
         syncOpt.onmouseleave = () => { syncOpt.style.background = bgColor; syncOpt.style.color = "#fff"; };
       }
       
       const unsyncOpt = document.getElementById('lyrics-plus-download-unsync');
       if (unsyncOpt) {
         unsyncOpt.style.background = bgColor;
-        unsyncOpt.onmouseenter = () => { unsyncOpt.style.background = enabled ? "#1a1a1a" : "#333"; unsyncOpt.style.color = "#fff"; };
+        unsyncOpt.onmouseenter = () => { unsyncOpt.style.background = hoverColor; unsyncOpt.style.color = "#fff"; };
         unsyncOpt.onmouseleave = () => { unsyncOpt.style.background = bgColor; unsyncOpt.style.color = "#fff"; };
       }
     }
