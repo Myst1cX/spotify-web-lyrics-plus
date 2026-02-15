@@ -6169,9 +6169,15 @@ const Providers = {
     // Detect if time values need conversion from seconds to milliseconds
     // Strategy: Check if MAJORITY of non-zero time values are < 10000
     // If most values are small, they're likely in seconds; if most are large, they're in ms
-    const timesWithValues = lyrics.filter(line => line.time != null && line.time > 0);
-    const needsConversion = timesWithValues.length >= 2 && 
-      timesWithValues.filter(line => line.time < 10000).length / timesWithValues.length > 0.5;
+    let totalCount = 0;
+    let smallCount = 0;
+    for (const line of lyrics) {
+      if (line.time != null && line.time > 0) {
+        totalCount++;
+        if (line.time < 10000) smallCount++;
+      }
+    }
+    const needsConversion = totalCount >= 2 && smallCount / totalCount > 0.5;
     
     return lyrics.map(line => {
       let timeMs;
