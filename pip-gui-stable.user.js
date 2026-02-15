@@ -6072,13 +6072,8 @@ const Providers = {
         }
         lyricsContainer.appendChild(p);
       });
-      // Normalize cached lyrics time format: convert startTime (seconds) to time (milliseconds)
-      // This ensures cached lyrics sync properly, especially for KPoe provider
-      const normalizedSynced = currentSyncedLyrics.map(line => ({
-        ...line,
-        time: line.time ?? Math.round((line.startTime || 0) * 1000)
-      }));
-      highlightSyncedLyrics(normalizedSynced, lyricsContainer);
+      // Normalize cached lyrics time format for proper syncing (especially for KPoe provider)
+      highlightSyncedLyrics(normalizeLyricsTimeFormat(currentSyncedLyrics), lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
@@ -6159,6 +6154,20 @@ const Providers = {
       }
     });
     console.log(`✅ [Lyrics+] Instrumental track cached (detected by ${provider}) - will show "no lyrics" message on future plays`);
+  }
+
+  /**
+   * Normalize lyrics time format for syncing
+   * Converts startTime (seconds) to time (milliseconds) if needed
+   * @param {Array} lyrics - Array of lyric lines
+   * @returns {Array} Normalized lyrics with time in milliseconds
+   */
+  function normalizeLyricsTimeFormat(lyrics) {
+    if (!lyrics || !Array.isArray(lyrics)) return lyrics;
+    return lyrics.map(line => ({
+      ...line,
+      time: line.time ?? Math.round((line.startTime || 0) * 1000)
+    }));
   }
 
   /**
@@ -6250,13 +6259,8 @@ const Providers = {
         }
         lyricsContainer.appendChild(p);
       });
-      // Normalize cached lyrics time format: convert startTime (seconds) to time (milliseconds)
-      // This ensures cached lyrics sync properly, especially for KPoe provider
-      const normalizedSynced = currentSyncedLyrics.map(line => ({
-        ...line,
-        time: line.time ?? Math.round((line.startTime || 0) * 1000)
-      }));
-      highlightSyncedLyrics(normalizedSynced, lyricsContainer);
+      // Normalize cached lyrics time format for proper syncing (especially for KPoe provider)
+      highlightSyncedLyrics(normalizeLyricsTimeFormat(currentSyncedLyrics), lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
