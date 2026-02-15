@@ -6166,16 +6166,20 @@ const Providers = {
   function normalizeLyricsTimeFormat(lyrics) {
     if (!lyrics || !Array.isArray(lyrics)) return lyrics;
     
+    // Detect if time values need conversion from seconds to milliseconds
+    // Strategy: Check if MAJORITY of non-zero time values are < 10000
+    // If most values are small, they're likely in seconds; if most are large, they're in ms
+    const timesWithValues = lyrics.filter(line => line.time != null && line.time > 0);
+    const needsConversion = timesWithValues.length >= 2 && 
+      timesWithValues.filter(line => line.time < 10000).length / timesWithValues.length > 0.5;
+    
     return lyrics.map(line => {
       let timeMs;
       
       if (line.time != null) {
-        // Line has a time property - but is it in milliseconds or seconds?
-        // Heuristic: If time value is less than 10000 for any line past the first few,
-        // it's likely in seconds (since a 10-second song is unlikely to have many lines)
-        // Most songs are 3+ minutes (180+ seconds = 180000+ milliseconds)
-        if (line.time < 10000 && line.time > 0) {
-          // Likely in seconds, convert to milliseconds
+        // Line has a time property - check if it needs conversion
+        if (needsConversion) {
+          // Majority of time values are < 10000, likely in seconds
           timeMs = Math.round(line.time * 1000);
         } else {
           // Already in milliseconds
