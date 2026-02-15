@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.2
+// @version      17.3
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,12 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.3): FIX KPOE PROVIDER'S CACHED LYRICS NOT UPDATING SYNC STATE
+// • Due to Kpoe's cached lyrics storing 'startTime' in seconds when the sync function expected 'time' in miliseconds)
+// • Created a normalizeLyricsTimeFormat() helper function: 
+// • converts startTime (seconds) → time (milliseconds) when needed
+// • applies normalization in two locations: in loadLyricsFromCache() - when loading from cache; and in rerenderLyrics() - when re-rendering cached lyrics
 
 // RESOLVED (17.2): GENIUS PROVIDER FIX
 // • For not transcribed patterns, return error to prevent caching the transcribed pattern as lyrics
@@ -5134,7 +5140,7 @@ const Providers = {
         outline: none;
         box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.3);
       }
-      
+
       /* AMOLED Theme CSS - Applied once to parent container */
       .lyrics-plus-amoled-theme #lyrics-plus-popup,
       .lyrics-plus-amoled-theme #lyrics-plus-header-wrapper,
@@ -5154,13 +5160,13 @@ const Providers = {
         background: #000 !important;
         background-color: #000 !important;
       }
-      
+
       /* Modal theme */
       .lyrics-plus-amoled-theme #lyrics-plus-musixmatch-modal-box,
       .lyrics-plus-amoled-theme #lyrics-plus-spotify-modal-box {
         background: #000 !important;
       }
-      
+
       /* Hover states for AMOLED theme */
       .lyrics-plus-amoled-theme #lyrics-plus-download-sync:hover,
       .lyrics-plus-amoled-theme #lyrics-plus-download-unsync:hover {
@@ -6072,7 +6078,8 @@ const Providers = {
         }
         lyricsContainer.appendChild(p);
       });
-      highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
+      // Normalize cached lyrics time format for proper syncing (especially for KPoe provider)
+      highlightSyncedLyrics(normalizeLyricsTimeFormat(currentSyncedLyrics), lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
@@ -6153,6 +6160,20 @@ const Providers = {
       }
     });
     console.log(`✅ [Lyrics+] Instrumental track cached (detected by ${provider}) - will show "no lyrics" message on future plays`);
+  }
+
+  /**
+   * Normalize lyrics time format for syncing
+   * Converts startTime (seconds) to time (milliseconds) if needed
+   * @param {Array} lyrics - Array of lyric lines
+   * @returns {Array} Normalized lyrics with time in milliseconds
+   */
+  function normalizeLyricsTimeFormat(lyrics) {
+    if (!lyrics || !Array.isArray(lyrics)) return lyrics;
+    return lyrics.map(line => ({
+      ...line,
+      time: line.time ?? Math.round((line.startTime || 0) * 1000)
+    }));
   }
 
   /**
@@ -6244,7 +6265,8 @@ const Providers = {
         }
         lyricsContainer.appendChild(p);
       });
-      highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
+      // Normalize cached lyrics time format for proper syncing (especially for KPoe provider)
+      highlightSyncedLyrics(normalizeLyricsTimeFormat(currentSyncedLyrics), lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
@@ -6820,14 +6842,14 @@ const Providers = {
     let savedTheme = localStorage.getItem('lyricsPlusTheme');
     if (savedTheme === null) savedTheme = false;
     else savedTheme = JSON.parse(savedTheme);
-    
+
     if (savedTheme) {
       document.body.classList.add('lyrics-plus-amoled-theme');
       console.log("🎨 [Lyrics+ Init] AMOLED theme applied on page load");
     } else {
       console.log("🎨 [Lyrics+ Init] Default theme active (AMOLED disabled)");
     }
-    
+
     addButton();
   }
 
@@ -6981,5 +7003,3 @@ const Providers = {
 
   init();
 })();
-
-
