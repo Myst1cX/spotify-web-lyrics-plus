@@ -6179,6 +6179,10 @@ const Providers = {
     }
     const needsConversion = totalCount >= 2 && smallCount / totalCount > 0.5;
     
+    if (needsConversion) {
+      console.log(`🔧 [Lyrics+] Detected cached lyrics with time in SECONDS (${smallCount}/${totalCount} lines < 10000) - converting to milliseconds`);
+    }
+    
     return lyrics.map(line => {
       let timeMs;
       
