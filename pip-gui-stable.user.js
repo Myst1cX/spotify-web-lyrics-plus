@@ -6072,7 +6072,8 @@ const Providers = {
         }
         lyricsContainer.appendChild(p);
       });
-      highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
+      // Normalize cached lyrics time format for proper syncing (especially for KPoe provider)
+      highlightSyncedLyrics(normalizeLyricsTimeFormat(currentSyncedLyrics), lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
@@ -6153,6 +6154,60 @@ const Providers = {
       }
     });
     console.log(`✅ [Lyrics+] Instrumental track cached (detected by ${provider}) - will show "no lyrics" message on future plays`);
+  }
+
+  /**
+   * Normalize lyrics time format for syncing
+   * Converts startTime (seconds) to time (milliseconds) if needed
+   * Also detects and fixes time values that are in seconds when they should be milliseconds
+   * @param {Array} lyrics - Array of lyric lines
+   * @returns {Array} Normalized lyrics with time in milliseconds
+   */
+  function normalizeLyricsTimeFormat(lyrics) {
+    if (!lyrics || !Array.isArray(lyrics)) return lyrics;
+    
+    // Detect if time values need conversion from seconds to milliseconds
+    // Strategy: Check if MAJORITY of non-zero time values are < 10000
+    // If most values are small, they're likely in seconds; if most are large, they're in ms
+    let totalCount = 0;
+    let smallCount = 0;
+    for (const line of lyrics) {
+      if (line.time != null && line.time > 0) {
+        totalCount++;
+        if (line.time < 10000) smallCount++;
+      }
+    }
+    const needsConversion = totalCount >= 2 && smallCount / totalCount > 0.5;
+    
+    if (needsConversion) {
+      console.log(`🔧 [Lyrics+] Detected cached lyrics with time in SECONDS (${smallCount}/${totalCount} lines < 10000) - converting to milliseconds`);
+    }
+    
+    return lyrics.map(line => {
+      let timeMs;
+      
+      if (line.time != null) {
+        // Line has a time property - check if it needs conversion
+        if (needsConversion) {
+          // Majority of time values are < 10000, likely in seconds
+          timeMs = Math.round(line.time * 1000);
+        } else {
+          // Already in milliseconds
+          timeMs = line.time;
+        }
+      } else if (line.startTime != null) {
+        // No time property, but has startTime (likely in seconds from parseKPoeFormat)
+        timeMs = Math.round(line.startTime * 1000);
+      } else {
+        // No timing information
+        timeMs = 0;
+      }
+      
+      return {
+        ...line,
+        time: timeMs
+      };
+    });
   }
 
   /**
@@ -6244,7 +6299,8 @@ const Providers = {
         }
         lyricsContainer.appendChild(p);
       });
-      highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
+      // Normalize cached lyrics time format for proper syncing (especially for KPoe provider)
+      highlightSyncedLyrics(normalizeLyricsTimeFormat(currentSyncedLyrics), lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
