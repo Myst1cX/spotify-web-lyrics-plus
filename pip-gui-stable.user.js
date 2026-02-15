@@ -6159,15 +6159,41 @@ const Providers = {
   /**
    * Normalize lyrics time format for syncing
    * Converts startTime (seconds) to time (milliseconds) if needed
+   * Also detects and fixes time values that are in seconds when they should be milliseconds
    * @param {Array} lyrics - Array of lyric lines
    * @returns {Array} Normalized lyrics with time in milliseconds
    */
   function normalizeLyricsTimeFormat(lyrics) {
     if (!lyrics || !Array.isArray(lyrics)) return lyrics;
-    return lyrics.map(line => ({
-      ...line,
-      time: line.time ?? Math.round((line.startTime || 0) * 1000)
-    }));
+    
+    return lyrics.map(line => {
+      let timeMs;
+      
+      if (line.time != null) {
+        // Line has a time property - but is it in milliseconds or seconds?
+        // Heuristic: If time value is less than 10000 for any line past the first few,
+        // it's likely in seconds (since a 10-second song is unlikely to have many lines)
+        // Most songs are 3+ minutes (180+ seconds = 180000+ milliseconds)
+        if (line.time < 10000 && line.time > 0) {
+          // Likely in seconds, convert to milliseconds
+          timeMs = Math.round(line.time * 1000);
+        } else {
+          // Already in milliseconds
+          timeMs = line.time;
+        }
+      } else if (line.startTime != null) {
+        // No time property, but has startTime (likely in seconds from parseKPoeFormat)
+        timeMs = Math.round(line.startTime * 1000);
+      } else {
+        // No timing information
+        timeMs = 0;
+      }
+      
+      return {
+        ...line,
+        time: timeMs
+      };
+    });
   }
 
   /**
