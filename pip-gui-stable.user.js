@@ -6072,7 +6072,13 @@ const Providers = {
         }
         lyricsContainer.appendChild(p);
       });
-      highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
+      // Normalize cached lyrics time format: convert startTime (seconds) to time (milliseconds)
+      // This ensures cached lyrics sync properly, especially for KPoe provider
+      const normalizedSynced = currentSyncedLyrics.map(line => ({
+        ...line,
+        time: line.time ?? Math.round((line.startTime || 0) * 1000)
+      }));
+      highlightSyncedLyrics(normalizedSynced, lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
@@ -6244,7 +6250,13 @@ const Providers = {
         }
         lyricsContainer.appendChild(p);
       });
-      highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
+      // Normalize cached lyrics time format: convert startTime (seconds) to time (milliseconds)
+      // This ensures cached lyrics sync properly, especially for KPoe provider
+      const normalizedSynced = currentSyncedLyrics.map(line => ({
+        ...line,
+        time: line.time ?? Math.round((line.startTime || 0) * 1000)
+      }));
+      highlightSyncedLyrics(normalizedSynced, lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
