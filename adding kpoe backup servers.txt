@@ -1,0 +1,346 @@
+/* Key Changes:
+
+    Server Array: Added KPOE_SERVERS constant at the top with all three servers
+    Server Index Parameter: Added serverIndex parameter to fetchKPoeLyrics to track which server to try
+    Automatic Fallback: On rate limit (429), service unavailable (503), or network errors, the function automatically tries the next backup server
+    Enhanced Logging: Added logs to show which server is being used and when fallbacks occur
+    Recursive Retry: The function calls itself with the next server index when needed
+    Early Exit: If all servers are exhausted, returns an appropriate error message
+
+How it Works:
+
+    Primary server (lyricsplus.prjktla.workers.dev) is tried first
+    If it returns 429 (rate limit), 503 (unavailable), 500 (server error), or network error, automatically tries backup server 1
+    If backup 1 fails, tries backup 2
+    If all servers fail, returns error message indicating all servers are unavailable
+    For 404 (not found) errors, doesn't retry other servers since the track doesn't exist
+
+The user won't notice any difference - the fallback happens automatically and transparently! 
+
+*/
+
+// what i wish to improve: this change should continue to respect the current implementation of the rest of lyrics fetching logic, specifically with noz found 404 error im pretty sure we established that other servers should still be checked as sometimes it will still find the lyrics
+// for instance if backup 1 gave one of the errors u should still try backup 2 regardless
+
+// below is an example of the idea (replacing current user.js 's kpoe provider with this) :
+
+// --- KPoe ---
+// KPoe server configuration with fallback support
+const KPOE_SERVERS = [
+  "https://lyricsplus.prjktla.workers.dev",     // Primary server
+  "https://lyricsplus-seven.vercel.app",        // Backup 1
+  "https://lyrics-plus-backend.vercel.app"      // Backup 2
+];
+
+async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0) {
+  // If we've tried all servers, return null
+  if (serverIndex >= KPOE_SERVERS.length) {
+    console.log("[KPoe Debug] ✗ All servers exhausted");
+    return { error: "All KPoe servers are currently unavailable or rate limited" };
+  }
+
+  const currentServer = KPOE_SERVERS[serverIndex];
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("[KPoe Debug] Starting lyrics search");
+  console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
+  console.log("[KPoe Debug] Input info:", {
+    artist: songInfo.artist,
+    title: songInfo.title,
+    album: songInfo.album,
+    duration: songInfo.duration,
+    sourceOrder: sourceOrder || 'none',
+    forceReload: forceReload
+  });
+
+  const albumParam = (songInfo.album && songInfo.album !== songInfo.title)
+    ? `&album=${encodeURIComponent(songInfo.album)}`
+    : '';
+  const sourceParam = sourceOrder ? `&source=${encodeURIComponent(sourceOrder)}` : '';
+  let forceReloadParam = forceReload ? `&forceReload=true` : '';
+  let fetchOptions = {};
+  if (forceReload) {
+    fetchOptions = { cache: 'no-store' };
+    forceReloadParam = `&forceReload=true`;
+    console.log("[KPoe Debug] Force reload enabled (bypassing cache)");
+  }
+
+  const url = `${currentServer}/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
+  console.log("[KPoe Debug] Request URL:", url);
+
+  try {
+    const response = await fetch(url, fetchOptions);
+    console.log(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
+
+    // Check if response is ok before parsing
+    if (!response.ok) {
+      // Handle rate limiting and service unavailability by trying next server
+      if (response.status === 429) {
+        console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
+        console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+        return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+      } else if (response.status === 503) {
+        console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
+        console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+        return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+      } else if (response.status === 404) {
+        console.log("[KPoe Debug] ✗ Track not found in KPoe database");
+        return { error: "Track not found in KPoe database" };
+      } else if (response.status === 400) {
+        console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
+        return { error: "Bad request - Invalid parameters" };
+      } else if (response.status === 500) {
+        console.log("[KPoe Debug] ✗ Internal Server Error on", currentServer);
+        // Try next server for 500 errors too
+        console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+        return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+      } else {
+        console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+        return { error: `Request failed: ${response.status} ${response.statusText}` };
+      }
+    }
+
+    // Only parse response on successful status
+    const data = await response.json();
+    console.log("[KPoe Debug] Response data:", {
+      hasLyrics: !!(data && data.lyrics),
+      lyricsType: data?.type,
+      lyricsCount: data?.lyrics?.length || 0,
+      source: data?.metadata?.source,
+      server: currentServer
+    });
+
+    if (data && data.lyrics && data.lyrics.length > 0) {
+      console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
+      console.log(`[KPoe Debug] ✓ Successfully fetched from: ${currentServer}`);
+      return data;
+    }
+
+    console.log("[KPoe Debug] ✗ No lyrics in response");
+    return null;
+  } catch (e) {
+    console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
+    // On network errors, try next server
+    console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+    return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+  }
+}
+
+function parseKPoeFormat(data) {
+  if (!Array.isArray(data.lyrics)) return null;
+  const metadata = {
+    ...data.metadata,
+    source: `${data.metadata.source} (KPoe)`
+  };
+  return {
+    type: data.type,
+    data: data.lyrics.map(item => {
+      const startTime = Number(item.time) || 0;
+      const duration = Number(item.duration) || 0;
+      const endTime = startTime + duration;
+      const parsedSyllabus = (item.syllabus || []).map(syllable => ({
+        text: syllable.text || '',
+        time: Number(syllable.time) || 0,
+        duration: Number(syllable.duration) || 0,
+        isLineEnding: Boolean(syllable.isLineEnding),
+        isBackground: Boolean(syllable.isBackground),
+        element: syllable.element || {}
+      }));
+      return {
+        text: item.text || '',
+        startTime: startTime / 1000,
+        duration: duration / 1000,
+        endTime: endTime / 1000,
+        syllabus: parsedSyllabus,
+        element: item.element || {},
+        transliteration: item.transliteration || null
+      };
+    }),
+    metadata
+  };
+}
+
+const ProviderKPoe = {
+  async findLyrics(info) {
+    try {
+      // Strategy: Try multiple combinations to maximize coverage
+      // No source restriction - let API search all sources (Apple, Spotify, etc.)
+      // 5 attempts with different data normalization strategies
+      // Line-by-line lyrics are preferred over word-by-word, so check all attempts
+      const duration = Math.floor(info.duration / 1000);
+
+      const attempts = [
+        {
+          normalizeArtist: false,
+          normalizeTitle: false,
+          includeAlbum: true,
+          description: "Raw data with album"
+        },
+        {
+          normalizeArtist: false,
+          normalizeTitle: false,
+          includeAlbum: false,
+          description: "Raw data without album (sometimes album metadata is wrong)"
+        },
+        {
+          normalizeArtist: true,
+          normalizeTitle: false,
+          includeAlbum: false,
+          description: "Normalized artist, raw title"
+        },
+        {
+          normalizeArtist: false,
+          normalizeTitle: true,
+          includeAlbum: false,
+          description: "Raw artist, normalized title"
+        },
+        {
+          normalizeArtist: true,
+          normalizeTitle: true,
+          includeAlbum: false,
+          description: "Fully normalized data"
+        }
+      ];
+
+      let bestResult = null;
+      let bestResultType = null;
+      let lastError = null; // Track the last error for reporting
+
+      for (let i = 0; i < attempts.length; i++) {
+        const attempt = attempts[i];
+        console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        console.log(`[KPoe Debug] Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
+
+        let songInfo = {
+          artist: attempt.normalizeArtist ? Utils.normalize(info.artist) : (info.artist || ""),
+          title: attempt.normalizeTitle ? Utils.normalize(info.title) : (info.title || ""),
+          album: attempt.includeAlbum ? (info.album || "") : "",
+          duration
+        };
+
+        // Start with primary server (serverIndex = 0)
+        // fetchKPoeLyrics will automatically try backup servers on rate limit/errors
+        let result = await fetchKPoeLyrics(songInfo);
+
+        // Handle errors - log but continue trying other attempts
+        if (result && result.error) {
+          lastError = result.error; // Track the last error
+          console.log(`[KPoe Debug] ✗ Error on attempt ${i + 1}: ${result.error}`);
+          // If error is about all servers being unavailable, break early
+          if (result.error.includes("All KPoe servers")) {
+            break;
+          }
+          // Continue to next attempt - sometimes one of them goes through
+        } else if (result && result.lyrics && result.lyrics.length > 0) {
+          console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
+
+          // Keep track of the best result (prefer Line over Word)
+          if (!bestResult) {
+            // First successful result
+            bestResult = result;
+            bestResultType = result.type;
+            console.log(`[KPoe Debug] Storing first result (${result.type} type)`);
+          } else if (result.type === "Line" && bestResultType !== "Line") {
+            // Found Line type - upgrade from Word to Line
+            bestResult = result;
+            bestResultType = result.type;
+            console.log(`[KPoe Debug] ✓ Upgraded to Line type lyrics!`);
+          } else {
+            console.log(`[KPoe Debug] Keeping previous result (current: ${bestResultType}, new: ${result.type})`);
+          }
+
+          // If we found Line type, we can stop early since that's the best
+          if (bestResultType === "Line") {
+            console.log(`[KPoe Debug] ✓ Found Line type lyrics, stopping search`);
+            break;
+          }
+        }
+      }
+
+      if (bestResult) {
+        console.log(`[KPoe Debug] ✓ Returning best result: ${bestResultType} type`);
+        return parseKPoeFormat(bestResult);
+      }
+
+      console.log("[KPoe Debug] ✗ All 5 attempts failed");
+      // If we have a specific error from the last attempt, return it
+      if (lastError) {
+        return { error: lastError };
+      }
+      return { error: "No lyrics available from KPoe" };
+    } catch (e) {
+      return { error: "KPoe request failed - connection error or service unreachable" };
+    }
+  },
+  getUnsynced(body) {
+    if (!body?.data || !Array.isArray(body.data)) return null;
+
+    const isWordType = body.type === "Word";
+    if (isWordType) {
+      console.log("[KPoe Debug] Processing Word type unsynced lyrics");
+    }
+
+    return body.data.map(line => {
+      let text = line.text;
+
+      // For Word type, line.text might be empty - reconstruct from syllabus
+      if ((!text || text.trim() === '') && line.syllabus && Array.isArray(line.syllabus)) {
+        // Join syllables with intelligent spacing for word boundaries
+        text = line.syllabus.map((s, index) => {
+          const syllableText = s.text || '';
+          // Add space after syllable if it's marked as line ending (word boundary)
+          // or if the next syllable doesn't start with punctuation
+          if (s.isLineEnding && index < line.syllabus.length - 1) {
+            return syllableText + ' ';
+          }
+          return syllableText;
+        }).join('').trim();
+
+        if (isWordType) {
+          console.log(`[KPoe Debug] Reconstructed unsynced line from ${line.syllabus.length} syllables: "${text}"`);
+        }
+      }
+
+      return {
+        text: text || '',
+        transliteration: line.transliteration?.text || null
+      };
+    }).filter(line => line.text.trim() !== ''); // Filter out any empty lines
+  },
+  getSynced(body) {
+    if (!body?.data || !Array.isArray(body.data)) return null;
+
+    // Handle both Line-synced and Word-synced lyrics
+    const isWordType = body.type === "Word";
+    if (isWordType) {
+      console.log("[KPoe Debug] Converting Word type lyrics to line-synced format");
+    }
+
+    return body.data.map(line => {
+      let text = line.text;
+
+      // For Word type, line.text might be empty - reconstruct from syllabus
+      if ((!text || text.trim() === '') && line.syllabus && Array.isArray(line.syllabus)) {
+        // Join syllables with intelligent spacing for word boundaries
+        text = line.syllabus.map((s, index) => {
+          const syllableText = s.text || '';
+          // Add space after syllable if it's marked as line ending (word boundary)
+          // or if the next syllable doesn't start with punctuation
+          if (s.isLineEnding && index < line.syllabus.length - 1) {
+            return syllableText + ' ';
+          }
+          return syllableText;
+        }).join('').trim();
+
+        if (isWordType) {
+          console.log(`[KPoe Debug] Reconstructed line from ${line.syllabus.length} syllables: "${text}"`);
+        }
+      }
+
+      return {
+        time: Math.round(line.startTime * 1000),
+        text: text || '',
+        transliteration: line.transliteration?.text || null
+      };
+    }).filter(line => line.text.trim() !== ''); // Filter out any empty lines
+  },
+};
