@@ -1850,7 +1850,7 @@ const PLAY_WORDS = [
     "https://lyrics-plus-backend.vercel.app"      // Backup 2
   ];
 
-  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0) {
+  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0, attemptInfo = '') {
     // If we've tried all servers, return null
     if (serverIndex >= KPOE_SERVERS.length) {
       console.log("[KPoe Debug] ✗ All servers exhausted");
@@ -1860,6 +1860,7 @@ const PLAY_WORDS = [
     const currentServer = KPOE_SERVERS[serverIndex];
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("[KPoe Debug] Starting lyrics search");
+    if (attemptInfo) console.log(`[KPoe Debug] ${attemptInfo}`);
     console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
     console.log("[KPoe Debug] Input info:", {
       artist: songInfo.artist,
@@ -1912,10 +1913,8 @@ const PLAY_WORDS = [
           console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 404) {
-          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
-          // Try backup servers - sometimes they have different data
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer} - not trying backup servers (all servers share the same data)`);
+          return null;
         } else if (response.status === 400) {
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
           return { error: "Bad request - Invalid parameters" };
@@ -2052,8 +2051,6 @@ const PLAY_WORDS = [
 
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
-          console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-          console.log(`[KPoe Debug] Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
 
           let songInfo = {
             artist: attempt.normalizeArtist ? Utils.normalize(info.artist) : (info.artist || ""),
@@ -2064,7 +2061,7 @@ const PLAY_WORDS = [
 
           // Start with primary server (serverIndex = 0)
           // fetchKPoeLyrics will automatically try backup servers on rate limit/errors
-          let result = await fetchKPoeLyrics(songInfo);
+          let result = await fetchKPoeLyrics(songInfo, '', false, 0, `Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
 
           // Handle errors - log but continue trying other attempts
           if (result && result.error) {
@@ -6469,6 +6466,7 @@ const Providers = {
 
     let synced = provider.getSynced(result);
     let unsynced = provider.getUnsynced(result);
+    console.log(`[Lyrics+] ${Providers.current}: synced=${synced?.length ?? 'none'} lines, unsynced=${unsynced?.length ?? 'none'} lines`);
 
     // Check if lyrics contain Chinese characters and detect script type
     const lyrics = synced || unsynced || [];
@@ -6703,7 +6701,11 @@ const Providers = {
     for (const { name, type } of detectionOrder) {
       try {
         const providerStartTime = performance.now();
+        const lyricsTypeName = type === 'getSynced' ? 'synced' : 'unsynced';
         DEBUG.provider.start(name, type, info);
+
+        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        console.log(`▶ [Lyrics+] ${name} [${lyricsTypeName}]`);
 
         const provider = Providers.map[name];
         const result = await provider.findLyrics(info);
@@ -6756,6 +6758,7 @@ const Providers = {
 
             DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
             DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
+            console.log(`✅ [Lyrics+] ${name} ✓ found ${lyricsTypeName} lyrics (${lyrics.length} lines)`);
 
             // Store metadata if available (e.g., KPoe server info)
             currentLyricsMetadata = result?.metadata || null;
