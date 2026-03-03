@@ -6777,11 +6777,9 @@ const Providers = {
             return;
           } else {
             DEBUG.debug('Provider', `${name} ${type} returned empty lyrics`);
-            console.log(`✗ [Lyrics+] ${name} [${lyricsTypeName}] - no lyrics returned`);
           }
         } else {
           DEBUG.provider.failure(name, type, result?.error || 'No result');
-          console.log(`✗ [Lyrics+] ${name} [${lyricsTypeName}] - failed: ${result?.error || 'no result'}`);
         }
 
         DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
