@@ -2023,6 +2023,9 @@ const PLAY_WORDS = [
   const ProviderKPoe = {
     async findLyrics(info) {
       try {
+        // Reset server cooldowns for each new song so the primary is always tried first.
+        kpoeServerCoolingDown.fill(0);
+
         // Strategy: Try multiple combinations to maximize coverage
         // No source restriction - let API search all sources (Apple, Spotify, etc.)
         // 5 attempts with different data normalization strategies
