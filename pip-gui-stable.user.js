@@ -1858,7 +1858,6 @@ const PLAY_WORDS = [
     }
 
     const currentServer = KPOE_SERVERS[serverIndex];
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("[KPoe Debug] Starting lyrics search");
     console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
     console.log("[KPoe Debug] Input info:", {
