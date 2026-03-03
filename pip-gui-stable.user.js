@@ -1856,6 +1856,13 @@ const PLAY_WORDS = [
     try {
       const response = await fetch(url, fetchOptions);
       console.log(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
+      
+      // Check cache status from headers
+      const cacheStatus = response.headers.get('x-cache') || response.headers.get('cf-cache-status') || 'unknown';
+      const cacheAge = response.headers.get('age');
+      if (cacheStatus !== 'unknown' || cacheAge) {
+        console.log(`[KPoe Debug] Cache info: Status=${cacheStatus}${cacheAge ? `, Age=${cacheAge}s` : ''}`);
+      }
 
       // Check if response is ok before parsing
       if (!response.ok) {
@@ -1888,17 +1895,29 @@ const PLAY_WORDS = [
 
       // Only parse response on successful status
       const data = await response.json();
+      
+      // Determine if from cache based on response headers and metadata
+      const isCached = cacheStatus && (cacheStatus.toLowerCase().includes('hit') || cacheAge);
+      const cacheInfo = isCached ? ' (from cache)' : ' (fresh)';
+      
       console.log("[KPoe Debug] Response data:", {
         hasLyrics: !!(data && data.lyrics),
         lyricsType: data?.type,
         lyricsCount: data?.lyrics?.length || 0,
         source: data?.metadata?.source,
-        server: currentServer
+        server: currentServer,
+        cached: isCached,
+        cacheStatus: cacheStatus,
+        cacheAge: cacheAge || 'N/A'
       });
 
       if (data && data.lyrics && data.lyrics.length > 0) {
         console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
-        console.log(`[KPoe Debug] ✓ Successfully fetched from: ${currentServer}`);
+        console.log(`[KPoe Debug] ✓ Successfully fetched from: ${currentServer}${cacheInfo}`);
+        // Store server info in metadata for later reference
+        data.metadata = data.metadata || {};
+        data.metadata.server = currentServer;
+        data.metadata.cached = isCached;
         return data;
       }
 
@@ -1913,6 +1932,12 @@ const PLAY_WORDS = [
   }
   function parseKPoeFormat(data) {
     if (!Array.isArray(data.lyrics)) return null;
+    
+    // Log server and cache information
+    const serverInfo = data.metadata?.server || 'unknown';
+    const cacheInfo = data.metadata?.cached ? ' (cached)' : ' (fresh)';
+    console.log(`[KPoe Debug] 📊 Parsing lyrics from: ${serverInfo}${cacheInfo}`);
+    
     const metadata = {
       ...data.metadata,
       source: `${data.metadata.source} (KPoe)`
