@@ -1850,7 +1850,7 @@ const PLAY_WORDS = [
     "https://lyrics-plus-backend.vercel.app"      // Backup 2
   ];
 
-  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0) {
+  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0, attemptInfo = '') {
     // If we've tried all servers, return null
     if (serverIndex >= KPOE_SERVERS.length) {
       console.log("[KPoe Debug] ✗ All servers exhausted");
@@ -1858,7 +1858,9 @@ const PLAY_WORDS = [
     }
 
     const currentServer = KPOE_SERVERS[serverIndex];
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("[KPoe Debug] Starting lyrics search");
+    if (attemptInfo) console.log(`[KPoe Debug] ${attemptInfo}`);
     console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
     console.log("[KPoe Debug] Input info:", {
       artist: songInfo.artist,
@@ -2049,8 +2051,6 @@ const PLAY_WORDS = [
 
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
-          console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-          console.log(`[KPoe Debug] Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
 
           let songInfo = {
             artist: attempt.normalizeArtist ? Utils.normalize(info.artist) : (info.artist || ""),
@@ -2061,7 +2061,7 @@ const PLAY_WORDS = [
 
           // Start with primary server (serverIndex = 0)
           // fetchKPoeLyrics will automatically try backup servers on rate limit/errors
-          let result = await fetchKPoeLyrics(songInfo);
+          let result = await fetchKPoeLyrics(songInfo, '', false, 0, `Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
 
           // Handle errors - log but continue trying other attempts
           if (result && result.error) {
