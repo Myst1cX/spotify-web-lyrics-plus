@@ -6707,7 +6707,7 @@ const Providers = {
         DEBUG.provider.start(name, type, info);
 
         if (type !== lastSearchType) {
-          console.log(`[Lyrics+] ─── ${type === 'getSynced' ? '🎵 Trying SYNCED lyrics providers' : '📄 Trying UNSYNCED lyrics providers'} ───`);
+          console.log(`[Lyrics+] ════════ ${type === 'getSynced' ? 'SYNCED' : 'UNSYNCED'} providers ════════`);
           lastSearchType = type;
         }
         console.log(`[Lyrics+] ──────────────────────────`);
