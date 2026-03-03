@@ -22,6 +22,12 @@
 // test version: 17.6.test
 // changes from previous to this version in this line: } else if (response.status === 404) {
 
+// RESOLVED (17.7): FIX KPOE APPLE SOURCE LYRICS WITH TYPE "None" ALWAYS HIGHLIGHTING LAST LINE
+// • Apple source lyrics from KPoe have type "None" (Python None serialised as string) and carry no timing data
+// • getSynced() now checks whether any line actually has a non-zero timestamp; if none do, it returns null
+// • This causes the display layer to fall back to getUnsynced, showing the lyrics as plain unsynced text
+// • Approach is data-driven rather than type-name-driven, so it handles any future unsynced-only type correctly
+
 // RESOLVED (17.6): FIX 0-BASED INDEX IN "GET CACHE STATS" CONSOLE TABLE
 // • Menu command "Debug: Get Cache Stats": Cached songs table now shows indices starting from 1 instead of 0
 
@@ -2169,7 +2175,7 @@ const PLAY_WORDS = [
         console.log("[KPoe Debug] Converting Word type lyrics to line-synced format");
       }
 
-      return body.data.map(line => {
+      const lines = body.data.map(line => {
         let text = line.text;
 
         // For Word type, line.text might be empty - reconstruct from syllabus
@@ -2196,6 +2202,12 @@ const PLAY_WORDS = [
           transliteration: line.transliteration?.text || null
         };
       }).filter(line => line.text.trim() !== ''); // Filter out any empty lines
+
+      // If no line has a non-zero timestamp, there is no real sync data (e.g. type "None"
+      // from Apple source). Return null so the caller falls back to unsynced display.
+      if (!lines.some(line => line.time > 0)) return null;
+
+      return lines;
     },
   };
 
