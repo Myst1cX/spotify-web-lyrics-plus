@@ -6705,7 +6705,7 @@ const Providers = {
         const lyricsTypeName = type === 'getSynced' ? 'synced' : 'unsynced';
         DEBUG.provider.start(name, type, info);
 
-        console.log(`[Lyrics+] ▶ ${name} [${lyricsTypeName}]`);
+        console.log(`🔍 [Lyrics+] ▶ ${name} [${lyricsTypeName}]`);
 
         const provider = Providers.map[name];
         const result = await provider.findLyrics(info);
