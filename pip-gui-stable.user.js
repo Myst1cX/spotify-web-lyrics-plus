@@ -2160,6 +2160,9 @@ const PLAY_WORDS = [
     getSynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
 
+      // Only handle Line and Word types - other types (e.g. None) have no valid sync timing and will therefore be considered only for Unsynced lyrics fetching
+      if (body.type !== "Line" && body.type !== "Word") return null;
+
       // Handle both Line-synced and Word-synced lyrics
       const isWordType = body.type === "Word";
       if (isWordType) {
@@ -7122,6 +7125,7 @@ const Providers = {
 
   init();
 })();
+
 
 
 
