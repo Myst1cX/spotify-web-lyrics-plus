@@ -1912,10 +1912,8 @@ const PLAY_WORDS = [
           console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 404) {
-          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
-          // Try backup servers - sometimes they have different data
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer} - not trying backup servers (song not found)`);
+          return null;
         } else if (response.status === 400) {
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
           return { error: "Bad request - Invalid parameters" };
