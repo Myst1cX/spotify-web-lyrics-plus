@@ -14,7 +14,8 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// test
+// test version
+// changes from previous to this version in this line: } else if (response.status === 404) {
 
 // RESOLVED (17.6): FIX 0-BASED INDEX IN "GET CACHE STATS" CONSOLE TABLE
 // • Menu command "Debug: Get Cache Stats": Cached songs table now shows indices starting from 1 instead of 0
@@ -7116,5 +7117,6 @@ const Providers = {
 
   init();
 })();
+
 
 
