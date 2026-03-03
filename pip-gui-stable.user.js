@@ -1912,8 +1912,12 @@ const PLAY_WORDS = [
           console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 404) {
-          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer} - not trying backup servers (song not found)`);
-          return { noLyrics: true, serverIndex };
+          // Server is UP but the query params didn't match any track.
+          // Backup servers query the same underlying database so would also return 404.
+          // Carry serverIndex so findLyrics can advance startServerIndex if a backup had
+          // to handle this because the primary was down (same guard as noLyrics).
+          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer} - returning for retry with different normalization`);
+          return { notFound: true, serverIndex };
         } else if (response.status === 400) {
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
           return { error: "Bad request - Invalid parameters" };
@@ -2073,11 +2077,25 @@ const PLAY_WORDS = [
               break;
             }
             // Continue to next attempt - sometimes one of them goes through
+          } else if (result && result.notFound) {
+            // Server is UP but this normalization's query params didn't match any track.
+            // Backup servers share the same underlying database, so they would also return
+            // 404 for the same params — no point trying them.  The next normalization will
+            // retry the same starting server with different params that may match.
+            // However, if serverIndex > startServerIndex, it means the primary was DOWN and
+            // a backup handled the 404; advance startServerIndex so we don't re-hit the
+            // known-dead primary on subsequent normalization attempts.
+            if (result.serverIndex > startServerIndex) {
+              startServerIndex = result.serverIndex;
+              console.log(`[KPoe Debug] 📌 Primary unavailable (404 via backup), starting next attempt from server ${startServerIndex}`);
+            } else {
+              console.log(`[KPoe Debug] Track not found with these params on server ${startServerIndex}, trying next normalization`);
+            }
           } else if (result && result.noLyrics) {
-            // A server responded but had no lyrics (404 or empty body).
-            // result.serverIndex is the server that actually replied, so if it's higher than
-            // our current start (meaning servers 0..N-1 were down), remember it so subsequent
-            // attempts don't waste time re-hitting those known-down servers.
+            // A server responded with a 200 OK but returned no lyric data.
+            // result.serverIndex is the server that actually replied. If it's higher than
+            // startServerIndex it means servers 0..N-1 were down and a backup took over;
+            // remember it so subsequent attempts don't waste time re-hitting those servers.
             if (result.serverIndex > startServerIndex) {
               startServerIndex = result.serverIndex;
               console.log(`[KPoe Debug] 📌 Primary unavailable, starting next attempt from server ${startServerIndex}`);
