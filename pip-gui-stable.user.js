@@ -1850,6 +1850,10 @@ const PLAY_WORDS = [
     "https://lyrics-plus-backend.vercel.app"      // Backup 2
   ];
 
+  function getServerLabel(index) {
+    return index === 0 ? 'Primary' : 'Backup ' + index;
+  }
+
   async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0) {
     // If we've tried all servers, return null
     if (serverIndex >= KPOE_SERVERS.length) {
@@ -1860,7 +1864,7 @@ const PLAY_WORDS = [
     const currentServer = KPOE_SERVERS[serverIndex];
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("[KPoe Debug] Starting lyrics search");
-    console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
+    console.log("[KPoe Debug] Using server:", currentServer, `(${getServerLabel(serverIndex)})`);
     console.log("[KPoe Debug] Input info:", {
       artist: songInfo.artist,
       title: songInfo.title,
@@ -1901,15 +1905,15 @@ const PLAY_WORDS = [
         // Handle rate limiting and service unavailability by trying next server
         if (response.status === 429) {
           console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          console.log(`[KPoe Debug] 🔄 Trying ${getServerLabel(serverIndex + 1)}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 503) {
           console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          console.log(`[KPoe Debug] 🔄 Trying ${getServerLabel(serverIndex + 1)}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 500) {
           console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          console.log(`[KPoe Debug] 🔄 Trying ${getServerLabel(serverIndex + 1)}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 404) {
           // Server is UP but the query params didn't match any track.
@@ -1962,7 +1966,7 @@ const PLAY_WORDS = [
     } catch (e) {
       console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
       // On network errors, try next server
-      console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+      console.log(`[KPoe Debug] 🔄 Trying ${getServerLabel(serverIndex + 1)}...`);
       return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
     }
   }
@@ -2087,16 +2091,16 @@ const PLAY_WORDS = [
             // known-dead primary on subsequent normalization attempts.
             if (result.serverIndex > startServerIndex) {
               startServerIndex = result.serverIndex;
-              console.log(`[KPoe Debug] 📌 Primary unavailable (404 via backup), starting next attempt from server ${startServerIndex}`);
+              console.log(`[KPoe Debug] 📌 Primary unavailable (404 via backup), starting next attempt from ${getServerLabel(startServerIndex)}`);
             }
           } else if (result && result.noLyrics) {
             // A server responded with a 200 OK but returned no lyric data.
             // result.serverIndex is the server that actually replied. If it's higher than
-            // startServerIndex it means servers 0..N-1 were down and a backup took over;
+            // startServerIndex it means earlier servers were down and a backup took over;
             // remember it so subsequent attempts don't waste time re-hitting those servers.
             if (result.serverIndex > startServerIndex) {
               startServerIndex = result.serverIndex;
-              console.log(`[KPoe Debug] 📌 Primary unavailable, starting next attempt from server ${startServerIndex}`);
+              console.log(`[KPoe Debug] 📌 Primary unavailable, starting next attempt from ${getServerLabel(startServerIndex)}`);
             }
           } else if (result && result.lyrics && result.lyrics.length > 0) {
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
@@ -2106,7 +2110,7 @@ const PLAY_WORDS = [
               const serverIdx = KPOE_SERVERS.indexOf(result.metadata.server);
               if (serverIdx !== -1 && serverIdx > startServerIndex) {
                 startServerIndex = serverIdx;
-                console.log(`[KPoe Debug] 📌 Primary unavailable, starting next attempt from server ${startServerIndex}`);
+                console.log(`[KPoe Debug] 📌 Primary unavailable, starting next attempt from ${getServerLabel(startServerIndex)}`);
               }
             }
 
