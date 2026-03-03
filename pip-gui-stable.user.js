@@ -1916,7 +1916,7 @@ const PLAY_WORDS = [
           // Backup servers query the same underlying database so would also return 404.
           // Carry serverIndex so findLyrics can advance startServerIndex if a backup had
           // to handle this because the primary was down (same guard as noLyrics).
-          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer} - returning for retry with different normalization`);
+          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
           return { notFound: true, serverIndex };
         } else if (response.status === 400) {
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
@@ -2088,8 +2088,6 @@ const PLAY_WORDS = [
             if (result.serverIndex > startServerIndex) {
               startServerIndex = result.serverIndex;
               console.log(`[KPoe Debug] 📌 Primary unavailable (404 via backup), starting next attempt from server ${startServerIndex}`);
-            } else {
-              console.log(`[KPoe Debug] Track not found with these params on server ${startServerIndex}, trying next normalization`);
             }
           } else if (result && result.noLyrics) {
             // A server responded with a 200 OK but returned no lyric data.
