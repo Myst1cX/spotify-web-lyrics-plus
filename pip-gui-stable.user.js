@@ -371,21 +371,11 @@
         // Extract server information from metadata
         let serverInfo = 'N/A';
         if (data.metadata?.server) {
-          const serverUrl = data.metadata.server;
-          // Determine server label for KPoe servers
-          if (serverUrl.includes('lyricsplus.prjktla.workers.dev')) {
-            serverInfo = 'KPoe - Primary';
-          } else if (serverUrl.includes('lyricsplus-seven.vercel.app')) {
-            serverInfo = 'KPoe - Backup 1';
-          } else if (serverUrl.includes('lyrics-plus-backend.vercel.app')) {
-            serverInfo = 'KPoe - Backup 2';
-          } else {
-            // For other servers, show abbreviated URL
-            serverInfo = serverUrl.replace(/^https?:\/\//, '').substring(0, 40);
-          }
+          // Use centralized server label function
+          serverInfo = getServerLabel(data.metadata.server, data.provider);
         } else if (data.provider) {
-          // If no server info but has provider, show provider name
-          serverInfo = data.provider;
+          // If no server info but has provider, show "Main" for consistency
+          serverInfo = 'Main';
         }
         
         return {
@@ -1843,6 +1833,44 @@ const PLAY_WORDS = [
     "https://lyrics-plus-backend.vercel.app"      // Backup 2
   ];
 
+  /**
+   * Server configuration for all providers
+   * Structure allows easy addition of backup servers for any provider
+   */
+  const PROVIDER_SERVERS = {
+    'KPoe': KPOE_SERVERS,
+    // Other providers currently use single server (labeled as "Main")
+    // To add backup servers for a provider, add an array like KPoe:
+    // 'Spotify': ['https://primary.spotify.com', 'https://backup1.spotify.com'],
+    // 'LRCLIB': ['https://lrclib.net'],
+    // etc.
+  };
+
+  /**
+   * Get server label from URL for any provider
+   * @param {string} serverUrl - The server URL
+   * @param {string} provider - The provider name
+   * @returns {string} Server label (e.g., "Primary", "Backup 1", "Main")
+   */
+  function getServerLabel(serverUrl, provider = null) {
+    if (!serverUrl) return 'Unknown';
+    
+    // Check if provider has defined servers
+    if (provider && PROVIDER_SERVERS[provider]) {
+      const servers = PROVIDER_SERVERS[provider];
+      const index = servers.findIndex(server => serverUrl.includes(server.replace(/^https?:\/\//, '')));
+      
+      if (index !== -1) {
+        // Primary server (index 0) or backup servers (index > 0)
+        return index === 0 ? 'Primary' : `Backup ${index}`;
+      }
+    }
+    
+    // For providers without defined servers, default to "Main"
+    // This allows future expansion without breaking existing functionality
+    return 'Main';
+  }
+
   async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0) {
     // If we've tried all servers, return null
     if (serverIndex >= KPOE_SERVERS.length) {
@@ -1851,9 +1879,10 @@ const PLAY_WORDS = [
     }
 
     const currentServer = KPOE_SERVERS[serverIndex];
+    const serverLabel = getServerLabel(currentServer, 'KPoe');
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("[KPoe Debug] Starting lyrics search");
-    console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
+    console.log("[KPoe Debug] Using server:", currentServer, `(${serverLabel})`);
     console.log("[KPoe Debug] Input info:", {
       artist: songInfo.artist,
       title: songInfo.title,
@@ -1940,7 +1969,7 @@ const PLAY_WORDS = [
 
       if (data && data.lyrics && data.lyrics.length > 0) {
         console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
-        console.log(`[KPoe Debug] ✓ Successfully fetched from: ${currentServer}${cacheInfo}`);
+        console.log(`[KPoe Debug] ✓ Successfully fetched from: ${currentServer} (${serverLabel})${cacheInfo}`);
         // Store server info in metadata for later reference
         data.metadata = data.metadata || {};
         data.metadata.server = currentServer;
@@ -1961,10 +1990,11 @@ const PLAY_WORDS = [
     if (!Array.isArray(data.lyrics)) return null;
     
     // Log server and cache information (only show cache status if we have actual info)
-    const serverInfo = data.metadata?.server || 'unknown';
+    const serverUrl = data.metadata?.server || 'unknown';
+    const serverLabel = serverUrl !== 'unknown' ? getServerLabel(serverUrl, 'KPoe') : 'unknown';
     const hasActualCacheInfo = data.metadata?.cached !== undefined && data.metadata?.cached !== null;
     const cacheInfo = hasActualCacheInfo ? (data.metadata.cached ? ' (cached)' : ' (fresh)') : '';
-    console.log(`[KPoe Debug] 📊 Parsing lyrics from: ${serverInfo}${cacheInfo}`);
+    console.log(`[KPoe Debug] 📊 Parsing lyrics from: ${serverUrl} (${serverLabel})${cacheInfo}`);
     
     const metadata = {
       ...data.metadata,
@@ -6274,19 +6304,14 @@ const Providers = {
 
     console.log(`✨ [Lyrics+] Loading lyrics from cache for "${info.title}" by ${info.artist}`);
     
-    // Display provider with server info if available (for KPoe)
+    // Display provider with server info if available
     let providerDisplay = cachedData.provider || 'Unknown';
-    if (cachedData.provider === 'KPoe' && cachedData.metadata?.server) {
-      const serverUrl = cachedData.metadata.server;
-      let serverLabel = 'Unknown server';
-      if (serverUrl.includes('lyricsplus.prjktla.workers.dev')) {
-        serverLabel = 'Primary';
-      } else if (serverUrl.includes('lyricsplus-seven.vercel.app')) {
-        serverLabel = 'Backup 1';
-      } else if (serverUrl.includes('lyrics-plus-backend.vercel.app')) {
-        serverLabel = 'Backup 2';
-      }
-      providerDisplay = `KPoe - ${serverLabel}`;
+    if (cachedData.metadata?.server) {
+      const serverLabel = getServerLabel(cachedData.metadata.server, cachedData.provider);
+      providerDisplay = `${cachedData.provider} - ${serverLabel}`;
+    } else if (cachedData.provider) {
+      // No server metadata, show as "Main"
+      providerDisplay = `${cachedData.provider} - Main`;
     }
     
     console.log(`   📦 Source: ${providerDisplay} (previously fetched)`);
