@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Test
+// @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.7.test
+// @version      17.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,14 +13,6 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
-
-// RESOLVED (17.7.test - built on top of 1.17.6.test): KPOE APPLE SOURCE LYRICS WITH TYPE "None" REASSIGNED TO UNSYNCED LYRICS
-// • Apple source lyrics from KPoe have type "None" (Python None serialised as string) and carry no timing data
-// • getSynced() now returns null for any type that is not "Line" or "Word", falling back to unsynced display
-// • Previously all lines defaulted to time=0, so the sync cursor always advanced to the last line
-
-// test version: 17.6.test
-// changes from previous to this version in this line: } else if (response.status === 404) {
 
 // RESOLVED (17.6): FIX 0-BASED INDEX IN "GET CACHE STATS" CONSOLE TABLE
 // • Menu command "Debug: Get Cache Stats": Cached songs table now shows indices starting from 1 instead of 0
@@ -1919,9 +1911,11 @@ const PLAY_WORDS = [
           console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
           console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
-          } else if (response.status === 404) {
-          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer} - not trying backup servers (song not found)`);
-          return null;
+        } else if (response.status === 404) {
+          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
+          // Try backup servers - sometimes they have different data
+          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 400) {
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
           return { error: "Bad request - Invalid parameters" };
@@ -2159,9 +2153,6 @@ const PLAY_WORDS = [
     },
     getSynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
-
-      // Only handle Line and Word types - other types (e.g. None) have no valid sync timing and will therefore be considered only for Unsynced lyrics fetching
-      if (body.type !== "Line" && body.type !== "Word") return null;
 
       // Handle both Line-synced and Word-synced lyrics
       const isWordType = body.type === "Word";
@@ -7125,8 +7116,3 @@ const Providers = {
 
   init();
 })();
-
-
-
-
-
