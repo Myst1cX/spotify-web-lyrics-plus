@@ -1913,7 +1913,7 @@ const PLAY_WORDS = [
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 404) {
           console.log(`[KPoe Debug] ✗ Track not found on ${currentServer} - not trying backup servers (song not found)`);
-          return null;
+          return { noLyrics: true, serverIndex };
         } else if (response.status === 400) {
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
           return { error: "Bad request - Invalid parameters" };
@@ -1954,7 +1954,7 @@ const PLAY_WORDS = [
       }
 
       console.log("[KPoe Debug] ✗ No lyrics in response");
-      return null;
+      return { noLyrics: true, serverIndex };
     } catch (e) {
       console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
       // On network errors, try next server
@@ -2047,6 +2047,7 @@ const PLAY_WORDS = [
         let bestResult = null;
         let bestResultType = null;
         let lastError = null; // Track the last error for reporting
+        let startServerIndex = 0; // Track which server to start from (advances past down servers)
 
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
@@ -2060,9 +2061,8 @@ const PLAY_WORDS = [
             duration
           };
 
-          // Start with primary server (serverIndex = 0)
-          // fetchKPoeLyrics will automatically try backup servers on rate limit/errors
-          let result = await fetchKPoeLyrics(songInfo);
+          // Start from whichever server was last known working (skips re-hitting a down primary)
+          let result = await fetchKPoeLyrics(songInfo, '', false, startServerIndex);
 
           // Handle errors - log but continue trying other attempts
           if (result && result.error) {
@@ -2073,8 +2073,26 @@ const PLAY_WORDS = [
               break;
             }
             // Continue to next attempt - sometimes one of them goes through
+          } else if (result && result.noLyrics) {
+            // A server responded but had no lyrics (404 or empty body).
+            // result.serverIndex is the server that actually replied, so if it's higher than
+            // our current start (meaning servers 0..N-1 were down), remember it so subsequent
+            // attempts don't waste time re-hitting those known-down servers.
+            if (result.serverIndex > startServerIndex) {
+              startServerIndex = result.serverIndex;
+              console.log(`[KPoe Debug] 📌 Primary unavailable, starting next attempt from server ${startServerIndex}`);
+            }
           } else if (result && result.lyrics && result.lyrics.length > 0) {
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
+
+            // Advance startServerIndex if a backup server was used (avoids re-hitting down primary)
+            if (result.metadata?.server) {
+              const serverIdx = KPOE_SERVERS.indexOf(result.metadata.server);
+              if (serverIdx !== -1 && serverIdx > startServerIndex) {
+                startServerIndex = serverIdx;
+                console.log(`[KPoe Debug] 📌 Primary unavailable, starting next attempt from server ${startServerIndex}`);
+              }
+            }
 
             // Keep track of the best result (prefer Line over Word)
             if (!bestResult) {
