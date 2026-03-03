@@ -1940,7 +1940,7 @@ const PLAY_WORDS = [
     
     const metadata = {
       ...data.metadata,
-      source: `${data.metadata.source} (KPoe)`
+      source: `${data.metadata?.source || 'Unknown'} (KPoe)`
     };
     return {
       type: data.type,
