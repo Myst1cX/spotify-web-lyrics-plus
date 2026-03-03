@@ -1811,9 +1811,24 @@ const PLAY_WORDS = [
   };
 
    // --- KPoe ---
-  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false) {
+  // KPoe server configuration with fallback support
+  const KPOE_SERVERS = [
+    "https://lyricsplus.prjktla.workers.dev",     // Primary server
+    "https://lyricsplus-seven.vercel.app",        // Backup 1
+    "https://lyrics-plus-backend.vercel.app"      // Backup 2
+  ];
+
+  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0) {
+    // If we've tried all servers, return null
+    if (serverIndex >= KPOE_SERVERS.length) {
+      console.log("[KPoe Debug] ✗ All servers exhausted");
+      return { error: "All KPoe servers are currently unavailable or rate limited" };
+    }
+
+    const currentServer = KPOE_SERVERS[serverIndex];
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("[KPoe Debug] Starting lyrics search");
+    console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
     console.log("[KPoe Debug] Input info:", {
       artist: songInfo.artist,
       title: songInfo.title,
@@ -1835,7 +1850,7 @@ const PLAY_WORDS = [
       console.log("[KPoe Debug] Force reload enabled (bypassing cache)");
     }
 
-    const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
+    const url = `${currentServer}/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
     console.log("[KPoe Debug] Request URL:", url);
 
     try {
@@ -1844,21 +1859,27 @@ const PLAY_WORDS = [
 
       // Check if response is ok before parsing
       if (!response.ok) {
-        if (response.status === 404) {
-          console.log("[KPoe Debug] ✗ Track not found in KPoe database");
-          return { error: "Track not found in KPoe database" };
+        // Handle rate limiting and service unavailability by trying next server
+        if (response.status === 429) {
+          console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
+          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+        } else if (response.status === 503) {
+          console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
+          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+        } else if (response.status === 500) {
+          console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
+          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+        } else if (response.status === 404) {
+          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
+          // Try backup servers - sometimes they have different data
+          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 400) {
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
           return { error: "Bad request - Invalid parameters" };
-        } else if (response.status === 429) {
-          console.log("[KPoe Debug] ✗ Rate limit exceeded - too many requests");
-          return { error: "Rate limit exceeded - too many requests" };
-        } else if (response.status === 500) {
-          console.log("[KPoe Debug] ✗ Internal Server Error - KPoe may be down");
-          return { error: "Internal Server Error - KPoe may be down" };
-        } else if (response.status === 503) {
-          console.log("[KPoe Debug] ✗ Service unavailable - KPoe may be down or exceeded resource limits");
-          return { error: "Service unavailable - KPoe may be down or exceeded resource limits" };
         } else {
           console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
           return { error: `Request failed: ${response.status} ${response.statusText}` };
@@ -1871,19 +1892,23 @@ const PLAY_WORDS = [
         hasLyrics: !!(data && data.lyrics),
         lyricsType: data?.type,
         lyricsCount: data?.lyrics?.length || 0,
-        source: data?.metadata?.source
+        source: data?.metadata?.source,
+        server: currentServer
       });
 
       if (data && data.lyrics && data.lyrics.length > 0) {
         console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
+        console.log(`[KPoe Debug] ✓ Successfully fetched from: ${currentServer}`);
         return data;
       }
 
       console.log("[KPoe Debug] ✗ No lyrics in response");
       return null;
     } catch (e) {
-      console.error("[KPoe Debug] ✗ Fetch error:", e.message || e);
-      return null;
+      console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
+      // On network errors, try next server
+      console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+      return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
     }
   }
   function parseKPoeFormat(data) {
@@ -1977,13 +2002,18 @@ const PLAY_WORDS = [
             duration
           };
 
-          // No sourceOrder parameter - let API search all sources
+          // Start with primary server (serverIndex = 0)
+          // fetchKPoeLyrics will automatically try backup servers on rate limit/errors
           let result = await fetchKPoeLyrics(songInfo);
 
           // Handle errors - log but continue trying other attempts
           if (result && result.error) {
             lastError = result.error; // Track the last error
             console.log(`[KPoe Debug] ✗ Error on attempt ${i + 1}: ${result.error}`);
+            // If error is about all servers being unavailable, break early
+            if (result.error.includes("All KPoe servers")) {
+              break;
+            }
             // Continue to next attempt - sometimes one of them goes through
           } else if (result && result.lyrics && result.lyrics.length > 0) {
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
