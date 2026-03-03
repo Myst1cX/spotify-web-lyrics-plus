@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.5
+// @version      17.6
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -14,9 +14,12 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (17.6): FIX 0-BASED INDEX IN "GET CACHE STATS" CONSOLE TABLE
+// • Menu command "Debug: Get Cache Stats": Cached songs table now shows indices starting from 1 instead of 0
+
 // RESOLVED (17.5): CONSOLE LOG IMPROVEMENTS
-// • KPOE PROVIDER: CONSOLE LOGS NOW INCLUDE THE INFO ABOUT WHICH KPOE SERVER WAS USED TO FETCH LYRICS
-// • MENU COMMAND "GET CACHE STATS": ADDED SERVER INFO COLUMN TO THE GENERATED CACHED SONGS TABLE TO KNOW FROM WHICH SERVER A CERTAIN CACHED SONG ORIGINATED
+// • Kpoe provider: Console logs now also show which Kpoe server was used to fetch the lyrics
+// • Menu command "Debug: Get Cache Stats": "Get Cache Stats" table now has a server info column which reveals from which provider server a certain cached song was fetched
 
 // RESOLVED (17.4): ADDED TWO BACKUP SERVERS TO KPOE PROVIDER CONFIGURATION
 
@@ -7068,7 +7071,9 @@ const Providers = {
     console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
     console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
     if (stats.entries.length > 0) {
-      console.table(stats.entries);
+      const tableData = {};
+      stats.entries.forEach((entry, i) => { tableData[i + 1] = entry; });
+      console.table(tableData);
     }
     alert(
     'Cache statistics have been logged to the console.\n' +
