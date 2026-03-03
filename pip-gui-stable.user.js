@@ -6467,6 +6467,7 @@ const Providers = {
 
     let synced = provider.getSynced(result);
     let unsynced = provider.getUnsynced(result);
+    console.log(`[Lyrics+] ${Providers.current}: synced=${synced?.length ?? 'none'} lines, unsynced=${unsynced?.length ?? 'none'} lines`);
 
     // Check if lyrics contain Chinese characters and detect script type
     const lyrics = synced || unsynced || [];
@@ -6698,10 +6699,18 @@ const Providers = {
       { name: "Genius", type: "getUnsynced" }
     ];
 
+    let lastSearchType = null;
     for (const { name, type } of detectionOrder) {
       try {
         const providerStartTime = performance.now();
+        const lyricsTypeName = type === 'getSynced' ? 'synced' : 'unsynced';
         DEBUG.provider.start(name, type, info);
+
+        if (type !== lastSearchType) {
+          console.log(`[Lyrics+] ─── ${type === 'getSynced' ? '🎵 Trying SYNCED lyrics providers' : '📄 Trying UNSYNCED lyrics providers'} ───`);
+          lastSearchType = type;
+        }
+        console.log(`[Lyrics+] ▶ ${name} [${lyricsTypeName}]`);
 
         const provider = Providers.map[name];
         const result = await provider.findLyrics(info);
@@ -6754,6 +6763,7 @@ const Providers = {
 
             DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
             DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
+            console.log(`✅ [Lyrics+] ${name} ✓ found ${lyricsTypeName} lyrics (${lyrics.length} lines)`);
 
             // Store metadata if available (e.g., KPoe server info)
             currentLyricsMetadata = result?.metadata || null;
@@ -6767,9 +6777,11 @@ const Providers = {
             return;
           } else {
             DEBUG.debug('Provider', `${name} ${type} returned empty lyrics`);
+            console.log(`✗ [Lyrics+] ${name} [${lyricsTypeName}] - no lyrics returned`);
           }
         } else {
           DEBUG.provider.failure(name, type, result?.error || 'No result');
+          console.log(`✗ [Lyrics+] ${name} [${lyricsTypeName}] - failed: ${result?.error || 'no result'}`);
         }
 
         DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
