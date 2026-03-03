@@ -6710,6 +6710,7 @@ const Providers = {
           console.log(`[Lyrics+] ─── ${type === 'getSynced' ? '🎵 Trying SYNCED lyrics providers' : '📄 Trying UNSYNCED lyrics providers'} ───`);
           lastSearchType = type;
         }
+        console.log(`[Lyrics+] ──────────────────────────`);
         console.log(`[Lyrics+] ▶ ${name} [${lyricsTypeName}]`);
 
         const provider = Providers.map[name];
