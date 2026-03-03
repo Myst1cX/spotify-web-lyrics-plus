@@ -186,6 +186,7 @@
   let currentSyncedLyrics = null;
   let currentUnsyncedLyrics = null;
   let currentLyricsContainer = null;
+  let currentLyricsMetadata = null; // Store metadata (including server info for KPoe)
   let lastTranslatedLang = null;
   let translationPresent = false;
   let isTranslating = false;
@@ -1900,7 +1901,9 @@ const PLAY_WORDS = [
       
       // Determine if from cache based on response headers and metadata
       const isCached = cacheStatus && (cacheStatus.toLowerCase().includes('hit') || cacheAge);
-      const cacheInfo = isCached ? ' (from cache)' : ' (fresh)';
+      // Only show cache/fresh indicator if we have actual cache information
+      const hasActualCacheInfo = cacheStatus !== 'unknown' || cacheAge;
+      const cacheInfo = hasActualCacheInfo ? (isCached ? ' (from cache)' : ' (fresh)') : '';
       
       console.log("[KPoe Debug] Response data:", {
         hasLyrics: !!(data && data.lyrics),
@@ -1935,9 +1938,10 @@ const PLAY_WORDS = [
   function parseKPoeFormat(data) {
     if (!Array.isArray(data.lyrics)) return null;
     
-    // Log server and cache information
+    // Log server and cache information (only show cache status if we have actual info)
     const serverInfo = data.metadata?.server || 'unknown';
-    const cacheInfo = data.metadata?.cached ? ' (cached)' : ' (fresh)';
+    const hasActualCacheInfo = data.metadata?.cached !== undefined && data.metadata?.cached !== null;
+    const cacheInfo = hasActualCacheInfo ? (data.metadata.cached ? ' (cached)' : ' (fresh)') : '';
     console.log(`[KPoe Debug] 📊 Parsing lyrics from: ${serverInfo}${cacheInfo}`);
     
     const metadata = {
@@ -6247,12 +6251,29 @@ const Providers = {
     if (!lyricsContainer) return false;
 
     console.log(`✨ [Lyrics+] Loading lyrics from cache for "${info.title}" by ${info.artist}`);
-    console.log(`   📦 Source: ${cachedData.provider} (previously fetched)`);
+    
+    // Display provider with server info if available (for KPoe)
+    let providerDisplay = cachedData.provider || 'Unknown';
+    if (cachedData.provider === 'KPoe' && cachedData.metadata?.server) {
+      const serverUrl = cachedData.metadata.server;
+      let serverLabel = 'Unknown server';
+      if (serverUrl.includes('lyricsplus.prjktla.workers.dev')) {
+        serverLabel = 'Primary';
+      } else if (serverUrl.includes('lyricsplus-seven.vercel.app')) {
+        serverLabel = 'Backup 1';
+      } else if (serverUrl.includes('lyrics-plus-backend.vercel.app')) {
+        serverLabel = 'Backup 2';
+      }
+      providerDisplay = `KPoe - ${serverLabel}`;
+    }
+    
+    console.log(`   📦 Source: ${providerDisplay} (previously fetched)`);
     DEBUG.info('Cache', `Loading lyrics from cache for: ${info.title} - ${info.artist}`);
 
     currentLyricsContainer = lyricsContainer;
     currentSyncedLyrics = cachedData.synced;
     currentUnsyncedLyrics = cachedData.unsynced;
+    currentLyricsMetadata = cachedData.metadata || null; // Restore metadata from cache
 
     // Reset translation state
     translationPresent = false;
@@ -6554,6 +6575,7 @@ const Providers = {
         provider: Providers.current,
         synced: currentSyncedLyrics,
         unsynced: currentUnsyncedLyrics,
+        metadata: currentLyricsMetadata, // Store metadata (e.g., KPoe server info)
         trackInfo: {
           title: info.title,
           artist: info.artist,
@@ -6705,6 +6727,9 @@ const Providers = {
 
             DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
             DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
+
+            // Store metadata if available (e.g., KPoe server info)
+            currentLyricsMetadata = result?.metadata || null;
 
             Providers.setCurrent(name);
             if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
