@@ -374,8 +374,8 @@
           // Use centralized server label function
           serverInfo = getServerLabel(data.metadata.server, data.provider);
         } else if (data.provider) {
-          // If no server info but has provider, show "Main" for consistency
-          serverInfo = 'Main';
+          // If no server info but has provider, use default label for consistency
+          serverInfo = DEFAULT_SERVER_LABEL;
         }
         
         return {
@@ -1846,6 +1846,9 @@ const PLAY_WORDS = [
     // etc.
   };
 
+  // Default server label for providers without defined backup servers
+  const DEFAULT_SERVER_LABEL = 'Main';
+
   /**
    * Get server label from URL for any provider
    * @param {string} serverUrl - The server URL
@@ -1858,7 +1861,12 @@ const PLAY_WORDS = [
     // Check if provider has defined servers
     if (provider && PROVIDER_SERVERS[provider]) {
       const servers = PROVIDER_SERVERS[provider];
-      const index = servers.findIndex(server => serverUrl.includes(server.replace(/^https?:\/\//, '')));
+      // Normalize URLs for accurate comparison
+      const normalizedUrl = serverUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      const index = servers.findIndex(server => {
+        const normalizedServer = server.replace(/^https?:\/\//, '').replace(/\/$/, '');
+        return normalizedUrl === normalizedServer || normalizedUrl.startsWith(normalizedServer + '/');
+      });
       
       if (index !== -1) {
         // Primary server (index 0) or backup servers (index > 0)
@@ -1868,7 +1876,7 @@ const PLAY_WORDS = [
     
     // For providers without defined servers, default to "Main"
     // This allows future expansion without breaking existing functionality
-    return 'Main';
+    return DEFAULT_SERVER_LABEL;
   }
 
   async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0) {
@@ -6310,8 +6318,8 @@ const Providers = {
       const serverLabel = getServerLabel(cachedData.metadata.server, cachedData.provider);
       providerDisplay = `${cachedData.provider} - ${serverLabel}`;
     } else if (cachedData.provider) {
-      // No server metadata, show as "Main"
-      providerDisplay = `${cachedData.provider} - Main`;
+      // No server metadata, use default label
+      providerDisplay = `${cachedData.provider} - ${DEFAULT_SERVER_LABEL}`;
     }
     
     console.log(`   📦 Source: ${providerDisplay} (previously fetched)`);
