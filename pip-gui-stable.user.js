@@ -367,9 +367,31 @@
       const entriesWithDetails = entries.map(([id, data]) => {
         const size = new Blob([JSON.stringify(data)]).size;
         totalBytes += size;
+        
+        // Extract server information from metadata
+        let serverInfo = 'N/A';
+        if (data.metadata?.server) {
+          const serverUrl = data.metadata.server;
+          // Determine server label for KPoe servers
+          if (serverUrl.includes('lyricsplus.prjktla.workers.dev')) {
+            serverInfo = 'KPoe - Primary';
+          } else if (serverUrl.includes('lyricsplus-seven.vercel.app')) {
+            serverInfo = 'KPoe - Backup 1';
+          } else if (serverUrl.includes('lyrics-plus-backend.vercel.app')) {
+            serverInfo = 'KPoe - Backup 2';
+          } else {
+            // For other servers, show abbreviated URL
+            serverInfo = serverUrl.replace('https://', '').replace('http://', '').substring(0, 40);
+          }
+        } else if (data.provider) {
+          // If no server info but has provider, show provider name
+          serverInfo = data.provider;
+        }
+        
         return {
           trackId: id,
           provider: data.provider,
+          server: serverInfo,
           hasSynced: !!data.synced,
           hasUnsynced: !!data.unsynced,
           timestamp: new Date(data.timestamp).toISOString(),
