@@ -381,7 +381,7 @@
             serverInfo = 'KPoe - Backup 2';
           } else {
             // For other servers, show abbreviated URL
-            serverInfo = serverUrl.replace('https://', '').replace('http://', '').substring(0, 40);
+            serverInfo = serverUrl.replace(/^https?:\/\//, '').substring(0, 40);
           }
         } else if (data.provider) {
           // If no server info but has provider, show provider name
