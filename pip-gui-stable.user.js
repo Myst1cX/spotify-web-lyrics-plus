@@ -6699,17 +6699,12 @@ const Providers = {
       { name: "Genius", type: "getUnsynced" }
     ];
 
-    let lastSearchType = null;
     for (const { name, type } of detectionOrder) {
       try {
         const providerStartTime = performance.now();
         const lyricsTypeName = type === 'getSynced' ? 'synced' : 'unsynced';
         DEBUG.provider.start(name, type, info);
 
-        if (type !== lastSearchType) {
-          console.log(`[Lyrics+] ${type === 'getSynced' ? '════ SYNCED providers ════' : '═══ UNSYNCED providers ═══'}`);
-          lastSearchType = type;
-        }
         console.log(`[Lyrics+] ▶ ${name} [${lyricsTypeName}]`);
 
         const provider = Providers.map[name];
