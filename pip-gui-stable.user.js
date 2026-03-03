@@ -7068,7 +7068,9 @@ const Providers = {
     console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
     console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
     if (stats.entries.length > 0) {
-      console.table(stats.entries);
+      const tableData = {};
+      stats.entries.forEach((entry, i) => { tableData[i + 1] = entry; });
+      console.table(tableData);
     }
     alert(
     'Cache statistics have been logged to the console.\n' +
