@@ -1,9 +1,8 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.3
+// @version      17.5
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
-// @author       Myst1cX 
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
@@ -15,9 +14,15 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (17.5): CONSOLE LOG IMPROVEMENTS
+// • KPOE PROVIDER: CONSOLE LOGS NOW INCLUDE THE INFO ABOUT WHICH KPOE SERVER WAS USED TO FETCH LYRICS
+// • MENU COMMAND "GET CACHE STATS": ADDED SERVER INFO COLUMN TO THE GENERATED CACHED SONGS TABLE TO KNOW FROM WHICH SERVER A CERTAIN CACHED SONG ORIGINATED
+
+// RESOLVED (17.4): ADDED TWO BACKUP SERVERS TO KPOE PROVIDER CONFIGURATION
+
 // RESOLVED (17.3): FIX KPOE PROVIDER'S CACHED LYRICS NOT UPDATING SYNC STATE
 // • Due to Kpoe's cached lyrics storing 'startTime' in seconds when the sync function expected 'time' in miliseconds)
-// • Created a normalizeLyricsTimeFormat() helper function: 
+// • Created a normalizeLyricsTimeFormat() helper function:
 // • converts startTime (seconds) → time (milliseconds) when needed
 // • applies normalization in two locations: in loadLyricsFromCache() - when loading from cache; and in rerenderLyrics() - when re-rendering cached lyrics
 
@@ -185,6 +190,7 @@
   let currentSyncedLyrics = null;
   let currentUnsyncedLyrics = null;
   let currentLyricsContainer = null;
+  let currentLyricsMetadata = null; // Store metadata (including server info for KPoe)
   let lastTranslatedLang = null;
   let translationPresent = false;
   let isTranslating = false;
@@ -365,9 +371,31 @@
       const entriesWithDetails = entries.map(([id, data]) => {
         const size = new Blob([JSON.stringify(data)]).size;
         totalBytes += size;
+
+        // Extract server information from metadata
+        let serverInfo = 'N/A';
+        if (data.metadata?.server) {
+          const serverUrl = data.metadata.server;
+          // Determine server label for KPoe servers
+          if (serverUrl.includes('lyricsplus.prjktla.workers.dev')) {
+            serverInfo = 'Primary';
+          } else if (serverUrl.includes('lyricsplus-seven.vercel.app')) {
+            serverInfo = 'Backup 1';
+          } else if (serverUrl.includes('lyrics-plus-backend.vercel.app')) {
+            serverInfo = 'Backup 2';
+          } else {
+            // For other servers, show abbreviated URL
+            serverInfo = serverUrl.replace(/^https?:\/\//, '').substring(0, 40);
+          }
+        } else if (data.provider) {
+          // For the rest of the providers (LRCLIB, Spotify, Musixmatch, Genius) that only use one server
+          serverInfo = 'Primary';
+        }
+
         return {
           trackId: id,
           provider: data.provider,
+          server: serverInfo,
           hasSynced: !!data.synced,
           hasUnsynced: !!data.unsynced,
           timestamp: new Date(data.timestamp).toISOString(),
@@ -1812,9 +1840,24 @@ const PLAY_WORDS = [
   };
 
    // --- KPoe ---
-  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false) {
+  // KPoe server configuration with fallback support
+  const KPOE_SERVERS = [
+    "https://lyricsplus.prjktla.workers.dev",     // Primary server
+    "https://lyricsplus-seven.vercel.app",        // Backup 1
+    "https://lyrics-plus-backend.vercel.app"      // Backup 2
+  ];
+
+  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0) {
+    // If we've tried all servers, return null
+    if (serverIndex >= KPOE_SERVERS.length) {
+      console.log("[KPoe Debug] ✗ All servers exhausted");
+      return { error: "All KPoe servers are currently unavailable or rate limited" };
+    }
+
+    const currentServer = KPOE_SERVERS[serverIndex];
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("[KPoe Debug] Starting lyrics search");
+    console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
     console.log("[KPoe Debug] Input info:", {
       artist: songInfo.artist,
       title: songInfo.title,
@@ -1836,30 +1879,43 @@ const PLAY_WORDS = [
       console.log("[KPoe Debug] Force reload enabled (bypassing cache)");
     }
 
-    const url = `https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
+    const url = `${currentServer}/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
     console.log("[KPoe Debug] Request URL:", url);
 
     try {
       const response = await fetch(url, fetchOptions);
       console.log(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
 
+      // Check cache status from headers
+      const cacheStatus = response.headers.get('x-cache') || response.headers.get('cf-cache-status') || 'unknown';
+      const cacheAge = response.headers.get('age');
+      if (cacheStatus !== 'unknown' || cacheAge) {
+        console.log(`[KPoe Debug] Cache info: Status=${cacheStatus}${cacheAge ? `, Age=${cacheAge}s` : ''}`);
+      }
+
       // Check if response is ok before parsing
       if (!response.ok) {
-        if (response.status === 404) {
-          console.log("[KPoe Debug] ✗ Track not found in KPoe database");
-          return { error: "Track not found in KPoe database" };
+        // Handle rate limiting and service unavailability by trying next server
+        if (response.status === 429) {
+          console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
+          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+        } else if (response.status === 503) {
+          console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
+          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+        } else if (response.status === 500) {
+          console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
+          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+        } else if (response.status === 404) {
+          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
+          // Try backup servers - sometimes they have different data
+          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 400) {
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
           return { error: "Bad request - Invalid parameters" };
-        } else if (response.status === 429) {
-          console.log("[KPoe Debug] ✗ Rate limit exceeded - too many requests");
-          return { error: "Rate limit exceeded - too many requests" };
-        } else if (response.status === 500) {
-          console.log("[KPoe Debug] ✗ Internal Server Error - KPoe may be down");
-          return { error: "Internal Server Error - KPoe may be down" };
-        } else if (response.status === 503) {
-          console.log("[KPoe Debug] ✗ Service unavailable - KPoe may be down or exceeded resource limits");
-          return { error: "Service unavailable - KPoe may be down or exceeded resource limits" };
         } else {
           console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
           return { error: `Request failed: ${response.status} ${response.statusText}` };
@@ -1868,30 +1924,55 @@ const PLAY_WORDS = [
 
       // Only parse response on successful status
       const data = await response.json();
+
+      // Determine if from cache based on response headers and metadata
+      const isCached = cacheStatus && (cacheStatus.toLowerCase().includes('hit') || cacheAge);
+      // Only show cache/fresh indicator if we have actual cache information
+      const hasActualCacheInfo = cacheStatus !== 'unknown' || cacheAge;
+      const cacheInfo = hasActualCacheInfo ? (isCached ? ' (from cache)' : ' (fresh)') : '';
+
       console.log("[KPoe Debug] Response data:", {
         hasLyrics: !!(data && data.lyrics),
         lyricsType: data?.type,
         lyricsCount: data?.lyrics?.length || 0,
-        source: data?.metadata?.source
+        source: data?.metadata?.source,
+        server: currentServer,
+        cached: isCached,
+        cacheStatus: cacheStatus,
+        cacheAge: cacheAge || 'N/A'
       });
 
       if (data && data.lyrics && data.lyrics.length > 0) {
         console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
+        console.log(`[KPoe Debug] ✓ Successfully fetched from: ${currentServer}${cacheInfo}`);
+        // Store server info in metadata for later reference
+        data.metadata = data.metadata || {};
+        data.metadata.server = currentServer;
+        data.metadata.cached = isCached;
         return data;
       }
 
       console.log("[KPoe Debug] ✗ No lyrics in response");
       return null;
     } catch (e) {
-      console.error("[KPoe Debug] ✗ Fetch error:", e.message || e);
-      return null;
+      console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
+      // On network errors, try next server
+      console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+      return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
     }
   }
   function parseKPoeFormat(data) {
     if (!Array.isArray(data.lyrics)) return null;
+
+    // Log server and cache information (only show cache status if we have actual info)
+    const serverInfo = data.metadata?.server || 'unknown';
+    const hasActualCacheInfo = data.metadata?.cached !== undefined && data.metadata?.cached !== null;
+    const cacheInfo = hasActualCacheInfo ? (data.metadata.cached ? ' (cached)' : ' (fresh)') : '';
+    console.log(`[KPoe Debug] 📊 Parsing lyrics from: ${serverInfo}${cacheInfo}`);
+
     const metadata = {
       ...data.metadata,
-      source: `${data.metadata.source} (KPoe)`
+      source: `${data.metadata?.source || 'Unknown'} (KPoe)`
     };
     return {
       type: data.type,
@@ -1978,13 +2059,18 @@ const PLAY_WORDS = [
             duration
           };
 
-          // No sourceOrder parameter - let API search all sources
+          // Start with primary server (serverIndex = 0)
+          // fetchKPoeLyrics will automatically try backup servers on rate limit/errors
           let result = await fetchKPoeLyrics(songInfo);
 
           // Handle errors - log but continue trying other attempts
           if (result && result.error) {
             lastError = result.error; // Track the last error
             console.log(`[KPoe Debug] ✗ Error on attempt ${i + 1}: ${result.error}`);
+            // If error is about all servers being unavailable, break early
+            if (result.error.includes("All KPoe servers")) {
+              break;
+            }
             // Continue to next attempt - sometimes one of them goes through
           } else if (result && result.lyrics && result.lyrics.length > 0) {
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
@@ -6191,12 +6277,29 @@ const Providers = {
     if (!lyricsContainer) return false;
 
     console.log(`✨ [Lyrics+] Loading lyrics from cache for "${info.title}" by ${info.artist}`);
-    console.log(`   📦 Source: ${cachedData.provider} (previously fetched)`);
+
+    // Display provider with server info if available (for KPoe)
+    let providerDisplay = cachedData.provider || 'Unknown';
+    if (cachedData.provider === 'KPoe' && cachedData.metadata?.server) {
+      const serverUrl = cachedData.metadata.server;
+      let serverLabel = 'Unknown server';
+      if (serverUrl.includes('lyricsplus.prjktla.workers.dev')) {
+        serverLabel = 'Primary';
+      } else if (serverUrl.includes('lyricsplus-seven.vercel.app')) {
+        serverLabel = 'Backup 1';
+      } else if (serverUrl.includes('lyrics-plus-backend.vercel.app')) {
+        serverLabel = 'Backup 2';
+      }
+      providerDisplay = `KPoe - ${serverLabel}`;
+    }
+
+    console.log(`   📦 Source: ${providerDisplay} (previously fetched)`);
     DEBUG.info('Cache', `Loading lyrics from cache for: ${info.title} - ${info.artist}`);
 
     currentLyricsContainer = lyricsContainer;
     currentSyncedLyrics = cachedData.synced;
     currentUnsyncedLyrics = cachedData.unsynced;
+    currentLyricsMetadata = cachedData.metadata || null; // Restore metadata from cache
 
     // Reset translation state
     translationPresent = false;
@@ -6498,6 +6601,7 @@ const Providers = {
         provider: Providers.current,
         synced: currentSyncedLyrics,
         unsynced: currentUnsyncedLyrics,
+        metadata: currentLyricsMetadata, // Store metadata (e.g., KPoe server info)
         trackInfo: {
           title: info.title,
           artist: info.artist,
@@ -6649,6 +6753,9 @@ const Providers = {
 
             DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
             DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
+
+            // Store metadata if available (e.g., KPoe server info)
+            currentLyricsMetadata = result?.metadata || null;
 
             Providers.setCurrent(name);
             if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
