@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.6
+// @version      17.7
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.7): IMPROVED CONSOLE LOGSFOR BETTER VISIBILTY (SEPARATORS)
 
 // RESOLVED (17.6): FIX 0-BASED INDEX IN "GET CACHE STATS" CONSOLE TABLE
 // • Menu command "Debug: Get Cache Stats": Cached songs table now shows indices starting from 1 instead of 0
@@ -1911,11 +1913,19 @@ const PLAY_WORDS = [
           console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
           console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+
+        } else if (response.status === 404) {
+          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
+          return null;  
+          
+   /*   OLD LOGIC: ALSO TRYING BACKUP SERVERS ON SONG NOT FOUND RESPONSE
         } else if (response.status === 404) {
           console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
           // Try backup servers - sometimes they have different data
           console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+   */
+          
         } else if (response.status === 400) {
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
           return { error: "Bad request - Invalid parameters" };
@@ -7116,3 +7126,4 @@ const Providers = {
 
   init();
 })();
+
