@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.3
+// @version      17.4
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.4): ADDED TWO BACKUP SERVERS TO KPOE PROVIDER CONFIGURATION
 
 // RESOLVED (17.3): FIX KPOE PROVIDER'S CACHED LYRICS NOT UPDATING SYNC STATE
 // • Due to Kpoe's cached lyrics storing 'startTime' in seconds when the sync function expected 'time' in miliseconds)
@@ -7058,3 +7060,4 @@ const Providers = {
 
   init();
 })();
+
