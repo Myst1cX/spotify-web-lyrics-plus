@@ -1851,13 +1851,24 @@ const PLAY_WORDS = [
     "https://lyricsplus-seven.vercel.app",        // Backup 1
     "https://lyrics-plus-backend.vercel.app"      // Backup 2
   ];
+  // How long (ms) to wait before retrying a server that returned a failure.
+  const KPOE_SERVER_COOLDOWN_MS = 60 * 1000;
+  // Stores the timestamp of the last failure for each server (indexed by KPOE_SERVERS position).
+  const kpoeServerCoolingDown = new Array(KPOE_SERVERS.length).fill(0);
 
-  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0, _serverIndexRef = null) {
+  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0) {
     // If we've tried all servers, return null
     if (serverIndex >= KPOE_SERVERS.length) {
       console.log("[KPoe Debug] ✗ All servers exhausted");
-      if (_serverIndexRef) _serverIndexRef.value = KPOE_SERVERS.length - 1;
       return { error: "All KPoe servers are currently unavailable or rate limited" };
+    }
+
+    // Skip this server if it is still within its cooldown window from a previous failure.
+    // Once the cooldown expires the server is tried again automatically.
+    if (Date.now() - kpoeServerCoolingDown[serverIndex] < KPOE_SERVER_COOLDOWN_MS) {
+      const label = serverIndex === 0 ? 'Primary' : `Backup ${serverIndex}`;
+      console.log(`[KPoe Debug] ⏳ ${label} is in cooldown, trying next...`);
+      return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
     }
 
     const currentServer = KPOE_SERVERS[serverIndex];
@@ -1903,28 +1914,28 @@ const PLAY_WORDS = [
       if (!response.ok) {
         // Handle rate limiting and service unavailability by trying next server
         if (response.status === 429) {
-          console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
+          console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}, will retry in ${KPOE_SERVER_COOLDOWN_MS / 1000}s`);
+          kpoeServerCoolingDown[serverIndex] = Date.now();
           console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, _serverIndexRef);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 503) {
-          console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
+          console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}, will retry in ${KPOE_SERVER_COOLDOWN_MS / 1000}s`);
+          kpoeServerCoolingDown[serverIndex] = Date.now();
           console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, _serverIndexRef);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 500) {
-          console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
+          console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}, will retry in ${KPOE_SERVER_COOLDOWN_MS / 1000}s`);
+          kpoeServerCoolingDown[serverIndex] = Date.now();
           console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, _serverIndexRef);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
           } else if (response.status === 404) {
           console.log(`[KPoe Debug] ✗ Track not found on ${currentServer} - not trying backup servers (song not found)`);
-          if (_serverIndexRef) _serverIndexRef.value = serverIndex;
           return null;
         } else if (response.status === 400) {
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
-          if (_serverIndexRef) _serverIndexRef.value = serverIndex;
           return { error: "Bad request - Invalid parameters" };
         } else {
           console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
-          if (_serverIndexRef) _serverIndexRef.value = serverIndex;
           return { error: `Request failed: ${response.status} ${response.statusText}` };
         }
       }
@@ -1956,18 +1967,17 @@ const PLAY_WORDS = [
         data.metadata = data.metadata || {};
         data.metadata.server = currentServer;
         data.metadata.cached = isCached;
-        if (_serverIndexRef) _serverIndexRef.value = serverIndex;
         return data;
       }
 
       console.log("[KPoe Debug] ✗ No lyrics in response");
-      if (_serverIndexRef) _serverIndexRef.value = serverIndex;
       return null;
     } catch (e) {
-      console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
+      console.error(`[KPoe Debug] ✗ Fetch error on ${currentServer}, will retry in ${KPOE_SERVER_COOLDOWN_MS / 1000}s:`, e.message || e);
       // On network errors, try next server
+      kpoeServerCoolingDown[serverIndex] = Date.now();
       console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
-      return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, _serverIndexRef);
+      return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
     }
   }
   function parseKPoeFormat(data) {
@@ -2055,7 +2065,6 @@ const PLAY_WORDS = [
         let bestResult = null;
         let bestResultType = null;
         let lastError = null; // Track the last error for reporting
-        let startServerIndex = 0; // Track which server to start from (skip known-down servers)
 
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
@@ -2069,18 +2078,9 @@ const PLAY_WORDS = [
             duration
           };
 
-          // Start from the last successfully-reached server to skip known-down servers.
-          // fetchKPoeLyrics will automatically try further backup servers on rate limit/errors.
-          const serverIndexRef = { value: startServerIndex };
-          let result = await fetchKPoeLyrics(songInfo, '', false, startServerIndex, serverIndexRef);
-
-          // Update startServerIndex for next attempt based on which server was actually reached.
-          // This avoids re-hitting a known-down primary server on subsequent normalization attempts.
-          const reachedIndex = Math.min(serverIndexRef.value, KPOE_SERVERS.length - 1);
-          if (reachedIndex > startServerIndex) {
-            startServerIndex = reachedIndex;
-          }
-
+          // fetchKPoeLyrics automatically skips servers that are in cooldown and
+          // tries backup servers on rate limit/errors.
+          let result = await fetchKPoeLyrics(songInfo);
           // Handle errors - log but continue trying other attempts
           if (result && result.error) {
             lastError = result.error; // Track the last error
