@@ -1957,12 +1957,15 @@ const PLAY_WORDS = [
         // Handle rate limiting and service unavailability by trying next server
         if (response.status === 429) {
           console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
+          // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 503) {
           console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
+          // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 500) {
           console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
+          // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
 
         } else if (response.status === 404) {
@@ -2020,6 +2023,7 @@ const PLAY_WORDS = [
       return null;
     } catch (e) {
       console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
+      // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
       return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
     }
   }
