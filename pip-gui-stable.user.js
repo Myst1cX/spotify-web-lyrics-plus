@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.10
+// @version      17.11
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,18 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.11): FIX KPOE "🔄 TRYING BACKUP SERVER X..." LOG POSITION IN CONSOLE
+// • Root cause: The "🔄 Trying backup server X..." message was logged at the end of the
+//   failing server's block (just before the recursive call), so it appeared visually appended
+//   to the previous fetch output rather than belonging to the new server's section.
+// • Fix: Removed the "Trying backup server X..." log from every retry site (429, 503, 500,
+//   and catch block). Instead, added a single log at the top of fetchKPoeLyrics that fires
+//   when serverIndex > 0 - right after the ━━━ separator and before "Starting lyrics search".
+//   This means every backup-server attempt now has the separator FIRST, then the "Trying
+//   backup server X..." message, then the standard search header - clear visual grouping.
+// • Also restores the missing RESOLVED (17.7) and RESOLVED (17.9) changelog entries that were
+//   accidentally overwritten instead of preserved in earlier copilot commits.
 
 // RESOLVED (17.10): FIX PREVIOUSLY-CACHED SONGS LOADING INSTANTLY AFTER "DEBUG: CLEAR CACHE"
 // • Root cause: LyricsCache.clear() correctly wipes localStorage, but fetch() calls to LRCLIB
@@ -27,6 +39,20 @@
 // • Note: this does not affect the currently-playing song's lyrics display, only future
 //   provider fetches after navigating to a different (previously-cached) song.
 
+// RESOLVED (17.9): FIX "DEBUG: CLEAR CACHE" NOT RE-FETCHING LYRICS FOR CURRENTLY-PLAYING SONG
+// • Root cause: LyricsCache.clear() only removed the localStorage entry, but never reset the
+//   in-memory currentTrackId. Because startPollingForTrackChange() only calls
+//   autodetectProviderAndLoad() when the track ID changes, the currently-playing song would
+//   never trigger a re-fetch - it kept showing its in-memory lyrics indefinitely.
+// • Fix: After clearing localStorage, currentTrackId is now reset to null. On the next
+//   polling tick (≤400 ms) the interval detects "info.id !== currentTrackId", shows
+//   "Loading lyrics..." and calls autodetectProviderAndLoad(), which finds no cache and
+//   performs a fresh provider fetch as expected.
+// • Alert text updated to confirm that the current song will be refreshed automatically.
+// ⚠ Note: This fix was superseded in 17.10 - the real root cause was the browser's HTTP cache
+//   serving provider responses (LRCLIB/KPoe) even after localStorage was cleared. 17.10 fixed
+//   this by adding cache: 'no-store' to all provider fetch() calls.
+
 // RESOLVED (17.8): BUG FIXES AND CODE QUALITY IMPROVEMENTS
 // • Fix: translateLyricsInPopup() now uses try-finally to guarantee isTranslating is reset
 //   and translateBtn is re-enabled even when an unexpected exception occurs during translation
@@ -35,6 +61,12 @@
 //   popup open/close cycle
 // • Fix: LyricsCache.getStats() field renamed from misleading 'maxSize' (entry count safety
 //   limit) to 'maxEntries' to avoid confusion with the byte-based 'maxBytes' field
+
+// RESOLVED (17.7): IMPROVED CONSOLE LOGS FOR BETTER VISIBILITY (SEPARATORS)
+// • KPoe provider: Added ━━━━ separator lines between each server attempt for clear visual grouping
+// • KPoe provider: Fixed 404 response to return null immediately instead of trying backup servers
+//   (a 404 means the track genuinely doesn't exist on that server; backup servers use the same
+//   upstream data source so retrying them for a 404 is pointless)
 
 // RESOLVED (17.6): FIX 0-BASED INDEX IN "GET CACHE STATS" CONSOLE TABLE
 // • Menu command "Debug: Get Cache Stats": Cached songs table now shows indices starting from 1 instead of 0
@@ -1882,6 +1914,9 @@ const PLAY_WORDS = [
 
     const currentServer = KPOE_SERVERS[serverIndex];
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    if (serverIndex > 0) {
+      console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex}...`);
+    }
     console.log("[KPoe Debug] Starting lyrics search");
     console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
     console.log("[KPoe Debug] Input info:", {
@@ -1922,15 +1957,12 @@ const PLAY_WORDS = [
         // Handle rate limiting and service unavailability by trying next server
         if (response.status === 429) {
           console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 503) {
           console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 500) {
           console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
 
         } else if (response.status === 404) {
@@ -1988,8 +2020,6 @@ const PLAY_WORDS = [
       return null;
     } catch (e) {
       console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
-      // On network errors, try next server
-      console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
       return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
     }
   }
