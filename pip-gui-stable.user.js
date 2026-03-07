@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.11
+// @version      17.12
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,22 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.12): FIX REMAINING DEBUG MESSAGE SPAM
+// • Removed observeSpotifyPlayPause/Shuffle/Repeat calls from the polling interval
+//   (startPollingForTrackChange). These were called every 400ms, tearing down and
+//   re-creating the three MutationObservers on each tick - causing constant
+//   "[ResourceManager] Cleaned up/Registered observer: Play/pause/Shuffle/Repeat button state" spam.
+//   The observers are already set up once when the popup controls are first created
+//   (setupPlaybackControls), and they self-re-attach via setTimeout when the observed
+//   Spotify button node is replaced - no periodic re-creation is needed.
+// • Removed DEBUG.debug('Button', 'Lyrics+ button already exists, skipping injection')
+//   from addButton(). This message fired on every DOM mutation (buttonInjectionObserver and
+//   pageObserver both watch document.body/appRoot with subtree:true), making it extremely
+//   chatty during normal Spotify navigation. The early-return itself is kept.
+// • Added a guard at the top of observePopupResize(): skips re-attaching resize handlers
+//   if popup._resizeMouseupHandler is already set, preventing "[PopupResize] Resize handlers
+//   attached" from being logged on every DOM mutation while the popup is open.
 
 // RESOLVED (17.11): FIX DEBUG MODE SPAMMING CONSOLE EVERY ~100ms
 // • Removed DEBUG calls from getCurrentTrackId() and getCurrentTrackInfo() which are
@@ -6933,9 +6949,6 @@ const Providers = {
       }
       if (popup && popup._repeatBtn) {
         updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
-        observeSpotifyPlayPause(popup);
-        observeSpotifyShuffle(popup);
-        observeSpotifyRepeat(popup);
       }
       // Update prev/next button icons from Spotify's DOM
       if (popup && popup._prevBtn) {
@@ -6974,7 +6987,6 @@ const Providers = {
         return;
       }
       if (document.getElementById("lyrics-plus-btn")) {
-        DEBUG.debug('Button', 'Lyrics+ button already exists, skipping injection');
         return;
       }
       const btn = document.createElement("button");
@@ -7080,6 +7092,8 @@ const Providers = {
   function observePopupResize() {
     const popup = document.getElementById("lyrics-plus-popup");
     if (!popup) return;
+    // Guard: skip if resize handlers are already attached to this popup instance
+    if (popup._resizeMouseupHandler) return;
     let isResizing = false;
     const resizer = Array.from(popup.children).find(el =>
       el.style && el.style.cursor === "nwse-resize"
