@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.14
+// @version      17.15
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,15 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.15): DISTINCT COLORS PER LOG LEVEL
+// • All four DEBUG log methods now use %c CSS styling with level-appropriate colors:
+//     DEBUG  → #1db954  Spotify green  (least urgent; matches menu command outputs)
+//     INFO   → #2196F3  blue           (informational, standard convention)
+//     WARN   → #FF9800  amber/orange   (warning, standard convention)
+//     ERROR  → #F44336  red            (error, standard convention)
+// • Previously ERROR and WARN had no color styling at all; DEBUG and INFO both used
+//   the same Spotify green (#1db954), making all levels visually identical.
 
 // RESOLVED (17.14): COLOR INFO AND DEBUG LOG LINES GREEN
 // • DEBUG.info() and DEBUG.debug() used plain console.info/console.debug with no styling,
@@ -500,13 +509,13 @@
 
     // Log levels with prefixes
     error: (context, ...args) => {
-      if (DEBUG.enabled) console.error(`[Lyrics+ ERROR] [${context}]`, ...args);
+      if (DEBUG.enabled) console.error(`%c[Lyrics+ ERROR] [${context}]`, 'color: #F44336; font-weight: bold;', ...args);
     },
     warn: (context, ...args) => {
-      if (DEBUG.enabled) console.warn(`[Lyrics+ WARN] [${context}]`, ...args);
+      if (DEBUG.enabled) console.warn(`%c[Lyrics+ WARN] [${context}]`, 'color: #FF9800; font-weight: bold;', ...args);
     },
     info: (context, ...args) => {
-      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
+      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #2196F3; font-weight: bold;', ...args);
     },
     debug: (context, ...args) => {
       if (DEBUG.enabled) console.debug(`%c[Lyrics+ DEBUG] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
