@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.13
+// @version      17.14
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,21 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+
+// RESOLVED (17.14): SEMANTIC LOG LEVEL DISTRIBUTION
+// Establishes a clear semantic boundary between the three lower log levels:
+//   LOG   → console.log  (#1db954 green)  → song fetching and caching pipeline events only
+//              (Cache hit/store/clear/load, Autodetect start/abort/success, Provider success,
+//               Track changed — all events that directly represent the data-fetch lifecycle)
+//   INFO  → console.info (#64B5F6 blue)   → application lifecycle events: UI, Playback, Settings
+//              (Popup created/removed, Button injected, Song restarted, OpenCC initialized,
+//               ResourceManager cleanup — high-level state transitions, not raw data flow)
+//   DEBUG → console.debug (#9E9E9E grey)  → verbose low-level developer details
+//              (DOM queries, timing, state changes, seekbar, cleanup intervals, observer ops —
+//               only visible in DevTools when "Verbose" level is enabled)
+// In Chrome DevTools: log/info show at default console level; debug requires "Verbose".
+// Grey for DEBUG visually signals "muted/verbose", distinct from the Spotify green used for LOG.
 
 // RESOLVED (17.13): DISTINCT COLORS PER LOG LEVEL
 // • All four DEBUG log methods now use %c CSS styling with level-appropriate colors:
@@ -345,7 +360,7 @@
       const entry = cache[trackId];
       if (entry) {
         console.log(`💾 [Lyrics+] Found cached lyrics! Loading instantly without network request...`);
-        DEBUG.info('Cache', `Cache hit for track: ${trackId}`);
+        DEBUG.log('Cache', `Cache hit for track: ${trackId}`);
         // Update timestamp to mark as recently used (LRU)
         entry.timestamp = Date.now();
         this.saveAll(cache);
@@ -416,7 +431,7 @@
       }
       const songWord = cacheSize === 1 ? 'song' : 'songs';
       console.log(`✅ [Lyrics+] Lyrics saved to cache! Now have ${cacheSize} ${songWord} (${totalKB} KB of ${maxKB} KB) cached for instant replay`);
-      DEBUG.info('Cache', `Cached lyrics for track: ${trackId}, total size: ${totalKB} KB`);
+      DEBUG.log('Cache', `Cached lyrics for track: ${trackId}, total size: ${totalKB} KB`);
     },
 
     /**
@@ -426,7 +441,7 @@
       try {
         localStorage.removeItem(STORAGE_KEYS.LYRICS_CACHE);
         console.log('🗑️ [Lyrics+] All cached lyrics cleared successfully');
-        DEBUG.info('Cache', 'Cache cleared');
+        DEBUG.log('Cache', 'Cache cleared');
       } catch (e) {
         console.warn('[Lyrics+] ⚠️ Could not clear cache:', e);
       }
@@ -506,8 +521,11 @@
     info: (context, ...args) => {
       if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #64B5F6; font-weight: bold;', ...args);
     },
+    log: (context, ...args) => {
+      if (DEBUG.enabled) console.log(`%c[Lyrics+ LOG] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
+    },
     debug: (context, ...args) => {
-      if (DEBUG.enabled) console.debug(`%c[Lyrics+ DEBUG] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
+      if (DEBUG.enabled) console.debug(`%c[Lyrics+ DEBUG] [${context}]`, 'color: #9E9E9E; font-weight: bold;', ...args);
     },
 
     // Specialized logging helpers
@@ -520,7 +538,7 @@
         });
       },
       success: (providerName, operation, lyricsType, lineCount) => {
-        DEBUG.info('Provider', `✓ ${providerName} ${operation} succeeded:`, {
+        DEBUG.log('Provider', `✓ ${providerName} ${operation} succeeded:`, {
           type: lyricsType,
           lines: lineCount
         });
@@ -547,7 +565,7 @@
 
     track: {
       changed: (oldId, newId, trackInfo) => {
-        DEBUG.info('Track', `Track changed: ${oldId || 'none'} → ${newId}`, trackInfo);
+        DEBUG.log('Track', `Track changed: ${oldId || 'none'} → ${newId}`, trackInfo);
       },
       detected: (trackInfo) => {
         DEBUG.debug('Track', 'Track info detected:', trackInfo);
@@ -6384,7 +6402,7 @@ const Providers = {
     }
 
     console.log(`   📦 Source: ${providerDisplay} (previously fetched)`);
-    DEBUG.info('Cache', `Loading lyrics from cache for: ${info.title} - ${info.artist}`);
+    DEBUG.log('Cache', `Loading lyrics from cache for: ${info.title} - ${info.artist}`);
 
     currentLyricsContainer = lyricsContainer;
     currentSyncedLyrics = cachedData.synced;
@@ -6726,7 +6744,7 @@ const Providers = {
     // Returns false if a newer search has superseded this one
     const isSearchStillCurrent = () => {
       if (currentSearchId !== searchId) {
-        DEBUG.info('Autodetect', `Search aborted - newer search has started`);
+        DEBUG.log('Autodetect', `Search aborted - newer search has started`);
         return false;
       }
       return true;
@@ -6745,7 +6763,7 @@ const Providers = {
         // Handle cached instrumental tracks - display error message
         if (cachedData.instrumental && cachedData.error) {
           console.log(`🎵 [Lyrics+] Loaded instrumental track from cache - no lyrics available`);
-          DEBUG.info('Autodetect', `Loaded instrumental from cache in <1ms`);
+          DEBUG.log('Autodetect', `Loaded instrumental from cache in <1ms`);
 
           // Clear provider highlighting
           Providers.current = null;
@@ -6765,14 +6783,14 @@ const Providers = {
         const success = loadLyricsFromCache(popup, info, cachedData);
         if (success) {
           console.log(`⚡ [Lyrics+] Lyrics loaded instantly from cache (no internet needed!)`);
-          DEBUG.info('Autodetect', `Loaded from cache in <1ms using ${cachedData.provider}`);
+          DEBUG.log('Autodetect', `Loaded from cache in <1ms using ${cachedData.provider}`);
           return;
         }
       }
     }
 
     console.log(`🔍 [Lyrics+] Searching for lyrics: "${info.title}" by ${info.artist}`);
-    DEBUG.info('Autodetect', 'Starting provider autodetect', info);
+    DEBUG.log('Autodetect', 'Starting provider autodetect', info);
     const startTime = performance.now();
 
     const detectionOrder = [
@@ -6810,7 +6828,7 @@ const Providers = {
             if (!isSearchStillCurrent()) return;
 
             console.log(`🎵 [Lyrics+] Track is instrumental (no lyrics) - detected by ${name}`);
-            DEBUG.info('Autodetect', `Track marked as instrumental by ${name}`);
+            DEBUG.log('Autodetect', `Track marked as instrumental by ${name}`);
 
             // Convert instrumental to an error result
             result.error = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
@@ -6830,7 +6848,7 @@ const Providers = {
             }
 
             const totalDuration = performance.now() - startTime;
-            DEBUG.info('Autodetect', `Completed in ${totalDuration.toFixed(2)}ms - instrumental track detected by ${name}`);
+            DEBUG.log('Autodetect', `Completed in ${totalDuration.toFixed(2)}ms - instrumental track detected by ${name}`);
             return;
           }
 
@@ -6852,7 +6870,7 @@ const Providers = {
             await updateLyricsContent(popup, info);
 
             const totalDuration = performance.now() - startTime;
-            DEBUG.info('Autodetect', `Completed successfully in ${totalDuration.toFixed(2)}ms using ${name}`);
+            DEBUG.log('Autodetect', `Completed successfully in ${totalDuration.toFixed(2)}ms using ${name}`);
             return;
           } else {
             DEBUG.debug('Provider', `${name} ${type} returned empty lyrics`);
