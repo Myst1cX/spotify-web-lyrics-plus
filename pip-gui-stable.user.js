@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.16
+// @version      17.17
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -15,19 +15,33 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (17.17): FIX CONSOLE LOG COLOR PRIORITY & AUDIT #1db954
+// Priority analysis (dark DevTools, ~#1e1e1e background — the primary context for Spotify Web):
+//   Before:  ERROR #F44336 = 4.53:1 < INFO #64B5F6 = 7.53:1  ← priority inversion (wrong)
+//   After:   ERROR #FF6B6B = 6.01:1 > INFO #2196F3 = 5.34:1  ← ERROR is more prominent ✓
+// Changes:
+//   ERROR  #F44336 → #FF6B6B  (4.53 → 6.01:1 on dark DevTools; brighter/lighter red)
+//   INFO   #64B5F6 → #2196F3  (7.53 → 5.34:1 on dark DevTools; less dominant than error)
+// #1db954 audit — no changes needed:
+//   All UI uses (#1db954 as text) are on dark backgrounds (#121212/#181818) → 6.45:1 contrast ✓
+//   Button hover/active uses #1db954 as background with #181818 dark text → high contrast ✓
+//   Console debug level and GM menu command outputs → 6.45:1 on dark DevTools ✓
+//   Progress bar gradient — decorative only, not text ✓
+
 // RESOLVED (17.16): IMPROVE INFO LOG COLOR READABILITY
-// • DEBUG.info() used #2196F3 (Material Blue 500) which is too dark to read comfortably
-//   in both light and dark browser DevTools console themes.
-// • Replaced with #64B5F6 (Material Blue 300), a lighter and more legible blue.
+// • DEBUG.info() used #2196F3 (Material Blue 500) which was replaced with #64B5F6
+//   (Material Blue 300). That change is now superseded by the 17.17 priority fix above.
 
 // RESOLVED (17.15): DISTINCT COLORS PER LOG LEVEL
-// • All four DEBUG log methods now use %c CSS styling with level-appropriate colors:
+// • All four DEBUG log methods now use %c CSS styling with level-appropriate colors.
+// • Final colors (after 17.16 and 17.17 refinements):
 //     DEBUG  → #1db954  Spotify green  (least urgent; matches menu command outputs)
-//     INFO   → #64B5F6  light blue     (informational, standard convention)
+//     INFO   → #2196F3  blue           (informational, standard convention)
 //     WARN   → #FF9800  amber/orange   (warning, standard convention)
-//     ERROR  → #F44336  red            (error, standard convention)
+//     ERROR  → #FF6B6B  bright red     (error, standard convention; most prominent)
 // • Previously ERROR and WARN had no color styling at all; DEBUG and INFO both used
 //   the same Spotify green (#1db954), making all levels visually identical.
+
 
 // RESOLVED (17.14): COLOR INFO AND DEBUG LOG LINES GREEN
 // • DEBUG.info() and DEBUG.debug() used plain console.info/console.debug with no styling,
@@ -514,13 +528,13 @@
 
     // Log levels with prefixes
     error: (context, ...args) => {
-      if (DEBUG.enabled) console.error(`%c[Lyrics+ ERROR] [${context}]`, 'color: #F44336; font-weight: bold;', ...args);
+      if (DEBUG.enabled) console.error(`%c[Lyrics+ ERROR] [${context}]`, 'color: #FF6B6B; font-weight: bold;', ...args);
     },
     warn: (context, ...args) => {
       if (DEBUG.enabled) console.warn(`%c[Lyrics+ WARN] [${context}]`, 'color: #FF9800; font-weight: bold;', ...args);
     },
     info: (context, ...args) => {
-      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #64B5F6; font-weight: bold;', ...args);
+      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #2196F3; font-weight: bold;', ...args);
     },
     debug: (context, ...args) => {
       if (DEBUG.enabled) console.debug(`%c[Lyrics+ DEBUG] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
