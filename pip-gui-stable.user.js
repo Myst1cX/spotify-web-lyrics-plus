@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.10
+// @version      17.11
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,17 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.11): FIX DEBUG MODE SPAMMING CONSOLE EVERY ~100ms
+// • Removed DEBUG calls from getCurrentTrackId() and getCurrentTrackInfo() which are
+//   called on every interval tick (every 100ms by the progress interval and every 400ms
+//   by the polling interval). These were the source of constant console spam when debug
+//   mode was enabled via the menu command.
+// • Removed: DEBUG.debug('Track', `Track ID extracted: ...`) from getCurrentTrackId()
+// • Removed: DEBUG.dom.notFound(...) from getCurrentTrackId() - fired on every tick when element absent
+// • Removed: DEBUG.dom.notFound(...) from getCurrentTrackInfo() - fired on every tick when element absent
+// • Removed: DEBUG.track.detected(trackInfo) from getCurrentTrackInfo() - fired on every tick
+// • Track change events are still properly logged via DEBUG.track.changed() in the polling loop
 
 // RESOLVED (17.10): IMPROVE KPOE PROVIDER'S "🔄 TRYING BACKUP SERVER X..." LOG POSITION IN CONSOLE
 // • Removed the "Trying backup server X..." log from every retry site (429, 503, 500,
@@ -965,11 +976,9 @@
       const href = contextLink.getAttribute('href');
       const match = decodeURIComponent(href).match(/spotify:track:([a-zA-Z0-9]{22})/);
       if (match) {
-        DEBUG.debug('Track', `Track ID extracted: ${match[1]}`);
         return match[1];
       }
     }
-    DEBUG.dom.notFound('a[data-testid="context-link"]...', 'getCurrentTrackId');
     return null;
   }
 
@@ -981,7 +990,6 @@
     const trackId = getCurrentTrackId();
 
     if (!titleEl || !artistEl) {
-      DEBUG.dom.notFound(!titleEl ? 'context-item-info-title' : 'context-item-info-subtitles', 'getCurrentTrackInfo');
       return null;
     }
 
@@ -1013,7 +1021,6 @@
       trackId
     };
 
-    DEBUG.track.detected(trackInfo);
     return trackInfo;
   }
 
