@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.8
+// @version      17.9
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,6 +13,17 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.9): FIX "DEBUG: CLEAR CACHE" NOT RE-FETCHING LYRICS FOR CURRENTLY-PLAYING SONG
+// • Root cause: LyricsCache.clear() only removed the localStorage entry, but never reset the
+//   in-memory currentTrackId. Because startPollingForTrackChange() only calls
+//   autodetectProviderAndLoad() when the track ID changes, the currently-playing song would
+//   never trigger a re-fetch - it kept showing its in-memory lyrics indefinitely.
+// • Fix: After clearing localStorage, currentTrackId is now reset to null. On the next
+//   polling tick (≤400 ms) the interval detects "info.id !== currentTrackId", shows
+//   "Loading lyrics..." and calls autodetectProviderAndLoad(), which finds no cache and
+//   performs a fresh provider fetch as expected.
+// • Alert text updated to confirm that the current song will be refreshed automatically.
 
 // RESOLVED (17.8): BUG FIXES AND CODE QUALITY IMPROVEMENTS
 // • Fix: translateLyricsInPopup() now uses try-finally to guarantee isTranslating is reset
@@ -7095,7 +7106,12 @@ const Providers = {
 
     if (confirm(confirmMsg)) {
       LyricsCache.clear();
-      alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.`);
+      // Reset the in-memory track ID so the polling loop treats the currently-playing
+      // song as a new track on its next tick. Without this, the currently-playing song
+      // would keep showing its in-memory lyrics without ever re-fetching from providers,
+      // even though the localStorage cache was just cleared.
+      currentTrackId = null;
+      alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.\nLyrics for the current song will be refreshed automatically.`);
     }
   });
 
