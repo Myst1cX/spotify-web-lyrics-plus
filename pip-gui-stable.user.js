@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.9
+// @version      17.10
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -14,16 +14,18 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.9): FIX "DEBUG: CLEAR CACHE" NOT RE-FETCHING LYRICS FOR CURRENTLY-PLAYING SONG
-// • Root cause: LyricsCache.clear() only removed the localStorage entry, but never reset the
-//   in-memory currentTrackId. Because startPollingForTrackChange() only calls
-//   autodetectProviderAndLoad() when the track ID changes, the currently-playing song would
-//   never trigger a re-fetch - it kept showing its in-memory lyrics indefinitely.
-// • Fix: After clearing localStorage, currentTrackId is now reset to null. On the next
-//   polling tick (≤400 ms) the interval detects "info.id !== currentTrackId", shows
-//   "Loading lyrics..." and calls autodetectProviderAndLoad(), which finds no cache and
-//   performs a fresh provider fetch as expected.
-// • Alert text updated to confirm that the current song will be refreshed automatically.
+// RESOLVED (17.10): FIX PREVIOUSLY-CACHED SONGS LOADING INSTANTLY AFTER "DEBUG: CLEAR CACHE"
+// • Root cause: LyricsCache.clear() correctly wipes localStorage, but fetch() calls to LRCLIB
+//   and KPoe did not include cache: 'no-store', so the browser's own HTTP cache served the
+//   provider response almost instantly - making lyrics appear to load from cache even though
+//   our localStorage cache was empty.
+// • Fix (LRCLIB): Added cache: 'no-store' to the LRCLIB fetch() options so that provider
+//   requests always bypass the browser HTTP cache, consistent with Musixmatch which already
+//   used cache: 'no-store'.
+// • Fix (KPoe): Made cache: 'no-store' the default fetchOptions (was only set for forceReload
+//   mode before). The &forceReload=true server-side param is unchanged for force-reload mode.
+// • Note: this does not affect the currently-playing song's lyrics display, only future
+//   provider fetches after navigating to a different (previously-cached) song.
 
 // RESOLVED (17.8): BUG FIXES AND CODE QUALITY IMPROVEMENTS
 // • Fix: translateLyricsInPopup() now uses try-finally to guarantee isTranslating is reset
@@ -1796,6 +1798,7 @@ const PLAY_WORDS = [
 
   try {
     const response = await fetch(url, {
+      cache: 'no-store',
       headers: {
         // This header is okay to send — doesn’t break anything
         "x-user-agent": "lyrics-plus-script"
@@ -1894,12 +1897,10 @@ const PLAY_WORDS = [
       ? `&album=${encodeURIComponent(songInfo.album)}`
       : '';
     const sourceParam = sourceOrder ? `&source=${encodeURIComponent(sourceOrder)}` : '';
-    let forceReloadParam = forceReload ? `&forceReload=true` : '';
-    let fetchOptions = {};
+    const forceReloadParam = forceReload ? `&forceReload=true` : '';
+    const fetchOptions = { cache: 'no-store' };
     if (forceReload) {
-      fetchOptions = { cache: 'no-store' };
-      forceReloadParam = `&forceReload=true`;
-      console.log("[KPoe Debug] Force reload enabled (bypassing cache)");
+      console.log("[KPoe Debug] Force reload enabled (bypassing server-side cache)");
     }
 
     const url = `${currentServer}/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
@@ -7106,12 +7107,7 @@ const Providers = {
 
     if (confirm(confirmMsg)) {
       LyricsCache.clear();
-      // Reset the in-memory track ID so the polling loop treats the currently-playing
-      // song as a new track on its next tick. Without this, the currently-playing song
-      // would keep showing its in-memory lyrics without ever re-fetching from providers,
-      // even though the localStorage cache was just cleared.
-      currentTrackId = null;
-      alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.\nLyrics for the current song will be refreshed automatically.`);
+      alert(`✅ Cache cleared successfully!\n\nAll ${stats.size} cached songs have been removed.`);
     }
   });
 
