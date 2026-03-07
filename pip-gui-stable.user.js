@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.7
+// @version      17.8
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
@@ -14,7 +14,14 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.7): IMPROVED CONSOLE LOGSFOR BETTER VISIBILTY (SEPARATORS)
+// RESOLVED (17.8): BUG FIXES AND CODE QUALITY IMPROVEMENTS
+// • Fix: translateLyricsInPopup() now uses try-finally to guarantee isTranslating is reset
+//   and translateBtn is re-enabled even when an unexpected exception occurs during translation
+// • Fix: Progress bar MutationObserver (attachProgressBarWatcher) is now stored on the popup
+//   element and explicitly disconnected in removePopup(), preventing a memory leak on each
+//   popup open/close cycle
+// • Fix: LyricsCache.getStats() field renamed from misleading 'maxSize' (entry count safety
+//   limit) to 'maxEntries' to avoid confusion with the byte-based 'maxBytes' field
 
 // RESOLVED (17.6): FIX 0-BASED INDEX IN "GET CACHE STATS" CONSOLE TABLE
 // • Menu command "Debug: Get Cache Stats": Cached songs table now shows indices starting from 1 instead of 0
@@ -411,7 +418,7 @@
       return {
         size: entries.length,
         safetyLimit: this.CACHE_ENTRY_SAFETY_LIMIT,
-        maxSize: this.CACHE_ENTRY_SAFETY_LIMIT,  // Backward compatibility alias
+        maxEntries: this.CACHE_ENTRY_SAFETY_LIMIT,  // Entry count safety limit (primary constraint is maxBytes)
         totalBytes: totalBytes,
         maxBytes: this.MAX_BYTES,
         totalKB: Math.round(totalBytes / 1024),
@@ -3565,6 +3572,17 @@ const Providers = {
         existing._resizeMouseupHandler = null;
       }
 
+      // Disconnect progress bar watcher observer
+      if (existing._progressBarWatcher) {
+        try {
+          existing._progressBarWatcher.disconnect();
+        } catch (e) {
+          DEBUG.error('Cleanup', 'Failed to disconnect progress bar watcher:', e);
+        }
+        existing._progressBarWatcher = null;
+        DEBUG.debug('Cleanup', 'Progress bar watcher disconnected');
+      }
+
       // Clear popup references
       existing._playPauseBtn = null;
       existing._shuffleBtn = null;
@@ -4339,33 +4357,36 @@ const Providers = {
       if (translationPresent && lastTranslatedLang === targetLang) return;
       isTranslating = true;
       translateBtn.disabled = true;
-      removeTranslatedLyrics();
-      const pEls = Array.from(lyricsContainer.querySelectorAll('p'));
-      const linesToTranslate = pEls.filter(el => el.textContent.trim() && el.textContent.trim() !== "♪");
-      await Promise.all(linesToTranslate.map(async (p) => {
-        const originalText = p.textContent.trim();
-        const translatedText = await translateText(originalText, targetLang);
-        const translationDiv = document.createElement('div');
-        translationDiv.textContent = translatedText;
-        translationDiv.style.color = 'gray';
-        translationDiv.setAttribute('data-translated', 'true');
+      try {
+        removeTranslatedLyrics();
+        const pEls = Array.from(lyricsContainer.querySelectorAll('p'));
+        const linesToTranslate = pEls.filter(el => el.textContent.trim() && el.textContent.trim() !== "♪");
+        await Promise.all(linesToTranslate.map(async (p) => {
+          const originalText = p.textContent.trim();
+          const translatedText = await translateText(originalText, targetLang);
+          const translationDiv = document.createElement('div');
+          translationDiv.textContent = translatedText;
+          translationDiv.style.color = 'gray';
+          translationDiv.setAttribute('data-translated', 'true');
 
-        // Find correct insertion point: after transliteration if it exists, otherwise after lyric
-        let insertionPoint = p.nextSibling;
+          // Find correct insertion point: after transliteration if it exists, otherwise after lyric
+          let insertionPoint = p.nextSibling;
 
-        // Check if next sibling is a transliteration div
-        if (insertionPoint && insertionPoint.nodeType === 1 &&
-            insertionPoint.getAttribute('data-transliteration') === 'true') {
-          // Transliteration exists - insert translation AFTER it
-          insertionPoint = insertionPoint.nextSibling;
-        }
+          // Check if next sibling is a transliteration div
+          if (insertionPoint && insertionPoint.nodeType === 1 &&
+              insertionPoint.getAttribute('data-transliteration') === 'true') {
+            // Transliteration exists - insert translation AFTER it
+            insertionPoint = insertionPoint.nextSibling;
+          }
 
-        p.parentNode.insertBefore(translationDiv, insertionPoint);
-      }));
-      lastTranslatedLang = targetLang;
-      translationPresent = true;
-      translateBtn.disabled = false;
-      isTranslating = false;
+          p.parentNode.insertBefore(translationDiv, insertionPoint);
+        }));
+        lastTranslatedLang = targetLang;
+        translationPresent = true;
+      } finally {
+        translateBtn.disabled = false;
+        isTranslating = false;
+      }
     }
 
     function removeTransliterationLyrics() {
@@ -6076,6 +6097,8 @@ const Providers = {
           attributes: true,
           attributeFilter: ['style']
         });
+        // Store observer on popup element so it can be disconnected when popup is removed
+        popup._progressBarWatcher = observer;
       } catch (e) {
         console.warn('attachProgressBarWatcher error:', e);
         progressBarWatcherAttached = false;
@@ -7079,7 +7102,7 @@ const Providers = {
   GM_registerMenuCommand('Debug: Get Cache Stats', () => {
     const stats = LyricsCache.getStats();
     console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
-    console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
+    console.log(`  Cache size: ${stats.size}/${stats.maxEntries} songs`);
     if (stats.entries.length > 0) {
       const tableData = {};
       stats.entries.forEach((entry, i) => { tableData[i + 1] = entry; });
