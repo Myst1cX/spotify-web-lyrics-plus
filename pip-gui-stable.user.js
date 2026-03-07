@@ -17,8 +17,8 @@
 
 // RESOLVED (17.13): DISTINCT COLORS PER LOG LEVEL
 // • All four DEBUG log methods now use %c CSS styling with level-appropriate colors:
-//     DEBUG  → #1db954  Spotify green  (least urgent; matches menu command outputs)
-//     INFO   → #2196F3  Blue           (informational, standard convention)
+//     DEBUG  → #1db954  Spotify Green  (least urgent; matches menu command outputs)
+//     INFO   → #64B5F6  Light Blue     (informational, standard convention)
 //     WARN   → #FF9800  Amber/Orange   (warning, standard convention)
 //     ERROR  → #F44336  Red            (error, standard convention)
 
@@ -504,7 +504,7 @@
       if (DEBUG.enabled) console.warn(`%c[Lyrics+ WARN] [${context}]`, 'color: #FF9800; font-weight: bold;', ...args);
     },
     info: (context, ...args) => {
-      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #2196F3; font-weight: bold;', ...args);
+      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #64B5F6; font-weight: bold;', ...args);
     },
     debug: (context, ...args) => {
       if (DEBUG.enabled) console.debug(`%c[Lyrics+ DEBUG] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
@@ -7212,5 +7212,6 @@ const Providers = {
 
   init();
 })();
+
 
 
