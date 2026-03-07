@@ -1,8 +1,9 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.7
+// @version      17.10
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
+// @author       Myst1cX 
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
@@ -14,7 +15,33 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.7): IMPROVED CONSOLE LOGSFOR BETTER VISIBILTY (SEPARATORS)
+// RESOLVED (17.10): IMPROVE KPOE PROVIDER'S "🔄 TRYING BACKUP SERVER X..." LOG POSITION IN CONSOLE
+// • Removed the "Trying backup server X..." log from every retry site (429, 503, 500,
+//   and catch block). Instead, added a single log at the top of fetchKPoeLyrics that fires
+//   when serverIndex > 0 - right after the ━━━ separator and before "Starting lyrics search".
+//   This means every backup-server attempt now has the separator FIRST, then the "Trying
+//   backup server X..." message, then the standard search header - clear visual grouping.
+
+// RESOLVED (17.9): FIX PREVIOUSLY-CACHED SONGS LOADING INSTANTLY AFTER "DEBUG: CLEAR CACHE"
+// • Added cache: 'no-store' to the LRCLIB fetch() options so that provider
+//   requests always bypass the browser HTTP cache, consistent with Musixmatch which already
+//   used cache: 'no-store'.
+// • Made cache: 'no-store' the default fetchOptions for KPoe (was only set for forceReload
+//   mode before). The &forceReload=true server-side param is unchanged for force-reload mode.
+
+// RESOLVED (17.8): BUG FIXES AND CODE QUALITY IMPROVEMENTS
+// • Fix: translateLyricsInPopup() now uses 'try' and 'finally' to guarantee isTranslating is reset
+//   and translateBtn is re-enabled even if an unexpected exception occurs during translation
+// • Fix: Progress bar MutationObserver (attachProgressBarWatcher) is now stored on the popup
+//   element and explicitly disconnected in removePopup(), preventing a memory leak on each
+//   popup open/close cycle
+// • Fix: LyricsCache.getStats() field renamed from misleading 'maxSize' (entry count safety
+//   limit) to 'maxEntries' to avoid confusion with the byte-based 'maxBytes' field
+
+// RESOLVED (17.7): IMPROVED KPOE'S CONSOLE LOGS FOR BETTER VISIBILITY (ADDED SEPARATORS)
+// • KPoe provider: Added ━━━━ separator lines between each server attempt for clear visual grouping
+// • KPoe provider: Fixed the 404 response (Track not found on server) to return null immediately instead of trying backup servers
+// (backup servers use the same upstream data source so trying them after a 404 is pointless)
 
 // RESOLVED (17.6): FIX 0-BASED INDEX IN "GET CACHE STATS" CONSOLE TABLE
 // • Menu command "Debug: Get Cache Stats": Cached songs table now shows indices starting from 1 instead of 0
@@ -411,7 +438,7 @@
       return {
         size: entries.length,
         safetyLimit: this.CACHE_ENTRY_SAFETY_LIMIT,
-        maxSize: this.CACHE_ENTRY_SAFETY_LIMIT,  // Backward compatibility alias
+        maxEntries: this.CACHE_ENTRY_SAFETY_LIMIT,  // Entry count safety limit (primary constraint is maxBytes)
         totalBytes: totalBytes,
         maxBytes: this.MAX_BYTES,
         totalKB: Math.round(totalBytes / 1024),
@@ -1778,6 +1805,7 @@ const PLAY_WORDS = [
 
   try {
     const response = await fetch(url, {
+      cache: 'no-store',
       headers: {
         // This header is okay to send — doesn’t break anything
         "x-user-agent": "lyrics-plus-script"
@@ -1861,6 +1889,10 @@ const PLAY_WORDS = [
 
     const currentServer = KPOE_SERVERS[serverIndex];
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    // Primary server's serverIndex is 0. If attempting to fetch from a backup server (whose serverIndex is defined as higher than 0), the following log displays:
+    if (serverIndex > 0) {
+      console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex}...`);
+    }
     console.log("[KPoe Debug] Starting lyrics search");
     console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
     console.log("[KPoe Debug] Input info:", {
@@ -1876,12 +1908,10 @@ const PLAY_WORDS = [
       ? `&album=${encodeURIComponent(songInfo.album)}`
       : '';
     const sourceParam = sourceOrder ? `&source=${encodeURIComponent(sourceOrder)}` : '';
-    let forceReloadParam = forceReload ? `&forceReload=true` : '';
-    let fetchOptions = {};
+    const forceReloadParam = forceReload ? `&forceReload=true` : '';
+    const fetchOptions = { cache: 'no-store' };
     if (forceReload) {
-      fetchOptions = { cache: 'no-store' };
-      forceReloadParam = `&forceReload=true`;
-      console.log("[KPoe Debug] Force reload enabled (bypassing cache)");
+      console.log("[KPoe Debug] Force reload enabled (bypassing server-side cache)");
     }
 
     const url = `${currentServer}/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
@@ -1903,22 +1933,27 @@ const PLAY_WORDS = [
         // Handle rate limiting and service unavailability by trying next server
         if (response.status === 429) {
           console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 503) {
           console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 500) {
           console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
 
+          
+   /*   A 404 response (Track not found on server) returns null immediately instead of trying backup servers
+        (backup servers use the same upstream data source so trying them after a 404 is pointless)
+   */  
         } else if (response.status === 404) {
           console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
           return null;  
           
    /*   OLD LOGIC: ALSO TRYING BACKUP SERVERS ON SONG NOT FOUND RESPONSE
+    
         } else if (response.status === 404) {
           console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
           // Try backup servers - sometimes they have different data
@@ -1969,8 +2004,7 @@ const PLAY_WORDS = [
       return null;
     } catch (e) {
       console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
-      // On network errors, try next server
-      console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+      // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
       return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
     }
   }
@@ -3565,6 +3599,17 @@ const Providers = {
         existing._resizeMouseupHandler = null;
       }
 
+      // Disconnect progress bar watcher observer
+      if (existing._progressBarWatcher) {
+        try {
+          existing._progressBarWatcher.disconnect();
+        } catch (e) {
+          DEBUG.error('Cleanup', 'Failed to disconnect progress bar watcher:', e);
+        }
+        existing._progressBarWatcher = null;
+        DEBUG.debug('Cleanup', 'Progress bar watcher disconnected');
+      }
+
       // Clear popup references
       existing._playPauseBtn = null;
       existing._shuffleBtn = null;
@@ -4339,33 +4384,36 @@ const Providers = {
       if (translationPresent && lastTranslatedLang === targetLang) return;
       isTranslating = true;
       translateBtn.disabled = true;
-      removeTranslatedLyrics();
-      const pEls = Array.from(lyricsContainer.querySelectorAll('p'));
-      const linesToTranslate = pEls.filter(el => el.textContent.trim() && el.textContent.trim() !== "♪");
-      await Promise.all(linesToTranslate.map(async (p) => {
-        const originalText = p.textContent.trim();
-        const translatedText = await translateText(originalText, targetLang);
-        const translationDiv = document.createElement('div');
-        translationDiv.textContent = translatedText;
-        translationDiv.style.color = 'gray';
-        translationDiv.setAttribute('data-translated', 'true');
+      try {
+        removeTranslatedLyrics();
+        const pEls = Array.from(lyricsContainer.querySelectorAll('p'));
+        const linesToTranslate = pEls.filter(el => el.textContent.trim() && el.textContent.trim() !== "♪");
+        await Promise.all(linesToTranslate.map(async (p) => {
+          const originalText = p.textContent.trim();
+          const translatedText = await translateText(originalText, targetLang);
+          const translationDiv = document.createElement('div');
+          translationDiv.textContent = translatedText;
+          translationDiv.style.color = 'gray';
+          translationDiv.setAttribute('data-translated', 'true');
 
-        // Find correct insertion point: after transliteration if it exists, otherwise after lyric
-        let insertionPoint = p.nextSibling;
+          // Find correct insertion point: after transliteration if it exists, otherwise after lyric
+          let insertionPoint = p.nextSibling;
 
-        // Check if next sibling is a transliteration div
-        if (insertionPoint && insertionPoint.nodeType === 1 &&
-            insertionPoint.getAttribute('data-transliteration') === 'true') {
-          // Transliteration exists - insert translation AFTER it
-          insertionPoint = insertionPoint.nextSibling;
-        }
+          // Check if next sibling is a transliteration div
+          if (insertionPoint && insertionPoint.nodeType === 1 &&
+              insertionPoint.getAttribute('data-transliteration') === 'true') {
+            // Transliteration exists - insert translation AFTER it
+            insertionPoint = insertionPoint.nextSibling;
+          }
 
-        p.parentNode.insertBefore(translationDiv, insertionPoint);
-      }));
-      lastTranslatedLang = targetLang;
-      translationPresent = true;
-      translateBtn.disabled = false;
-      isTranslating = false;
+          p.parentNode.insertBefore(translationDiv, insertionPoint);
+        }));
+        lastTranslatedLang = targetLang;
+        translationPresent = true;
+      } finally {
+        translateBtn.disabled = false;
+        isTranslating = false;
+      }
     }
 
     function removeTransliterationLyrics() {
@@ -6076,6 +6124,8 @@ const Providers = {
           attributes: true,
           attributeFilter: ['style']
         });
+        // Store observer on popup element so it can be disconnected when popup is removed
+        popup._progressBarWatcher = observer;
       } catch (e) {
         console.warn('attachProgressBarWatcher error:', e);
         progressBarWatcherAttached = false;
@@ -7079,7 +7129,7 @@ const Providers = {
   GM_registerMenuCommand('Debug: Get Cache Stats', () => {
     const stats = LyricsCache.getStats();
     console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
-    console.log(`  Cache size: ${stats.size}/${stats.maxSize} songs`);
+    console.log(`  Cache size: ${stats.size}/${stats.maxEntries} songs`);
     if (stats.entries.length > 0) {
       const tableData = {};
       stats.entries.forEach((entry, i) => { tableData[i + 1] = entry; });
