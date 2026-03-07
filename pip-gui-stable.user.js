@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.18
+// @version      17.14
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,60 +14,29 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
-
-// RESOLVED (17.18): SEMANTIC LOG LEVEL DISTRIBUTION
+
+// RESOLVED (17.14): SEMANTIC LOG LEVEL DISTRIBUTION
 // Establishes a clear semantic boundary between the three lower log levels:
 //   LOG   → console.log  (#1db954 green)  → song fetching and caching pipeline events only
 //              (Cache hit/store/clear/load, Autodetect start/abort/success, Provider success,
 //               Track changed — all events that directly represent the data-fetch lifecycle)
-//   INFO  → console.info (#2196F3 blue)   → application lifecycle events: UI, Playback, Settings
+//   INFO  → console.info (#64B5F6 blue)   → application lifecycle events: UI, Playback, Settings
 //              (Popup created/removed, Button injected, Song restarted, OpenCC initialized,
 //               ResourceManager cleanup — high-level state transitions, not raw data flow)
 //   DEBUG → console.debug (#9E9E9E grey)  → verbose low-level developer details
 //              (DOM queries, timing, state changes, seekbar, cleanup intervals, observer ops —
 //               only visible in DevTools when "Verbose" level is enabled)
 // In Chrome DevTools: log/info show at default console level; debug requires "Verbose".
-// This makes LOG the always-visible data-pipeline channel, INFO the lifecycle channel, and
-// DEBUG the opt-in noisy channel. Grey for DEBUG visually signals "muted/verbose",
-// distinct from the Spotify green used for LOG.
+// Grey for DEBUG visually signals "muted/verbose", distinct from the Spotify green used for LOG.
 
-// RESOLVED (17.17): FIX CONSOLE LOG COLOR PRIORITY & AUDIT #1db954
-// Priority analysis (dark DevTools, ~#1e1e1e background — the primary context for Spotify Web):
-//   Before:  ERROR #F44336 = 4.53:1 < INFO #64B5F6 = 7.53:1  ← priority inversion (wrong)
-//   After:   ERROR #FF6B6B = 6.01:1 > INFO #2196F3 = 5.34:1  ← ERROR is more prominent ✓
-// Changes:
-//   ERROR  #F44336 → #FF6B6B  (4.53 → 6.01:1 on dark DevTools; brighter/lighter red)
-//   INFO   #64B5F6 → #2196F3  (7.53 → 5.34:1 on dark DevTools; less dominant than error)
-// #1db954 audit — no changes needed:
-//   All UI uses (#1db954 as text) are on dark backgrounds (#121212/#181818) → 6.45:1 contrast ✓
-//   Button hover/active uses #1db954 as background with #181818 dark text → high contrast ✓
-//   Console debug level and GM menu command outputs → 6.45:1 on dark DevTools ✓
-//   Progress bar gradient — decorative only, not text ✓
+// RESOLVED (17.13): DISTINCT COLORS PER LOG LEVEL
+// • All four DEBUG log methods now use %c CSS styling with level-appropriate colors:
+//     DEBUG  → #1db954  Spotify Green  (least urgent; matches menu command outputs)
+//     INFO   → #64B5F6  Light Blue     (informational, standard convention)
+//     WARN   → #FF9800  Amber/Orange   (warning, standard convention)
+//     ERROR  → #F44336  Red            (error, standard convention)
 
-// RESOLVED (17.16): IMPROVE INFO LOG COLOR READABILITY
-// • DEBUG.info() used #2196F3 (Material Blue 500) which was replaced with #64B5F6
-//   (Material Blue 300). That change is now superseded by the 17.17 priority fix above.
-
-// RESOLVED (17.15): DISTINCT COLORS PER LOG LEVEL
-// • All five DEBUG log methods now use %c CSS styling with level-appropriate colors.
-// • Final colors (after 17.16, 17.17, and 17.18 refinements):
-//     LOG    → #1db954  Spotify green  (data pipeline; matches GM menu command outputs)
-//     DEBUG  → #9E9E9E  grey           (verbose/muted; Verbose-only in DevTools)
-//     INFO   → #2196F3  blue           (lifecycle events; standard convention)
-//     WARN   → #FF9800  amber/orange   (warning; standard convention)
-//     ERROR  → #FF6B6B  bright red     (error; most prominent; standard convention)
-// • Previously ERROR and WARN had no color styling at all; DEBUG and INFO both used
-//   the same Spotify green (#1db954), making all levels visually identical.
-
-
-// RESOLVED (17.14): COLOR INFO AND DEBUG LOG LINES GREEN
-// • DEBUG.info() and DEBUG.debug() used plain console.info/console.debug with no styling,
-//   making them visually indistinct in the browser console.
-// • Added %c CSS styling ('color: #1db954; font-weight: bold;') to both methods so their
-//   prefix label appears in Spotify green, matching the appearance of the
-//   "Debug: Get Track Info" (and other) menu command outputs.
-
-// RESOLVED (17.13): FIX ReferenceError: savePopupState is not defined
+// RESOLVED (17.12): FIX ReferenceError: savePopupState is not defined
 // • savePopupState() was defined as a local function inside createPopup(), but
 //   observePopupResize() lives at module scope and cannot access locals of createPopup().
 //   The mouseupHandler inside observePopupResize() called savePopupState(popup) and threw
@@ -77,7 +46,16 @@
 //   localStorage — it has no dependency on createPopup()'s closed-over variables — so the
 //   move is safe. All existing callers inside createPopup() continue to work as before.
 
-// RESOLVED (17.12): FIX REMAINING DEBUG MESSAGE SPAM
+// RESOLVED (17.11): FIX DEBUG MESSAGE SPAM
+// • Removed DEBUG calls from getCurrentTrackId() and getCurrentTrackInfo() which were
+//   called on every interval tick (every 100ms by the progress interval and every 400ms
+//   by the polling interval). These were the source of constant console spam when debug
+//   mode was enabled via the menu command.
+// • Removed: DEBUG.debug('Track', `Track ID extracted: ...`) from getCurrentTrackId()
+// • Removed: DEBUG.dom.notFound(...) from getCurrentTrackId() - fired on every tick when element absent
+// • Removed: DEBUG.dom.notFound(...) from getCurrentTrackInfo() - fired on every tick when element absent
+// • Removed: DEBUG.track.detected(trackInfo) from getCurrentTrackInfo() - fired on every tick
+// • Track change events are still properly logged via DEBUG.track.changed() in the polling loop
 // • Removed observeSpotifyPlayPause/Shuffle/Repeat calls from the polling interval
 //   (startPollingForTrackChange). These were called every 400ms, tearing down and
 //   re-creating the three MutationObservers on each tick - causing constant
@@ -92,17 +70,6 @@
 // • Added a guard at the top of observePopupResize(): skips re-attaching resize handlers
 //   if popup._resizeMouseupHandler is already set, preventing "[PopupResize] Resize handlers
 //   attached" from being logged on every DOM mutation while the popup is open.
-
-// RESOLVED (17.11): FIX DEBUG MODE SPAMMING CONSOLE EVERY ~100ms
-// • Removed DEBUG calls from getCurrentTrackId() and getCurrentTrackInfo() which are
-//   called on every interval tick (every 100ms by the progress interval and every 400ms
-//   by the polling interval). These were the source of constant console spam when debug
-//   mode was enabled via the menu command.
-// • Removed: DEBUG.debug('Track', `Track ID extracted: ...`) from getCurrentTrackId()
-// • Removed: DEBUG.dom.notFound(...) from getCurrentTrackId() - fired on every tick when element absent
-// • Removed: DEBUG.dom.notFound(...) from getCurrentTrackInfo() - fired on every tick when element absent
-// • Removed: DEBUG.track.detected(trackInfo) from getCurrentTrackInfo() - fired on every tick
-// • Track change events are still properly logged via DEBUG.track.changed() in the polling loop
 
 // RESOLVED (17.10): IMPROVE KPOE PROVIDER'S "🔄 TRYING BACKUP SERVER X..." LOG POSITION IN CONSOLE
 // • Removed the "Trying backup server X..." log from every retry site (429, 503, 500,
@@ -545,13 +512,13 @@
 
     // Log levels with prefixes
     error: (context, ...args) => {
-      if (DEBUG.enabled) console.error(`%c[Lyrics+ ERROR] [${context}]`, 'color: #FF6B6B; font-weight: bold;', ...args);
+      if (DEBUG.enabled) console.error(`%c[Lyrics+ ERROR] [${context}]`, 'color: #F44336; font-weight: bold;', ...args);
     },
     warn: (context, ...args) => {
       if (DEBUG.enabled) console.warn(`%c[Lyrics+ WARN] [${context}]`, 'color: #FF9800; font-weight: bold;', ...args);
     },
     info: (context, ...args) => {
-      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #2196F3; font-weight: bold;', ...args);
+      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #64B5F6; font-weight: bold;', ...args);
     },
     log: (context, ...args) => {
       if (DEBUG.enabled) console.log(`%c[Lyrics+ LOG] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
@@ -7262,4 +7229,6 @@ const Providers = {
 
   init();
 })();
+
+
 
