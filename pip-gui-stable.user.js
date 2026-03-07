@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.13
+// @version      17.14
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,13 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.14): COLOR INFO AND DEBUG LOG LINES GREEN
+// • DEBUG.info() and DEBUG.debug() used plain console.info/console.debug with no styling,
+//   making them visually indistinct in the browser console.
+// • Added %c CSS styling ('color: #1db954; font-weight: bold;') to both methods so their
+//   prefix label appears in Spotify green, matching the appearance of the
+//   "Debug: Get Track Info" (and other) menu command outputs.
 
 // RESOLVED (17.13): FIX ReferenceError: savePopupState is not defined
 // • savePopupState() was defined as a local function inside createPopup(), but
@@ -499,10 +506,10 @@
       if (DEBUG.enabled) console.warn(`[Lyrics+ WARN] [${context}]`, ...args);
     },
     info: (context, ...args) => {
-      if (DEBUG.enabled) console.info(`[Lyrics+ INFO] [${context}]`, ...args);
+      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
     },
     debug: (context, ...args) => {
-      if (DEBUG.enabled) console.debug(`[Lyrics+ DEBUG] [${context}]`, ...args);
+      if (DEBUG.enabled) console.debug(`%c[Lyrics+ DEBUG] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
     },
 
     // Specialized logging helpers
