@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.12
+// @version      17.13
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,13 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.13): DISTINCT COLORS PER LOG LEVEL
+// • All four DEBUG log methods now use %c CSS styling with level-appropriate colors:
+//     DEBUG  → #1db954  Spotify green  (least urgent; matches menu command outputs)
+//     INFO   → #2196F3  Blue           (informational, standard convention)
+//     WARN   → #FF9800  Amber/Orange   (warning, standard convention)
+//     ERROR  → #F44336  Red            (error, standard convention)
 
 // RESOLVED (17.12): FIX ReferenceError: savePopupState is not defined
 // • savePopupState() was defined as a local function inside createPopup(), but
@@ -491,16 +498,16 @@
 
     // Log levels with prefixes
     error: (context, ...args) => {
-      if (DEBUG.enabled) console.error(`[Lyrics+ ERROR] [${context}]`, ...args);
+      if (DEBUG.enabled) console.error(`%c[Lyrics+ ERROR] [${context}]`, 'color: #F44336; font-weight: bold;', ...args);
     },
     warn: (context, ...args) => {
-      if (DEBUG.enabled) console.warn(`[Lyrics+ WARN] [${context}]`, ...args);
+      if (DEBUG.enabled) console.warn(`%c[Lyrics+ WARN] [${context}]`, 'color: #FF9800; font-weight: bold;', ...args);
     },
     info: (context, ...args) => {
-      if (DEBUG.enabled) console.info(`[Lyrics+ INFO] [${context}]`, ...args);
+      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #2196F3; font-weight: bold;', ...args);
     },
     debug: (context, ...args) => {
-      if (DEBUG.enabled) console.debug(`[Lyrics+ DEBUG] [${context}]`, ...args);
+      if (DEBUG.enabled) console.debug(`%c[Lyrics+ DEBUG] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
     },
 
     // Specialized logging helpers
@@ -7205,4 +7212,5 @@ const Providers = {
 
   init();
 })();
+
 
