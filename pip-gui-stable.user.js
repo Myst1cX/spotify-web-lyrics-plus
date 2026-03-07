@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.12
+// @version      17.13
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,16 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.13): FIX ReferenceError: savePopupState is not defined
+// • savePopupState() was defined as a local function inside createPopup(), but
+//   observePopupResize() lives at module scope and cannot access locals of createPopup().
+//   The mouseupHandler inside observePopupResize() called savePopupState(popup) and threw
+//   "ReferenceError: savePopupState is not defined" whenever the user finished resizing.
+// • Fix: moved savePopupState() from inside createPopup() to module scope (just above
+//   observePopupResize()). The function only reads window.innerWidth/Height and writes to
+//   localStorage — it has no dependency on createPopup()'s closed-over variables — so the
+//   move is safe. All existing callers inside createPopup() continue to work as before.
 
 // RESOLVED (17.12): FIX REMAINING DEBUG MESSAGE SPAM
 // • Removed observeSpotifyPlayPause/Shuffle/Repeat calls from the polling interval
@@ -5381,17 +5391,6 @@ const Providers = {
       document.body.appendChild(popup);
     }
 
-    function savePopupState(el) {
-      const rect = el.getBoundingClientRect();
-      window.lastProportion = {
-        w: rect.width / window.innerWidth,
-        h: rect.height / window.innerHeight,
-        x: rect.left / window.innerWidth,
-        y: rect.top / window.innerHeight
-      };
-      localStorage.setItem('lyricsPlusPopupProportion', JSON.stringify(window.lastProportion));
-    }
-
     // Save initial state if using default position (not restored from saved state)
     if (shouldSaveDefaultPosition) {
       savePopupState(popup);
@@ -7086,6 +7085,17 @@ const Providers = {
     popup.style.right = "auto";
     popup.style.bottom = "auto";
     popup.style.position = "fixed";
+  }
+
+  function savePopupState(el) {
+    const rect = el.getBoundingClientRect();
+    window.lastProportion = {
+      w: rect.width / window.innerWidth,
+      h: rect.height / window.innerHeight,
+      x: rect.left / window.innerWidth,
+      y: rect.top / window.innerHeight
+    };
+    localStorage.setItem('lyricsPlusPopupProportion', JSON.stringify(window.lastProportion));
   }
 
   // Call this after user resizes the popup:
