@@ -1826,15 +1826,15 @@ const PLAY_WORDS = [
 
   // --- LRCLIB ---
   async function fetchLRCLibLyrics(songInfo, tryWithoutAlbum = false) {
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("[LRCLIB Debug] Starting lyrics search");
-  console.log("[LRCLIB Debug] Input info:", {
+  console.debug("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.debug("[LRCLIB Debug] Starting lyrics search");
+  console.debug("[LRCLIB Debug] Input info:", {
     artist: songInfo.artist,
     title: songInfo.title,
     album: songInfo.album,
     duration: songInfo.duration
   });
-  console.log(`[LRCLIB Debug] Searching ${tryWithoutAlbum ? 'WITHOUT' : 'WITH'} album parameter`);
+  console.debug(`[LRCLIB Debug] Searching ${tryWithoutAlbum ? 'WITHOUT' : 'WITH'} album parameter`);
 
   const params = [
     `artist_name=${encodeURIComponent(songInfo.artist)}`,
@@ -1844,20 +1844,20 @@ const PLAY_WORDS = [
   // Only add album if available and not skipped
   if (songInfo.album && !tryWithoutAlbum) {
     params.push(`album_name=${encodeURIComponent(songInfo.album)}`);
-    console.log("[LRCLIB Debug] Including album in search");
+    console.debug("[LRCLIB Debug] Including album in search");
   } else if (tryWithoutAlbum) {
-    console.log("[LRCLIB Debug] Retrying without album (fallback search)");
+    console.debug("[LRCLIB Debug] Retrying without album (fallback search)");
   }
 
   // Only include duration if it's a safe value
   if (songInfo.duration && songInfo.duration >= 10000) {
     const durationSec = Math.floor(songInfo.duration / 1000);
     params.push(`duration=${durationSec}`);
-    console.log(`[LRCLIB Debug] Including duration: ${durationSec} seconds`);
+    console.debug(`[LRCLIB Debug] Including duration: ${durationSec} seconds`);
   }
 
   const url = `https://lrclib.net/api/get?${params.join('&')}`;
-  console.log("[LRCLIB Debug] Request URL:", url);
+  console.debug("[LRCLIB Debug] Request URL:", url);
 
   try {
     const response = await fetch(url, {
@@ -1868,21 +1868,21 @@ const PLAY_WORDS = [
       }
     });
 
-    console.log(`[LRCLIB Debug] Response status: ${response.status} ${response.statusText}`);
+    console.debug(`[LRCLIB Debug] Response status: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       if (response.status === 404) {
-        console.log("[LRCLIB Debug] ✗ Track not found in LRCLIB database");
+        console.debug("[LRCLIB Debug] ✗ Track not found in LRCLIB database");
       } else if (response.status === 429) {
-        console.log("[LRCLIB Debug] ✗ Rate limit exceeded - too many requests");
+        console.debug("[LRCLIB Debug] ✗ Rate limit exceeded - too many requests");
       } else {
-        console.log(`[LRCLIB Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+        console.debug(`[LRCLIB Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
       }
       return null;
     }
 
     const data = await response.json();
-    console.log("[LRCLIB Debug] Response data:", {
+    console.debug("[LRCLIB Debug] Response data:", {
       hasPlainLyrics: !!data.plainLyrics,
       hasSyncedLyrics: !!data.syncedLyrics,
       isInstrumental: !!data.instrumental,
@@ -1890,11 +1890,11 @@ const PLAY_WORDS = [
     });
 
     if (data.instrumental) {
-      console.log("[LRCLIB Debug] ⚠ Track marked as instrumental (no lyrics)");
+      console.debug("[LRCLIB Debug] ⚠ Track marked as instrumental (no lyrics)");
     } else if (data.syncedLyrics || data.plainLyrics) {
-      console.log(`[LRCLIB Debug] ✓ Lyrics found! Type: ${data.syncedLyrics ? 'Synced' : 'Unsynced only'}`);
+      console.debug(`[LRCLIB Debug] ✓ Lyrics found! Type: ${data.syncedLyrics ? 'Synced' : 'Unsynced only'}`);
     } else {
-      console.log("[LRCLIB Debug] ✗ No lyrics data in response");
+      console.debug("[LRCLIB Debug] ✗ No lyrics data in response");
     }
 
     return data;
@@ -1939,19 +1939,19 @@ const PLAY_WORDS = [
   async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0) {
     // If we've tried all servers, return null
     if (serverIndex >= KPOE_SERVERS.length) {
-      console.log("[KPoe Debug] ✗ All servers exhausted");
+      console.debug("[KPoe Debug] ✗ All servers exhausted");
       return { error: "All KPoe servers are currently unavailable or rate limited" };
     }
 
     const currentServer = KPOE_SERVERS[serverIndex];
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.debug("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     // Primary server's serverIndex is 0. If attempting to fetch from a backup server (whose serverIndex is defined as higher than 0), the following log displays:
     if (serverIndex > 0) {
-      console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex}...`);
+      console.debug(`[KPoe Debug] 🔄 Trying backup server ${serverIndex}...`);
     }
-    console.log("[KPoe Debug] Starting lyrics search");
-    console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
-    console.log("[KPoe Debug] Input info:", {
+    console.debug("[KPoe Debug] Starting lyrics search");
+    console.debug("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
+    console.debug("[KPoe Debug] Input info:", {
       artist: songInfo.artist,
       title: songInfo.title,
       album: songInfo.album,
@@ -1967,36 +1967,36 @@ const PLAY_WORDS = [
     const forceReloadParam = forceReload ? `&forceReload=true` : '';
     const fetchOptions = { cache: 'no-store' };
     if (forceReload) {
-      console.log("[KPoe Debug] Force reload enabled (bypassing server-side cache)");
+      console.debug("[KPoe Debug] Force reload enabled (bypassing server-side cache)");
     }
 
     const url = `${currentServer}/v2/lyrics/get?title=${encodeURIComponent(songInfo.title)}&artist=${encodeURIComponent(songInfo.artist)}${albumParam}&duration=${songInfo.duration}${sourceParam}${forceReloadParam}`;
-    console.log("[KPoe Debug] Request URL:", url);
+    console.debug("[KPoe Debug] Request URL:", url);
 
     try {
       const response = await fetch(url, fetchOptions);
-      console.log(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
+      console.debug(`[KPoe Debug] Response status: ${response.status} ${response.statusText}`);
 
       // Check cache status from headers
       const cacheStatus = response.headers.get('x-cache') || response.headers.get('cf-cache-status') || 'unknown';
       const cacheAge = response.headers.get('age');
       if (cacheStatus !== 'unknown' || cacheAge) {
-        console.log(`[KPoe Debug] Cache info: Status=${cacheStatus}${cacheAge ? `, Age=${cacheAge}s` : ''}`);
+        console.debug(`[KPoe Debug] Cache info: Status=${cacheStatus}${cacheAge ? `, Age=${cacheAge}s` : ''}`);
       }
 
       // Check if response is ok before parsing
       if (!response.ok) {
         // Handle rate limiting and service unavailability by trying next server
         if (response.status === 429) {
-          console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
+          console.debug(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
           // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 503) {
-          console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
+          console.debug(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
           // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
         } else if (response.status === 500) {
-          console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
+          console.debug(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
           // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
 
@@ -2005,23 +2005,23 @@ const PLAY_WORDS = [
         (backup servers use the same upstream data source so trying them after a 404 is pointless)
    */  
         } else if (response.status === 404) {
-          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
+          console.debug(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
           return null;  
           
    /*   OLD LOGIC: ALSO TRYING BACKUP SERVERS ON SONG NOT FOUND RESPONSE
     
         } else if (response.status === 404) {
-          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
+          console.debug(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
           // Try backup servers - sometimes they have different data
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
+          console.debug(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
    */
           
         } else if (response.status === 400) {
-          console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
+          console.debug("[KPoe Debug] ✗ Bad request - Invalid parameters");
           return { error: "Bad request - Invalid parameters" };
         } else {
-          console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
+          console.debug(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
           return { error: `Request failed: ${response.status} ${response.statusText}` };
         }
       }
@@ -2035,7 +2035,7 @@ const PLAY_WORDS = [
       const hasActualCacheInfo = cacheStatus !== 'unknown' || cacheAge;
       const cacheInfo = hasActualCacheInfo ? (isCached ? ' (from cache)' : ' (fresh)') : '';
 
-      console.log("[KPoe Debug] Response data:", {
+      console.debug("[KPoe Debug] Response data:", {
         hasLyrics: !!(data && data.lyrics),
         lyricsType: data?.type,
         lyricsCount: data?.lyrics?.length || 0,
@@ -2047,8 +2047,8 @@ const PLAY_WORDS = [
       });
 
       if (data && data.lyrics && data.lyrics.length > 0) {
-        console.log(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
-        console.log(`[KPoe Debug] ✓ Successfully fetched from: ${currentServer}${cacheInfo}`);
+        console.debug(`[KPoe Debug] ✓ Lyrics found! Type: ${data.type}, Lines: ${data.lyrics.length}, Source: ${data.metadata?.source}`);
+        console.debug(`[KPoe Debug] ✓ Successfully fetched from: ${currentServer}${cacheInfo}`);
         // Store server info in metadata for later reference
         data.metadata = data.metadata || {};
         data.metadata.server = currentServer;
@@ -2056,7 +2056,7 @@ const PLAY_WORDS = [
         return data;
       }
 
-      console.log("[KPoe Debug] ✗ No lyrics in response");
+      console.debug("[KPoe Debug] ✗ No lyrics in response");
       return null;
     } catch (e) {
       console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
@@ -2071,7 +2071,7 @@ const PLAY_WORDS = [
     const serverInfo = data.metadata?.server || 'unknown';
     const hasActualCacheInfo = data.metadata?.cached !== undefined && data.metadata?.cached !== null;
     const cacheInfo = hasActualCacheInfo ? (data.metadata.cached ? ' (cached)' : ' (fresh)') : '';
-    console.log(`[KPoe Debug] 📊 Parsing lyrics from: ${serverInfo}${cacheInfo}`);
+    console.debug(`[KPoe Debug] 📊 Parsing lyrics from: ${serverInfo}${cacheInfo}`);
 
     const metadata = {
       ...data.metadata,
@@ -2152,8 +2152,8 @@ const PLAY_WORDS = [
 
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
-          console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-          console.log(`[KPoe Debug] Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
+          console.debug("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          console.debug(`[KPoe Debug] Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
 
           let songInfo = {
             artist: attempt.normalizeArtist ? Utils.normalize(info.artist) : (info.artist || ""),
@@ -2169,44 +2169,44 @@ const PLAY_WORDS = [
           // Handle errors - log but continue trying other attempts
           if (result && result.error) {
             lastError = result.error; // Track the last error
-            console.log(`[KPoe Debug] ✗ Error on attempt ${i + 1}: ${result.error}`);
+            console.debug(`[KPoe Debug] ✗ Error on attempt ${i + 1}: ${result.error}`);
             // If error is about all servers being unavailable, break early
             if (result.error.includes("All KPoe servers")) {
               break;
             }
             // Continue to next attempt - sometimes one of them goes through
           } else if (result && result.lyrics && result.lyrics.length > 0) {
-            console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
+            console.debug(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
 
             // Keep track of the best result (prefer Line over Word)
             if (!bestResult) {
               // First successful result
               bestResult = result;
               bestResultType = result.type;
-              console.log(`[KPoe Debug] Storing first result (${result.type} type)`);
+              console.debug(`[KPoe Debug] Storing first result (${result.type} type)`);
             } else if (result.type === "Line" && bestResultType !== "Line") {
               // Found Line type - upgrade from Word to Line
               bestResult = result;
               bestResultType = result.type;
-              console.log(`[KPoe Debug] ✓ Upgraded to Line type lyrics!`);
+              console.debug(`[KPoe Debug] ✓ Upgraded to Line type lyrics!`);
             } else {
-              console.log(`[KPoe Debug] Keeping previous result (current: ${bestResultType}, new: ${result.type})`);
+              console.debug(`[KPoe Debug] Keeping previous result (current: ${bestResultType}, new: ${result.type})`);
             }
 
             // If we found Line type, we can stop early since that's the best
             if (bestResultType === "Line") {
-              console.log(`[KPoe Debug] ✓ Found Line type lyrics, stopping search`);
+              console.debug(`[KPoe Debug] ✓ Found Line type lyrics, stopping search`);
               break;
             }
           }
         }
 
         if (bestResult) {
-          console.log(`[KPoe Debug] ✓ Returning best result: ${bestResultType} type`);
+          console.debug(`[KPoe Debug] ✓ Returning best result: ${bestResultType} type`);
           return parseKPoeFormat(bestResult);
         }
 
-        console.log("[KPoe Debug] ✗ All 5 attempts failed");
+        console.debug("[KPoe Debug] ✗ All 5 attempts failed");
         // If we have a specific error from the last attempt, return it
         if (lastError) {
           return { error: lastError };
@@ -2221,7 +2221,7 @@ const PLAY_WORDS = [
 
       const isWordType = body.type === "Word";
       if (isWordType) {
-        console.log("[KPoe Debug] Processing Word type unsynced lyrics");
+        console.debug("[KPoe Debug] Processing Word type unsynced lyrics");
       }
 
       return body.data.map(line => {
@@ -2241,7 +2241,7 @@ const PLAY_WORDS = [
           }).join('').trim();
 
           if (isWordType) {
-            console.log(`[KPoe Debug] Reconstructed unsynced line from ${line.syllabus.length} syllables: "${text}"`);
+            console.debug(`[KPoe Debug] Reconstructed unsynced line from ${line.syllabus.length} syllables: "${text}"`);
           }
         }
 
@@ -2257,7 +2257,7 @@ const PLAY_WORDS = [
       // Handle both Line-synced and Word-synced lyrics
       const isWordType = body.type === "Word";
       if (isWordType) {
-        console.log("[KPoe Debug] Converting Word type lyrics to line-synced format");
+        console.debug("[KPoe Debug] Converting Word type lyrics to line-synced format");
       }
 
       return body.data.map(line => {
@@ -2277,7 +2277,7 @@ const PLAY_WORDS = [
           }).join('').trim();
 
           if (isWordType) {
-            console.log(`[KPoe Debug] Reconstructed line from ${line.syllabus.length} syllables: "${text}"`);
+            console.debug(`[KPoe Debug] Reconstructed line from ${line.syllabus.length} syllables: "${text}"`);
           }
         }
 
@@ -2498,27 +2498,27 @@ function parseMusixmatchSyncedLyrics(subtitleBody) {
 
 
 async function fetchMusixmatchLyrics(songInfo) {
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("[Musixmatch Debug] Starting lyrics search");
-  console.log("[Musixmatch Debug] Input info:", {
+  console.debug("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.debug("[Musixmatch Debug] Starting lyrics search");
+  console.debug("[Musixmatch Debug] Input info:", {
     artist: songInfo.artist,
     title: songInfo.title
   });
 
   const token = localStorage.getItem("lyricsPlusMusixmatchToken");
   if (!token) {
-    console.log("[Musixmatch Debug] ✗ No token found - user needs to configure");
+    console.debug("[Musixmatch Debug] ✗ No token found - user needs to configure");
     return { error: "Double click on the Musixmatch provider to set up your token" };
   }
-  console.log("[Musixmatch Debug] ✓ Token found (length:", token.length, "characters)");
+  console.debug("[Musixmatch Debug] ✓ Token found (length:", token.length, "characters)");
 
   // Step 1: Get track info
   const trackUrl = `https://apic-desktop.musixmatch.com/ws/1.1/matcher.track.get?` +
       `q_track=${encodeURIComponent(songInfo.title)}&` +
       `q_artist=${encodeURIComponent(songInfo.artist)}&` +
       `format=json&usertoken=${encodeURIComponent(token)}&app_id=web-desktop-app-v1.0`;
-  console.log("[Musixmatch Debug] Step 1: Fetching track info");
-  console.log("[Musixmatch Debug] Track URL:", trackUrl.replace(token, '***TOKEN***'));
+  console.debug("[Musixmatch Debug] Step 1: Fetching track info");
+  console.debug("[Musixmatch Debug] Track URL:", trackUrl.replace(token, '***TOKEN***'));
 
   try {
     const trackResponse = await fetch(trackUrl, {
@@ -2529,17 +2529,17 @@ async function fetchMusixmatchLyrics(songInfo) {
       cache: 'no-store',
     });
 
-    console.log(`[Musixmatch Debug] Track response status: ${trackResponse.status}`);
+    console.debug(`[Musixmatch Debug] Track response status: ${trackResponse.status}`);
 
     if (!trackResponse.ok) {
       if (trackResponse.status === 401) {
-        console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid");
+        console.debug("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid");
         return { error: "Musixmatch token expired or invalid. Double click the Musixmatch provider to update your token." };
       } else if (trackResponse.status === 404) {
-        console.log("[Musixmatch Debug] ✗ Track not found in Musixmatch database");
+        console.debug("[Musixmatch Debug] ✗ Track not found in Musixmatch database");
         return { error: "Track not found in Musixmatch database" };
       }
-      console.log(`[Musixmatch Debug] ✗ Track request failed: ${trackResponse.status}`);
+      console.debug(`[Musixmatch Debug] ✗ Track request failed: ${trackResponse.status}`);
       return { error: `Track lookup failed (HTTP ${trackResponse.status})` };
     }
 
@@ -2547,11 +2547,11 @@ async function fetchMusixmatchLyrics(songInfo) {
     const track = trackBody?.message?.body?.track;
 
     if (!track) {
-      console.log("[Musixmatch Debug] ✗ No track data in response");
+      console.debug("[Musixmatch Debug] ✗ No track data in response");
       return { error: "Track not found in Musixmatch database" };
     }
 
-    console.log("[Musixmatch Debug] ✓ Track found:", {
+    console.debug("[Musixmatch Debug] ✓ Track found:", {
       trackId: track.track_id,
       trackName: track.track_name,
       artistName: track.artist_name,
@@ -2560,14 +2560,14 @@ async function fetchMusixmatchLyrics(songInfo) {
     });
 
     if (track.instrumental) {
-      console.log("[Musixmatch Debug] ⚠ Track marked as instrumental (no lyrics)");
+      console.debug("[Musixmatch Debug] ⚠ Track marked as instrumental (no lyrics)");
       return { instrumental: true };
     }
 
     // Step 2: Fetch synced lyrics via subtitles.get
     const subtitleUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.subtitles.get?` +
         `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`;
-    console.log("[Musixmatch Debug] Step 2: Fetching synced lyrics (subtitles)");
+    console.debug("[Musixmatch Debug] Step 2: Fetching synced lyrics (subtitles)");
 
     const subtitleResponse = await fetch(subtitleUrl, {
       headers: {
@@ -2577,7 +2577,7 @@ async function fetchMusixmatchLyrics(songInfo) {
       cache: 'no-store',
     });
 
-    console.log(`[Musixmatch Debug] Subtitle response status: ${subtitleResponse.status}`);
+    console.debug(`[Musixmatch Debug] Subtitle response status: ${subtitleResponse.status}`);
 
     if (subtitleResponse.ok) {
       const subtitleBody = await subtitleResponse.json();
@@ -2585,21 +2585,21 @@ async function fetchMusixmatchLyrics(songInfo) {
       if (subtitleList && subtitleList.length > 0) {
         const subtitleObj = subtitleList[0]?.subtitle;
         if (subtitleObj?.subtitle_body) {
-          console.log("[Musixmatch Debug] ✓ Synced lyrics found!");
+          console.debug("[Musixmatch Debug] ✓ Synced lyrics found!");
           const synced = parseMusixmatchSyncedLyrics(subtitleObj.subtitle_body);
-          console.log(`[Musixmatch Debug] Parsed ${synced.length} synced lyric lines`);
+          console.debug(`[Musixmatch Debug] Parsed ${synced.length} synced lyric lines`);
           if (synced.length > 0) return { synced };
         }
       }
-      console.log("[Musixmatch Debug] No synced lyrics in subtitle response");
+      console.debug("[Musixmatch Debug] No synced lyrics in subtitle response");
     } else {
-      console.log(`[Musixmatch Debug] Subtitle request failed: ${subtitleResponse.status}`);
+      console.debug(`[Musixmatch Debug] Subtitle request failed: ${subtitleResponse.status}`);
     }
 
     // Step 3: fallback to unsynced lyrics
     const lyricsUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.lyrics.get?` +
         `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`;
-    console.log("[Musixmatch Debug] Step 3: Fetching unsynced lyrics (fallback)");
+    console.debug("[Musixmatch Debug] Step 3: Fetching unsynced lyrics (fallback)");
 
     const lyricsResponse = await fetch(lyricsUrl, {
       headers: {
@@ -2609,10 +2609,10 @@ async function fetchMusixmatchLyrics(songInfo) {
       cache: 'no-store',
     });
 
-    console.log(`[Musixmatch Debug] Lyrics response status: ${lyricsResponse.status}`);
+    console.debug(`[Musixmatch Debug] Lyrics response status: ${lyricsResponse.status}`);
 
     if (!lyricsResponse.ok) {
-      console.log(`[Musixmatch Debug] ✗ Lyrics request failed: ${lyricsResponse.status}`);
+      console.debug(`[Musixmatch Debug] ✗ Lyrics request failed: ${lyricsResponse.status}`);
       return { error: `Lyrics fetch failed (HTTP ${lyricsResponse.status})` };
     }
 
@@ -2620,11 +2620,11 @@ async function fetchMusixmatchLyrics(songInfo) {
     const unsyncedRaw = lyricsBody?.message?.body?.lyrics?.lyrics_body;
     if (unsyncedRaw) {
       const unsynced = unsyncedRaw.split("\n").map(line => ({ text: line }));
-      console.log(`[Musixmatch Debug] ✓ Unsynced lyrics found! (${unsynced.length} lines)`);
+      console.debug(`[Musixmatch Debug] ✓ Unsynced lyrics found! (${unsynced.length} lines)`);
       return { unsynced };
     }
 
-    console.log("[Musixmatch Debug] ✗ No lyrics found in any format");
+    console.debug("[Musixmatch Debug] ✗ No lyrics found in any format");
     return { error: "No lyrics available from Musixmatch" };
   } catch (e) {
     console.error("[Musixmatch Debug] ✗ Fetch error:", e.message || e);
@@ -2676,9 +2676,9 @@ return data;
 
   // --- Genius ---
 async function fetchGeniusLyrics(info) {
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("[Genius Debug] Starting lyrics search");
-  console.log("[Genius Debug] Input info:", {
+  console.debug("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.debug("[Genius Debug] Starting lyrics search");
+  console.debug("[Genius Debug] Input info:", {
     artist: info.artist,
     title: info.title,
     album: info.album,
@@ -2691,7 +2691,7 @@ async function fetchGeniusLyrics(info) {
     Utils.removeSongFeat(info.title),
     Utils.removeSongFeat(Utils.removeExtraInfo(info.title)),
   ]);
-  console.log("[Genius Debug] Title variants to try:", Array.from(titles));
+  console.debug("[Genius Debug] Title variants to try:", Array.from(titles));
 
   function generateNthIndices(start = 1, step = 4, max = 25) {
     const arr = [];
@@ -2868,13 +2868,13 @@ async function fetchGeniusLyrics(info) {
 
   for (const title of titles) {
     const cleanTitle = cleanQuery(title);
-    console.log(`[Genius Debug] Trying title variant: "${title}" → cleaned: "${cleanTitle}"`);
+    console.debug(`[Genius Debug] Trying title variant: "${title}" → cleaned: "${cleanTitle}"`);
 
     for (let page = 1; page <= maxPages; page++) {
       const query = encodeURIComponent(`${info.artist} ${cleanTitle}`);
       const searchUrl = `https://genius.com/api/search/multi?per_page=5&page=${page}&q=${query}`;
-      console.log(`[Genius Debug] Page ${page}: Searching with query: "${info.artist} ${cleanTitle}"`);
-      console.log(`[Genius Debug] URL: ${searchUrl}`);
+      console.debug(`[Genius Debug] Page ${page}: Searching with query: "${info.artist} ${cleanTitle}"`);
+      console.debug(`[Genius Debug] URL: ${searchUrl}`);
 
       try {
         const searchRes = await new Promise((resolve, reject) => {
@@ -2896,10 +2896,10 @@ async function fetchGeniusLyrics(info) {
         const hits = searchJson?.response?.sections?.flatMap(s => s.hits) || [];
         const songHits = hits.filter(h => h.type === "song");
 
-        console.log(`[Genius Debug] Page ${page}: Received ${songHits.length} song results`);
+        console.debug(`[Genius Debug] Page ${page}: Received ${songHits.length} song results`);
         songHits.forEach((hit, idx) => {
           const result = hit.result;
-          console.log(`[Genius Debug]   Result ${idx + 1}:`, {
+          console.debug(`[Genius Debug]   Result ${idx + 1}:`, {
             title: result.title,
             artist: result.primary_artist?.name,
             url: result.url
@@ -2914,7 +2914,7 @@ async function fetchGeniusLyrics(info) {
         const targetTitleNorm = normalize(Utils.removeExtraInfo(info.title));
         const targetHasVersion = hasVersionKeywords(info.title);
 
-        console.log("[Genius Debug] Target (Spotify) normalization:", {
+        console.debug("[Genius Debug] Target (Spotify) normalization:", {
           originalArtist: info.artist,
           normalizedArtists: Array.from(targetArtists),
           originalTitle: info.title,
@@ -2927,7 +2927,7 @@ async function fetchGeniusLyrics(info) {
         // Single artist: need strong match (≥8) to prevent false positives
         // Multi-artist: more lenient (≥6) since metadata may be incomplete
         const matchThreshold = targetArtists.size === 1 ? 8 : 6;
-        console.log(`[Genius Debug] Match threshold for ${targetArtists.size} artist(s): ${matchThreshold}`);
+        console.debug(`[Genius Debug] Match threshold for ${targetArtists.size} artist(s): ${matchThreshold}`);
 
         let bestScore = -Infinity;
         let fallbackScore = -Infinity;
@@ -2938,7 +2938,7 @@ async function fetchGeniusLyrics(info) {
           const result = hit.result;
           // Only consider original (non-translation) Genius lyrics pages
           if (isTranslationPage(result) || !isSimpleOriginalUrl(result.url)) {
-            console.log(`[Genius Debug]     ⊗ Skipping "${result.title}" - translation page or non-simple URL`);
+            console.debug(`[Genius Debug]     ⊗ Skipping "${result.title}" - translation page or non-simple URL`);
             continue;
           }
 
@@ -2958,8 +2958,8 @@ async function fetchGeniusLyrics(info) {
           const resultTitleNorm = normalize(Utils.removeExtraInfo(result.title || ''));
           const resultHasVersion = hasVersionKeywords(result.title || '');
 
-          console.log(`[Genius Debug]     Candidate: "${result.title}" by ${result.primary_artist?.name}`);
-          console.log(`[Genius Debug]       Genius normalization:`, {
+          console.debug(`[Genius Debug]     Candidate: "${result.title}" by ${result.primary_artist?.name}`);
+          console.debug(`[Genius Debug]       Genius normalization:`, {
             originalArtist: result.primary_artist?.name,
             normalizedArtists: Array.from(resultArtists),
             originalTitle: result.title,
@@ -2972,7 +2972,7 @@ async function fetchGeniusLyrics(info) {
           const overlap = calculateArtistOverlap(targetArtists, resultArtists);
           const totalArtists = targetArtists.size;
 
-          console.log(`[Genius Debug]       Artist matching:`, {
+          console.debug(`[Genius Debug]       Artist matching:`, {
             targetArtists: Array.from(targetArtists),
             resultArtists: Array.from(resultArtists),
             exactMatches: overlap.exactMatches,
@@ -3011,11 +3011,11 @@ async function fetchGeniusLyrics(info) {
             artistScore -= missingArtists * PENALTY_MISSING_ARTIST;
           }
 
-          console.log(`[Genius Debug]       Artist score: ${artistScore} (threshold: ${SCORE_MIN_ARTIST_THRESHOLD})`);
+          console.debug(`[Genius Debug]       Artist score: ${artistScore} (threshold: ${SCORE_MIN_ARTIST_THRESHOLD})`);
 
           // Minimum artist threshold - must have at least some artist match
           if (artistScore < SCORE_MIN_ARTIST_THRESHOLD) {
-            console.log(`[Genius Debug]       ⊗ Rejected: artist score below threshold`);
+            console.debug(`[Genius Debug]       ⊗ Rejected: artist score below threshold`);
             continue;
           }
 
@@ -3051,7 +3051,7 @@ async function fetchGeniusLyrics(info) {
             else titleScore -= SCORE_VERSION_ADJUSTMENT;
           }
 
-          console.log(`[Genius Debug]       Title comparison:`, {
+          console.debug(`[Genius Debug]       Title comparison:`, {
             targetNorm: targetTitleNorm,
             resultNorm: resultTitleNorm,
             exactMatch: resultTitleNorm === targetTitleNorm,
@@ -3066,12 +3066,12 @@ async function fetchGeniusLyrics(info) {
             score -= PENALTY_NO_TITLE_OVERLAP;
           }
 
-          console.log(`[Genius Debug]       Final score: ${score} (artistScore: ${artistScore} + titleScore: ${titleScore})`);
-          console.log(`[Genius Debug]       Threshold: ${matchThreshold}, Current best: ${bestScore}`);
+          console.debug(`[Genius Debug]       Final score: ${score} (artistScore: ${artistScore} + titleScore: ${titleScore})`);
+          console.debug(`[Genius Debug]       Threshold: ${matchThreshold}, Current best: ${bestScore}`);
 
           // Check if this result meets the threshold and is better than current best
           if (score > bestScore && score >= matchThreshold && (!targetHasVersion || resultHasVersion)) {
-            console.log(`[Genius Debug]       ✓ NEW BEST MATCH!`);
+            console.debug(`[Genius Debug]       ✓ NEW BEST MATCH!`);
             bestScore = score;
             song = result;
           } else if (
@@ -3079,28 +3079,28 @@ async function fetchGeniusLyrics(info) {
             score >= matchThreshold - 1 && // Slightly lower threshold for fallback
             (!resultHasVersion || !targetHasVersion)
           ) {
-            console.log(`[Genius Debug]       ✓ New fallback candidate`);
+            console.debug(`[Genius Debug]       ✓ New fallback candidate`);
             fallbackScore = score;
             fallbackSong = result;
           } else {
-            console.log(`[Genius Debug]       ⊗ Not selected (score too low or version mismatch)`);
+            console.debug(`[Genius Debug]       ⊗ Not selected (score too low or version mismatch)`);
           }
         }
 
         if (!song && fallbackSong) {
-          console.log(`[Genius Debug]   Using fallback song: "${fallbackSong.title}"`);
+          console.debug(`[Genius Debug]   Using fallback song: "${fallbackSong.title}"`);
           song = fallbackSong;
           bestScore = fallbackScore;
         }
 
         // Final check: ensure we have a song that meets the minimum threshold
         if (bestScore < matchThreshold || !song?.url) {
-          console.log(`[Genius Debug]   No suitable match found on page ${page} (bestScore: ${bestScore}, threshold: ${matchThreshold})`);
+          console.debug(`[Genius Debug]   No suitable match found on page ${page} (bestScore: ${bestScore}, threshold: ${matchThreshold})`);
           continue;
         }
 
-        console.log(`[Genius Debug] ✓✓✓ SELECTED: "${song.title}" by ${song.primary_artist?.name}`);
-        console.log(`[Genius Debug] Fetching lyrics from: ${song.url}`);
+        console.debug(`[Genius Debug] ✓✓✓ SELECTED: "${song.title}" by ${song.primary_artist?.name}`);
+        console.debug(`[Genius Debug] Fetching lyrics from: ${song.url}`);
 
 
         const htmlRes = await new Promise((resolve, reject) => {
@@ -3221,8 +3221,8 @@ async function fetchGeniusLyrics(info) {
     }
   }
 
-  console.log("[Genius Debug] ✗✗✗ No lyrics found after trying all title variants and pages");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.debug("[Genius Debug] ✗✗✗ No lyrics found after trying all title variants and pages");
+  console.debug("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   return { error: "No lyrics available from Genius" };
 }
 
@@ -3272,14 +3272,14 @@ const ProviderGenius = {
           // Check for instrumental tracks first
           const instrumentalMatch = instrumentalTrackPatterns.find(rx => rx.test(lines[0].text));
           if (instrumentalMatch) {
-            console.log(`[Genius Debug] ⚠ Track is instrumental - matched pattern: ${instrumentalMatch} in text: "${lines[0].text}"`);
+            console.debug(`[Genius Debug] ⚠ Track is instrumental - matched pattern: ${instrumentalMatch} in text: "${lines[0].text}"`);
             return { instrumental: true };
           }
 
           // Check for not transcribed patterns
           const notTranscribedMatch = notTranscribedPatterns.find(rx => rx.test(lines[0].text));
           if (notTranscribedMatch) {
-            console.log(`[Genius Debug] ⚠ No lyrics available for this track - matched pattern: ${notTranscribedMatch} in text: "${lines[0].text}"`);
+            console.debug(`[Genius Debug] ⚠ No lyrics available for this track - matched pattern: ${notTranscribedMatch} in text: "${lines[0].text}"`);
             // For not transcribed patterns, return error to prevent caching the transcribed pattern as lyrics
             return { error: "No lyrics available from Genius" };
           }
@@ -3485,9 +3485,9 @@ const ProviderGenius = {
 
 const ProviderSpotify = {
   async findLyrics(info) {
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("[Spotify Debug] Starting lyrics search");
-    console.log("[Spotify Debug] Input info:", {
+    console.debug("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.debug("[Spotify Debug] Starting lyrics search");
+    console.debug("[Spotify Debug] Input info:", {
       trackId: info.trackId,
       title: info.title,
       artist: info.artist
@@ -3496,19 +3496,19 @@ const ProviderSpotify = {
     const token = localStorage.getItem("lyricsPlusSpotifyToken");
 
     if (!token) {
-      console.log("[Spotify Debug] ✗ No token found in localStorage");
+      console.debug("[Spotify Debug] ✗ No token found in localStorage");
       return { error: "Double click on the Spotify provider to set up your token.\n" + "A fresh token is required every hour/upon page reload for security." };
     }
-    console.log("[Spotify Debug] ✓ Token found (length:", token.length, "characters)");
+    console.debug("[Spotify Debug] ✓ Token found (length:", token.length, "characters)");
 
     if (!info.trackId) {
-      console.log("[Spotify Debug] ✗ No trackId provided in song info");
+      console.debug("[Spotify Debug] ✗ No trackId provided in song info");
       return { error: "Cannot fetch Spotify lyrics - track ID not available" };
     }
 
     const endpoint = `https://spclient.wg.spotify.com/color-lyrics/v2/track/${info.trackId}?format=json&vocalRemoval=false&market=from_token`;
-    console.log("[Spotify Debug] Request endpoint:", endpoint);
-    console.log("[Spotify Debug] Using Authorization: Bearer ***TOKEN***");
+    console.debug("[Spotify Debug] Request endpoint:", endpoint);
+    console.debug("[Spotify Debug] Using Authorization: Bearer ***TOKEN***");
 
     try {
       const res = await fetch(endpoint, {
@@ -3520,25 +3520,25 @@ const ProviderSpotify = {
         },
       });
 
-      console.log(`[Spotify Debug] Response status: ${res.status} ${res.statusText}`);
+      console.debug(`[Spotify Debug] Response status: ${res.status} ${res.statusText}`);
 
       if (!res.ok) {
         const text = await res.text();
-        console.log("[Spotify Debug] Response body:", text.substring(0, 200));
+        console.debug("[Spotify Debug] Response body:", text.substring(0, 200));
 
         if (res.status === 401) {
-          console.log("[Spotify Debug] ✗ Authentication failed - token expired or invalid");
+          console.debug("[Spotify Debug] ✗ Authentication failed - token expired or invalid");
           return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
         }
         if (res.status === 404) {
-          console.log("[Spotify Debug] ✗ Track not found or no lyrics available");
+          console.debug("[Spotify Debug] ✗ Track not found or no lyrics available");
           return { error: "Track not found or no lyrics available from Spotify" };
         }
         if (res.status === 403) {
-          console.log("[Spotify Debug] ✗ Access forbidden - check token permissions");
+          console.debug("[Spotify Debug] ✗ Access forbidden - check token permissions");
           return { error: "Access denied by Spotify - please refresh your token" };
         }
-        console.log(`[Spotify Debug] ✗ Request failed: ${res.status} ${res.statusText}`);
+        console.debug(`[Spotify Debug] ✗ Request failed: ${res.status} ${res.statusText}`);
         return { error: `Spotify lyrics request failed (HTTP ${res.status})` };
       }
 
@@ -3551,7 +3551,7 @@ const ProviderSpotify = {
         return { error: "Invalid response format from Spotify" };
       }
 
-      console.log("[Spotify Debug] Response data:", {
+      console.debug("[Spotify Debug] Response data:", {
         hasLyrics: !!(data && data.lyrics),
         hasLines: !!(data && data.lyrics && data.lyrics.lines),
         lineCount: data?.lyrics?.lines?.length || 0,
@@ -3561,11 +3561,11 @@ const ProviderSpotify = {
 
       // Adapt to your UI's expected data shape:
       if (!data || !data.lyrics || !data.lyrics.lines || !data.lyrics.lines.length) {
-        console.log("[Spotify Debug] ✗ No lyric lines in API response");
+        console.debug("[Spotify Debug] ✗ No lyric lines in API response");
         return { error: "No lyrics available from Spotify" };
       }
 
-      console.log(`[Spotify Debug] ✓ Lyrics found! Type: ${data.lyrics.syncType}, Lines: ${data.lyrics.lines.length}, Language: ${data.lyrics.language || 'unknown'}`);
+      console.debug(`[Spotify Debug] ✓ Lyrics found! Type: ${data.lyrics.syncType}, Lines: ${data.lyrics.lines.length}, Language: ${data.lyrics.language || 'unknown'}`);
       return data.lyrics;
     } catch (e) {
       console.error("[Spotify Debug] ✗ Fetch error:", e.message || e);
@@ -3896,7 +3896,7 @@ const Providers = {
       alignItems: "center",
       userSelect: "none"
     });
-    console.log("✅ [Lyrics+ UI] Restore default position button created");
+    console.info("✅ [Lyrics+ UI] Restore default position button created");
     btnReset.innerHTML = `
   <svg width="21" height="21" viewBox="0 0 24 24" style="display:block;">
     <g transform="rotate(-90 12 12)">
@@ -3907,7 +3907,7 @@ const Providers = {
 
     // Default Position and Size of the Popup Gui
     btnReset.onclick = () => {
-      console.log("🔄 [Lyrics+ UI] Restore default position button clicked");
+      console.info("🔄 [Lyrics+ UI] Restore default position button clicked");
       const rect = getSpotifyLyricsContainerRect();
       if (rect) {
         Object.assign(popup.style, {
@@ -3921,7 +3921,7 @@ const Providers = {
           zIndex: 100000
         });
         savePopupState(popup);
-        console.log("✅ [Lyrics+ UI] Position restored to Spotify lyrics container position");
+        console.info("✅ [Lyrics+ UI] Position restored to Spotify lyrics container position");
       } else {
         Object.assign(popup.style, {
           position: "fixed",
@@ -3934,7 +3934,7 @@ const Providers = {
           zIndex: 100000
         });
         savePopupState(popup);
-        console.log("✅ [Lyrics+ UI] Position restored to default position (bottom-right corner)");
+        console.info("✅ [Lyrics+ UI] Position restored to default position (bottom-right corner)");
       }
     };
 
@@ -3946,7 +3946,7 @@ const Providers = {
     translationControls.style.width = '100%';
     translationControls.style.gap = '8px';
 
-    console.log("✅ [Lyrics+ UI] Translation controls container created");
+    console.info("✅ [Lyrics+ UI] Translation controls container created");
 
     const controlHeight = '28px';
     const fontSize = '13px';
@@ -3971,10 +3971,10 @@ const Providers = {
     langSelect.style.fontSize = fontSize;
     langSelect.style.fontWeight = '400';
     langSelect.style.boxSizing = 'border-box';
-    console.log("✅ [Lyrics+ UI] Translation language dropdown created, current language:", getSavedTranslationLang());
+    console.info("✅ [Lyrics+ UI] Translation language dropdown created, current language:", getSavedTranslationLang());
     langSelect.onchange = () => {
       saveTranslationLang(langSelect.value);
-      console.log("📝 [Lyrics+ UI] Translation language changed to:", langSelect.value);
+      console.info("📝 [Lyrics+ UI] Translation language changed to:", langSelect.value);
       removeTranslatedLyrics();
       lastTranslatedLang = null;
     };
@@ -3993,7 +3993,7 @@ const Providers = {
     translateBtn.style.fontWeight = '600';
     translateBtn.style.cursor = 'pointer';
     translateBtn.style.boxSizing = 'border-box';
-    console.log("✅ [Lyrics+ UI] Translate button created");
+    console.info("✅ [Lyrics+ UI] Translate button created");
     translateBtn.onclick = translateLyricsInPopup;
 
     const removeBtn = document.createElement('button');
@@ -4009,9 +4009,9 @@ const Providers = {
     removeBtn.style.fontWeight = '600';
     removeBtn.style.cursor = 'pointer';
     removeBtn.style.boxSizing = 'border-box';
-    console.log("✅ [Lyrics+ UI] Remove translation button ('Original') created");
+    console.info("✅ [Lyrics+ UI] Remove translation button ('Original') created");
     removeBtn.onclick = () => {
-      console.log("🌐 [Lyrics+ Translation] Remove translation button clicked - showing original lyrics");
+      console.info("🌐 [Lyrics+ Translation] Remove translation button clicked - showing original lyrics");
       removeTranslatedLyrics();
       lastTranslatedLang = null;
     };
@@ -4072,7 +4072,7 @@ const Providers = {
       display: "none", // Hidden by default, shown when transliteration data is available
     });
 
-    console.log("✅ [Lyrics+ UI] Transliteration button created (hidden by default, shows when transliteration data available)");
+    console.info("✅ [Lyrics+ UI] Transliteration button created (hidden by default, shows when transliteration data available)");
 
     // --- Chinese Conversion Button (Traditional ⇄ Simplified) ---
     // Styled to match other header buttons
@@ -4214,7 +4214,7 @@ const Providers = {
     downloadBtnWrapper.appendChild(downloadBtn);
     downloadBtnWrapper.appendChild(downloadDropdown);
 
-    console.log("✅ [Lyrics+ UI] Download button created and added to DOM");
+    console.info("✅ [Lyrics+ UI] Download button created and added to DOM");
 
     // Logic for showing/hiding the dropdown and downloading
     downloadBtn.onclick = (e) => {
@@ -4251,12 +4251,12 @@ const Providers = {
     // Set up dropdown options
     syncOption.onclick = (e) => {
       downloadDropdown.style.display = "none";
-      console.log("💾 [Lyrics+ UI] Download synced lyrics clicked");
+      console.info("💾 [Lyrics+ UI] Download synced lyrics clicked");
       if (currentSyncedLyrics) downloadSyncedLyrics(currentSyncedLyrics, getCurrentTrackInfo(), Providers.current);
     };
     unsyncOption.onclick = (e) => {
       downloadDropdown.style.display = "none";
-      console.log("💾 [Lyrics+ UI] Download unsynced lyrics clicked");
+      console.info("💾 [Lyrics+ UI] Download unsynced lyrics clicked");
       if (currentUnsyncedLyrics) downloadUnsyncedLyrics(currentUnsyncedLyrics, getCurrentTrackInfo(), Providers.current);
     };
 
@@ -4277,10 +4277,10 @@ const Providers = {
       fontSizeSelect.appendChild(opt);
     });
     fontSizeSelect.value = localStorage.getItem("lyricsPlusFontSize") || "22";
-    console.log("✅ [Lyrics+ UI] Font size selector created with options: 16-56px, current value:", fontSizeSelect.value + "px");
+    console.info("✅ [Lyrics+ UI] Font size selector created with options: 16-56px, current value:", fontSizeSelect.value + "px");
     fontSizeSelect.onchange = () => {
       localStorage.setItem("lyricsPlusFontSize", fontSizeSelect.value);
-      console.log("📝 [Lyrics+ UI] Font size changed to:", fontSizeSelect.value + "px");
+      console.info("📝 [Lyrics+ UI] Font size changed to:", fontSizeSelect.value + "px");
       const lyricsContent = document.getElementById("lyrics-plus-content");
       if (lyricsContent) {
         lyricsContent.style.fontSize = fontSizeSelect.value + "px";
@@ -4360,7 +4360,7 @@ const Providers = {
           // Abort any ongoing autofetch by invalidating the current search ID
           // This prevents the autofetch loop from continuing when user manually selects a provider
           currentSearchId = null;
-          console.log(`🛑 [Lyrics+] User manually selected ${name} provider - aborting any ongoing autofetch`);
+          console.info(`🛑 [Lyrics+] User manually selected ${name} provider - aborting any ongoing autofetch`);
 
           Providers.setCurrent(name);
           updateTabs(tabs);
@@ -4436,7 +4436,7 @@ const Providers = {
     async function translateLyricsInPopup() {
       if (!lyricsContainer || isTranslating) return;
       const targetLang = getSavedTranslationLang();
-      console.log("🌐 [Lyrics+ Translation] Translate button clicked, target language:", targetLang);
+      console.info("🌐 [Lyrics+ Translation] Translate button clicked, target language:", targetLang);
       if (translationPresent && lastTranslatedLang === targetLang) return;
       isTranslating = true;
       translateBtn.disabled = true;
@@ -4564,12 +4564,12 @@ const Providers = {
         removeTransliterationLyrics();
         localStorage.setItem(STORAGE_KEYS.TRANSLITERATION_ENABLED, 'false');
         transliterationToggleBtn.title = "Show transliteration";
-        console.log("🔤 [Lyrics+ UI] Transliteration button clicked: HIDDEN");
+        console.info("🔤 [Lyrics+ UI] Transliteration button clicked: HIDDEN");
       } else {
         showTransliterationInPopup();
         localStorage.setItem(STORAGE_KEYS.TRANSLITERATION_ENABLED, 'true');
         transliterationToggleBtn.title = "Hide transliteration";
-        console.log("🔤 [Lyrics+ UI] Transliteration button clicked: SHOWN");
+        console.info("🔤 [Lyrics+ UI] Transliteration button clicked: SHOWN");
       }
     };
 
@@ -4736,7 +4736,7 @@ const Providers = {
     tabsToggleCheckbox.className = "lyrics-plus-checkbox";
     tabsToggleCheckbox.style.cursor = "pointer";
 
-    console.log("✅ [Lyrics+ Settings] Tabs toggle created (Show lyrics source tabs)");
+    console.info("✅ [Lyrics+ Settings] Tabs toggle created (Show lyrics source tabs)");
 
     tabsToggleWrapper.appendChild(tabsToggleLabel);
     tabsToggleWrapper.appendChild(tabsToggleCheckbox);
@@ -4764,7 +4764,7 @@ const Providers = {
     seekbarToggleCheckbox.className = "lyrics-plus-checkbox";
     seekbarToggleCheckbox.style.cursor = "pointer";
 
-    console.log("✅ [Lyrics+ Settings] Seekbar toggle created (Show seekbar)");
+    console.info("✅ [Lyrics+ Settings] Seekbar toggle created (Show seekbar)");
 
     seekbarToggleWrapper.appendChild(seekbarToggleLabel);
     seekbarToggleWrapper.appendChild(seekbarToggleCheckbox);
@@ -4792,7 +4792,7 @@ const Providers = {
     controlsToggleCheckbox.className = "lyrics-plus-checkbox";
     controlsToggleCheckbox.style.cursor = "pointer";
 
-    console.log("✅ [Lyrics+ Settings] Playback controls toggle created (Show playback controls)");
+    console.info("✅ [Lyrics+ Settings] Playback controls toggle created (Show playback controls)");
 
     controlsToggleWrapper.appendChild(controlsToggleLabel);
     controlsToggleWrapper.appendChild(controlsToggleCheckbox);
@@ -4820,7 +4820,7 @@ const Providers = {
     themeToggleCheckbox.className = "lyrics-plus-checkbox";
     themeToggleCheckbox.style.cursor = "pointer";
 
-    console.log("✅ [Lyrics+ Settings] Theme toggle created (Enable AMOLED theme)");
+    console.info("✅ [Lyrics+ Settings] Theme toggle created (Enable AMOLED theme)");
 
     themeToggleWrapper.appendChild(themeToggleLabel);
     themeToggleWrapper.appendChild(themeToggleCheckbox);
@@ -4978,7 +4978,7 @@ const Providers = {
       seekbarVisible = seekbarToggleCheckbox.checked;
       localStorage.setItem('lyricsPlusSeekbarVisible', JSON.stringify(seekbarVisible));
       applyProgressWrapperVisibility(seekbarVisible);
-      console.log("📝 [Lyrics+ Settings] Seekbar visibility toggled:", seekbarVisible ? "SHOWN" : "HIDDEN");
+      console.info("📝 [Lyrics+ Settings] Seekbar visibility toggled:", seekbarVisible ? "SHOWN" : "HIDDEN");
     };
 
     // Playback controls checkbox change handler (in settings)
@@ -4986,7 +4986,7 @@ const Providers = {
       controlsVisible = controlsToggleCheckbox.checked;
       localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
       applyControlsVisibility(controlsVisible);
-      console.log("📝 [Lyrics+ Settings] Playback controls visibility toggled:", controlsVisible ? "SHOWN" : "HIDDEN");
+      console.info("📝 [Lyrics+ Settings] Playback controls visibility toggled:", controlsVisible ? "SHOWN" : "HIDDEN");
     };
 
     // Theme toggle checkbox change handler (in settings)
@@ -4994,7 +4994,7 @@ const Providers = {
       amoledThemeEnabled = themeToggleCheckbox.checked;
       localStorage.setItem('lyricsPlusTheme', JSON.stringify(amoledThemeEnabled));
       applyAmoledTheme(amoledThemeEnabled);
-      console.log("📝 [Lyrics+ Settings] AMOLED theme toggled:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
+      console.info("📝 [Lyrics+ Settings] AMOLED theme toggled:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
     };
 
     // Apply initial visibility states
@@ -5010,18 +5010,18 @@ const Providers = {
     seekbarToggleCheckbox.checked = seekbarVisible;
     controlsToggleCheckbox.checked = controlsVisible;
     themeToggleCheckbox.checked = amoledThemeEnabled;
-    console.log("📝 [Lyrics+ Settings] Seekbar initial state:", seekbarVisible ? "SHOWN" : "HIDDEN");
-    console.log("📝 [Lyrics+ Settings] Playback controls initial state:", controlsVisible ? "SHOWN" : "HIDDEN");
-    console.log("📝 [Lyrics+ Settings] AMOLED theme initial state:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
+    console.info("📝 [Lyrics+ Settings] Seekbar initial state:", seekbarVisible ? "SHOWN" : "HIDDEN");
+    console.info("📝 [Lyrics+ Settings] Playback controls initial state:", controlsVisible ? "SHOWN" : "HIDDEN");
+    console.info("📝 [Lyrics+ Settings] AMOLED theme initial state:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
 
     // Initialize and handle tabs toggle checkbox in settings
     tabsToggleCheckbox.checked = tabsVisible;
-    console.log("📝 [Lyrics+ Settings] Tabs initial state:", tabsVisible ? "SHOWN" : "HIDDEN");
+    console.info("📝 [Lyrics+ Settings] Tabs initial state:", tabsVisible ? "SHOWN" : "HIDDEN");
     tabsToggleCheckbox.onchange = () => {
       tabsVisible = tabsToggleCheckbox.checked;
       localStorage.setItem('lyricsPlusTabsVisible', JSON.stringify(tabsVisible));
       applyTabsVisibility(tabsVisible);
-      console.log("📝 [Lyrics+ Settings] Tabs visibility toggled:", tabsVisible ? "SHOWN" : "HIDDEN");
+      console.info("📝 [Lyrics+ Settings] Tabs visibility toggled:", tabsVisible ? "SHOWN" : "HIDDEN");
     };
 
     // Create Spotify-style control buttons
@@ -5167,7 +5167,7 @@ const Providers = {
       const btn = findButton ? findButton() : null;
 
       if (btn) {
-        console.log("🎵 [Lyrics+ Playback] Command sent to Spotify:", command.toUpperCase());
+        console.info("🎵 [Lyrics+ Playback] Command sent to Spotify:", command.toUpperCase());
         btn.click();
 
         // If on mobile, try touch events as a fallback
@@ -5189,7 +5189,7 @@ const Providers = {
         setTimeout(() => updateShuffleButton(btnShuffle, shuffleIconWrapper), 100);
       }
     );
-    console.log("✅ [Lyrics+ Playback] Shuffle button created");
+    console.info("✅ [Lyrics+ Playback] Shuffle button created");
 
     const { button: btnPrevious, iconWrapper: prevIconWrapper } = createSpotifyControlButton(
       "previous",
@@ -5198,7 +5198,7 @@ const Providers = {
     );
     // Use DOM-cloned icon from Spotify's visible button
     updatePreviousButtonIcon(prevIconWrapper);
-    console.log("✅ [Lyrics+ Playback] Previous button created");
+    console.info("✅ [Lyrics+ Playback] Previous button created");
 
     const { button: btnPlayPause, iconWrapper: playIconWrapper } = createPlayPauseButton(
       () => {
@@ -5206,7 +5206,7 @@ const Providers = {
         setTimeout(() => updatePlayPauseButton(btnPlayPause, playIconWrapper), 100);
       }
     );
-    console.log("✅ [Lyrics+ Playback] Play/Pause button created");
+    console.info("✅ [Lyrics+ Playback] Play/Pause button created");
 
     const { button: btnNext, iconWrapper: nextIconWrapper } = createSpotifyControlButton(
       "next",
@@ -5215,7 +5215,7 @@ const Providers = {
     );
     // Use DOM-cloned icon from Spotify's visible button
     updateNextButtonIcon(nextIconWrapper);
-    console.log("✅ [Lyrics+ Playback] Next button created");
+    console.info("✅ [Lyrics+ Playback] Next button created");
 
     const { button: btnRepeat, iconWrapper: repeatIconWrapper } = createSpotifyControlButton(
       "repeat",
@@ -5225,7 +5225,7 @@ const Providers = {
         setTimeout(() => updateRepeatButton(btnRepeat, repeatIconWrapper), 100);
       }
     );
-    console.log("✅ [Lyrics+ Playback] Repeat button created");
+    console.info("✅ [Lyrics+ Playback] Repeat button created");
 
     // Initialize button states using DOM-cloned icons from Spotify's visible buttons
     updateShuffleButton(btnShuffle, shuffleIconWrapper);
@@ -5391,7 +5391,7 @@ const Providers = {
     progressWrapper.appendChild(progressInput);
     progressWrapper.appendChild(timeTotal);
 
-    console.log("✅ [Lyrics+ Seekbar] Progress bar (seekbar) created with time display");
+    console.info("✅ [Lyrics+ Seekbar] Progress bar (seekbar) created with time display");
 
     // Apply initial visibility state for progressWrapper (must be after progressWrapper is created)
     applyProgressWrapperVisibility(seekbarVisible);
@@ -6199,7 +6199,7 @@ const Providers = {
     const commitSeek = (e) => {
       const val = Number(progressInput.value) || 0;
       userSeeking = false;
-      console.log("⏩ [Lyrics+ Seekbar] User seeked to position:", formatMs(val));
+      console.info("⏩ [Lyrics+ Seekbar] User seeked to position:", formatMs(val));
       // Just seek - no interpolation state to manage
       seekTo(val);
     };
@@ -6304,7 +6304,7 @@ const Providers = {
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
       transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
-      console.log("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
+      console.info("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
     }
 
     // Show transliteration if enabled and data is available
@@ -6565,7 +6565,7 @@ const Providers = {
       lyricsContainer.textContent = result.error;
       if (downloadBtn) {
         downloadBtn.style.display = "none";
-        console.log("📝 [Lyrics+ UI] Download button hidden (lyrics error)");
+        console.info("📝 [Lyrics+ UI] Download button hidden (lyrics error)");
       }
       if (downloadDropdown) downloadDropdown.style.display = "none";
       if (chineseConvBtn) chineseConvBtn.style.display = "none";
@@ -6680,7 +6680,7 @@ const Providers = {
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
       transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
-      console.log("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
+      console.info("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
     }
 
     // Show transliteration if enabled and data is available
@@ -6695,10 +6695,10 @@ const Providers = {
     if (downloadBtn) {
       if (lyricsContainer.querySelectorAll('p').length > 0) {
         downloadBtn.style.display = "inline-flex";
-        console.log("📝 [Lyrics+ UI] Download button shown (lyrics loaded successfully)");
+        console.info("📝 [Lyrics+ UI] Download button shown (lyrics loaded successfully)");
       } else {
         downloadBtn.style.display = "none";
-        console.log("📝 [Lyrics+ UI] Download button hidden (no lyrics to display)");
+        console.info("📝 [Lyrics+ UI] Download button hidden (no lyrics to display)");
         if (downloadDropdown) downloadDropdown.style.display = "none";
       }
     }
@@ -6933,8 +6933,8 @@ const Providers = {
       );
 
       if (isRestart) {
-        console.log(`🔁 [Lyrics+] Song restarted! Repeat One detected for "${info.title}"`);
-        console.log(`   ⏮️ Resetting lyrics scroll to the beginning...`);
+        console.info(`🔁 [Lyrics+] Song restarted! Repeat One detected for "${info.title}"`);
+        console.info(`   ⏮️ Resetting lyrics scroll to the beginning...`);
         DEBUG.info('Track', `Song restarted (repeat one): ${info.title} - Position: ${lastPlaybackPosition}ms → ${currentPosition}ms`);
 
         // For repeat one, just reset scroll to beginning (lyrics already cached)
@@ -6942,7 +6942,7 @@ const Providers = {
           const firstLine = currentLyricsContainer.querySelector('p');
           if (firstLine) {
             firstLine.scrollIntoView({ behavior: "smooth", block: "center" });
-            console.log(`   ✅ Lyrics scrolled back to start (cached lyrics, no loading needed!)`);
+            console.info(`   ✅ Lyrics scrolled back to start (cached lyrics, no loading needed!)`);
             DEBUG.debug('Track', 'Scroll reset to beginning for repeat one');
           }
         }
@@ -7057,9 +7057,9 @@ const Providers = {
 
     if (savedTheme) {
       document.body.classList.add('lyrics-plus-amoled-theme');
-      console.log("🎨 [Lyrics+ Init] AMOLED theme applied on page load");
+      console.info("🎨 [Lyrics+ Init] AMOLED theme applied on page load");
     } else {
-      console.log("🎨 [Lyrics+ Init] Default theme active (AMOLED disabled)");
+      console.info("🎨 [Lyrics+ Init] Default theme active (AMOLED disabled)");
     }
 
     addButton();
