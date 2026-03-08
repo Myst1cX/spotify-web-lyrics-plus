@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.15
+// @version      17.16
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -15,6 +15,12 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+
+// RESOLVED (17.16): DEBUG WRAPPER - STRIP COLORS FROM INFO/LOG/DEBUG, ROUTE ALL TO CONSOLE.INFO
+// • Only ERROR and WARN retain %c CSS styling with colors
+// • INFO, LOG, DEBUG: drop %c styling (no color), all route to console.info
+// • Format changes from "[Lyrics+ LEVEL] [context]" to "emoji [Lyrics+ context]"
+// • CONTEXT_EMOJI lookup maps each context string to a fitting emoji prefix
 
 // RESOLVED (17.15): SEMANTIC LOG LEVEL DISTRIBUTION - ACTUAL CODE CHANGE
 // Establishes a clear semantic boundary between the three lower log levels:
@@ -505,7 +511,25 @@
     }
   };
 
-  // ------------------------
+  // Context-to-emoji mapping for DEBUG wrapper labels
+  const CONTEXT_EMOJI = {
+    Track:           '🎵', // music note
+    Cache:           '💾', // floppy disk
+    Provider:        '🔌', // electric plug
+    Autodetect:      '🔍', // magnifying glass
+    UI:              '💻', // laptop / UI
+    ResourceManager: '🔧', // wrench / resource management
+    OpenCC:          '🔤', // input symbol for latin letters
+    Button:          '🔘', // radio button
+    DOM:             '📄', // page facing up
+    Performance:     '⚡', // lightning / speed
+    Cleanup:         '🧹', // broom
+    Seekbar:         '⏩', // fast-forward
+    PopupResize:     '🔄', // arrows / resize
+    Translation:     '🌐', // globe with meridians
+  };
+
+    // ------------------------
   // Debug Logging Infrastructure
   // ------------------------
   const DEBUG = {
@@ -519,13 +543,13 @@
       if (DEBUG.enabled) console.warn(`%c[Lyrics+ WARN] [${context}]`, 'color: #FF9800; font-weight: bold;', ...args);
     },
     info: (context, ...args) => {
-      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #64B5F6; font-weight: bold;', ...args);
+      if (DEBUG.enabled) console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
     },
     log: (context, ...args) => {
-      if (DEBUG.enabled) console.log(`%c[Lyrics+ LOG] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
+      if (DEBUG.enabled) console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
     },
     debug: (context, ...args) => {
-      if (DEBUG.enabled) console.debug(`%c[Lyrics+ DEBUG] [${context}]`, 'color: #9E9E9E; font-weight: bold;', ...args);
+      if (DEBUG.enabled) console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
     },
 
     // Specialized logging helpers
@@ -547,7 +571,7 @@
         DEBUG.warn('Provider', `✗ ${providerName} ${operation} failed:`, error);
       },
       timing: (providerName, operation, durationMs) => {
-        DEBUG.debug('Provider', `⏱ ${providerName} ${operation} took ${durationMs}ms`);
+        DEBUG.debug('Provider', `⚡ ${providerName} ${operation} took ${durationMs}ms`);
       }
     },
 
