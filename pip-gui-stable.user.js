@@ -15,6 +15,9 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (17.15):
+// •  Fixed KPoe on manual provider selection not checking for unsynced lyrics when synced fails
+
 // RESOLVED (17.14): 
 // •  Fixed [KPoe Debug] separator length, added lyrics fetching phase logs (synced/unsynced) and improved console logs readability
 
@@ -7251,4 +7254,5 @@ const Providers = {
 
   init();
 })();
+
 
