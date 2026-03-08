@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.20
+// @version      17.21
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,15 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.21): TOKEN INPUT TYPE CHANGED FROM password TO text
+// • Both token input fields now use type="text" with autocomplete="off" instead of
+//   type="password". Since the token is never pre-populated in the field (the decrypted
+//   value is never written to the DOM), masking the input served no security purpose.
+//   type="password" was causing browsers to offer saved-credential suggestions, autofill
+//   with email addresses, and other password-manager interference that made pasting tokens
+//   awkward. type="text" + autocomplete="off" gives a plain field with no browser
+//   interference while retaining all the actual security properties.
 
 // RESOLVED (17.20): SESSION-ONLY ENCRYPTION KEY — REMOVE localStorage FALLBACK
 // • The AES-256-GCM encryption key is now stored in sessionStorage ONLY and is never
@@ -40,7 +49,8 @@
 //   raw token to anyone who opened the modal. Now the input is always left empty on open;
 //   the decrypted token is never surfaced to the UI.
 // • Both token input fields now set autocomplete="new-password", preventing browser
-//   credential managers from auto-filling or offering to save the field as a password.
+//   credential managers from auto-filling or offering to save the field as a password
+//   (superseded by 17.21 which switches to type="text" + autocomplete="off").
 // • A green "✓ Token saved" badge is shown below the modal title when a token is already
 //   stored, so users have clear visual confirmation without seeing the token value. The
 //   placeholder text also changes to "Token saved — enter a new token to replace".
@@ -2596,8 +2606,7 @@ const PLAY_WORDS = [
         color: #fff;
         text-decoration: underline;
       }
-      #lyrics-plus-musixmatch-modal input[type="text"],
-      #lyrics-plus-musixmatch-modal input[type="password"] {
+      #lyrics-plus-musixmatch-modal input[type="text"] {
         background: #222;
         color: #fff;
         border: 1px solid #333;
@@ -2647,10 +2656,9 @@ const PLAY_WORDS = [
     </div>
   `;
 
-  // Do NOT pre-populate the input with the decrypted token — doing so would expose
-  // the plaintext value to the browser's built-in "reveal password" feature and to any
-  // script that reads input.value. We only check whether a token is already saved so we
-  // can show a status badge and adjust placeholder text accordingly.
+  // Do NOT pre-populate the input with the decrypted token — the token is never written
+  // to the DOM. We only check whether a token is already saved so we can show a status
+  // badge and adjust placeholder text accordingly.
   const hasMusixmatchToken = !!(await TokenStorage.getToken(STORAGE_KEYS.MUSIXMATCH_TOKEN));
 
   if (hasMusixmatchToken) {
@@ -2661,8 +2669,8 @@ const PLAY_WORDS = [
   }
 
   const input = document.createElement("input");
-  input.type = "password";
-  input.autocomplete = "new-password";
+  input.type = "text";
+  input.autocomplete = "off";
   input.placeholder = hasMusixmatchToken
     ? "Token saved — enter a new token to replace"
     : "Enter your Musixmatch user token here";
@@ -3645,8 +3653,7 @@ const ProviderGenius = {
         color: #fff;
         text-decoration: underline;
       }
-      #lyrics-plus-spotify-modal input[type="text"],
-      #lyrics-plus-spotify-modal input[type="password"] {
+      #lyrics-plus-spotify-modal input[type="text"] {
         background: #222;
         color: #fff;
         border: 1px solid #333;
@@ -3698,10 +3705,9 @@ const ProviderGenius = {
     </div>
   `;
 
-  // Do NOT pre-populate the input with the decrypted token — doing so would expose
-  // the plaintext value to the browser's built-in "reveal password" feature and to any
-  // script that reads input.value. We only check whether a token is already saved so we
-  // can show a status badge and adjust placeholder text accordingly.
+  // Do NOT pre-populate the input with the decrypted token — the token is never written
+  // to the DOM. We only check whether a token is already saved so we can show a status
+  // badge and adjust placeholder text accordingly.
   const hasSpotifyToken = !!(await TokenStorage.getToken(STORAGE_KEYS.SPOTIFY_TOKEN));
 
   if (hasSpotifyToken) {
@@ -3712,8 +3718,8 @@ const ProviderGenius = {
   }
 
   const input = document.createElement("input");
-  input.type = "password";
-  input.autocomplete = "new-password";
+  input.type = "text";
+  input.autocomplete = "off";
   input.placeholder = hasSpotifyToken
     ? "Token saved — enter a new token to replace"
     : "Enter your Spotify user token here";
