@@ -18,11 +18,11 @@
 // RESOLVED (17.18): REFACTOR BUTTON INJECTION LOGIC
 // • Replaced the retry loop (up to 10 × 1 s attempts) in addButton() with a single-attempt
 //   function: it either injects the button or silently skips if the controls aren't ready yet.
-// • init() now uses setTimeout(addButton, TIMING.BUTTON_INJECT_INITIAL_DELAY_MS) (5 s) so the
+// • init() now uses setTimeout(addButton, TIMING.BUTTON_INJECT_INITIAL_DELAY_MS) (6 s) so the
 //   very first injection happens after Spotify's UI has had time to fully render, removing the
 //   need for any retry loop entirely.
 // • Removed LIMITS.BUTTON_ADD_MAX_RETRIES and TIMING.BUTTON_ADD_RETRY_MS; replaced with
-//   TIMING.BUTTON_INJECT_INITIAL_DELAY_MS (5000 ms) and TIMING.BUTTON_INJECT_DEBOUNCE_MS (500 ms).
+//   TIMING.BUTTON_INJECT_INITIAL_DELAY_MS (6000 ms) and TIMING.BUTTON_INJECT_DEBOUNCE_MS (500 ms).
 // • Replaced the two redundant MutationObservers (buttonInjectionObserver on document.body and
 //   pageObserver on #main — both watching subtree, both calling addButton() raw) with a single
 //   debounced observer on document.body: DOM mutations are collapsed into one addButton() call
@@ -334,7 +334,7 @@
     HIGHLIGHT_INTERVAL_MS: 50,        // How often to update synced lyrics highlighting
     POLLING_INTERVAL_MS: 400,         // How often to check for track changes
     OPENCC_RETRY_DELAY_MS: 100,       // Initial delay for OpenCC initialization retries
-    BUTTON_INJECT_INITIAL_DELAY_MS: 5000, // Delay before the first button injection attempt
+    BUTTON_INJECT_INITIAL_DELAY_MS: 6000, // Delay before the first button injection attempt
     BUTTON_INJECT_DEBOUNCE_MS: 500,       // Debounce delay for re-injection on DOM change
     DRAG_DEBOUNCE_MS: 1500,               // Debounce time after dragging before auto-resize
     PROGRESS_WATCH_DEBOUNCE_MS: 300,      // Debounce for progress bar watcher
@@ -7394,3 +7394,4 @@ const Providers = {
 
   init();
 })();
+
