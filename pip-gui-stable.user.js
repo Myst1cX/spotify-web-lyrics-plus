@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.14
+// @version      17.15
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,21 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.15):
+// • Added console.info logging for open/save/cancel actions in both the Spotify and Musixmatch token modals
+// • Spotify token modal: "Bearer " prefix is now automatically stripped from the pasted value on Save,
+//   so users can paste the raw Authorization header value directly without needing to manually delete
+//   the word "Bearer". Step 9 of the instructions updated accordingly.
+// • addButton() simplified to a single-attempt function — no more retry loop. Logs and returns if
+//   playback controls are not yet in the DOM.
+// • init() now defers the first button injection via setTimeout(addButton, TIMING.BUTTON_INJECT_INITIAL_DELAY_MS)
+//   (5.5 s), giving Spotify's UI time to render before the first attempt.
+// • Replaced the two redundant raw MutationObservers (buttonInjectionObserver on document.body and
+//   pageObserver on #main) with a single trailing-edge debounced MutationObserver on document.body.
+//   Mutations within a 500 ms window are collapsed into one addButton() call, preventing flooding.
+// • Constants: removed LIMITS.BUTTON_ADD_MAX_RETRIES and TIMING.BUTTON_ADD_RETRY_MS;
+//   added TIMING.BUTTON_INJECT_INITIAL_DELAY_MS (5500 ms) and TIMING.BUTTON_INJECT_DEBOUNCE_MS (500 ms).
 
 // RESOLVED (17.14): 
 // •  Fixed [KPoe Debug] separator length, added lyrics fetching phase logs (synced/unsynced) and improved console logs readability
@@ -296,17 +311,17 @@
   // Constants & Configuration
   // ------------------------
   const TIMING = {
-    HIGHLIGHT_INTERVAL_MS: 50,        // How often to update synced lyrics highlighting
-    POLLING_INTERVAL_MS: 400,         // How often to check for track changes
-    OPENCC_RETRY_DELAY_MS: 100,       // Initial delay for OpenCC initialization retries
-    BUTTON_ADD_RETRY_MS: 1000,        // Delay between button injection attempts
-    DRAG_DEBOUNCE_MS: 1500,           // Debounce time after dragging before auto-resize
-    PROGRESS_WATCH_DEBOUNCE_MS: 300,  // Debounce for progress bar watcher
+    HIGHLIGHT_INTERVAL_MS: 50,                 // How often to update synced lyrics highlighting
+    POLLING_INTERVAL_MS: 400,                  // How often to check for track changes
+    OPENCC_RETRY_DELAY_MS: 100,                // Initial delay for OpenCC initialization retries
+    BUTTON_INJECT_INITIAL_DELAY_MS: 5500,      // Initial delay before first button injection attempt
+    BUTTON_INJECT_DEBOUNCE_MS: 500,            // Debounce window for button injection observer
+    DRAG_DEBOUNCE_MS: 1500,                    // Debounce time after dragging before auto-resize
+    PROGRESS_WATCH_DEBOUNCE_MS: 300,           // Debounce for progress bar watcher
   };
 
   const LIMITS = {
     OPENCC_MAX_RETRIES: 3,            // Max retries for OpenCC initialization
-    BUTTON_ADD_MAX_RETRIES: 10,       // Max retries for button injection
   };
 
   const STORAGE_KEYS = {
@@ -2313,6 +2328,7 @@ const PLAY_WORDS = [
 
   // Musixmatch token prompt and storage
   function showMusixmatchTokenModal() {
+  console.info("🔑 [Lyrics+ Settings] Musixmatch token modal opened");
   // Remove any existing modal
   const old = document.getElementById("lyrics-plus-musixmatch-modal");
   if (old) old.remove();
@@ -2460,7 +2476,14 @@ const PLAY_WORDS = [
 btnSave.textContent = "Save";
 btnSave.className = "lyrics-btn";
 btnSave.onclick = () => {
-  localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
+  const token = input.value.trim();
+  if (token) {
+    localStorage.setItem("lyricsPlusMusixmatchToken", token);
+    console.info("🔑 [Lyrics+ Settings] Musixmatch token saved");
+  } else {
+    localStorage.removeItem("lyricsPlusMusixmatchToken");
+    console.info("🔑 [Lyrics+ Settings] Musixmatch token cleared");
+  }
   modal.remove();
    // Optionally: reload lyrics if popup open and provider is Musixmatch
   const popup = document.getElementById("lyrics-plus-popup");
@@ -2474,7 +2497,10 @@ btnSave.onclick = () => {
   const btnCancel = document.createElement("button");
   btnCancel.textContent = "Cancel";
   btnCancel.className = "lyrics-btn";
-  btnCancel.onclick = () => modal.remove();
+  btnCancel.onclick = () => {
+    console.info("🔑 [Lyrics+ Settings] Musixmatch token modal cancelled");
+    modal.remove();
+  };
 
   footer.appendChild(btnSave);
   footer.appendChild(btnCancel);
@@ -3323,6 +3349,7 @@ const ProviderGenius = {
   // --- Spotify ---
 
   function showSpotifyTokenModal() {
+  console.info("🔑 [Lyrics+ Settings] Spotify token modal opened");
   // Remove any existing modal
   const old = document.getElementById("lyrics-plus-spotify-modal");
   if (old) old.remove();
@@ -3453,7 +3480,7 @@ const ProviderGenius = {
       6. Under Response Headers, locate the authorization request header.<br>
       7. If there isn't one, try a different spclient domain.<br>
       8. Right-click on the content of the authorization request header and select Copy value.<br>
-      9. Paste the token below. Delete the word "Bearer" at the beginning and press Save.<br>
+      9. Paste the token below and press Save.<br>
       <span style="color:#e57373;"><b>WARNING:</b> Keep your token private! Do not share it with others.</span>
     </div>
   `;
@@ -3472,7 +3499,18 @@ const ProviderGenius = {
   btnSave.textContent = "Save";
   btnSave.className = "lyrics-btn";
   btnSave.onclick = () => {
-    localStorage.setItem("lyricsPlusSpotifyToken", input.value.trim());
+    let token = input.value.trim();
+    // Automatically strip the "Bearer " prefix so users can paste the raw Authorization header value
+    if (token.toLowerCase().startsWith("bearer ")) {
+      token = token.slice(7).trim();
+    }
+    if (token) {
+      localStorage.setItem("lyricsPlusSpotifyToken", token);
+      console.info("🔑 [Lyrics+ Settings] Spotify token saved");
+    } else {
+      localStorage.removeItem("lyricsPlusSpotifyToken");
+      console.info("🔑 [Lyrics+ Settings] Spotify token cleared");
+    }
     modal.remove();
     // Optionally: reload lyrics if popup open and provider is Spotify
   const popup = document.getElementById("lyrics-plus-popup");
@@ -3486,7 +3524,10 @@ const ProviderGenius = {
   const btnCancel = document.createElement("button");
   btnCancel.textContent = "Cancel";
   btnCancel.className = "lyrics-btn";
-  btnCancel.onclick = () => modal.remove();
+  btnCancel.onclick = () => {
+    console.info("🔑 [Lyrics+ Settings] Spotify token modal cancelled");
+    modal.remove();
+  };
 
   footer.appendChild(btnSave);
   footer.appendChild(btnCancel);
@@ -7008,62 +7049,55 @@ const Providers = {
     }
   }
 
-  function addButton(maxRetries = LIMITS.BUTTON_ADD_MAX_RETRIES) {
-    let attempts = 0;
-    const tryAdd = () => {
-      // const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
-      // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
-      const micBtn = document.querySelector('[data-testid="lyrics-button"]');
-      const targetBtn = micBtn; // previously: nowPlayingViewBtn || micBtn;
-      // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
-      const controls = targetBtn?.parentElement;
-      if (!controls) {
-        if (attempts < maxRetries) {
-          attempts++;
-          DEBUG.debug('Button', `Injection attempt ${attempts}/${maxRetries} - controls not found, retrying...`);
-          setTimeout(tryAdd, TIMING.BUTTON_ADD_RETRY_MS);
-        } else {
-          DEBUG.error('Button', `Failed to inject Lyrics+ button after ${maxRetries} attempts`);
-        }
+  function addButton() {
+    // const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
+    // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
+    const micBtn = document.querySelector('[data-testid="lyrics-button"]');
+    const targetBtn = micBtn; // previously: nowPlayingViewBtn || micBtn;
+    // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
+    const controls = targetBtn?.parentElement;
+    if (!controls) {
+      DEBUG.debug('Button', 'Injection skipped — playback controls not in DOM yet');
+      return;
+    }
+    if (document.getElementById("lyrics-plus-btn")) {
+      return;
+    }
+    const btn = document.createElement("button");
+    btn.id = "lyrics-plus-btn";
+    btn.title = "Show Lyrics+";
+    btn.textContent = "Lyrics+";
+    DEBUG.info('Button', 'Lyrics+ button injected successfully');
+    Object.assign(btn.style, {
+      backgroundColor: "#1aa34a",
+      border: "none",
+      borderRadius: "20px",
+      color: "#e0e0e0",
+      fontWeight: "600",
+      fontSize: "14px",
+      padding: "6px 12px",
+      marginLeft: "8px",
+      userSelect: "none",
+      cursor: "pointer",
+    });
+    btn.onclick = () => {
+      let popup = document.getElementById("lyrics-plus-popup");
+      if (popup) {
+        removePopup();
+        stopPollingForTrackChange();
         return;
       }
-      if (document.getElementById("lyrics-plus-btn")) {
-        return;
-      }
-      const btn = document.createElement("button");
-      btn.id = "lyrics-plus-btn";
-      btn.title = "Show Lyrics+";
-      btn.textContent = "Lyrics+";
-      DEBUG.info('Button', 'Lyrics+ button injected successfully');
-      Object.assign(btn.style, {
-        backgroundColor: "#1aa34a",
-        border: "none",
-        borderRadius: "20px",
-        color: "#e0e0e0",
-        fontWeight: "600",
-        fontSize: "14px",
-        padding: "6px 12px",
-        marginLeft: "8px",
-        userSelect: "none",
-        cursor: "pointer",
-      });
-      btn.onclick = () => {
-        let popup = document.getElementById("lyrics-plus-popup");
-        if (popup) {
-          removePopup();
-          stopPollingForTrackChange();
-          return;
-        }
-        createPopup();
-      };
-      controls.insertBefore(btn, targetBtn);
+      createPopup();
     };
-    tryAdd();
+    controls.insertBefore(btn, targetBtn);
   }
 
-  // Global observer to inject Lyrics+ button when DOM changes
+  // Single trailing-edge debounced MutationObserver — collapses rapid DOM mutations into
+  // one addButton() call, preventing flooding on every SPA navigation or mutation event.
+  let _buttonInjectDebounceTimer = null;
   const buttonInjectionObserver = new MutationObserver(() => {
-    addButton();
+    clearTimeout(_buttonInjectDebounceTimer);
+    _buttonInjectDebounceTimer = setTimeout(addButton, TIMING.BUTTON_INJECT_DEBOUNCE_MS);
   });
   ResourceManager.registerObserver(buttonInjectionObserver, 'Global button injection (document.body)');
   buttonInjectionObserver.observe(document.body, { childList: true, subtree: true });
@@ -7081,16 +7115,8 @@ const Providers = {
       console.info("🎨 [Lyrics+ Init] Default theme active (AMOLED disabled)");
     }
 
-    addButton();
-  }
-
-  const appRoot = document.querySelector('#main');
-  if (appRoot) {
-    const pageObserver = new MutationObserver(() => {
-      addButton();
-    });
-    ResourceManager.registerObserver(pageObserver, 'Page observer (appRoot)');
-    pageObserver.observe(appRoot, { childList: true, subtree: true });
+    // Defer first injection to give Spotify's SPA time to render playback controls
+    setTimeout(addButton, TIMING.BUTTON_INJECT_INITIAL_DELAY_MS);
   }
 
   // ------------------------
