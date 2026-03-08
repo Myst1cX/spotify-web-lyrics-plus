@@ -552,13 +552,17 @@
 
     // Specialized logging helpers
     provider: {
-      start: (providerName, operation, trackInfo) => {
+      start: (providerName, operation, trackInfo, fromCache = false) => {
         const lyricsType = operation === 'getSynced' ? 'synced' : 'unsynced';
-        DEBUG.debug('Provider', `Checking ${providerName} for ${lyricsType} lyrics:`, {
-          track: trackInfo.title,
-          artist: trackInfo.artist,
-          album: trackInfo.album
-        });
+        if (fromCache) {
+          DEBUG.debug('Provider', `Checking ${providerName} for ${lyricsType} lyrics: (from cache)`);
+        } else {
+          DEBUG.debug('Provider', `Checking ${providerName} for ${lyricsType} lyrics:`, {
+            track: trackInfo.title,
+            artist: trackInfo.artist,
+            album: trackInfo.album
+          });
+        }
       },
       success: (providerName, operation, lyricsType, lineCount) => {
         DEBUG.log('Provider', `✓ ${providerName} ${operation} succeeded:`, {
@@ -6858,9 +6862,7 @@ const Providers = {
         // otherwise call the provider API. This avoids a redundant double-fetch
         // when the provider already returned unsynced lyrics in the synced phase.
         const isUsingCache = cachedProviderResults[name] !== undefined;
-        if (!isUsingCache) {
-          DEBUG.provider.start(name, type, info);
-        }
+        DEBUG.provider.start(name, type, info, isUsingCache);
         const result = isUsingCache
           ? cachedProviderResults[name]
           : await provider.findLyrics(info, phase);
