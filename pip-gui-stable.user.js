@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.18
+// @version      17.13
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,28 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.13): DEBUG LOGGING SYSTEM
+// • Removed GM_registerMenuCommand('Debug: Enable') and GM_registerMenuCommand('Debug: Disable')
+//   and removed DEBUG.enabled flag; all five wrappers (error, warn, info, log, debug) now fire
+//   unconditionally — no toggle needed
+// • Only ERROR and WARN retain %c CSS styling with colors:
+//     ERROR → console.error  color #F44336  Red            font-weight bold
+//     WARN  → console.warn   color #FF9800  Amber/Orange   font-weight bold
+// • INFO, LOG, DEBUG: drop %c styling entirely — all three route to console.info with the
+//   format: emoji [Lyrics+ context] ...args
+//   CONTEXT_EMOJI lookup maps each context string (Track, Cache, Provider, UI, …) to an emoji
+// • Semantic intent per level (what each level is meant to log):
+//     LOG   → song fetching and caching pipeline events only
+//                (Cache hit/store/clear/load, Autodetect start/abort/success, Provider success,
+//                 Track changed — events that directly represent the data-fetch lifecycle)
+//     INFO  → application lifecycle events: UI, Playback, Settings
+//                (Popup created/removed, Button injected, Song restarted, OpenCC initialized,
+//                 ResourceManager cleanup — high-level state transitions, not raw data flow)
+//     DEBUG → verbose low-level developer details
+//                (DOM queries, timing, state changes, seekbar, cleanup intervals, observer ops)
+// • Menu commands Get Cache Stats, Get Track Info, Get Repeat State: announcement console.log
+//   color changed from #1db954 (Spotify green) to #64B5F6 (light blue)
 
 // RESOLVED (17.12): FIX ReferenceError: savePopupState is not defined
 // • savePopupState() was defined as a local function inside createPopup(), but
@@ -7209,3 +7231,4 @@ const Providers = {
 
   init();
 })();
+
