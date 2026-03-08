@@ -547,7 +547,8 @@
     // Specialized logging helpers
     provider: {
       start: (providerName, operation, trackInfo) => {
-        DEBUG.debug('Provider', `Starting ${operation} for ${providerName}:`, {
+        const lyricsType = operation === 'getSynced' ? 'synced' : 'unsynced';
+        DEBUG.debug('Provider', `Checking ${providerName} for ${lyricsType} lyrics:`, {
           track: trackInfo.title,
           artist: trackInfo.artist,
           album: trackInfo.album
@@ -560,10 +561,12 @@
         });
       },
       failure: (providerName, operation, error) => {
-        DEBUG.warn('Provider', `✗ ${providerName} ${operation} failed:`, error);
+        const lyricsType = operation === 'getSynced' ? 'synced' : 'unsynced';
+        DEBUG.warn('Provider', `✗ ${providerName} (${lyricsType}) failed:`, error);
       },
       timing: (providerName, operation, durationMs) => {
-        DEBUG.debug('Provider', `⚡ ${providerName} ${operation} took ${durationMs}ms`);
+        const lyricsType = operation === 'getSynced' ? 'synced' : 'unsynced';
+        DEBUG.debug('Provider', `⚡ ${providerName} (${lyricsType}) took ${durationMs}ms`);
       }
     },
 
@@ -6821,7 +6824,18 @@ const Providers = {
       { name: "Genius", type: "getUnsynced" }
     ];
 
+    let currentPhase = null;
     for (const { name, type } of detectionOrder) {
+      const phase = type === 'getSynced' ? 'synced' : 'unsynced';
+      if (phase !== currentPhase) {
+        currentPhase = phase;
+        if (phase === 'synced') {
+          console.log(`🎵 [Lyrics+] Phase 1: Checking providers for synced lyrics...`);
+        } else {
+          console.log(`📄 [Lyrics+] Phase 2: No synced lyrics found - checking providers for unsynced lyrics...`);
+        }
+      }
+
       try {
         const providerStartTime = performance.now();
         DEBUG.provider.start(name, type, info);
