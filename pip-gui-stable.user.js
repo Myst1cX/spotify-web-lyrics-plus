@@ -362,16 +362,22 @@
   // before being written to localStorage, ensuring raw token values are never persisted
   // as plain text.
   //
-  // Security model / known limitation:
-  //   The encryption key is also stored in localStorage (under lyricsPlusEncKey).
-  //   This means a determined attacker who already has full access to the browser's
-  //   localStorage for open.spotify.com could retrieve both the key and ciphertext.
-  //   The primary protection this module provides is against:
-  //     • casual inspection (DevTools Application → Local Storage),
-  //     • simple credential-harvesting scripts that only read well-known key names,
-  //     • browser-sync or backup features that copy localStorage to the cloud.
-  //   A session-only key (not persisted) was considered but would require the user to
-  //   re-enter their tokens on every page reload, which is impractical for this use-case.
+  // Security model:
+  //   • Raw token values are NEVER placed in DOM inputs or any JavaScript variable that
+  //     is accessible outside this module — they are only decrypted on demand and used
+  //     directly (never surfaced to the UI).
+  //   • The encryption key is persisted in localStorage (under lyricsPlusEncKey) so that
+  //     tokens survive page reloads.  Once loaded it is also cached in sessionStorage so
+  //     subsequent same-session reads bypass localStorage entirely.
+  //   • A determined attacker with full localStorage access for open.spotify.com could
+  //     retrieve both the key and the ciphertext.  The primary protections provided are:
+  //       – casual inspection (DevTools Application → Local Storage),
+  //       – simple credential-harvesting scripts that only read well-known key names,
+  //       – browser-sync / backup features that copy localStorage to the cloud
+  //         (sessionStorage is NOT synced or exported by those tools).
+  //   • A session-only key with no localStorage persistence would prevent all of the
+  //     above but would require the user to re-enter their tokens on every page reload,
+  //     which is impractical for this use-case.
   // ------------------------
   const TokenStorage = {
     _key: null,
@@ -382,15 +388,31 @@
     },
 
     // Returns (and caches) the AES-GCM CryptoKey, generating one if none exists yet.
+    // Load order: in-memory → sessionStorage (not synced/exported) → localStorage (persistent).
+    // After loading from localStorage the key is promoted to sessionStorage so that
+    // the localStorage entry is no longer needed for hot reads within the same tab.
     async _getKey() {
       if (this._key) return this._key;
       try {
-        const stored = localStorage.getItem(STORAGE_KEYS.ENC_KEY);
-        if (stored) {
-          const rawBytes = this._b64ToBytes(stored);
+        // Prefer sessionStorage: it is not synced by Firefox/Chrome Sync and is not
+        // included in most browser backup / export flows.
+        const fromSession = sessionStorage.getItem(STORAGE_KEYS.ENC_KEY);
+        if (fromSession) {
+          const rawBytes = this._b64ToBytes(fromSession);
           this._key = await crypto.subtle.importKey(
             'raw', rawBytes, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']
           );
+          return this._key;
+        }
+        // Fall back to localStorage for persistence across sessions.
+        const fromLocal = localStorage.getItem(STORAGE_KEYS.ENC_KEY);
+        if (fromLocal) {
+          const rawBytes = this._b64ToBytes(fromLocal);
+          this._key = await crypto.subtle.importKey(
+            'raw', rawBytes, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']
+          );
+          // Promote to sessionStorage to reduce future localStorage reads.
+          sessionStorage.setItem(STORAGE_KEYS.ENC_KEY, fromLocal);
           return this._key;
         }
       } catch (e) {
@@ -401,10 +423,9 @@
         { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
       );
       const exported = await crypto.subtle.exportKey('raw', this._key);
-      localStorage.setItem(
-        STORAGE_KEYS.ENC_KEY,
-        btoa(String.fromCharCode(...new Uint8Array(exported)))
-      );
+      const b64Key = btoa(String.fromCharCode(...new Uint8Array(exported)));
+      localStorage.setItem(STORAGE_KEYS.ENC_KEY, b64Key);
+      sessionStorage.setItem(STORAGE_KEYS.ENC_KEY, b64Key);
       return this._key;
     },
 
@@ -2564,6 +2585,19 @@ const PLAY_WORDS = [
         box-sizing: border-box;
         display: block;
       }
+      #lyrics-plus-musixmatch-modal .token-saved-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #1a3a24;
+        color: #1db954;
+        border: 1px solid #1db954;
+        border-radius: 6px;
+        padding: 5px 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -2589,10 +2623,26 @@ const PLAY_WORDS = [
     </div>
   `;
 
+  // Do NOT pre-populate the input with the decrypted token — doing so would expose
+  // the plaintext value to the browser's built-in "reveal password" feature and to any
+  // script that reads input.value. We only check whether a token is already saved so we
+  // can show a status badge and adjust placeholder text accordingly.
+  const hasMusixmatchToken = !!(await TokenStorage.getToken(STORAGE_KEYS.MUSIXMATCH_TOKEN));
+
+  if (hasMusixmatchToken) {
+    const badge = document.createElement("div");
+    badge.className = "token-saved-badge";
+    badge.textContent = "✓ Token saved";
+    box.appendChild(badge);
+  }
+
   const input = document.createElement("input");
   input.type = "password";
-  input.placeholder = "Enter your Musixmatch user token here";
-  input.value = (await TokenStorage.getToken(STORAGE_KEYS.MUSIXMATCH_TOKEN)) || "";
+  input.autocomplete = "new-password";
+  input.placeholder = hasMusixmatchToken
+    ? "Token saved — enter a new token to replace"
+    : "Enter your Musixmatch user token here";
+  // input.value is intentionally left empty; the decrypted token is never written to the DOM.
   box.appendChild(input);
 
   // Footer with Save & Cancel
@@ -2600,29 +2650,29 @@ const PLAY_WORDS = [
   footer.className = "modal-footer";
 
   const btnSave = document.createElement("button");
-btnSave.textContent = "Save";
-btnSave.className = "lyrics-btn";
-btnSave.onclick = async () => {
-  const trimmed = input.value.trim();
-  if (!trimmed) {
-    console.info("🗑️ [Lyrics+ Token] Musixmatch token field is empty — token cleared");
-    await TokenStorage.setToken(STORAGE_KEYS.MUSIXMATCH_TOKEN, "");
+  btnSave.textContent = "Save";
+  btnSave.className = "lyrics-btn";
+  btnSave.onclick = async () => {
+    const trimmed = input.value.trim();
+    if (!trimmed) {
+      console.info("🗑️ [Lyrics+ Token] Musixmatch token field is empty — token cleared");
+      await TokenStorage.setToken(STORAGE_KEYS.MUSIXMATCH_TOKEN, "");
+      modal.remove();
+      return;
+    }
+    console.info("📋 [Lyrics+ Token] Musixmatch token pasted by user");
+    console.info("✂️ [Lyrics+ Token] Musixmatch token trimmed (whitespace removed)");
+    await TokenStorage.setToken(STORAGE_KEYS.MUSIXMATCH_TOKEN, trimmed);
+    console.info("🔒 [Lyrics+ Token] Musixmatch token encrypted and saved to storage");
     modal.remove();
-    return;
-  }
-  console.info("📋 [Lyrics+ Token] Musixmatch token pasted by user");
-  console.info("✂️ [Lyrics+ Token] Musixmatch token trimmed (whitespace removed)");
-  await TokenStorage.setToken(STORAGE_KEYS.MUSIXMATCH_TOKEN, trimmed);
-  console.info("🔒 [Lyrics+ Token] Musixmatch token encrypted and saved to storage");
-  modal.remove();
-   // Optionally: reload lyrics if popup open and provider is Musixmatch
-  const popup = document.getElementById("lyrics-plus-popup");
-  if (popup && Providers.current === "Musixmatch") {
-    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-    if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-    updateLyricsContent(popup, getCurrentTrackInfo());
-  }
-};
+    // Optionally: reload lyrics if popup open and provider is Musixmatch
+    const popup = document.getElementById("lyrics-plus-popup");
+    if (popup && Providers.current === "Musixmatch") {
+      const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+      if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+      updateLyricsContent(popup, getCurrentTrackInfo());
+    }
+  };
 
   const btnCancel = document.createElement("button");
   btnCancel.textContent = "Cancel";
@@ -3584,6 +3634,19 @@ const ProviderGenius = {
         box-sizing: border-box;
         display: block;
       }
+      #lyrics-plus-spotify-modal .token-saved-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #1a3a24;
+        color: #1db954;
+        border: 1px solid #1db954;
+        border-radius: 6px;
+        padding: 5px 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -3611,10 +3674,26 @@ const ProviderGenius = {
     </div>
   `;
 
+  // Do NOT pre-populate the input with the decrypted token — doing so would expose
+  // the plaintext value to the browser's built-in "reveal password" feature and to any
+  // script that reads input.value. We only check whether a token is already saved so we
+  // can show a status badge and adjust placeholder text accordingly.
+  const hasSpotifyToken = !!(await TokenStorage.getToken(STORAGE_KEYS.SPOTIFY_TOKEN));
+
+  if (hasSpotifyToken) {
+    const badge = document.createElement("div");
+    badge.className = "token-saved-badge";
+    badge.textContent = "✓ Token saved";
+    box.appendChild(badge);
+  }
+
   const input = document.createElement("input");
   input.type = "password";
-  input.placeholder = "Enter your Spotify user token here";
-  input.value = (await TokenStorage.getToken(STORAGE_KEYS.SPOTIFY_TOKEN)) || "";
+  input.autocomplete = "new-password";
+  input.placeholder = hasSpotifyToken
+    ? "Token saved — enter a new token to replace"
+    : "Enter your Spotify user token here";
+  // input.value is intentionally left empty; the decrypted token is never written to the DOM.
   box.appendChild(input);
 
   // Footer with Save & Cancel
@@ -3646,13 +3725,13 @@ const ProviderGenius = {
     console.info("🔒 [Lyrics+ Token] Spotify token encrypted and saved to storage");
     modal.remove();
     // Optionally: reload lyrics if popup open and provider is Spotify
-  const popup = document.getElementById("lyrics-plus-popup");
-  if (popup && Providers.current === "Spotify") {
-    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-    if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-    updateLyricsContent(popup, getCurrentTrackInfo());
-  }
-};
+    const popup = document.getElementById("lyrics-plus-popup");
+    if (popup && Providers.current === "Spotify") {
+      const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+      if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+      updateLyricsContent(popup, getCurrentTrackInfo());
+    }
+  };
 
   const btnCancel = document.createElement("button");
   btnCancel.textContent = "Cancel";
