@@ -2586,8 +2586,14 @@ const PLAY_WORDS = [
 btnSave.textContent = "Save";
 btnSave.className = "lyrics-btn";
 btnSave.onclick = async () => {
-  console.info("📋 [Lyrics+ Token] Musixmatch token pasted by user");
   const trimmed = input.value.trim();
+  if (!trimmed) {
+    console.info("🗑️ [Lyrics+ Token] Musixmatch token field is empty — token cleared");
+    await TokenStorage.setToken(STORAGE_KEYS.MUSIXMATCH_TOKEN, "");
+    modal.remove();
+    return;
+  }
+  console.info("📋 [Lyrics+ Token] Musixmatch token pasted by user");
   console.info("✂️ [Lyrics+ Token] Musixmatch token trimmed (whitespace removed)");
   await TokenStorage.setToken(STORAGE_KEYS.MUSIXMATCH_TOKEN, trimmed);
   console.info("🔒 [Lyrics+ Token] Musixmatch token encrypted and saved to storage");
@@ -3603,6 +3609,12 @@ const ProviderGenius = {
   btnSave.className = "lyrics-btn";
   btnSave.onclick = async () => {
     const pasted = input.value.trim();
+    if (!pasted) {
+      console.info("🗑️ [Lyrics+ Token] Spotify token field is empty — token cleared");
+      await TokenStorage.setToken(STORAGE_KEYS.SPOTIFY_TOKEN, "");
+      modal.remove();
+      return;
+    }
     console.info("📋 [Lyrics+ Token] Spotify token pasted by user");
     // Strip the "Bearer " prefix if present (case-insensitive) so users can paste
     // the raw Authorization header value directly. If the token was already pasted
