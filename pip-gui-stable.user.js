@@ -6852,13 +6852,16 @@ const Providers = {
 
       try {
         const providerStartTime = performance.now();
-        DEBUG.provider.start(name, type, info);
-
         const provider = Providers.map[name];
+
         // Reuse a result already fetched during the synced phase if available,
         // otherwise call the provider API. This avoids a redundant double-fetch
         // when the provider already returned unsynced lyrics in the synced phase.
-        const result = cachedProviderResults[name] !== undefined
+        const isUsingCache = cachedProviderResults[name] !== undefined;
+        if (!isUsingCache) {
+          DEBUG.provider.start(name, type, info);
+        }
+        const result = isUsingCache
           ? cachedProviderResults[name]
           : await provider.findLyrics(info, phase);
 
@@ -6930,9 +6933,12 @@ const Providers = {
               if (unsyncedCheck && unsyncedCheck.length > 0) {
                 cachedProviderResults[name] = result;
                 DEBUG.debug('Provider', `${name} returned unsynced lyrics only - cached for phase 2`);
+              } else {
+                DEBUG.debug('Provider', `${name} ${type} returned empty lyrics`);
               }
+            } else {
+              DEBUG.debug('Provider', `${name} ${type} returned empty lyrics`);
             }
-            DEBUG.debug('Provider', `${name} ${type} returned empty lyrics`);
           }
         } else {
           DEBUG.provider.failure(name, type, result?.error || 'No result');
