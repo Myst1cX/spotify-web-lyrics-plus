@@ -6571,8 +6571,8 @@ const Providers = {
 
     const provider = Providers.getCurrent();
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`🎵 [Lyrics+] Phase 1: Checking for synced lyrics...`);
-    const result = await provider.findLyrics(info, 'synced');
+    console.log(`🎵 [Lyrics+] Fetching lyrics from ${Providers.current}...`);
+    const result = await provider.findLyrics(info, 'auto');
 
     // Check if track is marked as instrumental - convert to error
     if (result?.instrumental) {
@@ -6598,6 +6598,12 @@ const Providers = {
 
     let synced = provider.getSynced(result);
     let unsynced = provider.getUnsynced(result);
+
+    if (synced && synced.length > 0) {
+      console.log(`🎵 [Lyrics+] Synced lyrics available (${synced.length} lines)`);
+    } else if (unsynced && unsynced.length > 0) {
+      console.log(`📄 [Lyrics+] Unsynced lyrics available (${unsynced.length} lines)`);
+    }
 
     // Check if lyrics contain Chinese characters and detect script type
     const lyrics = synced || unsynced || [];
@@ -6829,6 +6835,11 @@ const Providers = {
       { name: "Genius", type: "getUnsynced" }
     ];
 
+    // Cache findLyrics results per provider for this search session.
+    // All providers fetch the same data regardless of lyricsType (it is logging-only),
+    // so Phase 2 can reuse Phase 1's result instead of repeating the HTTP request.
+    const providerResultCache = new Map();
+
     let currentPhase = null;
     for (const { name, type } of detectionOrder) {
       const phase = type === 'getSynced' ? 'synced' : 'unsynced';
@@ -6847,7 +6858,13 @@ const Providers = {
         DEBUG.provider.start(name, type, info);
 
         const provider = Providers.map[name];
-        const result = await provider.findLyrics(info, phase);
+        let result;
+        if (providerResultCache.has(name)) {
+          result = providerResultCache.get(name);
+        } else {
+          result = await provider.findLyrics(info, phase);
+          providerResultCache.set(name, result);
+        }
 
         // ═══ CHECKPOINT 1: After async provider call ═══
         // While waiting for the provider API response, a new song may have started.
