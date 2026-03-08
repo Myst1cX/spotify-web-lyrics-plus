@@ -6832,6 +6832,11 @@ const Providers = {
       { name: "Genius", type: "getUnsynced" }
     ];
 
+    // Cache of provider results fetched during the synced phase.
+    // If a provider returns valid data with only unsynced lyrics (no synced), the result is stored
+    // here so the unsynced phase can reuse it and skip a redundant API call.
+    const cachedProviderResults = {};
+
     let currentPhase = null;
     for (const { name, type } of detectionOrder) {
       const phase = type === 'getSynced' ? 'synced' : 'unsynced';
@@ -6850,7 +6855,12 @@ const Providers = {
         DEBUG.provider.start(name, type, info);
 
         const provider = Providers.map[name];
-        const result = await provider.findLyrics(info, phase);
+        // Reuse a result already fetched during the synced phase if available,
+        // otherwise call the provider API. This avoids a redundant double-fetch
+        // when the provider already returned unsynced lyrics in the synced phase.
+        const result = cachedProviderResults[name] !== undefined
+          ? cachedProviderResults[name]
+          : await provider.findLyrics(info, phase);
 
         // ═══ CHECKPOINT 1: After async provider call ═══
         // While waiting for the provider API response, a new song may have started.
@@ -6912,6 +6922,16 @@ const Providers = {
             DEBUG.log('Autodetect', `Completed successfully in ${totalDuration.toFixed(2)}ms using ${name}`);
             return;
           } else {
+            // During the synced phase, if the provider returned valid data but no synced
+            // lyrics, check whether it has unsynced lyrics. If so, cache the result so
+            // the unsynced phase can reuse it without issuing a second API request.
+            if (type === 'getSynced') {
+              const unsyncedCheck = provider.getUnsynced(result);
+              if (unsyncedCheck && unsyncedCheck.length > 0) {
+                cachedProviderResults[name] = result;
+                DEBUG.debug('Provider', `${name} returned unsynced lyrics only - cached for phase 2`);
+              }
+            }
             DEBUG.debug('Provider', `${name} ${type} returned empty lyrics`);
           }
         } else {
