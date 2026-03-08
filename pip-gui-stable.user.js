@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.14
+// @version      17.19
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -16,7 +16,29 @@
 // ==/UserScript==
 
 
-// RESOLVED (17.14): SEMANTIC LOG LEVEL DISTRIBUTION
+// RESOLVED (17.19): MOVE MENU COMMAND OUTPUTS TO CONSOLE.DEBUG
+// • Menu commands Get Cache Stats, Get Track Info, Get Repeat State: all console.log calls
+//   (header lines, cache size line) and console.table moved to console.debug so output
+//   is filtered at the DEBUG level and hidden by default in DevTools
+
+// RESOLVED (17.18): CHANGE MENU COMMAND CONSOLE.LOG COLOR FROM SPOTIFY GREEN TO LIGHT BLUE
+// • Menu commands Get Cache Stats, Get Track Info, Get Repeat State: announcement console.log
+//   color changed from #1db954 (Spotify green) to #64B5F6 (light blue) for visual consistency
+//   with INFO-level output which uses the same light blue color
+
+// RESOLVED (17.17): REMOVE DEBUG: ENABLE/DISABLE MENU COMMANDS - LOGGING IS NOW ALWAYS ACTIVE
+// • Removed GM_registerMenuCommand('Debug: Enable') and GM_registerMenuCommand('Debug: Disable')
+// • Removed DEBUG.enabled flag and if (DEBUG.enabled) guards from all wrapper methods
+// • All five wrappers (error, warn, info, log, debug) now fire unconditionally
+// • No toggle needed: all output goes to console.info/error/warn which are always visible
+
+// RESOLVED (17.16): DEBUG WRAPPER - STRIP COLORS FROM INFO/LOG/DEBUG, ROUTE ALL TO CONSOLE.INFO
+// • Only ERROR and WARN retain %c CSS styling with colors
+// • INFO, LOG, DEBUG: drop %c styling (no color), all route to console.info
+// • Format changes from "[Lyrics+ LEVEL] [context]" to "emoji [Lyrics+ context]"
+// • CONTEXT_EMOJI lookup maps each context string to a fitting emoji prefix
+
+// RESOLVED (17.15): SEMANTIC LOG LEVEL DISTRIBUTION - ACTUAL CODE CHANGE
 // Establishes a clear semantic boundary between the three lower log levels:
 //   LOG   → console.log  (#1db954 green)  → song fetching and caching pipeline events only
 //              (Cache hit/store/clear/load, Autodetect start/abort/success, Provider success,
@@ -128,7 +150,7 @@
 // • subsequently removed the getAudioElement command
 
 // RESOLVED (16.8): MOVED DEBUG COMMANDS TO MENU COMMANDS
-// • Debug commands now available only via userscript menu (enable, disable, getTrackInfo, getRepeatState, getAudioElement, getCacheStats, clearCache)
+// • Debug commands now available only via userscript menu (getTrackInfo, getRepeatState, getAudioElement, getCacheStats, clearCache)
 // • Removed console-based LyricsPlusDebug API to reduce global scope pollution
 // • Fixed grammar: "Now 1 song cached" instead of "Now 1 songs cached"
 
@@ -505,27 +527,43 @@
     }
   };
 
-  // ------------------------
+  // Context-to-emoji mapping for DEBUG wrapper labels
+  const CONTEXT_EMOJI = {
+    Track:           '🎵', // music note
+    Cache:           '💾', // floppy disk
+    Provider:        '🔌', // electric plug
+    Autodetect:      '🔍', // magnifying glass
+    UI:              '💻', // laptop / UI
+    ResourceManager: '🔧', // wrench / resource management
+    OpenCC:          '🔤', // input symbol for latin letters
+    Button:          '🔘', // radio button
+    DOM:             '📄', // page facing up
+    Performance:     '⚡', // lightning / speed
+    Cleanup:         '🧹', // broom
+    Seekbar:         '⏩', // fast-forward
+    PopupResize:     '🔄', // arrows / resize
+    Translation:     '🌐', // globe with meridians
+  };
+
+    // ------------------------
   // Debug Logging Infrastructure
   // ------------------------
   const DEBUG = {
-    enabled: false, // Set to false to disable all debug logging
-
     // Log levels with prefixes
     error: (context, ...args) => {
-      if (DEBUG.enabled) console.error(`%c[Lyrics+ ERROR] [${context}]`, 'color: #F44336; font-weight: bold;', ...args);
+      console.error(`%c[Lyrics+ ERROR] [${context}]`, 'color: #F44336; font-weight: bold;', ...args);
     },
     warn: (context, ...args) => {
-      if (DEBUG.enabled) console.warn(`%c[Lyrics+ WARN] [${context}]`, 'color: #FF9800; font-weight: bold;', ...args);
+      console.warn(`%c[Lyrics+ WARN] [${context}]`, 'color: #FF9800; font-weight: bold;', ...args);
     },
     info: (context, ...args) => {
-      if (DEBUG.enabled) console.info(`%c[Lyrics+ INFO] [${context}]`, 'color: #64B5F6; font-weight: bold;', ...args);
+      console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
     },
     log: (context, ...args) => {
-      if (DEBUG.enabled) console.log(`%c[Lyrics+ LOG] [${context}]`, 'color: #1db954; font-weight: bold;', ...args);
+      console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
     },
     debug: (context, ...args) => {
-      if (DEBUG.enabled) console.debug(`%c[Lyrics+ DEBUG] [${context}]`, 'color: #9E9E9E; font-weight: bold;', ...args);
+      console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
     },
 
     // Specialized logging helpers
@@ -547,7 +585,7 @@
         DEBUG.warn('Provider', `✗ ${providerName} ${operation} failed:`, error);
       },
       timing: (providerName, operation, durationMs) => {
-        DEBUG.debug('Provider', `⏱ ${providerName} ${operation} took ${durationMs}ms`);
+        DEBUG.debug('Provider', `⚡ ${providerName} ${operation} took ${durationMs}ms`);
       }
     },
 
@@ -3896,7 +3934,7 @@ const Providers = {
       alignItems: "center",
       userSelect: "none"
     });
-    console.log("✅ [Lyrics+ UI] Restore default position button created");
+    console.info("✅ [Lyrics+ UI] Restore default position button created");
     btnReset.innerHTML = `
   <svg width="21" height="21" viewBox="0 0 24 24" style="display:block;">
     <g transform="rotate(-90 12 12)">
@@ -3907,7 +3945,7 @@ const Providers = {
 
     // Default Position and Size of the Popup Gui
     btnReset.onclick = () => {
-      console.log("🔄 [Lyrics+ UI] Restore default position button clicked");
+      console.info("🔄 [Lyrics+ UI] Restore default position button clicked");
       const rect = getSpotifyLyricsContainerRect();
       if (rect) {
         Object.assign(popup.style, {
@@ -3921,7 +3959,7 @@ const Providers = {
           zIndex: 100000
         });
         savePopupState(popup);
-        console.log("✅ [Lyrics+ UI] Position restored to Spotify lyrics container position");
+        console.info("✅ [Lyrics+ UI] Position restored to Spotify lyrics container position");
       } else {
         Object.assign(popup.style, {
           position: "fixed",
@@ -3934,7 +3972,7 @@ const Providers = {
           zIndex: 100000
         });
         savePopupState(popup);
-        console.log("✅ [Lyrics+ UI] Position restored to default position (bottom-right corner)");
+        console.info("✅ [Lyrics+ UI] Position restored to default position (bottom-right corner)");
       }
     };
 
@@ -3946,7 +3984,7 @@ const Providers = {
     translationControls.style.width = '100%';
     translationControls.style.gap = '8px';
 
-    console.log("✅ [Lyrics+ UI] Translation controls container created");
+    console.info("✅ [Lyrics+ UI] Translation controls container created");
 
     const controlHeight = '28px';
     const fontSize = '13px';
@@ -3971,10 +4009,10 @@ const Providers = {
     langSelect.style.fontSize = fontSize;
     langSelect.style.fontWeight = '400';
     langSelect.style.boxSizing = 'border-box';
-    console.log("✅ [Lyrics+ UI] Translation language dropdown created, current language:", getSavedTranslationLang());
+    console.info("✅ [Lyrics+ UI] Translation language dropdown created, current language:", getSavedTranslationLang());
     langSelect.onchange = () => {
       saveTranslationLang(langSelect.value);
-      console.log("📝 [Lyrics+ UI] Translation language changed to:", langSelect.value);
+      console.info("📝 [Lyrics+ UI] Translation language changed to:", langSelect.value);
       removeTranslatedLyrics();
       lastTranslatedLang = null;
     };
@@ -3993,7 +4031,7 @@ const Providers = {
     translateBtn.style.fontWeight = '600';
     translateBtn.style.cursor = 'pointer';
     translateBtn.style.boxSizing = 'border-box';
-    console.log("✅ [Lyrics+ UI] Translate button created");
+    console.info("✅ [Lyrics+ UI] Translate button created");
     translateBtn.onclick = translateLyricsInPopup;
 
     const removeBtn = document.createElement('button');
@@ -4009,9 +4047,9 @@ const Providers = {
     removeBtn.style.fontWeight = '600';
     removeBtn.style.cursor = 'pointer';
     removeBtn.style.boxSizing = 'border-box';
-    console.log("✅ [Lyrics+ UI] Remove translation button ('Original') created");
+    console.info("✅ [Lyrics+ UI] Remove translation button ('Original') created");
     removeBtn.onclick = () => {
-      console.log("🌐 [Lyrics+ Translation] Remove translation button clicked - showing original lyrics");
+      console.info("🌐 [Lyrics+ Translation] Remove translation button clicked - showing original lyrics");
       removeTranslatedLyrics();
       lastTranslatedLang = null;
     };
@@ -4072,7 +4110,7 @@ const Providers = {
       display: "none", // Hidden by default, shown when transliteration data is available
     });
 
-    console.log("✅ [Lyrics+ UI] Transliteration button created (hidden by default, shows when transliteration data available)");
+    console.info("✅ [Lyrics+ UI] Transliteration button created (hidden by default, shows when transliteration data available)");
 
     // --- Chinese Conversion Button (Traditional ⇄ Simplified) ---
     // Styled to match other header buttons
@@ -4214,7 +4252,7 @@ const Providers = {
     downloadBtnWrapper.appendChild(downloadBtn);
     downloadBtnWrapper.appendChild(downloadDropdown);
 
-    console.log("✅ [Lyrics+ UI] Download button created and added to DOM");
+    console.info("✅ [Lyrics+ UI] Download button created and added to DOM");
 
     // Logic for showing/hiding the dropdown and downloading
     downloadBtn.onclick = (e) => {
@@ -4251,12 +4289,12 @@ const Providers = {
     // Set up dropdown options
     syncOption.onclick = (e) => {
       downloadDropdown.style.display = "none";
-      console.log("💾 [Lyrics+ UI] Download synced lyrics clicked");
+      console.info("💾 [Lyrics+ UI] Download synced lyrics clicked");
       if (currentSyncedLyrics) downloadSyncedLyrics(currentSyncedLyrics, getCurrentTrackInfo(), Providers.current);
     };
     unsyncOption.onclick = (e) => {
       downloadDropdown.style.display = "none";
-      console.log("💾 [Lyrics+ UI] Download unsynced lyrics clicked");
+      console.info("💾 [Lyrics+ UI] Download unsynced lyrics clicked");
       if (currentUnsyncedLyrics) downloadUnsyncedLyrics(currentUnsyncedLyrics, getCurrentTrackInfo(), Providers.current);
     };
 
@@ -4277,10 +4315,10 @@ const Providers = {
       fontSizeSelect.appendChild(opt);
     });
     fontSizeSelect.value = localStorage.getItem("lyricsPlusFontSize") || "22";
-    console.log("✅ [Lyrics+ UI] Font size selector created with options: 16-56px, current value:", fontSizeSelect.value + "px");
+    console.info("✅ [Lyrics+ UI] Font size selector created with options: 16-56px, current value:", fontSizeSelect.value + "px");
     fontSizeSelect.onchange = () => {
       localStorage.setItem("lyricsPlusFontSize", fontSizeSelect.value);
-      console.log("📝 [Lyrics+ UI] Font size changed to:", fontSizeSelect.value + "px");
+      console.info("📝 [Lyrics+ UI] Font size changed to:", fontSizeSelect.value + "px");
       const lyricsContent = document.getElementById("lyrics-plus-content");
       if (lyricsContent) {
         lyricsContent.style.fontSize = fontSizeSelect.value + "px";
@@ -4436,7 +4474,7 @@ const Providers = {
     async function translateLyricsInPopup() {
       if (!lyricsContainer || isTranslating) return;
       const targetLang = getSavedTranslationLang();
-      console.log("🌐 [Lyrics+ Translation] Translate button clicked, target language:", targetLang);
+      console.info("🌐 [Lyrics+ Translation] Translate button clicked, target language:", targetLang);
       if (translationPresent && lastTranslatedLang === targetLang) return;
       isTranslating = true;
       translateBtn.disabled = true;
@@ -4564,12 +4602,12 @@ const Providers = {
         removeTransliterationLyrics();
         localStorage.setItem(STORAGE_KEYS.TRANSLITERATION_ENABLED, 'false');
         transliterationToggleBtn.title = "Show transliteration";
-        console.log("🔤 [Lyrics+ UI] Transliteration button clicked: HIDDEN");
+        console.info("🔤 [Lyrics+ UI] Transliteration button clicked: HIDDEN");
       } else {
         showTransliterationInPopup();
         localStorage.setItem(STORAGE_KEYS.TRANSLITERATION_ENABLED, 'true');
         transliterationToggleBtn.title = "Hide transliteration";
-        console.log("🔤 [Lyrics+ UI] Transliteration button clicked: SHOWN");
+        console.info("🔤 [Lyrics+ UI] Transliteration button clicked: SHOWN");
       }
     };
 
@@ -4736,7 +4774,7 @@ const Providers = {
     tabsToggleCheckbox.className = "lyrics-plus-checkbox";
     tabsToggleCheckbox.style.cursor = "pointer";
 
-    console.log("✅ [Lyrics+ Settings] Tabs toggle created (Show lyrics source tabs)");
+    console.info("✅ [Lyrics+ Settings] Tabs toggle created (Show lyrics source tabs)");
 
     tabsToggleWrapper.appendChild(tabsToggleLabel);
     tabsToggleWrapper.appendChild(tabsToggleCheckbox);
@@ -4764,7 +4802,7 @@ const Providers = {
     seekbarToggleCheckbox.className = "lyrics-plus-checkbox";
     seekbarToggleCheckbox.style.cursor = "pointer";
 
-    console.log("✅ [Lyrics+ Settings] Seekbar toggle created (Show seekbar)");
+    console.info("✅ [Lyrics+ Settings] Seekbar toggle created (Show seekbar)");
 
     seekbarToggleWrapper.appendChild(seekbarToggleLabel);
     seekbarToggleWrapper.appendChild(seekbarToggleCheckbox);
@@ -4792,7 +4830,7 @@ const Providers = {
     controlsToggleCheckbox.className = "lyrics-plus-checkbox";
     controlsToggleCheckbox.style.cursor = "pointer";
 
-    console.log("✅ [Lyrics+ Settings] Playback controls toggle created (Show playback controls)");
+    console.info("✅ [Lyrics+ Settings] Playback controls toggle created (Show playback controls)");
 
     controlsToggleWrapper.appendChild(controlsToggleLabel);
     controlsToggleWrapper.appendChild(controlsToggleCheckbox);
@@ -4820,7 +4858,7 @@ const Providers = {
     themeToggleCheckbox.className = "lyrics-plus-checkbox";
     themeToggleCheckbox.style.cursor = "pointer";
 
-    console.log("✅ [Lyrics+ Settings] Theme toggle created (Enable AMOLED theme)");
+    console.info("✅ [Lyrics+ Settings] Theme toggle created (Enable AMOLED theme)");
 
     themeToggleWrapper.appendChild(themeToggleLabel);
     themeToggleWrapper.appendChild(themeToggleCheckbox);
@@ -4978,7 +5016,7 @@ const Providers = {
       seekbarVisible = seekbarToggleCheckbox.checked;
       localStorage.setItem('lyricsPlusSeekbarVisible', JSON.stringify(seekbarVisible));
       applyProgressWrapperVisibility(seekbarVisible);
-      console.log("📝 [Lyrics+ Settings] Seekbar visibility toggled:", seekbarVisible ? "SHOWN" : "HIDDEN");
+      console.info("📝 [Lyrics+ Settings] Seekbar visibility toggled:", seekbarVisible ? "SHOWN" : "HIDDEN");
     };
 
     // Playback controls checkbox change handler (in settings)
@@ -4986,7 +5024,7 @@ const Providers = {
       controlsVisible = controlsToggleCheckbox.checked;
       localStorage.setItem('lyricsPlusControlsVisible', JSON.stringify(controlsVisible));
       applyControlsVisibility(controlsVisible);
-      console.log("📝 [Lyrics+ Settings] Playback controls visibility toggled:", controlsVisible ? "SHOWN" : "HIDDEN");
+      console.info("📝 [Lyrics+ Settings] Playback controls visibility toggled:", controlsVisible ? "SHOWN" : "HIDDEN");
     };
 
     // Theme toggle checkbox change handler (in settings)
@@ -4994,7 +5032,7 @@ const Providers = {
       amoledThemeEnabled = themeToggleCheckbox.checked;
       localStorage.setItem('lyricsPlusTheme', JSON.stringify(amoledThemeEnabled));
       applyAmoledTheme(amoledThemeEnabled);
-      console.log("📝 [Lyrics+ Settings] AMOLED theme toggled:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
+      console.info("📝 [Lyrics+ Settings] AMOLED theme toggled:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
     };
 
     // Apply initial visibility states
@@ -5010,18 +5048,18 @@ const Providers = {
     seekbarToggleCheckbox.checked = seekbarVisible;
     controlsToggleCheckbox.checked = controlsVisible;
     themeToggleCheckbox.checked = amoledThemeEnabled;
-    console.log("📝 [Lyrics+ Settings] Seekbar initial state:", seekbarVisible ? "SHOWN" : "HIDDEN");
-    console.log("📝 [Lyrics+ Settings] Playback controls initial state:", controlsVisible ? "SHOWN" : "HIDDEN");
-    console.log("📝 [Lyrics+ Settings] AMOLED theme initial state:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
+    console.info("📝 [Lyrics+ Settings] Seekbar initial state:", seekbarVisible ? "SHOWN" : "HIDDEN");
+    console.info("📝 [Lyrics+ Settings] Playback controls initial state:", controlsVisible ? "SHOWN" : "HIDDEN");
+    console.info("📝 [Lyrics+ Settings] AMOLED theme initial state:", amoledThemeEnabled ? "ENABLED" : "DISABLED");
 
     // Initialize and handle tabs toggle checkbox in settings
     tabsToggleCheckbox.checked = tabsVisible;
-    console.log("📝 [Lyrics+ Settings] Tabs initial state:", tabsVisible ? "SHOWN" : "HIDDEN");
+    console.info("📝 [Lyrics+ Settings] Tabs initial state:", tabsVisible ? "SHOWN" : "HIDDEN");
     tabsToggleCheckbox.onchange = () => {
       tabsVisible = tabsToggleCheckbox.checked;
       localStorage.setItem('lyricsPlusTabsVisible', JSON.stringify(tabsVisible));
       applyTabsVisibility(tabsVisible);
-      console.log("📝 [Lyrics+ Settings] Tabs visibility toggled:", tabsVisible ? "SHOWN" : "HIDDEN");
+      console.info("📝 [Lyrics+ Settings] Tabs visibility toggled:", tabsVisible ? "SHOWN" : "HIDDEN");
     };
 
     // Create Spotify-style control buttons
@@ -5167,7 +5205,7 @@ const Providers = {
       const btn = findButton ? findButton() : null;
 
       if (btn) {
-        console.log("🎵 [Lyrics+ Playback] Command sent to Spotify:", command.toUpperCase());
+        console.info("🎵 [Lyrics+ Playback] Command sent to Spotify:", command.toUpperCase());
         btn.click();
 
         // If on mobile, try touch events as a fallback
@@ -5189,7 +5227,7 @@ const Providers = {
         setTimeout(() => updateShuffleButton(btnShuffle, shuffleIconWrapper), 100);
       }
     );
-    console.log("✅ [Lyrics+ Playback] Shuffle button created");
+    console.info("✅ [Lyrics+ Playback] Shuffle button created");
 
     const { button: btnPrevious, iconWrapper: prevIconWrapper } = createSpotifyControlButton(
       "previous",
@@ -5198,7 +5236,7 @@ const Providers = {
     );
     // Use DOM-cloned icon from Spotify's visible button
     updatePreviousButtonIcon(prevIconWrapper);
-    console.log("✅ [Lyrics+ Playback] Previous button created");
+    console.info("✅ [Lyrics+ Playback] Previous button created");
 
     const { button: btnPlayPause, iconWrapper: playIconWrapper } = createPlayPauseButton(
       () => {
@@ -5206,7 +5244,7 @@ const Providers = {
         setTimeout(() => updatePlayPauseButton(btnPlayPause, playIconWrapper), 100);
       }
     );
-    console.log("✅ [Lyrics+ Playback] Play/Pause button created");
+    console.info("✅ [Lyrics+ Playback] Play/Pause button created");
 
     const { button: btnNext, iconWrapper: nextIconWrapper } = createSpotifyControlButton(
       "next",
@@ -5215,7 +5253,7 @@ const Providers = {
     );
     // Use DOM-cloned icon from Spotify's visible button
     updateNextButtonIcon(nextIconWrapper);
-    console.log("✅ [Lyrics+ Playback] Next button created");
+    console.info("✅ [Lyrics+ Playback] Next button created");
 
     const { button: btnRepeat, iconWrapper: repeatIconWrapper } = createSpotifyControlButton(
       "repeat",
@@ -5225,7 +5263,7 @@ const Providers = {
         setTimeout(() => updateRepeatButton(btnRepeat, repeatIconWrapper), 100);
       }
     );
-    console.log("✅ [Lyrics+ Playback] Repeat button created");
+    console.info("✅ [Lyrics+ Playback] Repeat button created");
 
     // Initialize button states using DOM-cloned icons from Spotify's visible buttons
     updateShuffleButton(btnShuffle, shuffleIconWrapper);
@@ -5391,7 +5429,7 @@ const Providers = {
     progressWrapper.appendChild(progressInput);
     progressWrapper.appendChild(timeTotal);
 
-    console.log("✅ [Lyrics+ Seekbar] Progress bar (seekbar) created with time display");
+    console.info("✅ [Lyrics+ Seekbar] Progress bar (seekbar) created with time display");
 
     // Apply initial visibility state for progressWrapper (must be after progressWrapper is created)
     applyProgressWrapperVisibility(seekbarVisible);
@@ -6199,7 +6237,7 @@ const Providers = {
     const commitSeek = (e) => {
       const val = Number(progressInput.value) || 0;
       userSeeking = false;
-      console.log("⏩ [Lyrics+ Seekbar] User seeked to position:", formatMs(val));
+      console.info("⏩ [Lyrics+ Seekbar] User seeked to position:", formatMs(val));
       // Just seek - no interpolation state to manage
       seekTo(val);
     };
@@ -6304,7 +6342,7 @@ const Providers = {
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
       transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
-      console.log("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
+      console.info("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
     }
 
     // Show transliteration if enabled and data is available
@@ -6565,7 +6603,7 @@ const Providers = {
       lyricsContainer.textContent = result.error;
       if (downloadBtn) {
         downloadBtn.style.display = "none";
-        console.log("📝 [Lyrics+ UI] Download button hidden (lyrics error)");
+        console.info("📝 [Lyrics+ UI] Download button hidden (lyrics error)");
       }
       if (downloadDropdown) downloadDropdown.style.display = "none";
       if (chineseConvBtn) chineseConvBtn.style.display = "none";
@@ -6680,7 +6718,7 @@ const Providers = {
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
       transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
-      console.log("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
+      console.info("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
     }
 
     // Show transliteration if enabled and data is available
@@ -6695,10 +6733,10 @@ const Providers = {
     if (downloadBtn) {
       if (lyricsContainer.querySelectorAll('p').length > 0) {
         downloadBtn.style.display = "inline-flex";
-        console.log("📝 [Lyrics+ UI] Download button shown (lyrics loaded successfully)");
+        console.info("📝 [Lyrics+ UI] Download button shown (lyrics loaded successfully)");
       } else {
         downloadBtn.style.display = "none";
-        console.log("📝 [Lyrics+ UI] Download button hidden (no lyrics to display)");
+        console.info("📝 [Lyrics+ UI] Download button hidden (no lyrics to display)");
         if (downloadDropdown) downloadDropdown.style.display = "none";
       }
     }
@@ -7057,9 +7095,9 @@ const Providers = {
 
     if (savedTheme) {
       document.body.classList.add('lyrics-plus-amoled-theme');
-      console.log("🎨 [Lyrics+ Init] AMOLED theme applied on page load");
+      console.info("🎨 [Lyrics+ Init] AMOLED theme applied on page load");
     } else {
-      console.log("🎨 [Lyrics+ Init] Default theme active (AMOLED disabled)");
+      console.info("🎨 [Lyrics+ Init] Default theme active (AMOLED disabled)");
     }
 
     addButton();
@@ -7182,12 +7220,12 @@ const Providers = {
 
   GM_registerMenuCommand('Debug: Get Cache Stats', () => {
     const stats = LyricsCache.getStats();
-    console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
-    console.log(`  Cache size: ${stats.size}/${stats.maxEntries} songs`);
+    console.debug('%c[Lyrics+] Cache Statistics:', 'color: #64B5F6; font-weight: bold;', stats);
+    console.debug(`  Cache size: ${stats.size}/${stats.maxEntries} songs`);
     if (stats.entries.length > 0) {
       const tableData = {};
       stats.entries.forEach((entry, i) => { tableData[i + 1] = entry; });
-      console.table(tableData);
+      console.debug(tableData);
     }
     alert(
     'Cache statistics have been logged to the console.\n' +
@@ -7197,7 +7235,7 @@ const Providers = {
 
   GM_registerMenuCommand('Debug: Get Track Info', () => {
     const info = getCurrentTrackInfo();
-    console.log('%c[Lyrics+] Current Track Info:', 'color: #1db954; font-weight: bold;', info);
+    console.debug('%c[Lyrics+] Current Track Info:', 'color: #64B5F6; font-weight: bold;', info);
      alert(
     'Track information has been logged to the console.\n' +
     'Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.'
@@ -7206,27 +7244,12 @@ const Providers = {
 
   GM_registerMenuCommand('Debug: Get Repeat State', () => {
     const state = getRepeatState();
-    console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
+    console.debug('%c[Lyrics+] Repeat State:', 'color: #64B5F6; font-weight: bold;', state);
     alert(
     'Repeat state has been logged to the console.\n' +
     'Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.'
   );
 });
-
-  GM_registerMenuCommand('Debug: Enable', () => {
-    DEBUG.enabled = true;
-    console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
-    alert(
-    '✅ Debug mode enabled!\n' +
-    'Open DevTools (Press F12 or Right click and Inspect), then select the Debug tab under Console for detailed logging.'
-  );
-});
-
-  GM_registerMenuCommand('Debug: Disable', () => {
-    DEBUG.enabled = false;
-    console.log('%c[Lyrics+] Debug mode disabled', 'color: #888;');
-    alert('Debug mode disabled.');
-  });
 
   init();
 })();
