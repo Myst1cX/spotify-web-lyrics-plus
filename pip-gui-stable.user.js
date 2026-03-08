@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.18
+// @version      17.19
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,24 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.19): TOKEN MODAL SECURITY HARDENING
+// • Decrypted token values are no longer written to DOM inputs. Previously, opening a token
+//   modal with a saved token placed the plaintext value directly into input.value, which
+//   allowed Firefox's (and other browsers') built-in "reveal password" button to expose the
+//   raw token to anyone who opened the modal. Now the input is always left empty on open;
+//   the decrypted token is never surfaced to the UI.
+// • Both token input fields now set autocomplete="new-password", preventing browser
+//   credential managers from auto-filling or offering to save the field as a password.
+// • A green "✓ Token saved" badge is shown below the modal title when a token is already
+//   stored, so users have clear visual confirmation without seeing the token value. The
+//   placeholder text also changes to "Token saved — enter a new token to replace".
+// • TokenStorage._getKey() now caches the encryption key in sessionStorage (load order:
+//   in-memory → sessionStorage → localStorage). sessionStorage is not synced by
+//   Firefox/Chrome Sync and is excluded from most browser localStorage backup/export flows,
+//   so the key is no longer co-located with the ciphertext in exportable storage during an
+//   active session. localStorage is still used as the persistence fallback so tokens survive
+//   page reloads without requiring re-entry.
 
 // RESOLVED (17.18): REFACTOR BUTTON INJECTION LOGIC
 // • Replaced the retry loop (up to 10 × 1 s attempts) in addButton() with a single-attempt
