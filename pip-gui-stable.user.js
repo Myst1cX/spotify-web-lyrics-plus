@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.19
+// @version      17.20
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,24 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.20): SESSION-ONLY ENCRYPTION KEY — REMOVE localStorage FALLBACK
+// • The AES-256-GCM encryption key is now stored in sessionStorage ONLY and is never
+//   written to localStorage. Previously (17.19) localStorage was kept as a persistence
+//   fallback, but that meant the key and its ciphertext were co-located in the same
+//   exportable storage — an attacker who can read localStorage (via browser sync, a
+//   backup tool, or a credential-harvesting script) would obtain both pieces needed to
+//   decrypt the tokens. Removing the localStorage copy means localStorage contains only
+//   undecryptable ciphertext; the key is never present alongside it.
+// • sessionStorage persists across page reloads within the same browser session (tab),
+//   so tokens continue to work across reloads. They need to be re-entered once per
+//   browser session (i.e. after closing the tab or browser), which is the intended
+//   security trade-off.
+// • On startup, any legacy lyricsPlusEncKey entry left in localStorage by v17.19 is
+//   removed so it does not linger unnecessarily.
+// • getToken() now explicitly removes stale/undecryptable localStorage ciphertext
+//   (from a previous session whose key is gone) instead of just warning, so the UI
+//   correctly shows "no token saved" and prompts the user to re-enter.
 
 // RESOLVED (17.19): TOKEN MODAL SECURITY HARDENING
 // • Decrypted token values are no longer written to DOM inputs. Previously, opening a token
@@ -376,26 +394,26 @@
 
   // ------------------------
   // Token Storage Module (AES-GCM encrypted)
-  // Tokens are encrypted with a randomly generated per-installation AES-256-GCM key
-  // before being written to localStorage, ensuring raw token values are never persisted
-  // as plain text.
+  // Tokens are encrypted with a randomly generated per-session AES-256-GCM key before
+  // being written to localStorage, ensuring raw token values are never persisted as plain text.
   //
   // Security model:
   //   • Raw token values are NEVER placed in DOM inputs or any JavaScript variable that
   //     is accessible outside this module — they are only decrypted on demand and used
   //     directly (never surfaced to the UI).
-  //   • The encryption key is persisted in localStorage (under lyricsPlusEncKey) so that
-  //     tokens survive page reloads.  Once loaded it is also cached in sessionStorage so
-  //     subsequent same-session reads bypass localStorage entirely.
-  //   • A determined attacker with full localStorage access for open.spotify.com could
-  //     retrieve both the key and the ciphertext.  The primary protections provided are:
-  //       – casual inspection (DevTools Application → Local Storage),
-  //       – simple credential-harvesting scripts that only read well-known key names,
-  //       – browser-sync / backup features that copy localStorage to the cloud
-  //         (sessionStorage is NOT synced or exported by those tools).
-  //   • A session-only key with no localStorage persistence would prevent all of the
-  //     above but would require the user to re-enter their tokens on every page reload,
-  //     which is impractical for this use-case.
+  //   • The encryption key lives ONLY in sessionStorage and in-memory.
+  //     It is never written to localStorage.  sessionStorage is:
+  //       – NOT synced by Firefox/Chrome Sync,
+  //       – NOT included in localStorage backup/export flows,
+  //       – NOT accessible across browser sessions (cleared on tab/browser close).
+  //     This means an attacker who can read localStorage (e.g. via browser sync, a backup
+  //     tool, or a script that only dumps localStorage) obtains only undecryptable ciphertext
+  //     — the key is never present alongside it.
+  //   • Because the key is session-scoped, encrypted tokens stored in localStorage become
+  //     undecryptable after the browser session ends.  Users need to re-enter their tokens
+  //     once per browser session.  Tokens persist across page reloads within the same session.
+  //   • On startup any legacy lyricsPlusEncKey entry left in localStorage by a previous
+  //     version is removed so it does not linger unnecessarily.
   // ------------------------
   const TokenStorage = {
     _key: null,
@@ -405,15 +423,12 @@
       return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
     },
 
-    // Returns (and caches) the AES-GCM CryptoKey, generating one if none exists yet.
-    // Load order: in-memory → sessionStorage (not synced/exported) → localStorage (persistent).
-    // After loading from localStorage the key is promoted to sessionStorage so that
-    // the localStorage entry is no longer needed for hot reads within the same tab.
+    // Returns (and caches) the AES-GCM CryptoKey for this session.
+    // Load order: in-memory → sessionStorage → generate new.
+    // The key is NEVER written to localStorage.
     async _getKey() {
       if (this._key) return this._key;
       try {
-        // Prefer sessionStorage: it is not synced by Firefox/Chrome Sync and is not
-        // included in most browser backup / export flows.
         const fromSession = sessionStorage.getItem(STORAGE_KEYS.ENC_KEY);
         if (fromSession) {
           const rawBytes = this._b64ToBytes(fromSession);
@@ -422,34 +437,24 @@
           );
           return this._key;
         }
-        // Fall back to localStorage for persistence across sessions.
-        const fromLocal = localStorage.getItem(STORAGE_KEYS.ENC_KEY);
-        if (fromLocal) {
-          const rawBytes = this._b64ToBytes(fromLocal);
-          this._key = await crypto.subtle.importKey(
-            'raw', rawBytes, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']
-          );
-          // Promote to sessionStorage to reduce future localStorage reads.
-          sessionStorage.setItem(STORAGE_KEYS.ENC_KEY, fromLocal);
-          return this._key;
-        }
       } catch (e) {
-        console.warn('[Lyrics+] ⚠️ Could not load encryption key – generating a new one:', e);
+        console.warn('[Lyrics+] ⚠️ Could not load session encryption key – generating a new one:', e);
       }
-      // Generate and persist a new 256-bit key
+      // Generate a fresh key for this session and store it in sessionStorage only.
       this._key = await crypto.subtle.generateKey(
         { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
       );
       const exported = await crypto.subtle.exportKey('raw', this._key);
-      const b64Key = btoa(String.fromCharCode(...new Uint8Array(exported)));
-      localStorage.setItem(STORAGE_KEYS.ENC_KEY, b64Key);
-      sessionStorage.setItem(STORAGE_KEYS.ENC_KEY, b64Key);
+      sessionStorage.setItem(
+        STORAGE_KEYS.ENC_KEY,
+        btoa(String.fromCharCode(...new Uint8Array(exported)))
+      );
       return this._key;
     },
 
-    // Encrypts `value` with AES-256-GCM and persists it under `storageKey`.
-    // A fresh 12-byte random IV is generated for every encryption operation;
-    // IV uniqueness is critical for AES-GCM security – never reuse an IV with the same key.
+    // Encrypts `value` with AES-256-GCM and persists the ciphertext under `storageKey`
+    // in localStorage.  A fresh 12-byte random IV is generated for every encryption
+    // operation; IV uniqueness is critical for AES-GCM security.
     async setToken(storageKey, value) {
       if (!value) {
         localStorage.removeItem(storageKey);
@@ -466,10 +471,11 @@
     },
 
     // Decrypts and returns the token stored under `storageKey`, or null if absent.
-    // If the stored value looks like a plain-text token saved before this module was
-    // introduced (decryption fails AND the value does not decode to valid base64 binary
-    // with at least 12 bytes for the IV), it is transparently re-encrypted and returned
-    // to migrate old installations.
+    // Three failure cases are handled:
+    //   1. Plain-text token (saved before encryption was introduced) → re-encrypt and return.
+    //   2. Stale ciphertext from a previous browser session (session key is gone) →
+    //      remove the undecryptable entry and return null so the user is prompted to re-enter.
+    //   3. Genuinely corrupted data → warn and return null.
     async getToken(storageKey) {
       const stored = localStorage.getItem(storageKey);
       if (!stored) return null;
@@ -484,17 +490,17 @@
         const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
         return new TextDecoder().decode(decrypted);
       } catch (e) {
-        // Distinguish likely plain-text tokens from genuinely corrupted ciphertext.
-        // A plain-text token will not be valid base64 (or will be far shorter than an
-        // AES-GCM ciphertext), so we attempt migration only if the stored value looks
-        // like a raw token string (printable ASCII, not a long base64-encoded blob).
+        // Case 1: plain-text token left over from before the encryption module was added.
         const looksLikePlainText = /^[\x20-\x7E]{10,}$/.test(stored) && stored.length < 500;
         if (looksLikePlainText) {
           console.info('[Lyrics+] Migrating plain-text token to encrypted storage');
           await this.setToken(storageKey, stored);
           return stored;
         }
-        console.warn('[Lyrics+] ⚠️ Could not decrypt token – it may be corrupted. Please re-enter your token.', e);
+        // Case 2 / 3: stale ciphertext from a previous session, or corrupted data.
+        // Either way it is undecryptable — remove it so the UI correctly prompts re-entry.
+        console.info('[Lyrics+] Removing undecryptable token entry (stale session or corrupted) — please re-enter your token.');
+        localStorage.removeItem(storageKey);
         return null;
       }
     },
@@ -7333,6 +7339,11 @@ const Providers = {
   buttonInjectionObserver.observe(document.body, { childList: true, subtree: true });
 
   function init() {
+    // One-time cleanup: remove any lyricsPlusEncKey that a previous version (<= 17.19) may
+    // have written to localStorage.  The key now lives in sessionStorage only; leaving the
+    // old copy in localStorage would reintroduce the exact vulnerability we fixed.
+    localStorage.removeItem(STORAGE_KEYS.ENC_KEY);
+
     // Apply AMOLED theme if enabled in localStorage
     let savedTheme = localStorage.getItem('lyricsPlusTheme');
     if (savedTheme === null) savedTheme = false;
