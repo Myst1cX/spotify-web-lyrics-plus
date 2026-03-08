@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.16
+// @version      17.17
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,21 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.17): ENCRYPTED-TOKEN PASTE PROTECTION + INJECTION SPAM FIX
+// • TokenStorage.setToken() now detects when the pasted value is already an
+//   AES-GCM ciphertext produced by this script (e.g. the user copied the raw
+//   localStorage blob from DevTools). If decryption of the pasted value succeeds,
+//   the decrypted plaintext is stored instead of double-encrypting the blob.
+// • addButton() now uses a _addButtonPending guard flag so only one retry chain
+//   can run at a time. Previously the MutationObserver (which fires on every DOM
+//   mutation) spawned a new retry chain on each mutation during page load, flooding
+//   the console with duplicate "Injection attempt X/Y" messages.
+// • buttonInjectionObserver.observe() and the pageObserver setup are now started
+//   inside init() rather than at script-evaluation time.
+// • The init() call at the bottom is now deferred to window.load (or fires
+//   immediately if document.readyState is already 'complete'), so no injection
+//   attempts are made while Spotify's page is still loading.
 
 // RESOLVED (17.16): SPOTIFY TOKEN BEARER PREFIX
 // • The "Bearer " prefix is now automatically stripped from the pasted value on Save,
@@ -394,14 +409,36 @@
     // Encrypts `value` with AES-256-GCM and persists it under `storageKey`.
     // A fresh 12-byte random IV is generated for every encryption operation;
     // IV uniqueness is critical for AES-GCM security – never reuse an IV with the same key.
+    // If `value` is already a valid AES-GCM ciphertext produced by this script (i.e. the
+    // user copied the raw localStorage blob and pasted it into the token field), it is
+    // decrypted first so the plaintext token is stored rather than a double-encrypted blob.
     async setToken(storageKey, value) {
       if (!value) {
         localStorage.removeItem(storageKey);
         return;
       }
       const key = await this._getKey();
+      // Detect if the pasted value is already encrypted by this script.
+      // Attempt to base64-decode and AES-GCM decrypt it; if that succeeds the user
+      // accidentally pasted the ciphertext blob from localStorage – use the plaintext instead.
+      let plainValue = value;
+      try {
+        const decoded = this._b64ToBytes(value);
+        if (decoded.byteLength > 12) {
+          const candidate = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv: decoded.slice(0, 12) }, key, decoded.slice(12)
+          );
+          const candidateText = new TextDecoder().decode(candidate);
+          if (candidateText.length > 0) {
+            console.info('[Lyrics+] 🔁 Pasted value is already encrypted – using decrypted token instead');
+            plainValue = candidateText;
+          }
+        }
+      } catch (_) {
+        // Not a valid ciphertext – treat as plain text (the normal case)
+      }
       const iv = crypto.getRandomValues(new Uint8Array(12));
-      const encoded = new TextEncoder().encode(value);
+      const encoded = new TextEncoder().encode(plainValue);
       const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
       const combined = new Uint8Array(iv.byteLength + encrypted.byteLength);
       combined.set(iv, 0);
@@ -7162,9 +7199,26 @@ const Providers = {
     }
   }
 
+  // Guard flag: ensures only one addButton() retry chain runs at a time.
+  // The MutationObserver fires on every DOM mutation, so without this flag every
+  // mutation during Spotify's initial load would spawn its own retry chain, flooding
+  // the console with duplicate "Injection attempt X/Y" messages.
+  let _addButtonPending = false;
+
   function addButton(maxRetries = LIMITS.BUTTON_ADD_MAX_RETRIES) {
+    // Fast-path: button already in DOM – nothing to do.
+    if (document.getElementById("lyrics-plus-btn")) return;
+    // Guard: a retry chain is already in progress – don't start another.
+    if (_addButtonPending) return;
+    _addButtonPending = true;
     let attempts = 0;
     const tryAdd = () => {
+      // Button may have been injected between retries (e.g. by a second observer
+      // trigger that arrived after the guard was already released on success).
+      if (document.getElementById("lyrics-plus-btn")) {
+        _addButtonPending = false;
+        return;
+      }
       // const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
       // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
       const micBtn = document.querySelector('[data-testid="lyrics-button"]');
@@ -7177,13 +7231,12 @@ const Providers = {
           DEBUG.debug('Button', `Injection attempt ${attempts}/${maxRetries} - controls not found, retrying...`);
           setTimeout(tryAdd, TIMING.BUTTON_ADD_RETRY_MS);
         } else {
+          _addButtonPending = false;
           DEBUG.error('Button', `Failed to inject Lyrics+ button after ${maxRetries} attempts`);
         }
         return;
       }
-      if (document.getElementById("lyrics-plus-btn")) {
-        return;
-      }
+      _addButtonPending = false;
       const btn = document.createElement("button");
       btn.id = "lyrics-plus-btn";
       btn.title = "Show Lyrics+";
@@ -7215,12 +7268,13 @@ const Providers = {
     tryAdd();
   }
 
-  // Global observer to inject Lyrics+ button when DOM changes
+  // Global observer to re-inject the Lyrics+ button when Spotify mutates the DOM
+  // (e.g. after a page navigation within the SPA).  The observer is only started
+  // inside init() so it never fires before the page has finished loading.
   const buttonInjectionObserver = new MutationObserver(() => {
     addButton();
   });
   ResourceManager.registerObserver(buttonInjectionObserver, 'Global button injection (document.body)');
-  buttonInjectionObserver.observe(document.body, { childList: true, subtree: true });
 
   function init() {
     // Apply AMOLED theme if enabled in localStorage
@@ -7235,16 +7289,20 @@ const Providers = {
       console.info("🎨 [Lyrics+ Init] Default theme active (AMOLED disabled)");
     }
 
-    addButton();
-  }
+    // Start the global injection observer and the per-page observer now that the
+    // page is fully loaded, preventing spurious injection attempts during load.
+    buttonInjectionObserver.observe(document.body, { childList: true, subtree: true });
 
-  const appRoot = document.querySelector('#main');
-  if (appRoot) {
-    const pageObserver = new MutationObserver(() => {
-      addButton();
-    });
-    ResourceManager.registerObserver(pageObserver, 'Page observer (appRoot)');
-    pageObserver.observe(appRoot, { childList: true, subtree: true });
+    const appRoot = document.querySelector('#main');
+    if (appRoot) {
+      const pageObserver = new MutationObserver(() => {
+        addButton();
+      });
+      ResourceManager.registerObserver(pageObserver, 'Page observer (appRoot)');
+      pageObserver.observe(appRoot, { childList: true, subtree: true });
+    }
+
+    addButton();
   }
 
   // ------------------------
@@ -7386,7 +7444,13 @@ const Providers = {
   );
 });
 
-  init();
+  // Defer init() until the page is fully loaded so no injection attempts are made
+  // while Spotify's JavaScript is still bootstrapping (prevents console spam).
+  if (document.readyState === 'complete') {
+    init();
+  } else {
+    window.addEventListener('load', init, { once: true });
+  }
 })();
 
 
