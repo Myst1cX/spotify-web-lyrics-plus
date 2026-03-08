@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @version      17.14
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
-// @author       Myst1cX 
+// @author       Myst1cX
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
@@ -550,7 +550,8 @@
     // Specialized logging helpers
     provider: {
       start: (providerName, operation, trackInfo) => {
-        DEBUG.debug('Provider', `Starting ${operation} for ${providerName}:`, {
+        const lyricsType = operation === 'getSynced' ? 'synced' : 'unsynced';
+        DEBUG.debug('Provider', `Checking ${providerName} for ${lyricsType} lyrics:`, {
           track: trackInfo.title,
           artist: trackInfo.artist,
           album: trackInfo.album
@@ -563,10 +564,12 @@
         });
       },
       failure: (providerName, operation, error) => {
-        DEBUG.warn('Provider', `✗ ${providerName} ${operation} failed:`, error);
+        const lyricsType = operation === 'getSynced' ? 'synced' : 'unsynced';
+        DEBUG.warn('Provider', `✗ ${providerName} (${lyricsType}) failed:`, error);
       },
       timing: (providerName, operation, durationMs) => {
-        DEBUG.debug('Provider', `⚡ ${providerName} ${operation} took ${durationMs}ms`);
+        const lyricsType = operation === 'getSynced' ? 'synced' : 'unsynced';
+        DEBUG.debug('Provider', `⚡ ${providerName} (${lyricsType}) took ${durationMs}ms`);
       }
     },
 
@@ -1844,9 +1847,9 @@ const PLAY_WORDS = [
   // ------------------------
 
   // --- LRCLIB ---
-  async function fetchLRCLibLyrics(songInfo, tryWithoutAlbum = false) {
+  async function fetchLRCLibLyrics(songInfo, tryWithoutAlbum = false, lyricsType = 'auto') {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("[LRCLIB Debug] Starting lyrics search");
+  console.log(`[LRCLIB Debug] Starting lyrics search (${lyricsType})`);
   console.log("[LRCLIB Debug] Input info:", {
     artist: songInfo.artist,
     title: songInfo.title,
@@ -1923,11 +1926,11 @@ const PLAY_WORDS = [
   }
 }
   const ProviderLRCLIB = {
-    async findLyrics(info) {
+    async findLyrics(info, lyricsType = 'auto') {
       try {
-        let data = await fetchLRCLibLyrics(info, false);
+        let data = await fetchLRCLibLyrics(info, false, lyricsType);
         if (!data || (!data.syncedLyrics && !data.plainLyrics)) {
-          data = await fetchLRCLibLyrics(info, true); // try without album
+          data = await fetchLRCLibLyrics(info, true, lyricsType); // try without album
         }
         if (!data) return { error: "No lyrics available from LRCLIB" };
         return data;
@@ -1955,7 +1958,7 @@ const PLAY_WORDS = [
     "https://lyrics-plus-backend.vercel.app"      // Backup 2
   ];
 
-  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0) {
+  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0, lyricsType = 'auto') {
     // If we've tried all servers, return null
     if (serverIndex >= KPOE_SERVERS.length) {
       console.log("[KPoe Debug] ✗ All servers exhausted");
@@ -1968,7 +1971,7 @@ const PLAY_WORDS = [
     if (serverIndex > 0) {
       console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex}...`);
     }
-    console.log("[KPoe Debug] Starting lyrics search");
+    console.log(`[KPoe Debug] Starting lyrics search (${lyricsType})`);
     console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
     console.log("[KPoe Debug] Input info:", {
       artist: songInfo.artist,
@@ -2009,33 +2012,33 @@ const PLAY_WORDS = [
         if (response.status === 429) {
           console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
           // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType);
         } else if (response.status === 503) {
           console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
           // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType);
         } else if (response.status === 500) {
           console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
           // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType);
 
-          
+
    /*   A 404 response (Track not found on server) returns null immediately instead of trying backup servers
         (backup servers use the same upstream data source so trying them after a 404 is pointless)
-   */  
+   */
         } else if (response.status === 404) {
           console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
-          return null;  
-          
+          return null;
+
    /*   OLD LOGIC: ALSO TRYING BACKUP SERVERS ON SONG NOT FOUND RESPONSE
-    
+
         } else if (response.status === 404) {
           console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
           // Try backup servers - sometimes they have different data
           console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
    */
-          
+
         } else if (response.status === 400) {
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
           return { error: "Bad request - Invalid parameters" };
@@ -2080,7 +2083,7 @@ const PLAY_WORDS = [
     } catch (e) {
       console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
       // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
-      return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
+      return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType);
     }
   }
   function parseKPoeFormat(data) {
@@ -2124,7 +2127,7 @@ const PLAY_WORDS = [
     };
   }
   const ProviderKPoe = {
-    async findLyrics(info) {
+    async findLyrics(info, lyricsType = 'auto') {
       try {
         // Strategy: Try multiple combinations to maximize coverage
         // No source restriction - let API search all sources (Apple, Spotify, etc.)
@@ -2171,7 +2174,7 @@ const PLAY_WORDS = [
 
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
-          console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
           console.log(`[KPoe Debug] Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
 
           let songInfo = {
@@ -2183,7 +2186,7 @@ const PLAY_WORDS = [
 
           // Start with primary server (serverIndex = 0)
           // fetchKPoeLyrics will automatically try backup servers on rate limit/errors
-          let result = await fetchKPoeLyrics(songInfo);
+          let result = await fetchKPoeLyrics(songInfo, '', false, 0, lyricsType);
 
           // Handle errors - log but continue trying other attempts
           if (result && result.error) {
@@ -2516,9 +2519,9 @@ function parseMusixmatchSyncedLyrics(subtitleBody) {
 }
 
 
-async function fetchMusixmatchLyrics(songInfo) {
+async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("[Musixmatch Debug] Starting lyrics search");
+  console.log(`[Musixmatch Debug] Starting lyrics search (${lyricsType})`);
   console.log("[Musixmatch Debug] Input info:", {
     artist: songInfo.artist,
     title: songInfo.title
@@ -2671,9 +2674,9 @@ function musixmatchGetUnsynced(body) {
 }
 
 const ProviderMusixmatch = {
-  async findLyrics(info) {
+  async findLyrics(info, lyricsType = 'auto') {
     try {
-      const data = await fetchMusixmatchLyrics(info);
+      const data = await fetchMusixmatchLyrics(info, lyricsType);
       if (!data) {
   return { error: "No lyrics available from Musixmatch" };
 }
@@ -2694,9 +2697,9 @@ return data;
 };
 
   // --- Genius ---
-async function fetchGeniusLyrics(info) {
+async function fetchGeniusLyrics(info, lyricsType = 'auto') {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("[Genius Debug] Starting lyrics search");
+  console.log(`[Genius Debug] Starting lyrics search (${lyricsType})`);
   console.log("[Genius Debug] Input info:", {
     artist: info.artist,
     title: info.title,
@@ -3258,9 +3261,9 @@ function parseGeniusLyrics(raw) {
 }
 
 const ProviderGenius = {
-  async findLyrics(info) {
+  async findLyrics(info, lyricsType = 'auto') {
     try {
-      const data = await fetchGeniusLyrics(info);
+      const data = await fetchGeniusLyrics(info, lyricsType);
       if (!data) {
         return { error: "Genius request failed - connection error or service unreachable" };
       }
@@ -3503,9 +3506,9 @@ const ProviderGenius = {
 }
 
 const ProviderSpotify = {
-  async findLyrics(info) {
+  async findLyrics(info, lyricsType = 'auto') {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("[Spotify Debug] Starting lyrics search");
+    console.log(`[Spotify Debug] Starting lyrics search (${lyricsType})`);
     console.log("[Spotify Debug] Input info:", {
       trackId: info.trackId,
       title: info.title,
@@ -6567,7 +6570,9 @@ const Providers = {
     const chineseConvBtn = popup._chineseConvBtn;
 
     const provider = Providers.getCurrent();
-    const result = await provider.findLyrics(info);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`🎵 [Lyrics+] Phase 1: Checking for synced lyrics...`);
+    const result = await provider.findLyrics(info, 'synced');
 
     // Check if track is marked as instrumental - convert to error
     if (result.instrumental) {
@@ -6824,13 +6829,25 @@ const Providers = {
       { name: "Genius", type: "getUnsynced" }
     ];
 
+    let currentPhase = null;
     for (const { name, type } of detectionOrder) {
+      const phase = type === 'getSynced' ? 'synced' : 'unsynced';
+      if (phase !== currentPhase) {
+        currentPhase = phase;
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        if (phase === 'synced') {
+          console.log(`🎵 [Lyrics+] Phase 1: Checking for synced lyrics...`);
+        } else {
+          console.log(`📄 [Lyrics+] Phase 2: Checking for unsynced lyrics...`);
+        }
+      }
+
       try {
         const providerStartTime = performance.now();
         DEBUG.provider.start(name, type, info);
 
         const provider = Providers.map[name];
-        const result = await provider.findLyrics(info);
+        const result = await provider.findLyrics(info, phase);
 
         // ═══ CHECKPOINT 1: After async provider call ═══
         // While waiting for the provider API response, a new song may have started.
