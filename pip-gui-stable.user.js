@@ -6823,48 +6823,25 @@ const Providers = {
     DEBUG.log('Autodetect', 'Starting provider autodetect', info);
     const startTime = performance.now();
 
-    const detectionOrder = [
-      { name: "LRCLIB", type: "getSynced" },
-      { name: "Spotify", type: "getSynced" },
-      { name: "KPoe", type: "getSynced" },
-      { name: "Musixmatch", type: "getSynced" },
-      { name: "LRCLIB", type: "getUnsynced" },
-      { name: "Spotify", type: "getUnsynced" },
-      { name: "KPoe", type: "getUnsynced" },
-      { name: "Musixmatch", type: "getUnsynced" },
-      { name: "Genius", type: "getUnsynced" }
-    ];
+    // Providers that return both synced and unsynced lyrics in a single API call.
+    // Genius only returns unsynced and is tried in Phase 2 alone.
+    const combinedProviders = ["LRCLIB", "Spotify", "KPoe", "Musixmatch"];
+    const unsyncedOnlyProviders = ["Genius"];
 
-    // Cache findLyrics results per provider for this search session.
-    // All providers fetch the same data regardless of lyricsType (it is logging-only),
-    // so Phase 2 can reuse Phase 1's result instead of repeating the HTTP request.
+    // Phase 1 results are cached here so Phase 2 reuses them — no duplicate HTTP requests.
     const providerResultCache = new Map();
 
-    let currentPhase = null;
-    for (const { name, type } of detectionOrder) {
-      const phase = type === 'getSynced' ? 'synced' : 'unsynced';
-      if (phase !== currentPhase) {
-        currentPhase = phase;
-        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-        if (phase === 'synced') {
-          console.log(`🎵 [Lyrics+] Phase 1: Checking for synced lyrics...`);
-        } else {
-          console.log(`📄 [Lyrics+] Phase 2: Checking for unsynced lyrics...`);
-        }
-      }
-
+    // ── Phase 1: Synced ──────────────────────────────────────────────────────
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`🎵 [Lyrics+] Phase 1: Checking for synced lyrics...`);
+    for (const name of combinedProviders) {
       try {
         const providerStartTime = performance.now();
-        DEBUG.provider.start(name, type, info);
+        DEBUG.provider.start(name, 'getSynced', info);
 
         const provider = Providers.map[name];
-        let result;
-        if (providerResultCache.has(name)) {
-          result = providerResultCache.get(name);
-        } else {
-          result = await provider.findLyrics(info, phase);
-          providerResultCache.set(name, result);
-        }
+        const result = await provider.findLyrics(info, 'synced');
+        providerResultCache.set(name, result);
 
         // ═══ CHECKPOINT 1: After async provider call ═══
         // While waiting for the provider API response, a new song may have started.
@@ -6883,18 +6860,13 @@ const Providers = {
             console.log(`🎵 [Lyrics+] Track is instrumental (no lyrics) - detected by ${name}`);
             DEBUG.log('Autodetect', `Track marked as instrumental by ${name}`);
 
-            // Convert instrumental to an error result
             result.error = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
-
-            // Hide buttons and cache the instrumental status
             hideButtonsForInstrumental(popup);
             cacheInstrumentalTrack(info.id, name, info);
 
-            // Don't highlight any provider since instrumental means no lyrics from any source
             Providers.current = null;
             if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
 
-            // Display error message through the standard error path
             const lyricsContainer = popup.querySelector("#lyrics-plus-content");
             if (lyricsContainer) {
               lyricsContainer.textContent = result.error;
@@ -6905,19 +6877,17 @@ const Providers = {
             return;
           }
 
-          let lyrics = provider[type](result);
+          const lyrics = provider.getSynced(result);
           if (lyrics && lyrics.length > 0) {
             // ═══ CHECKPOINT 2: Before UI update with lyrics ═══
             // Found lyrics! But before updating UI, verify we're STILL current.
             // This prevents: Old search finds lyrics after new search already updated UI.
             if (!isSearchStillCurrent()) return;
 
-            DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
-            DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
+            DEBUG.provider.success(name, 'getSynced', 'synced', lyrics.length);
+            DEBUG.provider.timing(name, 'getSynced', providerDuration.toFixed(2));
 
-            // Store metadata if available (e.g., KPoe server info)
             currentLyricsMetadata = result?.metadata || null;
-
             Providers.setCurrent(name);
             if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
             await updateLyricsContent(popup, info);
@@ -6926,17 +6896,98 @@ const Providers = {
             DEBUG.log('Autodetect', `Completed successfully in ${totalDuration.toFixed(2)}ms using ${name}`);
             return;
           } else {
-            DEBUG.debug('Provider', `${name} ${type} returned empty lyrics`);
+            DEBUG.debug('Provider', `${name} getSynced returned empty lyrics`);
           }
         } else {
-          DEBUG.provider.failure(name, type, result?.error || 'No result');
+          DEBUG.provider.failure(name, 'getSynced', result?.error || 'No result');
         }
 
-        DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
+        DEBUG.provider.timing(name, 'getSynced', providerDuration.toFixed(2));
       } catch (error) {
         // If a provider fails for any reason, continue looking for lyrics in other providers
-        // Without this try-catch, an error would skip the remaining providers and stop the loop.
-        DEBUG.provider.failure(name, type, error);
+        DEBUG.provider.failure(name, 'getSynced', error);
+        providerResultCache.set(name, null);
+      }
+    }
+
+    // ── Phase 2: Unsynced ────────────────────────────────────────────────────
+    // Combined providers reuse their cached Phase 1 result — no new HTTP request.
+    // Unsynced-only providers (Genius) are fetched fresh here.
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`📄 [Lyrics+] Phase 2: Checking for unsynced lyrics...`);
+    for (const name of [...combinedProviders, ...unsyncedOnlyProviders]) {
+      try {
+        const provider = Providers.map[name];
+        let result;
+        let providerDuration;
+
+        if (providerResultCache.has(name)) {
+          // Reuse data from Phase 1 — no new HTTP request needed
+          result = providerResultCache.get(name);
+          providerDuration = 0;
+        } else {
+          // Fresh fetch for unsynced-only providers (e.g. Genius)
+          const providerStartTime = performance.now();
+          DEBUG.provider.start(name, 'getUnsynced', info);
+          result = await provider.findLyrics(info, 'unsynced');
+          providerDuration = performance.now() - providerStartTime;
+
+          // ═══ CHECKPOINT 1 (Phase 2 fresh fetch): same race guard ═══
+          if (!isSearchStillCurrent()) return;
+        }
+
+        if (result && !result.error) {
+          // Check if track is marked as instrumental by the provider
+          if (result.instrumental) {
+            if (!isSearchStillCurrent()) return;
+
+            console.log(`🎵 [Lyrics+] Track is instrumental (no lyrics) - detected by ${name}`);
+            DEBUG.log('Autodetect', `Track marked as instrumental by ${name}`);
+
+            result.error = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
+            hideButtonsForInstrumental(popup);
+            cacheInstrumentalTrack(info.id, name, info);
+
+            Providers.current = null;
+            if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
+
+            const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+            if (lyricsContainer) {
+              lyricsContainer.textContent = result.error;
+            }
+
+            const totalDuration = performance.now() - startTime;
+            DEBUG.log('Autodetect', `Completed in ${totalDuration.toFixed(2)}ms - instrumental track detected by ${name}`);
+            return;
+          }
+
+          const lyrics = provider.getUnsynced(result);
+          if (lyrics && lyrics.length > 0) {
+            // ═══ CHECKPOINT 2 (Phase 2): verify still current before UI update ═══
+            if (!isSearchStillCurrent()) return;
+
+            DEBUG.provider.success(name, 'getUnsynced', 'unsynced', lyrics.length);
+            DEBUG.provider.timing(name, 'getUnsynced', providerDuration.toFixed(2));
+
+            currentLyricsMetadata = result?.metadata || null;
+            Providers.setCurrent(name);
+            if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+            await updateLyricsContent(popup, info);
+
+            const totalDuration = performance.now() - startTime;
+            DEBUG.log('Autodetect', `Completed successfully in ${totalDuration.toFixed(2)}ms using ${name}`);
+            return;
+          } else {
+            DEBUG.debug('Provider', `${name} getUnsynced returned empty lyrics`);
+          }
+        } else {
+          DEBUG.provider.failure(name, 'getUnsynced', result?.error || 'No result');
+        }
+
+        DEBUG.provider.timing(name, 'getUnsynced', providerDuration.toFixed(2));
+      } catch (error) {
+        // If a provider fails for any reason, continue looking for lyrics in other providers
+        DEBUG.provider.failure(name, 'getUnsynced', error);
       }
     }
 
