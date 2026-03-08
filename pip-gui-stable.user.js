@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.15
+// @version      17.16
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,12 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.16): SPOTIFY TOKEN BEARER PREFIX
+// • The "Bearer " prefix is now automatically stripped from the pasted value on Save,
+//   so users can paste the raw Authorization header value directly without needing to
+//   manually delete the word "Bearer". Stripping is case-insensitive.
+// • Updated step 9 of the Spotify token modal instructions accordingly.
 
 // RESOLVED (17.15): TOKEN SECURITY
 // • Added TokenStorage module: Musixmatch and Spotify tokens are now encrypted with
@@ -3573,7 +3579,7 @@ const ProviderGenius = {
       6. Under Response Headers, locate the authorization request header.<br>
       7. If there isn't one, try a different spclient domain.<br>
       8. Right-click on the content of the authorization request header and select Copy value.<br>
-      9. Paste the token below. Delete the word "Bearer" at the beginning and press Save.<br>
+      9. Paste the token below and press Save.<br>
       <span style="color:#e57373;"><b>WARNING:</b> Keep your token private! Do not share it with others.</span>
     </div>
   `;
@@ -3592,7 +3598,11 @@ const ProviderGenius = {
   btnSave.textContent = "Save";
   btnSave.className = "lyrics-btn";
   btnSave.onclick = async () => {
-    await TokenStorage.setToken(STORAGE_KEYS.SPOTIFY_TOKEN, input.value.trim());
+    // Strip the "Bearer " prefix if present (case-insensitive) so users can paste
+    // the raw Authorization header value directly. If the token was already pasted
+    // without the prefix, replace() leaves it unchanged.
+    const raw = input.value.trim().replace(/^bearer\s+/i, '');
+    await TokenStorage.setToken(STORAGE_KEYS.SPOTIFY_TOKEN, raw);
     modal.remove();
     // Optionally: reload lyrics if popup open and provider is Spotify
   const popup = document.getElementById("lyrics-plus-popup");
