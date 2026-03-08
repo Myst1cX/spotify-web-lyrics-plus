@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.16
+// @version      17.17
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -15,6 +15,12 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+
+// RESOLVED (17.17): REMOVE DEBUG: ENABLE/DISABLE MENU COMMANDS - LOGGING IS NOW ALWAYS ACTIVE
+// • Removed GM_registerMenuCommand('Debug: Enable') and GM_registerMenuCommand('Debug: Disable')
+// • Removed DEBUG.enabled flag and if (DEBUG.enabled) guards from all wrapper methods
+// • All five wrappers (error, warn, info, log, debug) now fire unconditionally
+// • No toggle needed: all output goes to console.info/error/warn which are always visible
 
 // RESOLVED (17.16): DEBUG WRAPPER - STRIP COLORS FROM INFO/LOG/DEBUG, ROUTE ALL TO CONSOLE.INFO
 // • Only ERROR and WARN retain %c CSS styling with colors
@@ -134,7 +140,7 @@
 // • subsequently removed the getAudioElement command
 
 // RESOLVED (16.8): MOVED DEBUG COMMANDS TO MENU COMMANDS
-// • Debug commands now available only via userscript menu (enable, disable, getTrackInfo, getRepeatState, getAudioElement, getCacheStats, clearCache)
+// • Debug commands now available only via userscript menu (getTrackInfo, getRepeatState, getAudioElement, getCacheStats, clearCache)
 // • Removed console-based LyricsPlusDebug API to reduce global scope pollution
 // • Fixed grammar: "Now 1 song cached" instead of "Now 1 songs cached"
 
@@ -533,23 +539,21 @@
   // Debug Logging Infrastructure
   // ------------------------
   const DEBUG = {
-    enabled: false, // Set to false to disable all debug logging
-
     // Log levels with prefixes
     error: (context, ...args) => {
-      if (DEBUG.enabled) console.error(`%c[Lyrics+ ERROR] [${context}]`, 'color: #F44336; font-weight: bold;', ...args);
+      console.error(`%c[Lyrics+ ERROR] [${context}]`, 'color: #F44336; font-weight: bold;', ...args);
     },
     warn: (context, ...args) => {
-      if (DEBUG.enabled) console.warn(`%c[Lyrics+ WARN] [${context}]`, 'color: #FF9800; font-weight: bold;', ...args);
+      console.warn(`%c[Lyrics+ WARN] [${context}]`, 'color: #FF9800; font-weight: bold;', ...args);
     },
     info: (context, ...args) => {
-      if (DEBUG.enabled) console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
+      console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
     },
     log: (context, ...args) => {
-      if (DEBUG.enabled) console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
+      console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
     },
     debug: (context, ...args) => {
-      if (DEBUG.enabled) console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
+      console.info(`${CONTEXT_EMOJI[context] || '▸'} [Lyrics+ ${context}]`, ...args);
     },
 
     // Specialized logging helpers
@@ -7236,21 +7240,6 @@ const Providers = {
     'Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.'
   );
 });
-
-  GM_registerMenuCommand('Debug: Enable', () => {
-    DEBUG.enabled = true;
-    console.log('%c[Lyrics+] Debug mode enabled', 'color: #1db954; font-weight: bold;');
-    alert(
-    '✅ Debug mode enabled!\n' +
-    'Open DevTools (Press F12 or Right click and Inspect), then select the Debug tab under Console for detailed logging.'
-  );
-});
-
-  GM_registerMenuCommand('Debug: Disable', () => {
-    DEBUG.enabled = false;
-    console.log('%c[Lyrics+] Debug mode disabled', 'color: #888;');
-    alert('Debug mode disabled.');
-  });
 
   init();
 })();
