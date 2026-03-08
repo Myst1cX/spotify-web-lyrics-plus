@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.17
+// @version      17.18
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -15,6 +15,11 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+
+// RESOLVED (17.18): CHANGE MENU COMMAND CONSOLE.LOG COLOR FROM SPOTIFY GREEN TO LIGHT BLUE
+// • Menu commands Get Cache Stats, Get Track Info, Get Repeat State: announcement console.log
+//   color changed from #1db954 (Spotify green) to #64B5F6 (light blue) for visual consistency
+//   with INFO-level output which uses the same light blue color
 
 // RESOLVED (17.17): REMOVE DEBUG: ENABLE/DISABLE MENU COMMANDS - LOGGING IS NOW ALWAYS ACTIVE
 // • Removed GM_registerMenuCommand('Debug: Enable') and GM_registerMenuCommand('Debug: Disable')
@@ -7210,7 +7215,7 @@ const Providers = {
 
   GM_registerMenuCommand('Debug: Get Cache Stats', () => {
     const stats = LyricsCache.getStats();
-    console.log('%c[Lyrics+] Cache Statistics:', 'color: #1db954; font-weight: bold;', stats);
+    console.log('%c[Lyrics+] Cache Statistics:', 'color: #64B5F6; font-weight: bold;', stats);
     console.log(`  Cache size: ${stats.size}/${stats.maxEntries} songs`);
     if (stats.entries.length > 0) {
       const tableData = {};
@@ -7225,7 +7230,7 @@ const Providers = {
 
   GM_registerMenuCommand('Debug: Get Track Info', () => {
     const info = getCurrentTrackInfo();
-    console.log('%c[Lyrics+] Current Track Info:', 'color: #1db954; font-weight: bold;', info);
+    console.log('%c[Lyrics+] Current Track Info:', 'color: #64B5F6; font-weight: bold;', info);
      alert(
     'Track information has been logged to the console.\n' +
     'Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.'
@@ -7234,7 +7239,7 @@ const Providers = {
 
   GM_registerMenuCommand('Debug: Get Repeat State', () => {
     const state = getRepeatState();
-    console.log('%c[Lyrics+] Repeat State:', 'color: #1db954; font-weight: bold;', state);
+    console.log('%c[Lyrics+] Repeat State:', 'color: #64B5F6; font-weight: bold;', state);
     alert(
     'Repeat state has been logged to the console.\n' +
     'Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.'
