@@ -2586,7 +2586,11 @@ const PLAY_WORDS = [
 btnSave.textContent = "Save";
 btnSave.className = "lyrics-btn";
 btnSave.onclick = async () => {
-  await TokenStorage.setToken(STORAGE_KEYS.MUSIXMATCH_TOKEN, input.value.trim());
+  console.info("📋 [Lyrics+ Token] Musixmatch token pasted by user");
+  const trimmed = input.value.trim();
+  console.info("✂️ [Lyrics+ Token] Musixmatch token trimmed (whitespace removed)");
+  await TokenStorage.setToken(STORAGE_KEYS.MUSIXMATCH_TOKEN, trimmed);
+  console.info("🔒 [Lyrics+ Token] Musixmatch token encrypted and saved to storage");
   modal.remove();
    // Optionally: reload lyrics if popup open and provider is Musixmatch
   const popup = document.getElementById("lyrics-plus-popup");
@@ -3598,11 +3602,19 @@ const ProviderGenius = {
   btnSave.textContent = "Save";
   btnSave.className = "lyrics-btn";
   btnSave.onclick = async () => {
+    const pasted = input.value.trim();
+    console.info("📋 [Lyrics+ Token] Spotify token pasted by user");
     // Strip the "Bearer " prefix if present (case-insensitive) so users can paste
     // the raw Authorization header value directly. If the token was already pasted
     // without the prefix, replace() leaves it unchanged.
-    const raw = input.value.trim().replace(/^bearer\s+/i, '');
+    const raw = pasted.replace(/^bearer\s+/i, '');
+    if (raw !== pasted) {
+      console.info('✂️ [Lyrics+ Token] "Bearer" prefix detected and stripped from Spotify token');
+    } else {
+      console.info("✅ [Lyrics+ Token] No \"Bearer\" prefix found — Spotify token used as-is");
+    }
     await TokenStorage.setToken(STORAGE_KEYS.SPOTIFY_TOKEN, raw);
+    console.info("🔒 [Lyrics+ Token] Spotify token encrypted and saved to storage");
     modal.remove();
     // Optionally: reload lyrics if popup open and provider is Spotify
   const popup = document.getElementById("lyrics-plus-popup");
