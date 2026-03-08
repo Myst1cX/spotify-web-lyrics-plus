@@ -2171,7 +2171,7 @@ const PLAY_WORDS = [
 
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
-          console.log("[KPoe Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
           console.log(`[KPoe Debug] Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
 
           let songInfo = {
@@ -6833,9 +6833,9 @@ const Providers = {
         currentPhase = phase;
         console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         if (phase === 'synced') {
-          console.log(`🎵 [Lyrics+] Phase 1: Checking providers for synced lyrics...`);
+          console.log(`🎵 [Lyrics+] Phase 1: Checking the provider for synced lyrics...`);
         } else {
-          console.log(`📄 [Lyrics+] Phase 2: No synced lyrics found - checking providers for unsynced lyrics...`);
+          console.log(`📄 [Lyrics+] Phase 2: No synced lyrics found - checking the provider for unsynced lyrics...`);
         }
       }
 
