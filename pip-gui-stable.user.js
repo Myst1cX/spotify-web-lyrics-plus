@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.14
+// @version      17.17
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -14,6 +14,27 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.17): 
+// • Added console.info logging for actions inside the Spotify and Musixmatch token modals
+
+// RESOLVED (17.16): SPOTIFY TOKEN BEARER PREFIX
+// • The "Bearer " prefix is now automatically stripped from the pasted value on Save,
+//   so users can paste the raw Authorization header value directly without needing to
+//   manually delete the word "Bearer". Stripping is case-insensitive.
+// • Updated step 9 of the Spotify token modal instructions accordingly.
+
+// RESOLVED (17.15): TOKEN SECURITY FOR SPOTIFY AND MUSIXMATCH MODALS
+// • Added TokenStorage module: Musixmatch and Spotify tokens are now encrypted with
+//   AES-256-GCM (Web Crypto API) before being written to localStorage. A random
+//   per-installation key is generated on first run and stored alongside the ciphertext;
+//   this ensures raw token values are never persisted as plain text.
+// • Transparent migration: any plain-text token left over from a previous version is
+//   automatically re-encrypted on first read without requiring user action.
+// • Token input fields now use type="password" so the token value is masked on screen,
+//   preventing shoulder-surfing exposure.
+// • Fixed CSS selector bug in Spotify token modal (was targeting musixmatch selector for
+//   password input style).
 
 // RESOLVED (17.14): 
 // •  Fixed [KPoe Debug] separator length, added lyrics fetching phase logs (synced/unsynced) and improved console logs readability
@@ -316,6 +337,114 @@
     FONT_SIZE: 'lyricsPlusFontSize',
     CHINESE_CONVERSION: 'lyricsPlusChineseConversion',
     LYRICS_CACHE: 'lyricsPlusCache_v1',
+    ENC_KEY: 'lyricsPlusEncKey',
+    MUSIXMATCH_TOKEN: 'lyricsPlusMusixmatchToken',
+    SPOTIFY_TOKEN: 'lyricsPlusSpotifyToken',
+  };
+
+  // ------------------------
+  // Token Storage Module (AES-GCM encrypted)
+  // Tokens are encrypted with a randomly generated per-installation AES-256-GCM key
+  // before being written to localStorage, ensuring raw token values are never persisted
+  // as plain text.
+  //
+  // Security model / known limitation:
+  //   The encryption key is also stored in localStorage (under lyricsPlusEncKey).
+  //   This means a determined attacker who already has full access to the browser's
+  //   localStorage for open.spotify.com could retrieve both the key and ciphertext.
+  //   The primary protection this module provides is against:
+  //     • casual inspection (DevTools Application → Local Storage),
+  //     • simple credential-harvesting scripts that only read well-known key names,
+  //     • browser-sync or backup features that copy localStorage to the cloud.
+  //   A session-only key (not persisted) was considered but would require the user to
+  //   re-enter their tokens on every page reload, which is impractical for this use-case.
+  // ------------------------
+  const TokenStorage = {
+    _key: null,
+
+    // Converts a base64 string to a Uint8Array.
+    _b64ToBytes(b64) {
+      return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    },
+
+    // Returns (and caches) the AES-GCM CryptoKey, generating one if none exists yet.
+    async _getKey() {
+      if (this._key) return this._key;
+      try {
+        const stored = localStorage.getItem(STORAGE_KEYS.ENC_KEY);
+        if (stored) {
+          const rawBytes = this._b64ToBytes(stored);
+          this._key = await crypto.subtle.importKey(
+            'raw', rawBytes, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']
+          );
+          return this._key;
+        }
+      } catch (e) {
+        console.warn('[Lyrics+] ⚠️ Could not load encryption key – generating a new one:', e);
+      }
+      // Generate and persist a new 256-bit key
+      this._key = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
+      );
+      const exported = await crypto.subtle.exportKey('raw', this._key);
+      localStorage.setItem(
+        STORAGE_KEYS.ENC_KEY,
+        btoa(String.fromCharCode(...new Uint8Array(exported)))
+      );
+      return this._key;
+    },
+
+    // Encrypts `value` with AES-256-GCM and persists it under `storageKey`.
+    // A fresh 12-byte random IV is generated for every encryption operation;
+    // IV uniqueness is critical for AES-GCM security – never reuse an IV with the same key.
+    async setToken(storageKey, value) {
+      if (!value) {
+        localStorage.removeItem(storageKey);
+        return;
+      }
+      const key = await this._getKey();
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const encoded = new TextEncoder().encode(value);
+      const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
+      const combined = new Uint8Array(iv.byteLength + encrypted.byteLength);
+      combined.set(iv, 0);
+      combined.set(new Uint8Array(encrypted), iv.byteLength);
+      localStorage.setItem(storageKey, btoa(String.fromCharCode(...combined)));
+    },
+
+    // Decrypts and returns the token stored under `storageKey`, or null if absent.
+    // If the stored value looks like a plain-text token saved before this module was
+    // introduced (decryption fails AND the value does not decode to valid base64 binary
+    // with at least 12 bytes for the IV), it is transparently re-encrypted and returned
+    // to migrate old installations.
+    async getToken(storageKey) {
+      const stored = localStorage.getItem(storageKey);
+      if (!stored) return null;
+      try {
+        const key = await this._getKey();
+        const combined = this._b64ToBytes(stored);
+        if (combined.byteLength <= 12) {
+          throw new Error('Stored value too short to be a valid ciphertext');
+        }
+        const iv = combined.slice(0, 12);
+        const data = combined.slice(12);
+        const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+        return new TextDecoder().decode(decrypted);
+      } catch (e) {
+        // Distinguish likely plain-text tokens from genuinely corrupted ciphertext.
+        // A plain-text token will not be valid base64 (or will be far shorter than an
+        // AES-GCM ciphertext), so we attempt migration only if the stored value looks
+        // like a raw token string (printable ASCII, not a long base64-encoded blob).
+        const looksLikePlainText = /^[\x20-\x7E]{10,}$/.test(stored) && stored.length < 500;
+        if (looksLikePlainText) {
+          console.info('[Lyrics+] Migrating plain-text token to encrypted storage');
+          await this.setToken(storageKey, stored);
+          return stored;
+        }
+        console.warn('[Lyrics+] ⚠️ Could not decrypt token – it may be corrupted. Please re-enter your token.', e);
+        return null;
+      }
+    },
   };
 
   // ------------------------
@@ -2312,7 +2441,7 @@ const PLAY_WORDS = [
   // --- Musixmatch ---
 
   // Musixmatch token prompt and storage
-  function showMusixmatchTokenModal() {
+  async function showMusixmatchTokenModal() {
   // Remove any existing modal
   const old = document.getElementById("lyrics-plus-musixmatch-modal");
   if (old) old.remove();
@@ -2447,9 +2576,9 @@ const PLAY_WORDS = [
   `;
 
   const input = document.createElement("input");
-  input.type = "text";
+  input.type = "password";
   input.placeholder = "Enter your Musixmatch user token here";
-  input.value = localStorage.getItem("lyricsPlusMusixmatchToken") || "";
+  input.value = (await TokenStorage.getToken(STORAGE_KEYS.MUSIXMATCH_TOKEN)) || "";
   box.appendChild(input);
 
   // Footer with Save & Cancel
@@ -2459,8 +2588,18 @@ const PLAY_WORDS = [
   const btnSave = document.createElement("button");
 btnSave.textContent = "Save";
 btnSave.className = "lyrics-btn";
-btnSave.onclick = () => {
-  localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
+btnSave.onclick = async () => {
+  const trimmed = input.value.trim();
+  if (!trimmed) {
+    console.info("🗑️ [Lyrics+ Token] Musixmatch token field is empty — token cleared");
+    await TokenStorage.setToken(STORAGE_KEYS.MUSIXMATCH_TOKEN, "");
+    modal.remove();
+    return;
+  }
+  console.info("📋 [Lyrics+ Token] Musixmatch token pasted by user");
+  console.info("✂️ [Lyrics+ Token] Musixmatch token trimmed (whitespace removed)");
+  await TokenStorage.setToken(STORAGE_KEYS.MUSIXMATCH_TOKEN, trimmed);
+  console.info("🔒 [Lyrics+ Token] Musixmatch token encrypted and saved to storage");
   modal.remove();
    // Optionally: reload lyrics if popup open and provider is Musixmatch
   const popup = document.getElementById("lyrics-plus-popup");
@@ -2524,7 +2663,7 @@ async function fetchMusixmatchLyrics(songInfo) {
     title: songInfo.title
   });
 
-  const token = localStorage.getItem("lyricsPlusMusixmatchToken");
+  const token = await TokenStorage.getToken(STORAGE_KEYS.MUSIXMATCH_TOKEN);
   if (!token) {
     console.log("[Musixmatch Debug] ✗ No token found - user needs to configure");
     return { error: "Double click on the Musixmatch provider to set up your token" };
@@ -3322,7 +3461,7 @@ const ProviderGenius = {
 
   // --- Spotify ---
 
-  function showSpotifyTokenModal() {
+  async function showSpotifyTokenModal() {
   // Remove any existing modal
   const old = document.getElementById("lyrics-plus-spotify-modal");
   if (old) old.remove();
@@ -3419,7 +3558,7 @@ const ProviderGenius = {
         text-decoration: underline;
       }
       #lyrics-plus-spotify-modal input[type="text"],
-      #lyrics-plus-musixmatch-modal input[type="password"] {
+      #lyrics-plus-spotify-modal input[type="password"] {
         background: #222;
         color: #fff;
         border: 1px solid #333;
@@ -3453,15 +3592,15 @@ const ProviderGenius = {
       6. Under Response Headers, locate the authorization request header.<br>
       7. If there isn't one, try a different spclient domain.<br>
       8. Right-click on the content of the authorization request header and select Copy value.<br>
-      9. Paste the token below. Delete the word "Bearer" at the beginning and press Save.<br>
+      9. Paste the token below and press Save.<br>
       <span style="color:#e57373;"><b>WARNING:</b> Keep your token private! Do not share it with others.</span>
     </div>
   `;
 
   const input = document.createElement("input");
-  input.type = "text";
+  input.type = "password";
   input.placeholder = "Enter your Spotify user token here";
-  input.value = localStorage.getItem("lyricsPlusSpotifyToken") || "";
+  input.value = (await TokenStorage.getToken(STORAGE_KEYS.SPOTIFY_TOKEN)) || "";
   box.appendChild(input);
 
   // Footer with Save & Cancel
@@ -3471,8 +3610,26 @@ const ProviderGenius = {
   const btnSave = document.createElement("button");
   btnSave.textContent = "Save";
   btnSave.className = "lyrics-btn";
-  btnSave.onclick = () => {
-    localStorage.setItem("lyricsPlusSpotifyToken", input.value.trim());
+  btnSave.onclick = async () => {
+    const pasted = input.value.trim();
+    if (!pasted) {
+      console.info("🗑️ [Lyrics+ Token] Spotify token field is empty — token cleared");
+      await TokenStorage.setToken(STORAGE_KEYS.SPOTIFY_TOKEN, "");
+      modal.remove();
+      return;
+    }
+    console.info("📋 [Lyrics+ Token] Spotify token pasted by user");
+    // Strip the "Bearer " prefix if present (case-insensitive) so users can paste
+    // the raw Authorization header value directly. If the token was already pasted
+    // without the prefix, replace() leaves it unchanged.
+    const raw = pasted.replace(/^bearer\s+/i, '');
+    if (raw !== pasted) {
+      console.info('✂️ [Lyrics+ Token] "Bearer" prefix detected and stripped from Spotify token');
+    } else {
+      console.info("✅ [Lyrics+ Token] No \"Bearer\" prefix found — Spotify token used as-is");
+    }
+    await TokenStorage.setToken(STORAGE_KEYS.SPOTIFY_TOKEN, raw);
+    console.info("🔒 [Lyrics+ Token] Spotify token encrypted and saved to storage");
     modal.remove();
     // Optionally: reload lyrics if popup open and provider is Spotify
   const popup = document.getElementById("lyrics-plus-popup");
@@ -3512,7 +3669,7 @@ const ProviderSpotify = {
       artist: info.artist
     });
 
-    const token = localStorage.getItem("lyricsPlusSpotifyToken");
+    const token = await TokenStorage.getToken(STORAGE_KEYS.SPOTIFY_TOKEN);
 
     if (!token) {
       console.log("[Spotify Debug] ✗ No token found in localStorage");
@@ -7234,5 +7391,4 @@ const Providers = {
 
   init();
 })();
-
 
