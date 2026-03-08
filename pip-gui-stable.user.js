@@ -6572,10 +6572,10 @@ const Providers = {
     const provider = Providers.getCurrent();
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`🎵 [Lyrics+] Phase 1: Checking for synced lyrics...`);
-    const result = await provider.findLyrics(info, 'synced');
+    let result = await provider.findLyrics(info, 'synced');
 
     // Check if track is marked as instrumental - convert to error
-    if (result.instrumental) {
+    if (result?.instrumental) {
       console.log(`🎵 [Lyrics+] Track is instrumental (no lyrics) - detected by ${Providers.current}`);
       result.error = "♪ Instrumental Track ♪\n\nThis track has no lyrics";
       // Cache the instrumental status before proceeding to error handling
@@ -6585,15 +6585,26 @@ const Providers = {
       if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
     }
 
-    if (result.error) {
-      lyricsContainer.textContent = result.error;
-      if (downloadBtn) {
-        downloadBtn.style.display = "none";
-        console.info("📝 [Lyrics+ UI] Download button hidden (lyrics error)");
+    if (result?.error) {
+      // For instrumental tracks, skip unsynced fallback and show the instrumental message directly
+      if (!result?.instrumental) {
+        // Synced lyrics not found - try unsynced as fallback before giving up
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`📄 [Lyrics+] Phase 2: Checking for unsynced lyrics...`);
+        const unsyncedResult = await provider.findLyrics(info, 'unsynced');
+        result = unsyncedResult;
       }
-      if (downloadDropdown) downloadDropdown.style.display = "none";
-      if (chineseConvBtn) chineseConvBtn.style.display = "none";
-      return;
+      // Show error and hide controls if still unresolved after fallback
+      if (result?.error) {
+        lyricsContainer.textContent = result.error;
+        if (downloadBtn) {
+          downloadBtn.style.display = "none";
+          console.info("📝 [Lyrics+ UI] Download button hidden (lyrics error)");
+        }
+        if (downloadDropdown) downloadDropdown.style.display = "none";
+        if (chineseConvBtn) chineseConvBtn.style.display = "none";
+        return;
+      }
     }
 
     let synced = provider.getSynced(result);
