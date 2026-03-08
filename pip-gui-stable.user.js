@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.18
+// @version      17.19
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX 
 // @match        *://open.spotify.com/*
@@ -15,6 +15,11 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+
+// RESOLVED (17.19): MOVE MENU COMMAND OUTPUTS TO CONSOLE.DEBUG
+// • Menu commands Get Cache Stats, Get Track Info, Get Repeat State: all console.log calls
+//   (header lines, cache size line) and console.table moved to console.debug so output
+//   is filtered at the DEBUG level and hidden by default in DevTools
 
 // RESOLVED (17.18): CHANGE MENU COMMAND CONSOLE.LOG COLOR FROM SPOTIFY GREEN TO LIGHT BLUE
 // • Menu commands Get Cache Stats, Get Track Info, Get Repeat State: announcement console.log
@@ -7215,12 +7220,12 @@ const Providers = {
 
   GM_registerMenuCommand('Debug: Get Cache Stats', () => {
     const stats = LyricsCache.getStats();
-    console.log('%c[Lyrics+] Cache Statistics:', 'color: #64B5F6; font-weight: bold;', stats);
-    console.log(`  Cache size: ${stats.size}/${stats.maxEntries} songs`);
+    console.debug('%c[Lyrics+] Cache Statistics:', 'color: #64B5F6; font-weight: bold;', stats);
+    console.debug(`  Cache size: ${stats.size}/${stats.maxEntries} songs`);
     if (stats.entries.length > 0) {
       const tableData = {};
       stats.entries.forEach((entry, i) => { tableData[i + 1] = entry; });
-      console.table(tableData);
+      console.debug(tableData);
     }
     alert(
     'Cache statistics have been logged to the console.\n' +
@@ -7230,7 +7235,7 @@ const Providers = {
 
   GM_registerMenuCommand('Debug: Get Track Info', () => {
     const info = getCurrentTrackInfo();
-    console.log('%c[Lyrics+] Current Track Info:', 'color: #64B5F6; font-weight: bold;', info);
+    console.debug('%c[Lyrics+] Current Track Info:', 'color: #64B5F6; font-weight: bold;', info);
      alert(
     'Track information has been logged to the console.\n' +
     'Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.'
@@ -7239,7 +7244,7 @@ const Providers = {
 
   GM_registerMenuCommand('Debug: Get Repeat State', () => {
     const state = getRepeatState();
-    console.log('%c[Lyrics+] Repeat State:', 'color: #64B5F6; font-weight: bold;', state);
+    console.debug('%c[Lyrics+] Repeat State:', 'color: #64B5F6; font-weight: bold;', state);
     alert(
     'Repeat state has been logged to the console.\n' +
     'Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.'
