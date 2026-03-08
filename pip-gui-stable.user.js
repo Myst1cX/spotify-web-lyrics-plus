@@ -6572,7 +6572,7 @@ const Providers = {
     const provider = Providers.getCurrent();
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`🎵 [Lyrics+] Phase 1: Checking for synced lyrics...`);
-    let result = await provider.findLyrics(info, 'synced');
+    const result = await provider.findLyrics(info, 'synced');
 
     // Check if track is marked as instrumental - convert to error
     if (result?.instrumental) {
@@ -6586,33 +6586,14 @@ const Providers = {
     }
 
     if (result?.error) {
-      // Instrumental tracks have no lyrics at all - skip unsynced fallback
-      if (!result?.instrumental) {
-        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-        console.log(`📄 [Lyrics+] Phase 2: Checking for unsynced lyrics...`);
-        const unsyncedResult = await provider.findLyrics(info, 'unsynced');
-        if (!unsyncedResult?.error) {
-          result = unsyncedResult;
-        } else {
-          lyricsContainer.textContent = unsyncedResult.error;
-          if (downloadBtn) {
-            downloadBtn.style.display = "none";
-            console.info("📝 [Lyrics+ UI] Download button hidden (lyrics error)");
-          }
-          if (downloadDropdown) downloadDropdown.style.display = "none";
-          if (chineseConvBtn) chineseConvBtn.style.display = "none";
-          return;
-        }
-      } else {
-        lyricsContainer.textContent = result.error;
-        if (downloadBtn) {
-          downloadBtn.style.display = "none";
-          console.info("📝 [Lyrics+ UI] Download button hidden (lyrics error)");
-        }
-        if (downloadDropdown) downloadDropdown.style.display = "none";
-        if (chineseConvBtn) chineseConvBtn.style.display = "none";
-        return;
+      lyricsContainer.textContent = result.error;
+      if (downloadBtn) {
+        downloadBtn.style.display = "none";
+        console.info("📝 [Lyrics+ UI] Download button hidden (lyrics error)");
       }
+      if (downloadDropdown) downloadDropdown.style.display = "none";
+      if (chineseConvBtn) chineseConvBtn.style.display = "none";
+      return;
     }
 
     let synced = provider.getSynced(result);
