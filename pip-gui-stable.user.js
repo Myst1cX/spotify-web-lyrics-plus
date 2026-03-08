@@ -15,6 +15,25 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (17.13): DEBUG LOGGING SYSTEM — FINAL FORM (incorporates 17.13 → 17.18)
+// Five unconditional wrappers (error, warn, info, log, debug) — no enable/disable toggle,
+// all output fires at all times. Semantic level distribution:
+//   LOG   → console.info  emoji prefix  → song fetching and caching pipeline events only
+//              (Cache hit/store/clear/load, Autodetect start/abort/success, Provider success,
+//               Track changed — events that directly represent the data-fetch lifecycle)
+//   INFO  → console.info  emoji prefix  → application lifecycle events: UI, Playback, Settings
+//              (Popup created/removed, Button injected, Song restarted, OpenCC initialized,
+//               ResourceManager cleanup — high-level state transitions, not raw data flow)
+//   DEBUG → console.info  emoji prefix  → verbose low-level developer details
+//              (DOM queries, timing, state changes, seekbar, cleanup intervals, observer ops)
+//   WARN  → console.warn  %c styled     → color #FF9800 amber/orange, font-weight bold
+//   ERROR → console.error %c styled     → color #F44336 red, font-weight bold
+// Only ERROR and WARN retain %c CSS styling. INFO, LOG, and DEBUG drop color entirely and
+// use the format: emoji [Lyrics+ context] ...args, where the emoji comes from CONTEXT_EMOJI —
+// a lookup table mapping each context string (Track, Cache, Provider, UI, …) to a fitting emoji.
+// Menu command announcement logs (Get Cache Stats, Get Track Info, Get Repeat State) use
+// #64B5F6 light blue instead of the original #1db954 Spotify green.
+
 // RESOLVED (17.12): FIX ReferenceError: savePopupState is not defined
 // • savePopupState() was defined as a local function inside createPopup(), but
 //   observePopupResize() lives at module scope and cannot access locals of createPopup().
