@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.15
+// @version      17.16
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,6 +14,20 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.16): SINGLE PROVIDER CALL PER AUTODETECT SESSION
+// •  Refactored autodetectProviderAndLoad: each provider (except Genius) is now called only once per track
+// •  Phase 1 fetches both synced and unsynced in a single findLyrics call; unsynced results are stored
+//    in memory (sessionResults) as a fallback if no provider returns synced lyrics
+// •  Phase 2 reuses the stored unsynced result from the highest-priority provider instead of making a
+//    second network request; Genius is still called in phase 2 as a last resort (unchanged behavior)
+// •  Manual provider tab selection: updateLyricsContent already used a single findLyrics call; now also
+//    skips the redundant call when invoked from autodetect by accepting a pre-fetched cachedResult param
+// •  Updated Phase 1 log: "Fetching lyrics from providers (synced preferred). Unsynced lyrics will be
+//    stored for fallback if needed." and Phase 2 log: "No synced lyrics found. Now displaying unsynced
+//    lyrics cached from the highest-priority provider that returned them."
+// •  Errors are logged only once per provider per session; all other logging, caching, instrumental and
+//    race-condition handling preserved
 
 // RESOLVED (17.15):
 // •  Fixed KPoe on manual provider selection not checking for unsynced lyrics when synced fails
@@ -6555,7 +6569,7 @@ const Providers = {
     return true;
   }
 
-  async function updateLyricsContent(popup, info) {
+  async function updateLyricsContent(popup, info, cachedResult = null) {
     if (!info) return;
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
     if (!lyricsContainer) return;
@@ -6573,9 +6587,14 @@ const Providers = {
     const chineseConvBtn = popup._chineseConvBtn;
 
     const provider = Providers.getCurrent();
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`🎵 [Lyrics+] Phase 1: Checking for synced lyrics...`);
-    const result = await provider.findLyrics(info, 'synced');
+    let result;
+    if (cachedResult !== null) {
+      result = cachedResult;
+    } else {
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`🎵 [Lyrics+] Phase 1: Fetching lyrics from providers (synced preferred). Unsynced lyrics will be stored for fallback if needed.`);
+      result = await provider.findLyrics(info, 'synced');
+    }
 
     // Check if track is marked as instrumental - convert to error
     if (result.instrumental) {
@@ -6820,37 +6839,19 @@ const Providers = {
     DEBUG.log('Autodetect', 'Starting provider autodetect', info);
     const startTime = performance.now();
 
-    const detectionOrder = [
-      { name: "LRCLIB", type: "getSynced" },
-      { name: "Spotify", type: "getSynced" },
-      { name: "KPoe", type: "getSynced" },
-      { name: "Musixmatch", type: "getSynced" },
-      { name: "LRCLIB", type: "getUnsynced" },
-      { name: "Spotify", type: "getUnsynced" },
-      { name: "KPoe", type: "getUnsynced" },
-      { name: "Musixmatch", type: "getUnsynced" },
-      { name: "Genius", type: "getUnsynced" }
-    ];
+    const mainProviders = ["LRCLIB", "Spotify", "KPoe", "Musixmatch"];
+    const sessionResults = []; // { name, result } - stores providers that returned unsynced lyrics (but not synced) for phase 2 fallback
 
-    let currentPhase = null;
-    for (const { name, type } of detectionOrder) {
-      const phase = type === 'getSynced' ? 'synced' : 'unsynced';
-      if (phase !== currentPhase) {
-        currentPhase = phase;
-        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-        if (phase === 'synced') {
-          console.log(`🎵 [Lyrics+] Phase 1: Checking for synced lyrics...`);
-        } else {
-          console.log(`📄 [Lyrics+] Phase 2: Checking for unsynced lyrics...`);
-        }
-      }
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`🎵 [Lyrics+] Phase 1: Fetching lyrics from providers (synced preferred). Unsynced lyrics will be stored for fallback if needed.`);
 
+    for (const name of mainProviders) {
       try {
         const providerStartTime = performance.now();
-        DEBUG.provider.start(name, type, info);
+        DEBUG.provider.start(name, 'getSynced', info);
 
         const provider = Providers.map[name];
-        const result = await provider.findLyrics(info, phase);
+        const result = await provider.findLyrics(info, 'synced');
 
         // ═══ CHECKPOINT 1: After async provider call ═══
         // While waiting for the provider API response, a new song may have started.
@@ -6891,39 +6892,119 @@ const Providers = {
             return;
           }
 
-          let lyrics = provider[type](result);
-          if (lyrics && lyrics.length > 0) {
+          const synced = provider.getSynced(result);
+          if (synced && synced.length > 0) {
             // ═══ CHECKPOINT 2: Before UI update with lyrics ═══
             // Found lyrics! But before updating UI, verify we're STILL current.
             // This prevents: Old search finds lyrics after new search already updated UI.
             if (!isSearchStillCurrent()) return;
 
-            DEBUG.provider.success(name, type, type === 'getSynced' ? 'synced' : 'unsynced', lyrics.length);
-            DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
+            DEBUG.provider.success(name, 'getSynced', 'synced', synced.length);
+            DEBUG.provider.timing(name, 'getSynced', providerDuration.toFixed(2));
 
             // Store metadata if available (e.g., KPoe server info)
             currentLyricsMetadata = result?.metadata || null;
 
             Providers.setCurrent(name);
             if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
-            await updateLyricsContent(popup, info);
+            await updateLyricsContent(popup, info, result);
 
             const totalDuration = performance.now() - startTime;
             DEBUG.log('Autodetect', `Completed successfully in ${totalDuration.toFixed(2)}ms using ${name}`);
             return;
+          }
+
+          // No synced lyrics - check for unsynced to store for phase 2 fallback
+          const unsynced = provider.getUnsynced(result);
+          if (unsynced && unsynced.length > 0) {
+            DEBUG.debug('Provider', `${name} returned unsynced lyrics only, stored for phase 2`);
+            sessionResults.push({ name, result });
           } else {
-            DEBUG.debug('Provider', `${name} ${type} returned empty lyrics`);
+            DEBUG.debug('Provider', `${name} getSynced returned empty lyrics`);
           }
         } else {
-          DEBUG.provider.failure(name, type, result?.error || 'No result');
+          DEBUG.provider.failure(name, 'getSynced', result?.error || 'No result');
         }
 
-        DEBUG.provider.timing(name, type, providerDuration.toFixed(2));
+        DEBUG.provider.timing(name, 'getSynced', providerDuration.toFixed(2));
       } catch (error) {
         // If a provider fails for any reason, continue looking for lyrics in other providers
         // Without this try-catch, an error would skip the remaining providers and stop the loop.
-        DEBUG.provider.failure(name, type, error);
+        DEBUG.provider.failure(name, 'getSynced', error);
       }
+    }
+
+    // ═══ CHECKPOINT: Before phase 2 ═══
+    if (!isSearchStillCurrent()) return;
+
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`📄 [Lyrics+] Phase 2: No synced lyrics found. Now displaying unsynced lyrics cached from the highest-priority provider that returned them.`);
+
+    // Check stored results from phase 1 (highest-priority provider first)
+    for (const { name, result } of sessionResults) {
+      if (!isSearchStillCurrent()) return;
+
+      const provider = Providers.map[name];
+      const unsynced = provider.getUnsynced(result);
+      if (unsynced && unsynced.length > 0) {
+        DEBUG.provider.success(name, 'getUnsynced', 'unsynced', unsynced.length);
+        // No separate timing to log - this result was already fetched during phase 1
+
+        // Store metadata if available (e.g., KPoe server info)
+        currentLyricsMetadata = result?.metadata || null;
+
+        Providers.setCurrent(name);
+        if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+        await updateLyricsContent(popup, info, result);
+
+        const totalDuration = performance.now() - startTime;
+        DEBUG.log('Autodetect', `Completed successfully in ${totalDuration.toFixed(2)}ms using ${name}`);
+        return;
+      }
+    }
+
+    // No unsynced from main providers - try Genius (unsynced only, unchanged)
+    try {
+      const providerStartTime = performance.now();
+      DEBUG.provider.start('Genius', 'getUnsynced', info);
+
+      const provider = Providers.map['Genius'];
+      const result = await provider.findLyrics(info, 'unsynced');
+
+      // ═══ CHECKPOINT 1: After async provider call ═══
+      if (!isSearchStillCurrent()) return;
+
+      const providerDuration = performance.now() - providerStartTime;
+
+      if (result && !result.error) {
+        const unsynced = provider.getUnsynced(result);
+        if (unsynced && unsynced.length > 0) {
+          // ═══ CHECKPOINT 2: Before UI update with lyrics ═══
+          if (!isSearchStillCurrent()) return;
+
+          DEBUG.provider.success('Genius', 'getUnsynced', 'unsynced', unsynced.length);
+          DEBUG.provider.timing('Genius', 'getUnsynced', providerDuration.toFixed(2));
+
+          currentLyricsMetadata = result?.metadata || null;
+
+          Providers.setCurrent('Genius');
+          if (popup._lyricsTabs) updateTabs(popup._lyricsTabs);
+          await updateLyricsContent(popup, info, result);
+
+          const totalDuration = performance.now() - startTime;
+          DEBUG.log('Autodetect', `Completed successfully in ${totalDuration.toFixed(2)}ms using Genius`);
+          return;
+        } else {
+          DEBUG.debug('Provider', `Genius getUnsynced returned empty lyrics`);
+        }
+      } else {
+        DEBUG.provider.failure('Genius', 'getUnsynced', result?.error || 'No result');
+      }
+
+      DEBUG.provider.timing('Genius', 'getUnsynced', providerDuration.toFixed(2));
+    } catch (error) {
+      // If a provider fails for any reason, continue to "no lyrics found"
+      DEBUG.provider.failure('Genius', 'getUnsynced', error);
     }
 
     // ═══ CHECKPOINT 3: Before "No lyrics found" message ═══
