@@ -1,0 +1,66 @@
+// Kpoe lyrics with Type: None are actually unsynced lyrics, so these should not display as part of synced.
+
+[KPoe Debug] Attempt 1/5: Raw data with album Spotify Lyrics+ Stable.user.js:2582:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2373:13
+[KPoe Debug] Starting lyrics search (synced) Spotify Lyrics+ Stable.user.js:2378:13
+[KPoe Debug] Using server: https://lyricsplus.prjktla.workers.dev (Primary) Spotify Lyrics+ Stable.user.js:2379:13
+[KPoe Debug] Input info: 
+Object { artist: "Arkanian", title: "XO - Raw", album: "", duration: 168, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2380:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=XO%20-%20Raw&artist=Arkanian&duration=168 Spotify Lyrics+ Stable.user.js:2400:13
+[KPoe Debug] Response status: 200 Spotify Lyrics+ Stable.user.js:2404:15
+[KPoe Debug] Response data: 
+Object { hasLyrics: true, lyricsType: "None", lyricsCount: 44, source: "Apple", server: "https://lyricsplus.prjktla.workers.dev", cached: null, cacheStatus: "unknown", cacheAge: "N/A" }
+Spotify Lyrics+ Stable.user.js:2464:15
+[KPoe Debug] ✓ Lyrics found! Type: None, Lines: 44, Source: Apple Spotify Lyrics+ Stable.user.js:2476:17
+[KPoe Debug] ✓ Successfully fetched from: https://lyricsplus.prjktla.workers.dev Spotify Lyrics+ Stable.user.js:2477:17
+[KPoe Debug] ✓ Success on attempt 1! Type: None Spotify Lyrics+ Stable.user.js:2605:21
+[KPoe Debug] Storing first result (None type) Spotify Lyrics+ Stable.user.js:2612:23
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2581:19
+[KPoe Debug] Attempt 2/5: Raw data without album (sometimes album metadata is wrong) Spotify Lyrics+ Stable.user.js:2582:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2373:13
+[KPoe Debug] Starting lyrics search (synced) Spotify Lyrics+ Stable.user.js:2378:13
+[KPoe Debug] Using server: https://lyricsplus.prjktla.workers.dev (Primary) Spotify Lyrics+ Stable.user.js:2379:13
+[KPoe Debug] Input info: 
+Object { artist: "Arkanian", title: "XO - Raw", album: "", duration: 168, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2380:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=XO%20-%20Raw&artist=Arkanian&duration=168 Spotify Lyrics+ Stable.user.js:2400:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2404:15
+[KPoe Debug] ✗ Track not found on https://lyricsplus.prjktla.workers.dev Spotify Lyrics+ Stable.user.js:2434:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2581:19
+[KPoe Debug] Attempt 3/5: Normalized artist, raw title Spotify Lyrics+ Stable.user.js:2582:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2373:13
+[KPoe Debug] Starting lyrics search (synced) Spotify Lyrics+ Stable.user.js:2378:13
+[KPoe Debug] Using server: https://lyricsplus.prjktla.workers.dev (Primary) Spotify Lyrics+ Stable.user.js:2379:13
+[KPoe Debug] Input info: 
+Object { artist: "Arkanian", title: "XO - Raw", album: "", duration: 168, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2380:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=XO%20-%20Raw&artist=Arkanian&duration=168 Spotify Lyrics+ Stable.user.js:2400:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2404:15
+[KPoe Debug] ✗ Track not found on https://lyricsplus.prjktla.workers.dev Spotify Lyrics+ Stable.user.js:2434:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2581:19
+[KPoe Debug] Attempt 4/5: Raw artist, normalized title Spotify Lyrics+ Stable.user.js:2582:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2373:13
+[KPoe Debug] Starting lyrics search (synced) Spotify Lyrics+ Stable.user.js:2378:13
+[KPoe Debug] Using server: https://lyricsplus.prjktla.workers.dev (Primary) Spotify Lyrics+ Stable.user.js:2379:13
+[KPoe Debug] Input info: 
+Object { artist: "Arkanian", title: "XO - Raw", album: "", duration: 168, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2380:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=XO%20-%20Raw&artist=Arkanian&duration=168 Spotify Lyrics+ Stable.user.js:2400:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2404:15
+[KPoe Debug] ✗ Track not found on https://lyricsplus.prjktla.workers.dev Spotify Lyrics+ Stable.user.js:2434:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2581:19
+[KPoe Debug] Attempt 5/5: Fully normalized data Spotify Lyrics+ Stable.user.js:2582:19
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Spotify Lyrics+ Stable.user.js:2373:13
+[KPoe Debug] Starting lyrics search (synced) Spotify Lyrics+ Stable.user.js:2378:13
+[KPoe Debug] Using server: https://lyricsplus.prjktla.workers.dev (Primary) Spotify Lyrics+ Stable.user.js:2379:13
+[KPoe Debug] Input info: 
+Object { artist: "Arkanian", title: "XO - Raw", album: "", duration: 168, sourceOrder: "none", forceReload: false }
+Spotify Lyrics+ Stable.user.js:2380:13
+[KPoe Debug] Request URL: https://lyricsplus.prjktla.workers.dev/v2/lyrics/get?title=XO%20-%20Raw&artist=Arkanian&duration=168 Spotify Lyrics+ Stable.user.js:2400:13
+[KPoe Debug] Response status: 404 Spotify Lyrics+ Stable.user.js:2404:15
+[KPoe Debug] ✗ Track not found on https://lyricsplus.prjktla.workers.dev Spotify Lyrics+ Stable.user.js:2434:19
+[KPoe Debug] ✓ Returning best result: None type Spotify Lyrics+ Stable.user.js:2631:19
+[KPoe Debug] 📊 Parsing lyrics from: https://lyricsplus.prjktla.workers.dev Spotify Lyrics+ Stable.user.js:2500:13
+✅ [Lyrics+] Lyrics saved to cache! Now have 165 songs (807 KB of 6144 KB) cached for instant replay Spotify Lyrics+ Stable.user.js:840:15
+
