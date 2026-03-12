@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.18
+// @version      17.19
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,6 +14,10 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.19): UPDATED CONSOLE LOG MESSAGES TO REFLECT NEW CHANGES
+// • Providers LRCLIB, KPoe, Musixmatch, Spotify: Log now reads "Starting lyrics search (synced preferred)" - these providers support synced and unsynced lyrics, prefer synced.
+// • Provider Genius: Log now reads "Starting lyrics search (unsynced only)" - Genius only supports unsynced lyrics.
 
 // RESOLVED (17.18): UPDATED CONSOLE LOG MESSAGES TO REFLECT NEW CHANGES
 // • "Phase 2" console log message removed
@@ -1880,7 +1884,7 @@ const PLAY_WORDS = [
   // --- LRCLIB ---
   async function fetchLRCLibLyrics(songInfo, tryWithoutAlbum = false, lyricsType = 'auto') {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`[LRCLIB Debug] Starting lyrics search (${lyricsType})`);
+  console.log(`[LRCLIB Debug] Starting lyrics search (synced preferred)`);
   console.log("[LRCLIB Debug] Input info:", {
     artist: songInfo.artist,
     title: songInfo.title,
@@ -2002,7 +2006,7 @@ const PLAY_WORDS = [
     if (serverIndex > 0) {
       console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex}...`);
     }
-    console.log(`[KPoe Debug] Starting lyrics search (${lyricsType})`);
+    console.log(`[KPoe Debug] Starting lyrics search (synced preferred)`);
     console.log("[KPoe Debug] Using server:", currentServer, `(${serverIndex === 0 ? 'Primary' : 'Backup ' + serverIndex})`);
     console.log("[KPoe Debug] Input info:", {
       artist: songInfo.artist,
@@ -2559,7 +2563,7 @@ function parseMusixmatchSyncedLyrics(subtitleBody) {
 
 async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`[Musixmatch Debug] Starting lyrics search (${lyricsType})`);
+  console.log(`[Musixmatch Debug] Starting lyrics search (synced preferred)`);
   console.log("[Musixmatch Debug] Input info:", {
     artist: songInfo.artist,
     title: songInfo.title
@@ -2737,7 +2741,7 @@ return data;
   // --- Genius ---
 async function fetchGeniusLyrics(info, lyricsType = 'auto') {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`[Genius Debug] Starting lyrics search (${lyricsType})`);
+  console.log(`[Genius Debug] Starting lyrics search (unsynced only)`);
   console.log("[Genius Debug] Input info:", {
     artist: info.artist,
     title: info.title,
@@ -3546,7 +3550,7 @@ const ProviderGenius = {
 const ProviderSpotify = {
   async findLyrics(info, lyricsType = 'auto') {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log(`[Spotify Debug] Starting lyrics search (${lyricsType})`);
+    console.log(`[Spotify Debug] Starting lyrics search (synced preferred)`);
     console.log("[Spotify Debug] Input info:", {
       trackId: info.trackId,
       title: info.title,
@@ -7353,5 +7357,4 @@ const Providers = {
 
   init();
 })();
-
 
