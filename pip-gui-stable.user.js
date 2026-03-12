@@ -6608,7 +6608,7 @@ const Providers = {
       result = cachedResult;
     } else {
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      console.log(`🎵 [Lyrics+] Phase 1: Fetching lyrics from providers (synced preferred). Unsynced lyrics will be stored for fallback if needed.`);
+      console.log(`🎵 [Lyrics+] Fetching lyrics from the manually selected provider. Synced lyrics are preferred. If only unsynced lyrics are found, they will be displayed from the provider.`);
       result = await provider.findLyrics(info, 'synced');
     }
 
@@ -6859,7 +6859,7 @@ const Providers = {
     const sessionResults = []; // { name, result } - stores providers that returned unsynced lyrics (but not synced) for phase 2 fallback
 
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`🎵 [Lyrics+] Phase 1: Fetching lyrics from providers (synced preferred). Unsynced lyrics will be stored for fallback if needed.`);
+    console.log(`🎵 [Lyrics+] Fetching lyrics from providers LRCLIB, Spotify, KPoe and Musixmatch. Synced lyrics are preferred. If a provider only finds unsynced lyrics, they will be stored in the autodetect logic's memory. If no synced lyrics are found on any provider, unsynced lyrics will be cached from the highest-priority provider that returned them. If no lyrics were found at all, Genius provider (unsynced lyrics only) will be tried.`);
 
     for (const name of mainProviders) {
       try {
@@ -6952,9 +6952,6 @@ const Providers = {
 
     // ═══ CHECKPOINT: Before phase 2 ═══
     if (!isSearchStillCurrent()) return;
-
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`📄 [Lyrics+] Phase 2: No synced lyrics found. Now displaying unsynced lyrics cached from the highest-priority provider that returned them.`);
 
     // Check stored results from phase 1 (highest-priority provider first)
     for (const { name, result } of sessionResults) {
