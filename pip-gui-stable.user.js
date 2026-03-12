@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.16.test
+// @version      17.17
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -15,7 +15,16 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.16.test): SINGLE PROVIDER CALL PER AUTODETECT SESSION
+// RESOLVED (17.17): FIX KPOE NONE TYPE LYRICS - UNSYNCED LYRIC TYPE (PREVIOUSLY TREATED AS SYNCED)
+// •  In some cases, KPoe's Apple source returns lyrics with type: "None" and no timing fields.
+//    parseKPoeFormat defaulted missing timestamps to 0, so every line got time: 0,
+//    causing highlightLyrics to always land on the last line.
+// •  Fix: ProviderKPoe.getSynced now returns null when body.type === "None",
+//    causing the caller to fall back to getUnsynced() for correct static display.
+// •  Fix: ProviderKPoe.findLyrics priority logic updated to Line > Word > None,
+//    so a later attempt returning "Word" or "Line" now replaces a prior "None" result.
+
+// RESOLVED (17.16): SINGLE PROVIDER CALL PER AUTODETECT SESSION
 // •  Refactored autodetectProviderAndLoad: each provider (except Genius) is now called only once per track
 // •  Phase 1 fetches both synced and unsynced in a single findLyrics call; unsynced results are stored
 //    in memory (sessionResults) as a fallback if no provider returns synced lyrics
@@ -2217,17 +2226,20 @@ const PLAY_WORDS = [
           } else if (result && result.lyrics && result.lyrics.length > 0) {
             console.log(`[KPoe Debug] ✓ Success on attempt ${i + 1}! Type: ${result.type}`);
 
-            // Keep track of the best result (prefer Line over Word)
+            // Keep track of the best result (priority: Line > Word > None)
+            const typePriority = { "Line": 3, "Word": 2, "None": 1 };
+            const newPriority = typePriority[result.type] ?? 0;
+            const bestPriority = typePriority[bestResultType] ?? 0;
             if (!bestResult) {
               // First successful result
               bestResult = result;
               bestResultType = result.type;
               console.log(`[KPoe Debug] Storing first result (${result.type} type)`);
-            } else if (result.type === "Line" && bestResultType !== "Line") {
-              // Found Line type - upgrade from Word to Line
+            } else if (newPriority > bestPriority) {
+              // Found a higher-priority type - upgrade
               bestResult = result;
               bestResultType = result.type;
-              console.log(`[KPoe Debug] ✓ Upgraded to Line type lyrics!`);
+              console.log(`[KPoe Debug] ✓ Upgraded to ${result.type} type lyrics!`);
             } else {
               console.log(`[KPoe Debug] Keeping previous result (current: ${bestResultType}, new: ${result.type})`);
             }
@@ -2292,6 +2304,10 @@ const PLAY_WORDS = [
     },
     getSynced(body) {
       if (!body?.data || !Array.isArray(body.data)) return null;
+
+      // "None" type means unsynced lyrics (no timing data from Apple source)
+      // Returning null here causes the caller to fall back to getUnsynced()
+      if (body.type === "None") return null;
 
       // Handle both Line-synced and Word-synced lyrics
       const isWordType = body.type === "Word";
