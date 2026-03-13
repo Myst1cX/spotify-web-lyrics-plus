@@ -1,7 +1,8 @@
 ## SPOTIFY WEB LYRICS+
 
 > Injects a powerful lyrics popup into the Spotify Web Player.  
-> Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, **playback controls**, **lyrics download** and more.  
+> Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, **playback controls**, **seekbar**, **lyrics download**, **transliteration** and **Chinese script conversion**.
+> Amoled theme support.
 > **Recommended userscript manager:** [Violentmonkey](https://violentmonkey.github.io/)
 
 ## Features
@@ -26,7 +27,7 @@
 > ⚙️ Fine-tune lyric timing in milliseconds for perfect sync.
 >
 > **PLAYBACK CONTROLS**  
-> 🎛️ Play, pause, next, previous track directly from the popup.
+> Play, pause, next, previous track directly from the popup.
 >
 > **PROVIDER TABS**  
 > Instantly switch between lyric sources.
@@ -39,6 +40,24 @@
 >
 > **STATE SAVING**  
 > Remembers all your popup settings and preferences.
+>
+> **SEEKBAR**  
+> Enable the seekbar from ⚙️ settings to drag or click to any point in the track.
+>
+> **TRANSLITERATION**  
+> 🔡 Shows romanized transliteration alongside lyrics (KPoe provider only, when data is available).
+>
+> **CHINESE SCRIPT CONVERSION**  
+> 繁⇄简 Instantly convert between Traditional and Simplified Chinese lyrics.  
+> Button appears automatically when Chinese lyrics are detected.
+>
+> **LYRICS CACHING**  
+> Lyrics are automatically cached locally (up to 6 MB, typically 150–400 songs).  
+> Cached songs load instantly with no network request. Evicts oldest entries automatically.  
+> Also supports **Repeat One**: lyrics scroll back to the beginning when a song restarts.
+>
+> **AMOLED THEME**  
+> Enable a pitch-black background from ⚙️ settings for AMOLED displays.
 
 ## Screenshots
 
@@ -50,10 +69,10 @@
 > 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
 > 3. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
 > 4. Optional - for stock lyrics button: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
-> 4. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
-> 5. Open [Spotify Web Player](https://open.spotify.com/) 
-> 6. Play a song
-> 7. Click on the Lyrics+ button to open the interface popup and see the song lyrics
+> 5. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)
+> 6. Open [Spotify Web Player](https://open.spotify.com/) 
+> 7. Play a song
+> 8. Click on the Lyrics+ button to open the interface popup and see the song lyrics
 
 ## Usage
 
@@ -62,10 +81,14 @@
 > 3. **Switch provider:** Use the top tabs.  
 > 4. **Translate lyrics:** 🌐 Toggle translation controls, pick your language, click "Translate".  
 > 5. **Change font size:** Use the dropdown at top right.  
-> 6. **Playback controls:** Use play, pause, next, previous inside the popup.  
-> 7. **Timing offset:** Click ⚙️, adjust ms if lyrics are early/late.  
-> 8. **Show/hide controls:** Click 🎛️ for extra playback options.  
-> 9. **Reset:** Click ↻ to restore default popup position/size.
+> 6. **Settings panel:** Click ⚙️ to open/close the settings panel (timing offset, seekbar, playback controls, AMOLED theme).  
+> 7. **Timing offset:** In the ⚙️ settings panel, adjust ms if lyrics are early/late.  
+> 8. **Seekbar:** In the ⚙️ settings panel, toggle "Show seekbar", then drag or click the seekbar to jump to any position in the track.  
+> 9. **Playback controls:** In the ⚙️ settings panel, toggle "Show playback controls" to show/hide play, pause, next, previous.  
+> 10. **AMOLED theme:** In the ⚙️ settings panel, toggle "Enable AMOLED theme" for a pitch-black background.  
+> 11. **Transliteration:** Click 🔡 (KPoe provider, when available) to show/hide romanized transliteration alongside lyrics.  
+> 12. **Chinese conversion:** Click 繁→简 or 简→繁 (when Chinese lyrics are detected) to convert between Traditional and Simplified Chinese.  
+> 13. **Reset:** Click ↻ to restore default popup position/size.
 
 * * * 
 
@@ -94,7 +117,7 @@
 > 7. Under Response Headers, locate the authorization request header. 
 > 8. If there isn't one, try a different spclient domain.
 > 9. Right-click on the content of the authorization request header and select Copy value. 
-> 10. In the Lyrics+ popup, double-click on the Spotify provider, paste your token and press Save.
+> 10. In the Lyrics+ popup, double-click on the Spotify provider, paste your token and press Save.  
 
 ## Troubleshooting
 
@@ -110,7 +133,7 @@
 > 4. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
 > 5. Optional - for stock lyrics button: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
 > 6. Install [Spotifuck](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v5.user.js)
-> 7. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui.user.js)
+> 7. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)
 > 8. Install Chameleon extension
 > 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)
 > 10. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option
