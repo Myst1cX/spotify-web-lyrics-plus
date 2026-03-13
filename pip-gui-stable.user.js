@@ -19,6 +19,7 @@
 // • Added a missing flag initialisation: window.lyricsPlusPopupIsResizing = false;
 // • Removed a comment referencing an old FIX_EXPLANATION.md file that's no longer relevant
 // • Removed a stale "NEW" feature marker
+// • Added line breaks: /n - to "Fetching lyrics from" console logs
 
 // RESOLVED (17.19): UPDATED CONSOLE LOG MESSAGES TO REFLECT NEW CHANGES
 // • Providers LRCLIB, KPoe, Musixmatch, Spotify: Log now reads "Starting lyrics search (synced preferred)" - these providers support synced and unsynced lyrics, prefer synced.
@@ -6622,7 +6623,7 @@ const Providers = {
       result = cachedResult;
     } else {
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      console.log(`🎵 [Lyrics+] Fetching lyrics from the manually selected provider. Synced lyrics are preferred. If only unsynced lyrics are found, they will be displayed from the provider.`);
+      console.log(`🎵 [Lyrics+] Fetching lyrics from the manually selected provider.\nSynced lyrics are preferred.\nIf only unsynced lyrics are found, they will be displayed from the provider.`);
       result = await provider.findLyrics(info, 'synced');
     }
 
@@ -6873,7 +6874,7 @@ const Providers = {
     const sessionResults = []; // { name, result } - stores providers that returned unsynced lyrics (but not synced) for phase 2 fallback
 
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`🎵 [Lyrics+] Fetching lyrics from providers LRCLIB, Spotify, KPoe and Musixmatch. Synced lyrics are preferred. If a provider only finds unsynced lyrics, they will be stored in the autodetect logic's memory. If no synced lyrics are found on any provider, unsynced lyrics will be cached from the highest-priority provider that returned them. If no lyrics were found at all, Genius provider (unsynced lyrics only) will be tried.`);
+    console.log(`🎵 [Lyrics+] Fetching lyrics from providers LRCLIB, Spotify, KPoe and Musixmatch.\nSynced lyrics are preferred.\nIf a provider only finds unsynced lyrics, they will be stored in the autodetect logic's memory.\nIf no synced lyrics are found on any provider, unsynced lyrics will be cached from the highest-priority provider that returned them.\nIf no lyrics were found at all, Genius provider (unsynced lyrics only) will be tried.`);
 
     for (const name of mainProviders) {
       try {
