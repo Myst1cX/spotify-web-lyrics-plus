@@ -1,9 +1,10 @@
 ## SPOTIFY WEB LYRICS+
 
-> Injects a powerful lyrics popup into the Spotify Web Player.  
+> Injects a powerful lyrics popup into the Spotify Web Player.
 > Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, **lyrics download**, **Chinese script conversion** and **transliteration** (the  latter is limited to KPoe provider, when available in the lyric source)  
 > **Playback controls** and **seekbar** can be enabled specifically for the Lyrics+ lyric popup to facilitate song navigation.  
-> **Amoled theme** support.  
+> **Amoled theme** support.
+> **State saving** popup modal - remembers all your settings and preferences.
 > **Recommended userscript manager:** [Violentmonkey](https://violentmonkey.github.io/)
 
 ## Features
@@ -16,49 +17,54 @@
 > Move and resize anywhere on your screen.  
 > Remembers position, size, font, provider, and translation settings.  
 > Reset button to restore default popup position/size.
+> 
+> **FONT SIZE PICKER**  
+> Choose your favorite lyrics text size.  
+> The chosen setting saves locally. By default, it is set to 22px.
 >
-> **LYRICS DOWNLOAD**<br>
+> **AUTO-DETECT**  
+> Script automatically picks the best lyric provider for each track.
+> When a provider finds lyrics to be displayed, it gets highlighted in green.
+>
+> **PROVIDER TABS**  
+> Manually switch between lyric providers.  
+> Option to show/hide the lyric source tabs menu is available in the ⚙️ settings menu.
+>
+> **LYRICS CACHING**  
+> Lyrics are automatically cached locally (up to 6 MB, typically 150–400 songs; limit currently set to 1000 songs).  
+> Cached songs load instantly with no network request. Evicts oldest entries automatically.  
+> When a song is set to be played on repeat (Repeat One) and has cached lyrics, the lyrics interface scrolls back to the beginning upon song restart.
+> 
+> **SEEKBAR**  
+> Seek to any point in the track.  
+> Enable the seekbar from the ⚙️ settings menu.
+>
+> **PLAYBACK CONTROLS**  
+> Play/pause, next/previous track, shuffle and repeat buttons accessible directly inside the popup.  
+> Enable the playback controls from the ⚙️ settings menu.
+>
+> **LYRICS TIMING OFFSET**  
+> Fine-tune lyric timing in milliseconds for perfect sync.
+> Accessible from the ⚙️ settings menu.
+> The chosen setting saves locally. By default, is is set to 1000ms.
+>
+> **AMOLED THEME**
+> A pitch-black theme for the Lyrics+ popup.  
+> Can be toggled on/off from the ⚙️ settings menu.
+> 
+> **LYRICS DOWNLOAD**
 > Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability.
 > 
 > **LIVE TRANSLATION**  
-> 🌐 Instantly translate any lyrics (line-by-line, 70+ languages).  
+> 🌐 Instantly translate any lyrics (line-by-line, 70+ languages, utilizing Google translate api).  
 > Show/hide translation controls. Remove or re-translate in one click.
 >
-> **LYRICS TIMING OFFSET**  
-> ⚙️ Fine-tune lyric timing in milliseconds for perfect sync.
->
-> **PLAYBACK CONTROLS**  
-> Play, pause, next, previous track directly from the popup.
->
-> **PROVIDER TABS**  
-> Instantly switch between lyric sources.
->
-> **FONT SIZE PICKER**  
-> Choose your favorite lyrics text size.
->
-> **AUTO-DETECT**  
-> Script automatically picks the best provider for each track.
->
-> **STATE SAVING**  
-> Remembers all your popup settings and preferences.
->
-> **SEEKBAR**  
-> Enable the seekbar from ⚙️ settings to drag or click to any point in the track.
->
 > **TRANSLITERATION**  
-> 🔡 Shows romanized transliteration alongside lyrics (KPoe provider only, when data is available).
+> 🔡 Shows romanized transliteration alongside lyrics (KPoe provider only, when available in the lyric source).
 >
 > **CHINESE SCRIPT CONVERSION**  
 > 繁⇄简 Instantly convert between Traditional and Simplified Chinese lyrics.  
 > Button appears automatically when Chinese lyrics are detected.
->
-> **LYRICS CACHING**  
-> Lyrics are automatically cached locally (up to 6 MB, typically 150–400 songs).  
-> Cached songs load instantly with no network request. Evicts oldest entries automatically.  
-> Also supports **Repeat One**: lyrics scroll back to the beginning when a song restarts.
->
-> **AMOLED THEME**  
-> Enable a pitch-black background from ⚙️ settings for AMOLED displays.
 
 ## Screenshots
 
