@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.19
+// @version      17.20
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,6 +14,11 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.20): CODE IMPROVEMENTS
+// • Added a missing flag initialisation: window.lyricsPlusPopupIsResizing = false;
+// • Removed a comment referencing an old FIX_EXPLANATION.md file that's no longer relevant
+// • Removed a stale "NEW" feature marker
 
 // RESOLVED (17.19): UPDATED CONSOLE LOG MESSAGES TO REFLECT NEW CHANGES
 // • Providers LRCLIB, KPoe, Musixmatch, Spotify: Log now reads "Starting lyrics search (synced preferred)" - these providers support synced and unsynced lyrics, prefer synced.
@@ -306,11 +311,10 @@
 
   let highlightTimer = null;
   let pollingInterval = null;
-  let progressInterval = null; // <-- NEW: interval for progress bar updates
+  let progressInterval = null; // interval for progress bar updates
   let currentTrackId = null;
 
   // Race Condition Prevention (fixes bug where advertisements overwrite song lyrics)
-  // See FIX_EXPLANATION.md for detailed explanation
   let currentSearchId = null; // Tracks the ID of the currently active lyrics search
   let searchIdCounter = 0; // Monotonically increasing counter for guaranteed unique search IDs
 
@@ -662,6 +666,7 @@
   window.lyricsPlusPopupIgnoreProportion = false;
   window.lastProportion = { w: null, h: null };
   window.lyricsPlusPopupIsDragging = false;
+  window.lyricsPlusPopupIsResizing = false;
 
   // ------------------------
   // Resource Management & Cleanup System
@@ -7138,7 +7143,6 @@ const Providers = {
       // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
       const micBtn = document.querySelector('[data-testid="lyrics-button"]');
       const targetBtn = micBtn; // previously: nowPlayingViewBtn || micBtn;
-      // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
       const controls = targetBtn?.parentElement;
       if (!controls) {
         if (attempts < maxRetries) {
@@ -7357,4 +7361,3 @@ const Providers = {
 
   init();
 })();
-
