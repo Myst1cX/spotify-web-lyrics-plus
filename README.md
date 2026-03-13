@@ -110,7 +110,7 @@
 > 4. Go to the Network tab, and look for the `www.musixmatch.com` domain.  
 > 5. Click on `www.musixmatch.com` and go to the Cookies section.  
 > 6. Find `musixmatchUserToken`, right-click its content and select Copy value.  
-> 7. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click Process.  
+> 7. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click Process. 
 > 8. Copy the value of `web-desktop-app-v1.0` — this is your user token.  
 > 9. In the Lyrics+ popup, double-click on the Musixmatch provider, paste your token and press Save.
 
@@ -124,8 +124,9 @@
 > 6. Click on one of the spclient domains and go to the Headers section. 
 > 7. Under Response Headers, locate the authorization request header. 
 > 8. If there isn't one, try a different spclient domain.
-> 9. Right-click on the content of the authorization request header and select Copy value. 
-> 10. In the Lyrics+ popup, double-click on the Spotify provider, paste your token and press Save.  
+> 9. Right-click on the content of the authorization request header and select Copy value.
+> 10. In the Lyrics+ popup, double-click on the Spotify provider, paste your token and press Save.
+> 11. The "Bearer " prefix will be stripped automatically, so you can enter the whole value out of the box.
 
 ## Troubleshooting
 
