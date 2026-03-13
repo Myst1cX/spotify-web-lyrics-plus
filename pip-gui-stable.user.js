@@ -20,6 +20,7 @@
 // • Removed a comment referencing an old FIX_EXPLANATION.md file that's no longer relevant
 // • Removed a stale "NEW" feature marker
 // • Added line breaks: /n - to "Fetching lyrics from" console logs
+// • Implemented automatic stripping of the Bearer prefix from the Spotify token: the user can now directly paste the raw Authorization header value without needing to delete the word "Bearer"
 
 // RESOLVED (17.19): UPDATED CONSOLE LOG MESSAGES TO REFLECT NEW CHANGES
 // • Providers LRCLIB, KPoe, Musixmatch, Spotify: Log now reads "Starting lyrics search (synced preferred)" - these providers support synced and unsynced lyrics, prefer synced.
@@ -3504,7 +3505,7 @@ const ProviderGenius = {
       6. Under Response Headers, locate the authorization request header.<br>
       7. If there isn't one, try a different spclient domain.<br>
       8. Right-click on the content of the authorization request header and select Copy value.<br>
-      9. Paste the token below. Delete the word "Bearer" at the beginning and press Save.<br>
+      9. Paste the token below and press Save.<br>
       <span style="color:#e57373;"><b>WARNING:</b> Keep your token private! Do not share it with others.</span>
     </div>
   `;
@@ -3523,7 +3524,10 @@ const ProviderGenius = {
   btnSave.textContent = "Save";
   btnSave.className = "lyrics-btn";
   btnSave.onclick = () => {
-    localStorage.setItem("lyricsPlusSpotifyToken", input.value.trim());
+    const rawValue = input.value.trim();
+    const bearerPrefix = "Bearer ";
+    const tokenValue = rawValue.startsWith(bearerPrefix) ? rawValue.slice(bearerPrefix.length) : rawValue;
+    localStorage.setItem("lyricsPlusSpotifyToken", tokenValue);
     modal.remove();
     // Optionally: reload lyrics if popup open and provider is Spotify
   const popup = document.getElementById("lyrics-plus-popup");
