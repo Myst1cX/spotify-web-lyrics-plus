@@ -44,8 +44,8 @@
 > Enable the playback controls from the ⚙️ settings menu.
 >
 > **LYRICS TIMING OFFSET**  
-> Fine-tune lyric timing in milliseconds for perfect sync.
-> Accessible from the ⚙️ settings menu.
+> Fine-tune lyric timing in milliseconds for perfect sync.  
+> Accessible from the ⚙️ settings menu.  
 > The chosen setting saves locally. By default, is is set to 1000ms.
 >
 > **AMOLED THEME**
