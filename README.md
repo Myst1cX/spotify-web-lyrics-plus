@@ -23,7 +23,7 @@
 > The chosen setting saves locally. By default, it is set to 22px.
 >
 > **AUTO-DETECT**  
-> Script automatically picks the best lyric provider for each track.
+> Script automatically picks the best lyric provider for each track.  
 > When a provider finds lyrics to be displayed, it gets highlighted in green.
 >
 > **PROVIDER TABS**  
