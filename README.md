@@ -52,7 +52,7 @@
 > A pitch-black theme for the Lyrics+ popup.  
 > Can be toggled on/off from the ⚙️ settings menu.
 > 
-> **LYRICS DOWNLOAD**
+> **LYRICS DOWNLOAD**  
 > Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability.
 > 
 > **LIVE TRANSLATION**  
