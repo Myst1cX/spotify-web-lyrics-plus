@@ -125,7 +125,7 @@
 > 7. Under Response Headers, locate the authorization request header. 
 > 8. If there isn't one, try a different spclient domain.
 > 9. Right-click on the content of the authorization request header and select Copy value.
-> 10. In the Lyrics+ popup, double-click on the Spotify provider, paste your token and press Save.
+> 10. In the Lyrics+ popup, double-click on the Spotify provider, paste your token and press Save.  
 > 11. The "Bearer " prefix will be stripped automatically, so you can enter the whole value out of the box.
 
 ## Troubleshooting
