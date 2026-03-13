@@ -22,11 +22,11 @@
 > Choose your favorite lyrics text size.  
 > The chosen setting saves locally. By default, it is set to 22px.
 >
-> **AUTO-DETECT**  
+> **AUTO-DETECT LOGIC**  
 > Script automatically picks the best lyric provider for each track.  
 > When a provider finds lyrics to be displayed, it gets highlighted in green.
 >
-> **PROVIDER TABS**  
+> **LYRIC SOURCE PROVIDER TABS**  
 > Manually switch between lyric providers.  
 > Option to show/hide the lyric source tabs menu is available in the ⚙️ settings menu.
 >
@@ -36,7 +36,7 @@
 > If a song is set to "Repeat One", the lyrics container automatically reloads the cached song without consuming another fetch request.
 > 
 > **SEEKBAR**  
-> Seek to any point in the track.  
+> Jump to any position in the track by dragging or clicking on the seekbar. 
 > Enable the seekbar from the ⚙️ settings menu.
 >
 > **PLAYBACK CONTROLS**  
@@ -56,15 +56,19 @@
 > Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability.
 > 
 > **LIVE TRANSLATION**  
-> 🌐 Instantly translate any lyrics (line-by-line, 70+ languages, utilizing Google translate api).  
-> Show/hide translation controls. Remove or re-translate in one click.
+> Instantly translate any lyrics (70+ languages, using the Google translate api).
+> It may not always be accurate as it performs translation line-by-line.
+> Show/hide translation controls using the 🌐 button. 
 >
 > **TRANSLITERATION**  
-> 🔡 Shows romanized transliteration alongside lyrics (KPoe provider only, when available in the lyric source).
+> Show/hide romanized transliteration alongside lyrics using the 🔡 button.
+> Limited to the KPoe provider, when transliteration is available in the lyric source.
 >
 > **CHINESE SCRIPT CONVERSION**  
-> 繁⇄简 Instantly convert between Traditional and Simplified Chinese lyrics.  
-> Button appears automatically when Chinese lyrics are detected.
+> Instantly convert between Traditional and Simplified Chinese lyrics (using the open.cc conversion api).
+> 简 = Convert from Simplified to Traditional Chinese
+> 繁 = Convert from Traditional to Simplified Chinese
+> The conversion button appears automatically when Chinese lyrics are detected.
 
 ## Screenshots
 
@@ -73,29 +77,26 @@
 ## Installation
 
 > 1. Install [Violentmonkey](https://violentmonkey.github.io/)  
-> 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
-> 3. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
-> 4. Optional - for stock lyrics button: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
-> 5. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)
-> 6. Open [Spotify Web Player](https://open.spotify.com/) 
-> 7. Play a song
-> 8. Click on the Lyrics+ button to open the interface popup and see the song lyrics
+> 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
+> 3. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)  
+> 4. Optional - for stock lyrics button: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)  
+> 5. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)  
+> 6. Open [Spotify Web Player](https://open.spotify.com/)   
+> 7. Play a song  
+> 8. Click on the Lyrics+ button to open the interface popup and see the song lyrics  
 
 ## Usage
 
 > 1. **Open/close popup:** Click the Lyrics+ button.  
 > 2. **Move/resize:** Drag the header or the triangle in the corner.  
-> 3. **Switch provider:** Use the top tabs.  
-> 4. **Translate lyrics:** 🌐 Toggle translation controls, pick your language, click "Translate".  
-> 5. **Change font size:** Use the dropdown at top right.  
-> 6. **Settings panel:** Click ⚙️ to open/close the settings panel (timing offset, seekbar, playback controls, AMOLED theme).  
-> 7. **Timing offset:** In the ⚙️ settings panel, adjust ms if lyrics are early/late.  
-> 8. **Seekbar:** In the ⚙️ settings panel, toggle "Show seekbar", then drag or click the seekbar to jump to any position in the track.  
-> 9. **Playback controls:** In the ⚙️ settings panel, toggle "Show playback controls" to show/hide play, pause, next, previous.  
-> 10. **AMOLED theme:** In the ⚙️ settings panel, toggle "Enable AMOLED theme" for a pitch-black background.  
-> 11. **Transliteration:** Click 🔡 (KPoe provider, when available) to show/hide romanized transliteration alongside lyrics.  
-> 12. **Chinese conversion:** Click 繁→简 or 简→繁 (when Chinese lyrics are detected) to convert between Traditional and Simplified Chinese.  
-> 13. **Reset:** Click ↻ to restore default popup position/size.
+> 3. **Auto-detect logic:** Script automatically chooses the best lyric provider for each track.  
+> 4. **Manually switch between lyric providers:** Click between the lyric source provider tabs.  
+> 8. **Settings panel:** Click ⚙️ to open/close the settings panel (show/hide lyric source tabs, show/hide seekbar, show/hide playback controls, set timing offset, enable/disable AMOLED theme).   
+> 5. **Translate lyrics:** Click 🌐 to toggle translation controls, pick your language, and press on "Translate".  
+> 6. **Transliteration:** Click 🔡 (KPoe provider only, when available in the lyric source) to show/hide romanized transliteration alongside lyrics.  
+> 7. **Chinese conversion:** Click 简 or 繁 (when Chinese lyrics are detected) to convert between Traditional and Simplified Chinese.    
+> 8. **Change font size:** Use the font size's "px" dropdown menu.  
+> 9. **Reset:** Click ↻ to restore default popup position/size.  
 
 * * * 
 
