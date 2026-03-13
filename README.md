@@ -33,7 +33,7 @@
 > **LYRICS CACHING**  
 > Lyrics are automatically cached locally (up to 6 MB, typically 150–400 songs; limit currently set to 1000 songs).  
 > Cached songs load instantly with no network request. Evicts oldest entries automatically.  
-> When a song is set to be played on repeat (Repeat One) and has cached lyrics, the lyrics interface scrolls back to the beginning upon song restart.
+> If a song is set to "Repeat One", the lyrics container automatically reloads the cached song without consuming another fetch request.
 > 
 > **SEEKBAR**  
 > Seek to any point in the track.  
