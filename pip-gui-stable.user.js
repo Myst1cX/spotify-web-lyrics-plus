@@ -306,11 +306,10 @@
 
   let highlightTimer = null;
   let pollingInterval = null;
-  let progressInterval = null; // <-- NEW: interval for progress bar updates
+  let progressInterval = null; // interval for progress bar updates
   let currentTrackId = null;
 
   // Race Condition Prevention (fixes bug where advertisements overwrite song lyrics)
-  // See FIX_EXPLANATION.md for detailed explanation
   let currentSearchId = null; // Tracks the ID of the currently active lyrics search
   let searchIdCounter = 0; // Monotonically increasing counter for guaranteed unique search IDs
 
@@ -662,6 +661,7 @@
   window.lyricsPlusPopupIgnoreProportion = false;
   window.lastProportion = { w: null, h: null };
   window.lyricsPlusPopupIsDragging = false;
+  window.lyricsPlusPopupIsResizing = false;
 
   // ------------------------
   // Resource Management & Cleanup System
@@ -7138,7 +7138,6 @@ const Providers = {
       // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
       const micBtn = document.querySelector('[data-testid="lyrics-button"]');
       const targetBtn = micBtn; // previously: nowPlayingViewBtn || micBtn;
-      // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
       const controls = targetBtn?.parentElement;
       if (!controls) {
         if (attempts < maxRetries) {
