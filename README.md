@@ -1,8 +1,9 @@
 ## SPOTIFY WEB LYRICS+
 
 > Injects a powerful lyrics popup into the Spotify Web Player.  
-> Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, **playback controls**, **seekbar**, **lyrics download**, **transliteration** and **Chinese script conversion**.  
-> Amoled theme support.  
+> Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, **lyrics download**, **transliteration (KPoe provider, when available in the lyric source)** and **Chinese script conversion**.  
+> **Playback controls** and **seekbar** can be enabled specifically for the Lyrics+ lyric popup to facilitate song navigation.  
+> **Amoled theme** support.  
 > **Recommended userscript manager:** [Violentmonkey](https://violentmonkey.github.io/)
 
 ## Features
