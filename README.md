@@ -9,8 +9,8 @@
 ## Features
 
 > **MULTI-PROVIDER LYRICS (LRCLIB, Spotify, KPoe, Musixmatch, Genius)**  
-> Get lyrics from LRCLIB, Spotify, KPoe (Apple Music source), Musixmatch or Genius.  
-> Spotify and Musixmatch require a user token, guides for both are further down in the README.
+> Get lyrics from LRCLIB, Spotify, KPoe (combines Apple Music/Musixmatch/QQ Music as sources), Musixmatch or Genius.  
+> Spotify and Musixmatch require a user token, guides for both are further down in the README file.
 > 
 > **POPUP WINDOW**  
 > Move and resize anywhere on your screen.  
