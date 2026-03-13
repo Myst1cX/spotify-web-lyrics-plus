@@ -3524,8 +3524,8 @@ const ProviderGenius = {
   btnSave.className = "lyrics-btn";
   btnSave.onclick = () => {
     const rawValue = input.value.trim();
-    const bearerPrefix = "Bearer ";
-    const tokenValue = rawValue.startsWith(bearerPrefix) ? rawValue.slice(bearerPrefix.length) : rawValue;
+    const bearerPrefix = "bearer ";
+    const tokenValue = rawValue.toLowerCase().startsWith(bearerPrefix) ? rawValue.slice(bearerPrefix.length) : rawValue;
     localStorage.setItem("lyricsPlusSpotifyToken", tokenValue);
     modal.remove();
     // Optionally: reload lyrics if popup open and provider is Spotify
