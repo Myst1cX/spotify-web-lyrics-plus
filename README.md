@@ -48,7 +48,7 @@
 > Accessible from the ⚙️ settings menu.  
 > The chosen setting saves locally. By default, is is set to 1000ms.
 >
-> **AMOLED THEME**
+> **AMOLED THEME**  
 > A pitch-black theme for the Lyrics+ popup.  
 > Can be toggled on/off from the ⚙️ settings menu.
 > 
