@@ -1,14 +1,14 @@
 ## SPOTIFY WEB LYRICS+
 
 > Injects a powerful lyrics popup into the Spotify Web Player.  
-> Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, **playback controls**, **seekbar**, **lyrics download**, **transliteration** and **Chinese script conversion**.
-> Amoled theme support.
+> Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, **playback controls**, **seekbar**, **lyrics download**, **transliteration** and **Chinese script conversion**.  
+> Amoled theme support.  
 > **Recommended userscript manager:** [Violentmonkey](https://violentmonkey.github.io/)
 
 ## Features
 
 > **MULTI-PROVIDER LYRICS (LRCLIB, Spotify, KPoe, Musixmatch, Genius)**  
-> Get lyrics from LRCLIB, Spotify, KPoe (Apple Music source), Musixmatch or Genius.
+> Get lyrics from LRCLIB, Spotify, KPoe (Apple Music source), Musixmatch or Genius.  
 > Spotify and Musixmatch require a user token, guides for both are further down in the README.
 > 
 > **POPUP WINDOW**  
