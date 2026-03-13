@@ -61,14 +61,14 @@
 > Show/hide translation controls using the 🌐 button. 
 >
 > **TRANSLITERATION**  
-> Show/hide romanized transliteration alongside lyrics using the 🔡 button.
-> Limited to the KPoe provider, when transliteration is available in the lyric source.
+> Show/hide romanized transliteration alongside lyrics using the 🔡 button.  
+> Limited to the KPoe provider, when transliteration is available in the lyric source.  
 >
 > **CHINESE SCRIPT CONVERSION**  
-> Instantly convert between Traditional and Simplified Chinese lyrics (using the open.cc conversion api).
-> 简 = Convert from Simplified to Traditional Chinese
-> 繁 = Convert from Traditional to Simplified Chinese
-> The conversion button appears automatically when Chinese lyrics are detected.
+> Instantly convert between Traditional and Simplified Chinese lyrics (using the open.cc conversion api).  
+> 简 = Convert from Simplified to Traditional Chinese  
+> 繁 = Convert from Traditional to Simplified Chinese  
+> The conversion button appears automatically when Chinese lyrics are detected.  
 
 ## Screenshots
 
