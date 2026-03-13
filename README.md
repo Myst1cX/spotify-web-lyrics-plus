@@ -130,11 +130,11 @@
 ## Troubleshooting
 
 > **Lyrics out of sync?** Adjust the timing offset for perfect sync. 
-  
+>
 * * * 
 
 > **Mobile?** YES!
-
+>
 > 1. Download the latest version of Firefox (Original version! - Nightly or other releases might break your userscript manager).
 > 2. Install [Violentmonkey](https://violentmonkey.github.io/)  
 > 3. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
