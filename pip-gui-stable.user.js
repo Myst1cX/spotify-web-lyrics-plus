@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.20
+// @version      17.21
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,6 +14,15 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.21): FIX MEMORY LEAKS IN DRAG AND RESIZE WINDOW EVENT LISTENERS
+// • makeDraggable IIFE: the four window event listeners (mousemove, touchmove, mouseup, touchend)
+//   were registered as anonymous functions with no way to remove them. Every popup open/close cycle
+//   accumulated 4 more permanent window listeners. Fixed by extracting named handler functions,
+//   storing them on the popup element as _dragHandlers, and removing them in removePopup().
+// • makeResizable IIFE: the same pattern — four window event listeners (mousemove, touchmove,
+//   mouseup, touchend) leaked on every popup open/close cycle. Fixed by extracting named handler
+//   functions, storing them on the popup element as _resizeHandlers, and removing them in removePopup().
 
 // RESOLVED (17.20): CODE IMPROVEMENTS
 // • Added a missing flag initialisation: window.lyricsPlusPopupIsResizing = false;
@@ -57,7 +66,7 @@
 // RESOLVED (17.15):
 // •  Fixed KPoe on manual provider selection not checking for unsynced lyrics when synced fails
 
-// RESOLVED (17.14): 
+// RESOLVED (17.14):
 // •  Fixed [KPoe Debug] separator length, added lyrics fetching phase logs (synced/unsynced) and improved console logs readability
 
 // RESOLVED (17.13): DEBUG LOGGING SYSTEM
@@ -404,14 +413,14 @@
       const entry = cache[trackId];
       if (entry) {
         console.log(`💾 [Lyrics+] Found cached lyrics! Loading instantly without network request...`);
-        DEBUG.log('Cache', `Cache hit for track: ${trackId}`);
+        DEBUG.log('Cache', `Found cached lyrics for track: ${trackId}`);
         // Update timestamp to mark as recently used (LRU)
         entry.timestamp = Date.now();
         this.saveAll(cache);
         return entry;
       }
       console.log(`🔍 [Lyrics+] No cached lyrics found for this song - fetching from providers...`);
-      DEBUG.debug('Cache', `Cache miss for track: ${trackId}`);
+      DEBUG.debug('Cache', `No cached lyrics found for track: ${trackId}`);
       return null;
     },
 
@@ -3729,6 +3738,28 @@ const Providers = {
         existing._resizeMouseupHandler = null;
       }
 
+      // Remove drag window event listeners
+      if (existing._dragHandlers) {
+        const { onDragMouseMove, onDragTouchMove, onDragMouseUp, onDragTouchEnd } = existing._dragHandlers;
+        window.removeEventListener("mousemove", onDragMouseMove);
+        window.removeEventListener("touchmove", onDragTouchMove);
+        window.removeEventListener("mouseup", onDragMouseUp);
+        window.removeEventListener("touchend", onDragTouchEnd);
+        existing._dragHandlers = null;
+        DEBUG.debug('Cleanup', 'Removed drag window event listeners');
+      }
+
+      // Remove resize window event listeners
+      if (existing._resizeHandlers) {
+        const { onResizeMouseMove, onResizeTouchMove, onResizeMouseUp, onResizeTouchEnd } = existing._resizeHandlers;
+        window.removeEventListener("mousemove", onResizeMouseMove);
+        window.removeEventListener("touchmove", onResizeTouchMove);
+        window.removeEventListener("mouseup", onResizeMouseUp);
+        window.removeEventListener("touchend", onResizeTouchEnd);
+        existing._resizeHandlers = null;
+        DEBUG.debug('Cleanup', 'Removed resize window event listeners');
+      }
+
       // Disconnect progress bar watcher observer
       if (existing._progressBarWatcher) {
         try {
@@ -5523,7 +5554,7 @@ const Providers = {
         document.body.style.userSelect = "none";
       });
 
-      window.addEventListener("mousemove", (e) => {
+      const onDragMouseMove = (e) => {
         if (!isDragging) return;
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
@@ -5538,9 +5569,9 @@ const Providers = {
         el.style.right = "auto";
         el.style.bottom = "auto";
         el.style.position = "fixed";
-      });
+      };
 
-      window.addEventListener("touchmove", (e) => {
+      const onDragTouchMove = (e) => {
         if (!isDragging || e.touches.length !== 1) return;
         const dx = e.touches[0].clientX - startX;
         const dy = e.touches[0].clientY - startY;
@@ -5556,9 +5587,9 @@ const Providers = {
         el.style.bottom = "auto";
         el.style.position = "fixed";
         e.preventDefault();
-      }, { passive: false });
+      };
 
-      window.addEventListener("mouseup", () => {
+      const onDragMouseUp = () => {
         if (isDragging) {
           isDragging = false;
           document.body.style.userSelect = "";
@@ -5568,9 +5599,9 @@ const Providers = {
             window.lyricsPlusPopupIsDragging = false;
           }, 200);
         }
-      });
+      };
 
-      window.addEventListener("touchend", () => {
+      const onDragTouchEnd = () => {
         if (isDragging) {
           isDragging = false;
           document.body.style.userSelect = "";
@@ -5580,7 +5611,15 @@ const Providers = {
             window.lyricsPlusPopupIsDragging = false;
           }, 200);
         }
-      });
+      };
+
+      window.addEventListener("mousemove", onDragMouseMove);
+      window.addEventListener("touchmove", onDragTouchMove, { passive: false });
+      window.addEventListener("mouseup", onDragMouseUp);
+      window.addEventListener("touchend", onDragTouchEnd);
+
+      // Store handlers on the element so they can be removed when the popup is destroyed
+      el._dragHandlers = { onDragMouseMove, onDragTouchMove, onDragMouseUp, onDragTouchEnd };
     })(popup, headerWrapper);
 
     // Create a larger invisible hit area
@@ -5644,7 +5683,7 @@ const Providers = {
       resizerHitArea.addEventListener("mousedown", startResize);
       resizerHitArea.addEventListener("touchstart", startResize);
 
-      window.addEventListener("mousemove", (e) => {
+      const onResizeMouseMove = (e) => {
         if (!isResizing) return;
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
@@ -5661,9 +5700,9 @@ const Providers = {
 
         el.style.width = newWidth + "px";
         el.style.height = newHeight + "px";
-      });
+      };
 
-      window.addEventListener("touchmove", (e) => {
+      const onResizeTouchMove = (e) => {
         if (!isResizing || e.touches.length !== 1) return;
         const dx = e.touches[0].clientX - startX;
         const dy = e.touches[0].clientY - startY;
@@ -5681,25 +5720,33 @@ const Providers = {
         el.style.width = newWidth + "px";
         el.style.height = newHeight + "px";
         e.preventDefault();
-      }, { passive: false });
+      };
 
-      window.addEventListener("mouseup", () => {
+      const onResizeMouseUp = () => {
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
-      });
+      };
 
-      window.addEventListener("touchend", () => {
+      const onResizeTouchEnd = () => {
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
-      });
+      };
+
+      window.addEventListener("mousemove", onResizeMouseMove);
+      window.addEventListener("touchmove", onResizeTouchMove, { passive: false });
+      window.addEventListener("mouseup", onResizeMouseUp);
+      window.addEventListener("touchend", onResizeTouchEnd);
+
+      // Store handlers on the element so they can be removed when the popup is destroyed
+      el._resizeHandlers = { onResizeMouseMove, onResizeTouchMove, onResizeMouseUp, onResizeTouchEnd };
     })(popup, resizer);
 
     observeSpotifyPlayPause(popup);
