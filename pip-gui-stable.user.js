@@ -6430,12 +6430,17 @@ const Providers = {
         }
         lyricsContainer.appendChild(p);
       });
-      // For unsynced, always allow user scroll
+      // For unsynced, always allow user scroll and right-click
       lyricsContainer.style.overflowY = "auto";
       lyricsContainer.style.pointerEvents = "";
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
+      // Remove any wheel-scroll blocker left over from a previous synced+playing state
+      if (lyricsContainer._preventScrollHandler) {
+        lyricsContainer.removeEventListener('wheel', lyricsContainer._preventScrollHandler);
+        lyricsContainer._preventScrollHandler = null;
+      }
     }
 
     // Show/hide transliteration button based on data availability
