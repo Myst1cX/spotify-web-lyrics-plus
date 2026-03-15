@@ -4332,16 +4332,20 @@ const Providers = {
       unsyncOption.style.display = hasUnsynced ? "" : "none";
 
       if (hasSynced || hasUnsynced) {
-        downloadDropdown.style.display = "flex";
-        setTimeout(() => {
-          const hide = (ev) => {
-            if (!downloadDropdown.contains(ev.target) && ev.target !== downloadBtn) {
-              downloadDropdown.style.display = "none";
-              document.removeEventListener("mousedown", hide);
-            }
-          };
-          document.addEventListener("mousedown", hide);
-        }, 1);
+        if (downloadDropdown.style.display === "flex") {
+          downloadDropdown.style.display = "none";
+        } else {
+          downloadDropdown.style.display = "flex";
+          setTimeout(() => {
+            const hide = (ev) => {
+              if (!downloadDropdown.contains(ev.target) && ev.target !== downloadBtn) {
+                downloadDropdown.style.display = "none";
+                document.removeEventListener("mousedown", hide);
+              }
+            };
+            document.addEventListener("mousedown", hide);
+          }, 1);
+        }
       } else {
         // Fallback: try to extract from DOM as plain
         const popup = document.getElementById("lyrics-plus-popup");
