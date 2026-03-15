@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.21
+// @version      17.22
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,6 +14,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.22): FIX: CLOSE THE DOWNLOAD DROPDOWN MENU BY CLICKING ON THE DOWNLOAD BUTTON WHILE THE DROPDOWN IS OPENED.
 
 // RESOLVED (17.21): FIX MEMORY LEAKS IN DRAG AND RESIZE WINDOW EVENT LISTENERS
 // • makeDraggable IIFE: the four window event listeners (mousemove, touchmove, mouseup, touchend)
