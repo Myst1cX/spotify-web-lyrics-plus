@@ -4332,6 +4332,10 @@ const Providers = {
       unsyncOption.style.display = hasUnsynced ? "" : "none";
 
       if (hasSynced || hasUnsynced) {
+        if (downloadDropdown.style.display === "flex") {
+          downloadDropdown.style.display = "none";
+          return;
+        }
         downloadDropdown.style.display = "flex";
         setTimeout(() => {
           const hide = (ev) => {
