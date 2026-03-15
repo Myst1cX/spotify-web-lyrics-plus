@@ -1228,12 +1228,12 @@
           container.style.msOverflowStyle = "none"; // IE 10+
           container.classList.add('hide-scrollbar');
           // Prevent manual scrolling during synced playback while still allowing
-          // right-click context menu and mouse-based text selection
+          // right-click context menu and mouse-based text selection.
+          // _preventScrollHandler is non-null only while the listener is attached.
           if (!container._preventScrollHandler) {
             container._preventScrollHandler = (e) => e.preventDefault();
+            container.addEventListener('wheel', container._preventScrollHandler, { passive: false });
           }
-          container.removeEventListener('wheel', container._preventScrollHandler);
-          container.addEventListener('wheel', container._preventScrollHandler, { passive: false });
         } else {
           container.style.overflowY = "auto";
           container.style.pointerEvents = "";
@@ -3795,6 +3795,14 @@ const Providers = {
       existing._prevBtn = null;
       existing._nextBtn = null;
       existing._lyricsTabs = null;
+
+      // Remove wheel-scroll blocker from lyrics container so the detached element
+      // and its listener are not kept alive by the currentLyricsContainer reference
+      if (currentLyricsContainer && currentLyricsContainer._preventScrollHandler) {
+        currentLyricsContainer.removeEventListener('wheel', currentLyricsContainer._preventScrollHandler);
+        currentLyricsContainer._preventScrollHandler = null;
+      }
+      currentLyricsContainer = null;
 
       existing.remove();
       DEBUG.debug('Cleanup', 'Popup element and all observers removed from DOM');
@@ -6644,6 +6652,11 @@ const Providers = {
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
+      // Remove any wheel-scroll blocker left over from a previous synced+playing state
+      if (lyricsContainer._preventScrollHandler) {
+        lyricsContainer.removeEventListener('wheel', lyricsContainer._preventScrollHandler);
+        lyricsContainer._preventScrollHandler = null;
+      }
     }
 
     // Show/hide transliteration button
@@ -6805,12 +6818,17 @@ const Providers = {
         }
         lyricsContainer.appendChild(p);
       });
-      // For unsynced, always allow user scroll
+      // For unsynced, always allow user scroll and right-click
       lyricsContainer.style.overflowY = "auto";
       lyricsContainer.style.pointerEvents = "";
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
+      // Remove any wheel-scroll blocker left over from a previous synced+playing state
+      if (lyricsContainer._preventScrollHandler) {
+        lyricsContainer.removeEventListener('wheel', lyricsContainer._preventScrollHandler);
+        lyricsContainer._preventScrollHandler = null;
+      }
     } else {
       isShowingSyncedLyrics = false;
       // Always allow user scroll for unsynced or empty
@@ -6819,6 +6837,11 @@ const Providers = {
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
+      // Remove any wheel-scroll blocker left over from a previous synced+playing state
+      if (lyricsContainer._preventScrollHandler) {
+        lyricsContainer.removeEventListener('wheel', lyricsContainer._preventScrollHandler);
+        lyricsContainer._preventScrollHandler = null;
+      }
       if (!lyricsContainer.textContent.trim()) {
         lyricsContainer.textContent = `No lyrics available from ${Providers.current}`;
       }
