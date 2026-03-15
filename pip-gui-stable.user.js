@@ -1223,16 +1223,28 @@
       if (isShowingSyncedLyrics) {
         if (isPlaying) {
           container.style.overflowY = "auto";
-          container.style.pointerEvents = "none";
+          container.style.pointerEvents = "";
           container.style.scrollbarWidth = "none"; // Firefox
           container.style.msOverflowStyle = "none"; // IE 10+
           container.classList.add('hide-scrollbar');
+          // Prevent manual scrolling during synced playback while still allowing
+          // right-click context menu and mouse-based text selection
+          if (!container._preventScrollHandler) {
+            container._preventScrollHandler = (e) => e.preventDefault();
+          }
+          container.removeEventListener('wheel', container._preventScrollHandler);
+          container.addEventListener('wheel', container._preventScrollHandler, { passive: false });
         } else {
           container.style.overflowY = "auto";
           container.style.pointerEvents = "";
           container.classList.remove('hide-scrollbar');
           container.style.scrollbarWidth = "";
           container.style.msOverflowStyle = "";
+          // Re-enable manual scroll when paused
+          if (container._preventScrollHandler) {
+            container.removeEventListener('wheel', container._preventScrollHandler);
+            container._preventScrollHandler = null;
+          }
         }
       } else {
         // Always allow scroll and show scrollbar for unsynced
@@ -1241,6 +1253,11 @@
         container.classList.remove('hide-scrollbar');
         container.style.scrollbarWidth = "";
         container.style.msOverflowStyle = "";
+        // Re-enable manual scroll for unsynced lyrics
+        if (container._preventScrollHandler) {
+          container.removeEventListener('wheel', container._preventScrollHandler);
+          container._preventScrollHandler = null;
+        }
       }
 
       if (!posEl) return;
