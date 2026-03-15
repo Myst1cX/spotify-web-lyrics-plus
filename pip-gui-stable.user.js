@@ -4322,39 +4322,13 @@ const Providers = {
     console.info("✅ [Lyrics+ UI] Download button created and added to DOM");
 
     // Logic for showing/hiding the dropdown and downloading
-    downloadBtn.onclick = (e) => {
-      // Always show dropdown if at least one download option is available
+    downloadBtn.onclick = () => {
       let hasSynced = !!currentSyncedLyrics;
       let hasUnsynced = !!currentUnsyncedLyrics;
-
-      // Show/hide options
+      if (!hasSynced && !hasUnsynced) return;
       syncOption.style.display = hasSynced ? "" : "none";
       unsyncOption.style.display = hasUnsynced ? "" : "none";
-
-      if (hasSynced || hasUnsynced) {
-        if (downloadDropdown.style.display === "flex") {
-          downloadDropdown.style.display = "none";
-        } else {
-          downloadDropdown.style.display = "flex";
-          setTimeout(() => {
-            const hide = (ev) => {
-              if (!downloadDropdown.contains(ev.target) && ev.target !== downloadBtn) {
-                downloadDropdown.style.display = "none";
-                document.removeEventListener("mousedown", hide);
-              }
-            };
-            document.addEventListener("mousedown", hide);
-          }, 1);
-        }
-      } else {
-        // Fallback: try to extract from DOM as plain
-        const popup = document.getElementById("lyrics-plus-popup");
-        if (!popup) return;
-        const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-        if (!lyricsContainer) return;
-        const lines = Array.from(lyricsContainer.querySelectorAll('p')).map(p => ({ text: p.textContent }));
-        if (lines.length) downloadUnsyncedLyrics(lines, getCurrentTrackInfo(), Providers.current);
-      }
+      downloadDropdown.style.display = downloadDropdown.style.display === "flex" ? "none" : "flex";
     };
 
     // Set up dropdown options
