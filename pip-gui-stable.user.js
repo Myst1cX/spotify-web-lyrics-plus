@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.22
+// @version      17.23
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,6 +14,16 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.23): FIX COMPATIBILITY WITH "ABSOLUTE ENABLE RIGHT CLICK" EXTENSION
+// • Dropdown close handler now uses capture-phase listeners ({capture:true}) so right-click
+//   extension event interception can no longer block the outside-click-to-close behaviour.
+// • Dropdown close handler also listens for contextmenu events, so right-clicking outside
+//   a dropdown now properly closes it.
+// • During popup corner drag and resize, userSelect is now disabled directly on the lyrics
+//   container element (not just document.body), preventing text-selection while resizing.
+// • Added e.preventDefault() to the drag-handle mousedown/touchstart handlers (was already
+//   present on the resize handler but was missing from the drag handler).
 
 // RESOLVED (17.22): FIX: CLOSE THE DOWNLOAD DROPDOWN MENU BY CLICKING ON THE DOWNLOAD BUTTON WHILE THE DROPDOWN IS OPENED.
 
@@ -4343,10 +4353,12 @@ const Providers = {
           const hide = (ev) => {
             if (!downloadDropdown.contains(ev.target) && !downloadBtn.contains(ev.target)) {
               downloadDropdown.style.display = "none";
-              document.removeEventListener("mousedown", hide);
+              document.removeEventListener("mousedown", hide, { capture: true });
+              document.removeEventListener("contextmenu", hide, { capture: true });
             }
           };
-          document.addEventListener("mousedown", hide);
+          document.addEventListener("mousedown", hide, { capture: true });
+          document.addEventListener("contextmenu", hide, { capture: true });
         }, 1);
       } else {
         // Fallback: try to extract from DOM as plain
@@ -5530,6 +5542,11 @@ const Providers = {
       savePopupState(popup);
     }
 
+    function setLyricsUserSelect(el, value) {
+      const lyricsContent = el.querySelector('#lyrics-plus-content');
+      if (lyricsContent) lyricsContent.style.userSelect = value;
+    }
+
     (function makeDraggable(el, handle) {
       let isDragging = false;
       let startX, startY;
@@ -5537,6 +5554,7 @@ const Providers = {
 
       // Mouse events
       handle.addEventListener("mousedown", (e) => {
+        e.preventDefault();
         isDragging = true;
         window.lyricsPlusPopupIsDragging = true;
         startX = e.clientX;
@@ -5545,11 +5563,13 @@ const Providers = {
         origX = rect.left;
         origY = rect.top;
         document.body.style.userSelect = "none";
+        setLyricsUserSelect(el, 'none');
       });
 
       // Touch events
       handle.addEventListener("touchstart", (e) => {
         if (e.touches.length !== 1) return;
+        e.preventDefault();
         isDragging = true;
         window.lyricsPlusPopupIsDragging = true;
         startX = e.touches[0].clientX;
@@ -5558,6 +5578,7 @@ const Providers = {
         origX = rect.left;
         origY = rect.top;
         document.body.style.userSelect = "none";
+        setLyricsUserSelect(el, 'none');
       });
 
       const onDragMouseMove = (e) => {
@@ -5599,6 +5620,7 @@ const Providers = {
         if (isDragging) {
           isDragging = false;
           document.body.style.userSelect = "";
+          setLyricsUserSelect(el, 'text');
           window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
           setTimeout(() => {
@@ -5611,6 +5633,7 @@ const Providers = {
         if (isDragging) {
           isDragging = false;
           document.body.style.userSelect = "";
+          setLyricsUserSelect(el, 'text');
           window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
           setTimeout(() => {
@@ -5680,6 +5703,7 @@ const Providers = {
         startWidth = el.offsetWidth;
         startHeight = el.offsetHeight;
         document.body.style.userSelect = "none";
+        setLyricsUserSelect(el, 'none');
       }
 
       handle.addEventListener("mousedown", startResize);
@@ -5732,6 +5756,7 @@ const Providers = {
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
+          setLyricsUserSelect(el, 'text');
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
@@ -5741,6 +5766,7 @@ const Providers = {
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
+          setLyricsUserSelect(el, 'text');
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
