@@ -4343,10 +4343,12 @@ const Providers = {
           const hide = (ev) => {
             if (!downloadDropdown.contains(ev.target) && !downloadBtn.contains(ev.target)) {
               downloadDropdown.style.display = "none";
-              document.removeEventListener("mousedown", hide);
+              document.removeEventListener("mousedown", hide, { capture: true });
+              document.removeEventListener("contextmenu", hide, { capture: true });
             }
           };
-          document.addEventListener("mousedown", hide);
+          document.addEventListener("mousedown", hide, { capture: true });
+          document.addEventListener("contextmenu", hide, { capture: true });
         }, 1);
       } else {
         // Fallback: try to extract from DOM as plain
