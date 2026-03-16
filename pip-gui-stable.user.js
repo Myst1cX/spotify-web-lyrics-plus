@@ -4343,10 +4343,12 @@ const Providers = {
           const hide = (ev) => {
             if (!downloadDropdown.contains(ev.target) && !downloadBtn.contains(ev.target)) {
               downloadDropdown.style.display = "none";
-              document.removeEventListener("mousedown", hide);
+              document.removeEventListener("mousedown", hide, { capture: true });
+              document.removeEventListener("contextmenu", hide, { capture: true });
             }
           };
-          document.addEventListener("mousedown", hide);
+          document.addEventListener("mousedown", hide, { capture: true });
+          document.addEventListener("contextmenu", hide, { capture: true });
         }, 1);
       } else {
         // Fallback: try to extract from DOM as plain
@@ -5487,6 +5489,14 @@ const Providers = {
       .lyrics-plus-amoled-theme #lyrics-plus-download-unsync:hover {
         background: #1a1a1a !important;
       }
+
+      /* Disable text selection across the entire popup during drag/resize.
+         !important beats any inline user-select style on child elements. */
+      #lyrics-plus-popup.lyrics-plus-no-select,
+      #lyrics-plus-popup.lyrics-plus-no-select * {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+      }
     `;
     document.head.appendChild(checkboxStyle);
 
@@ -5535,8 +5545,21 @@ const Providers = {
       let startX, startY;
       let origX, origY;
 
+      // Suppress text selection across the entire popup as soon as the user
+      // hovers over the drag handle.  We use a CSS class with !important so
+      // it reliably overrides any inline user-select style on child elements
+      // (e.g. the lyrics container).  This must happen on mouseenter — BEFORE
+      // mousedown — because browsers lock in "selection mode" on mousedown.
+      handle.addEventListener("mouseenter", () => {
+        el.classList.add("lyrics-plus-no-select");
+      });
+      handle.addEventListener("mouseleave", () => {
+        if (!isDragging) el.classList.remove("lyrics-plus-no-select");
+      });
+
       // Mouse events
       handle.addEventListener("mousedown", (e) => {
+        e.preventDefault(); // prevent browser from entering native selection mode
         isDragging = true;
         window.lyricsPlusPopupIsDragging = true;
         startX = e.clientX;
@@ -5544,7 +5567,7 @@ const Providers = {
         const rect = el.getBoundingClientRect();
         origX = rect.left;
         origY = rect.top;
-        document.body.style.userSelect = "none";
+        el.classList.add("lyrics-plus-no-select");
       });
 
       // Touch events
@@ -5557,7 +5580,7 @@ const Providers = {
         const rect = el.getBoundingClientRect();
         origX = rect.left;
         origY = rect.top;
-        document.body.style.userSelect = "none";
+        el.classList.add("lyrics-plus-no-select");
       });
 
       const onDragMouseMove = (e) => {
@@ -5598,7 +5621,7 @@ const Providers = {
       const onDragMouseUp = () => {
         if (isDragging) {
           isDragging = false;
-          document.body.style.userSelect = "";
+          el.classList.remove("lyrics-plus-no-select");
           window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
           setTimeout(() => {
@@ -5610,7 +5633,7 @@ const Providers = {
       const onDragTouchEnd = () => {
         if (isDragging) {
           isDragging = false;
-          document.body.style.userSelect = "";
+          el.classList.remove("lyrics-plus-no-select");
           window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
           setTimeout(() => {
@@ -5666,6 +5689,20 @@ const Providers = {
       let startX, startY;
       let startWidth, startHeight;
 
+      // Suppress text selection across the entire popup as soon as the user
+      // hovers over either resize handle.  CSS !important beats any inline
+      // user-select style on child elements.
+      const onResizeHandleEnter = () => {
+        el.classList.add("lyrics-plus-no-select");
+      };
+      const onResizeHandleLeave = () => {
+        if (!isResizing) el.classList.remove("lyrics-plus-no-select");
+      };
+      handle.addEventListener("mouseenter", onResizeHandleEnter);
+      handle.addEventListener("mouseleave", onResizeHandleLeave);
+      resizerHitArea.addEventListener("mouseenter", onResizeHandleEnter);
+      resizerHitArea.addEventListener("mouseleave", onResizeHandleLeave);
+
       function startResize(e) {
         e.preventDefault();
         isResizing = true;
@@ -5679,7 +5716,7 @@ const Providers = {
         }
         startWidth = el.offsetWidth;
         startHeight = el.offsetHeight;
-        document.body.style.userSelect = "none";
+        el.classList.add("lyrics-plus-no-select");
       }
 
       handle.addEventListener("mousedown", startResize);
@@ -5731,7 +5768,7 @@ const Providers = {
       const onResizeMouseUp = () => {
         if (isResizing) {
           isResizing = false;
-          document.body.style.userSelect = "";
+          el.classList.remove("lyrics-plus-no-select");
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
@@ -5740,7 +5777,7 @@ const Providers = {
       const onResizeTouchEnd = () => {
         if (isResizing) {
           isResizing = false;
-          document.body.style.userSelect = "";
+          el.classList.remove("lyrics-plus-no-select");
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
