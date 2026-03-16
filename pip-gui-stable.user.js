@@ -4343,10 +4343,12 @@ const Providers = {
           const hide = (ev) => {
             if (!downloadDropdown.contains(ev.target) && !downloadBtn.contains(ev.target)) {
               downloadDropdown.style.display = "none";
-              document.removeEventListener("mousedown", hide);
+              document.removeEventListener("mousedown", hide, { capture: true });
+              document.removeEventListener("contextmenu", hide, { capture: true });
             }
           };
-          document.addEventListener("mousedown", hide);
+          document.addEventListener("mousedown", hide, { capture: true });
+          document.addEventListener("contextmenu", hide, { capture: true });
         }, 1);
       } else {
         // Fallback: try to extract from DOM as plain
@@ -5534,6 +5536,16 @@ const Providers = {
       let isDragging = false;
       let startX, startY;
       let origX, origY;
+      const lyricsContainer = el.querySelector("#lyrics-plus-content");
+
+      // Disable text selection on lyricsContainer as soon as the user hovers over
+      // the drag handle, so that mousedown never triggers a selection start.
+      handle.addEventListener("mouseenter", () => {
+        if (lyricsContainer) lyricsContainer.style.userSelect = "none";
+      });
+      handle.addEventListener("mouseleave", () => {
+        if (!isDragging && lyricsContainer) lyricsContainer.style.userSelect = "text";
+      });
 
       // Mouse events
       handle.addEventListener("mousedown", (e) => {
@@ -5545,6 +5557,7 @@ const Providers = {
         origX = rect.left;
         origY = rect.top;
         document.body.style.userSelect = "none";
+        if (lyricsContainer) lyricsContainer.style.userSelect = "none";
       });
 
       // Touch events
@@ -5558,6 +5571,7 @@ const Providers = {
         origX = rect.left;
         origY = rect.top;
         document.body.style.userSelect = "none";
+        if (lyricsContainer) lyricsContainer.style.userSelect = "none";
       });
 
       const onDragMouseMove = (e) => {
@@ -5599,6 +5613,7 @@ const Providers = {
         if (isDragging) {
           isDragging = false;
           document.body.style.userSelect = "";
+          if (lyricsContainer) lyricsContainer.style.userSelect = "text";
           window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
           setTimeout(() => {
@@ -5611,6 +5626,7 @@ const Providers = {
         if (isDragging) {
           isDragging = false;
           document.body.style.userSelect = "";
+          if (lyricsContainer) lyricsContainer.style.userSelect = "text";
           window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
           setTimeout(() => {
@@ -5665,6 +5681,20 @@ const Providers = {
       let isResizing = false;
       let startX, startY;
       let startWidth, startHeight;
+      const lyricsContainer = el.querySelector("#lyrics-plus-content");
+
+      // Disable text selection on lyricsContainer as soon as the user hovers over
+      // a resize handle, so that mousedown never triggers a selection start.
+      const onResizeHandleEnter = () => {
+        if (lyricsContainer) lyricsContainer.style.userSelect = "none";
+      };
+      const onResizeHandleLeave = () => {
+        if (!isResizing && lyricsContainer) lyricsContainer.style.userSelect = "text";
+      };
+      handle.addEventListener("mouseenter", onResizeHandleEnter);
+      handle.addEventListener("mouseleave", onResizeHandleLeave);
+      resizerHitArea.addEventListener("mouseenter", onResizeHandleEnter);
+      resizerHitArea.addEventListener("mouseleave", onResizeHandleLeave);
 
       function startResize(e) {
         e.preventDefault();
@@ -5680,6 +5710,7 @@ const Providers = {
         startWidth = el.offsetWidth;
         startHeight = el.offsetHeight;
         document.body.style.userSelect = "none";
+        if (lyricsContainer) lyricsContainer.style.userSelect = "none";
       }
 
       handle.addEventListener("mousedown", startResize);
@@ -5732,6 +5763,7 @@ const Providers = {
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
+          if (lyricsContainer) lyricsContainer.style.userSelect = "text";
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
@@ -5741,6 +5773,7 @@ const Providers = {
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
+          if (lyricsContainer) lyricsContainer.style.userSelect = "text";
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
