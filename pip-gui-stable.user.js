@@ -15,7 +15,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.22): FIX: CLOSE THE DOWNLOAD DROPDOWN MENU BY CLICKING ON THE DOWNLOAD BUTTON WHILE THE DROPDOWN IS OPENED.
+// RESOLVED (17.22): FIX: CLOSE THE DOWNLOAD DROPDOWN MENU BY CLICKING ON THE DOWNLOAD BUTTON WHILE THE DROPDOWN IS OPENED/CLICKING OUTSIDE THE DROPDOWN MENU.
 
 // RESOLVED (17.21): FIX MEMORY LEAKS IN DRAG AND RESIZE WINDOW EVENT LISTENERS
 // • makeDraggable IIFE: the four window event listeners (mousemove, touchmove, mouseup, touchend)
@@ -4324,6 +4324,15 @@ const Providers = {
     console.info("✅ [Lyrics+ UI] Download button created and added to DOM");
 
     // Logic for showing/hiding the dropdown and downloading
+    let currentHideHandler = null;
+    const removeHideHandler = () => {
+      if (currentHideHandler) {
+        document.removeEventListener("mousedown", currentHideHandler, { capture: true });
+        document.removeEventListener("contextmenu", currentHideHandler, { capture: true });
+        currentHideHandler = null;
+      }
+    };
+
     downloadBtn.onclick = (e) => {
       // Always show dropdown if at least one download option is available
       let hasSynced = !!currentSyncedLyrics;
@@ -4336,17 +4345,19 @@ const Providers = {
       if (hasSynced || hasUnsynced) {
         if (downloadDropdown.style.display === "flex") {
           downloadDropdown.style.display = "none";
+          removeHideHandler();
           return;
         }
         downloadDropdown.style.display = "flex";
         setTimeout(() => {
+          removeHideHandler();
           const hide = (ev) => {
             if (!downloadDropdown.contains(ev.target) && !downloadBtn.contains(ev.target)) {
               downloadDropdown.style.display = "none";
-              document.removeEventListener("mousedown", hide, { capture: true });
-              document.removeEventListener("contextmenu", hide, { capture: true });
+              removeHideHandler();
             }
           };
+          currentHideHandler = hide;
           document.addEventListener("mousedown", hide, { capture: true });
           document.addEventListener("contextmenu", hide, { capture: true });
         }, 1);
