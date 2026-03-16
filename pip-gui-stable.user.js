@@ -4341,7 +4341,7 @@ const Providers = {
         downloadDropdown.style.display = "flex";
         setTimeout(() => {
           const hide = (ev) => {
-            if (!downloadDropdown.contains(ev.target) && ev.target !== downloadBtn) {
+            if (!downloadDropdown.contains(ev.target) && !downloadBtn.contains(ev.target)) {
               downloadDropdown.style.display = "none";
               document.removeEventListener("mousedown", hide);
             }
