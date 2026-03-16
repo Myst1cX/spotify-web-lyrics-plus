@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.23
+// @version      17.24
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,6 +14,19 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.24): FIX TEXT SELECTION DURING RESIZE WITH RIGHT-CLICK EXTENSION
+// • The "Absolute Enable Right Click" extension sets user-select: auto !important via CSS,
+//   which overrides plain inline style assignments (style.userSelect = 'none').
+// • Setting user-select in the mousedown/startResize handler was already too late — the
+//   browser initiates text selection the instant the button goes down, before JS runs.
+// • Fix: use element.style.setProperty('user-select', 'none', 'important') everywhere so
+//   our disable wins over the extension's !important rule.
+// • Fix: add mouseenter/mouseleave on the resize hit area so the lyrics container has
+//   user-select disabled *before* the user ever presses the mouse button in that zone.
+// • Fix: add user-select: none (with !important) and cursor: nwse-resize to the
+//   resizerHitArea element itself at creation time so it can never be a text-selection
+//   start point regardless of extension CSS.
 
 // RESOLVED (17.23): FIX COMPATIBILITY WITH "ABSOLUTE ENABLE RIGHT CLICK" EXTENSION
 // • Dropdown close handler now uses capture-phase listeners ({capture:true}) so right-click
@@ -3763,11 +3776,24 @@ const Providers = {
 
       // Remove resize window event listeners
       if (existing._resizeHandlers) {
-        const { onResizeMouseMove, onResizeTouchMove, onResizeMouseUp, onResizeTouchEnd } = existing._resizeHandlers;
+        const {
+          onResizeMouseMove, onResizeTouchMove, onResizeMouseUp, onResizeTouchEnd,
+          onResizerEnter, onResizerLeave, resizerHitAreaEl, resizerEl,
+        } = existing._resizeHandlers;
         window.removeEventListener("mousemove", onResizeMouseMove);
         window.removeEventListener("touchmove", onResizeTouchMove);
         window.removeEventListener("mouseup", onResizeMouseUp);
         window.removeEventListener("touchend", onResizeTouchEnd);
+        // Remove the proactive mouseenter/mouseleave listeners from the resize elements
+        // to break closure references to the popup element before it is removed.
+        if (resizerHitAreaEl) {
+          resizerHitAreaEl.removeEventListener("mouseenter", onResizerEnter);
+          resizerHitAreaEl.removeEventListener("mouseleave", onResizerLeave);
+        }
+        if (resizerEl) {
+          resizerEl.removeEventListener("mouseenter", onResizerEnter);
+          resizerEl.removeEventListener("mouseleave", onResizerLeave);
+        }
         existing._resizeHandlers = null;
         DEBUG.debug('Cleanup', 'Removed resize window event listeners');
       }
@@ -5544,7 +5570,14 @@ const Providers = {
 
     function setLyricsUserSelect(el, value) {
       const lyricsContent = el.querySelector('#lyrics-plus-content');
-      if (lyricsContent) lyricsContent.style.userSelect = value;
+      if (!lyricsContent) return;
+      if (value === 'none') {
+        // Use !important to beat the extension's own user-select: auto !important CSS rule
+        lyricsContent.style.setProperty('user-select', 'none', 'important');
+      } else {
+        // Restore to text; remove the !important flag so normal styling applies
+        lyricsContent.style.setProperty('user-select', value, '');
+      }
     }
 
     (function makeDraggable(el, handle) {
@@ -5554,7 +5587,7 @@ const Providers = {
 
       // Mouse events
       handle.addEventListener("mousedown", (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Prevents browser's default text-selection drag behaviour
         isDragging = true;
         window.lyricsPlusPopupIsDragging = true;
         startX = e.clientX;
@@ -5569,7 +5602,7 @@ const Providers = {
       // Touch events
       handle.addEventListener("touchstart", (e) => {
         if (e.touches.length !== 1) return;
-        e.preventDefault();
+        e.preventDefault(); // Prevents scroll and text-selection on touch
         isDragging = true;
         window.lyricsPlusPopupIsDragging = true;
         startX = e.touches[0].clientX;
@@ -5662,7 +5695,11 @@ const Providers = {
       zIndex: 19, // just below visible resizer
       background: "transparent",
       touchAction: "none",
+      cursor: "nwse-resize",
     });
+    // Prevent the hit area itself from ever being a text-selection start point,
+    // using !important to beat any extension CSS that forces user-select: auto.
+    resizerHitArea.style.setProperty('user-select', 'none', 'important');
 
     // Create the visual resizer
     const resizer = document.createElement("div");
@@ -5712,6 +5749,19 @@ const Providers = {
       // Also attach to the hit area!
       resizerHitArea.addEventListener("mousedown", startResize);
       resizerHitArea.addEventListener("touchstart", startResize);
+
+      // Proactively disable text selection as soon as the cursor enters the resize zone,
+      // BEFORE any mousedown fires. This is necessary because the "Absolute Enable Right
+      // Click" extension sets user-select: auto !important via CSS, making text selection
+      // start the instant the mouse button goes down — too early for the mousedown handler
+      // to prevent. Disabling on mouseenter ensures the lyrics container already has
+      // user-select: none (with !important) by the time the user presses the button.
+      const onResizerEnter = () => { setLyricsUserSelect(el, 'none'); };
+      const onResizerLeave = () => { if (!isResizing) setLyricsUserSelect(el, 'text'); };
+      resizerHitArea.addEventListener("mouseenter", onResizerEnter);
+      resizerHitArea.addEventListener("mouseleave", onResizerLeave);
+      handle.addEventListener("mouseenter", onResizerEnter);
+      handle.addEventListener("mouseleave", onResizerLeave);
 
       const onResizeMouseMove = (e) => {
         if (!isResizing) return;
@@ -5777,8 +5827,15 @@ const Providers = {
       window.addEventListener("mouseup", onResizeMouseUp);
       window.addEventListener("touchend", onResizeTouchEnd);
 
-      // Store handlers on the element so they can be removed when the popup is destroyed
-      el._resizeHandlers = { onResizeMouseMove, onResizeTouchMove, onResizeMouseUp, onResizeTouchEnd };
+      // Store handlers on the element so they can be removed when the popup is destroyed.
+      // Also store the enter/leave handlers and their target elements so removePopup() can
+      // explicitly remove them and avoid retaining closures that reference the popup element.
+      el._resizeHandlers = {
+        onResizeMouseMove, onResizeTouchMove, onResizeMouseUp, onResizeTouchEnd,
+        onResizerEnter, onResizerLeave,
+        resizerHitAreaEl: resizerHitArea,
+        resizerEl: handle,
+      };
     })(popup, resizer);
 
     observeSpotifyPlayPause(popup);
