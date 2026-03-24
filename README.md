@@ -79,11 +79,43 @@
 > 1. Install [Violentmonkey](https://violentmonkey.github.io/)  
 > 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
 > 3. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)  
-> 4. Optional - for stock lyrics button: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)  
+> 4. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)  
 > 5. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)  
 > 6. Open [Spotify Web Player](https://open.spotify.com/)   
 > 7. Play a song  
 > 8. Click on the Lyrics+ button to open the interface popup and see the song lyrics  
+
+## Make it work on a mobile device
+
+> 1. Download the latest version of Firefox (must be the Original version; Nightly or other releases might break your userscript manager).
+> 2. Install [Violentmonkey](https://violentmonkey.github.io/)  
+> 3. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
+> 4. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
+> 5. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
+> 6. Install [Spotifuck](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v5.user.js)
+> 7. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)  
+> 8. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/)  
+> 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)
+> 10. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option
+> 11. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"
+> 12. Restart Firefox
+> 13. Open Spotify Web and login to your account
+> 14. The interface should change to a wider window > If it ever resets, repeat steps 7 and 8 > Keep Desktop Mode Disabled 
+> 15. Play a song
+> 16. Click on the Lyrics+ button to open the interface popup and see the song lyrics
+
+* * * 
+
+> 17. Recommended: While on the Spotify web instance in Firefox, click on the hamburger menu in the top right corner of the browser and press "Add to home screen" - this transforms the website into a PWA (Priority Web Application) and gives you an easy access shortcut to the Spotify player. 
+> 18. SIDE NOTE: You can begin playing a song in the web interface and then open the Spotify app - it will let you play music there and control playback without any limitations.
+
+* * * 
+
+> 19. REMEMBER: PWA's essentially allow running an entire app in your web browser.
+> A good way of finding progressive web apps is through `store.app`
+> The degree to which you can block ads varies depending on the app, but it is often times better than using the actual app - a PWA also uses less storage than installing a native app.
+
+* * *
 
 ## Usage
 
@@ -130,43 +162,9 @@
 
 ## Troubleshooting
 
-> **Lyrics out of sync?** Adjust the timing offset from the ⚙️ settings menu.
->
-> ***Mobile browser?** YES! Follow the steps below:
->
-* * * 
-
-> 1. Download the latest version of Firefox (Original version! - Nightly or other releases might break your userscript manager).
-> 2. Install [Violentmonkey](https://violentmonkey.github.io/)  
-> 3. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
-> 4. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)
-> 5. Optional - for stock lyrics button: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
-> 6. Install [Spotifuck](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v5.user.js)
-> 7. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)
-> 8. Install Chameleon extension
-> 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)
-> 10. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option
-> 11. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"
-> 12. Restart Firefox
-> 13. Open Spotify Web and login to your account
-> 14. The interface should change to a wider window > If it ever resets, repeat steps 7 and 8 > Keep Desktop Mode Disabled 
-> 15. Play a song
-> 16. Click on the Lyrics+ button to open the interface popup and see the song lyrics
-
-* * * 
-
-> 16. Recommended: While on the Spotify web instance in Firefox, click on the hamburger menu in the top right corner of the browser and press "Add to home screen" - this transforms the website into a PWA (Priority Web Application) and gives you an easy access shortcut to the Spotify player. 
-> 17. FINAL TIP: You can begin playing a song in the web interface and then open the Spotify app - it will let you play music there and control playback without any limitations.
-
-* * *
-
-> 18. SIDE NOTE: PWA's essentially allow running an entire app in your web browser.
-> A good way of finding progressive web apps is through `store.app`
-> The degree to which you can block ads varies depending on the app, but it is often times better than using the actual app - a PWA also uses less storage than installing a native app.
-
-* * *
-
-> Enjoy! For feedback or bug reports, open an issue:  
+> **Lyrics out of sync?** - Adjust the timing offset from the ⚙️ settings menu.  
+> 
+> For feedback or bug reports, open an issue:  
 > [https://github.com/Myst1cX/spotify-web-lyrics-plus/issues](https://github.com/Myst1cX/spotify-web-lyrics-plus/issues)
 
 ## Credits
