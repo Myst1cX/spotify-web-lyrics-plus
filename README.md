@@ -130,11 +130,9 @@
 
 ## Troubleshooting
 
-> **Lyrics out of sync?** Adjust the timing offset for perfect sync. 
+> **Lyrics out of sync?** Adjust the timing offset from the ⚙️ settings menu.
 >
-* * * 
-
-> **Mobile?** YES!
+> ***Mobile browser?** YES! Follow the steps below:
 >
 * * * 
 
@@ -173,7 +171,7 @@
 
 ## Credits
 
-> 1. **Lyrics from** [LRCLIB](https://lrclib.net/), [KPoe](https://github.com/ibratabian17/KPoe), [Genius](https://genius.com/), [Musixmatch](https://musixmatch.com/)
+> 1. **Lyrics from** [LRCLIB](https://lrclib.net/), [Spotify](https://github.com/Natoune/SpotifyMobileLyricsAPI), [KPoe](https://github.com/ibratabian17/KPoe), [Musixmatch](https://musixmatch.com/), [Genius](https://genius.com/)
 > 2. **Third part libraries and utilities used:**
 > [spicetify/lyrics-plus: Providers.js (on 3.6.'25)](https://github.com/spicetify/cli/blob/main/CustomApps/lyrics-plus/Providers.js), [spicetify/lyrics-plus: ProviderLRCLIB.js, (on 3.6.'25)](https://github.com/spicetify/cli/blob/main/CustomApps/lyrics-plus/ProviderLRCLIB.js),
 > [spicetify/lyrics-plus: ProviderMusixmatch.js, (on 3.6.'25)](https://github.com/spicetify/cli/blob/main/CustomApps/lyrics-plus/ProviderMusixmatch.js), [spicetify/lyrics-plus: ProviderGenius.js, (on 3.6.'25)](https://github.com/spicetify/cli/blob/main/CustomApps/lyrics-plus/ProviderGenius.js),
