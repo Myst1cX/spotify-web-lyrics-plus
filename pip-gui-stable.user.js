@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.22
+// @version      17.23
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,6 +14,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// also add resolved 17.23
 
 // RESOLVED (17.22): FIX: CLOSE THE DOWNLOAD DROPDOWN MENU BY CLICKING ON THE DOWNLOAD BUTTON WHILE THE DROPDOWN IS OPENED/CLICKING OUTSIDE THE DROPDOWN MENU.
 
@@ -2615,8 +2617,10 @@ async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
 
     if (!trackResponse.ok) {
       if (trackResponse.status === 401) {
-        console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid");
-        return { error: "Musixmatch token expired or invalid. Double click the Musixmatch provider to update your token." };
+        localStorage.removeItem("lyricsPlusMusixmatchToken");
+        DEBUG.warn('Provider', 'Musixmatch 401: Token expired or invalid. Cleared from storage.');
+        console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid. Cleared from storage.");
+        return { error: "Musixmatch token expired or invalid. Saved token has been cleared. Double click the Musixmatch provider to update your token." };
       } else if (trackResponse.status === 404) {
         console.log("[Musixmatch Debug] ✗ Track not found in Musixmatch database");
         return { error: "Track not found in Musixmatch database" };
@@ -3612,8 +3616,10 @@ const ProviderSpotify = {
         console.log("[Spotify Debug] Response body:", text.substring(0, 200));
 
         if (res.status === 401) {
-          console.log("[Spotify Debug] ✗ Authentication failed - token expired or invalid");
-          return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
+          localStorage.removeItem("lyricsPlusSpotifyToken");
+          DEBUG.warn('Provider', 'Spotify 401: Token expired or invalid. Cleared from storage.');
+          console.log("[Spotify Debug] ✗ Authentication failed - token expired or invalid. Cleared from storage.");
+          return { error: "Spotify token expired or invalid. Saved token has been cleared. Double click on the Spotify provider and follow the instructions to set a new one." };
         }
         if (res.status === 404) {
           console.log("[Spotify Debug] ✗ Track not found or no lyrics available");
