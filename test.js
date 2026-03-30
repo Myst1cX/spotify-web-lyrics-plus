@@ -2591,6 +2591,7 @@ async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
 
   const token = localStorage.getItem("lyricsPlusMusixmatchToken");
   if (!token) {
+    DEBUG.info('Provider', 'Musixmatch: No token found in storage.');
     console.log("[Musixmatch Debug] ✗ No token found - user needs to configure");
     return { error: "Double click on the Musixmatch provider to set up your token" };
   }
@@ -2630,6 +2631,13 @@ async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
     }
 
     const trackBody = await trackResponse.json();
+    const bodyStatusCode = trackBody?.message?.header?.status_code;
+    if (bodyStatusCode === 401) {
+      localStorage.removeItem("lyricsPlusMusixmatchToken");
+      DEBUG.info('Provider', 'Musixmatch 401: Token expired or invalid. Cleared from storage.');
+      console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid. Cleared from storage.");
+      return { error: "Double click on the Musixmatch provider to set up your token." };
+    }
     const track = trackBody?.message?.body?.track;
 
     if (!track) {
@@ -3585,6 +3593,7 @@ const ProviderSpotify = {
     const token = localStorage.getItem("lyricsPlusSpotifyToken");
 
     if (!token) {
+      DEBUG.info('Provider', 'Spotify: No token found in storage.');
       console.log("[Spotify Debug] ✗ No token found in localStorage");
       return { error: "Double click on the Spotify provider to set up your token.\n" + "A fresh token is required every hour/upon page reload for security." };
     }
