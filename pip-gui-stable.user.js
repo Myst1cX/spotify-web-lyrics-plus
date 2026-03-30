@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.22
+// @version      17.23
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,6 +14,8 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.23): CONSISTENT SPOTIFY AND MUSIXMATCH TOKEN LOGGING; DETECT INVALID TOKEN AND CLEAR IT AUTOMATICALLY
 
 // RESOLVED (17.22): FIX: CLOSE THE DOWNLOAD DROPDOWN MENU BY CLICKING ON THE DOWNLOAD BUTTON WHILE THE DROPDOWN IS OPENED/CLICKING OUTSIDE THE DROPDOWN MENU.
 
@@ -2589,8 +2591,9 @@ async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
 
   const token = localStorage.getItem("lyricsPlusMusixmatchToken");
   if (!token) {
-    console.log("[Musixmatch Debug] ✗ No token found - user needs to configure");
-    return { error: "Double click on the Musixmatch provider to set up your token" };
+    DEBUG.info('Provider', 'Musixmatch: No token found in localStorage.');
+    console.log("[Musixmatch Debug] ✗ No token found - double click on the provider to  set it up.");
+    return { error: "Double click on the Musixmatch provider to set up your token." };
   }
   console.log("[Musixmatch Debug] ✓ Token found (length:", token.length, "characters)");
 
@@ -2615,8 +2618,10 @@ async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
 
     if (!trackResponse.ok) {
       if (trackResponse.status === 401) {
-        console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid");
-        return { error: "Musixmatch token expired or invalid. Double click the Musixmatch provider to update your token." };
+        localStorage.removeItem("lyricsPlusMusixmatchToken");
+        DEBUG.info('Provider', 'Musixmatch 401: Token expired or invalid. Cleared from storage.');
+        console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid. Cleared from storage.");
+        return { error: "Double click on the Musixmatch provider to set up your token." };
       } else if (trackResponse.status === 404) {
         console.log("[Musixmatch Debug] ✗ Track not found in Musixmatch database");
         return { error: "Track not found in Musixmatch database" };
@@ -2626,6 +2631,13 @@ async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
     }
 
     const trackBody = await trackResponse.json();
+    const bodyStatusCode = trackBody?.message?.header?.status_code;
+    if (bodyStatusCode === 401) {
+      localStorage.removeItem("lyricsPlusMusixmatchToken");
+      DEBUG.info('Provider', 'Musixmatch 401: Token expired or invalid. Cleared from storage.');
+      console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid. Cleared from storage.");
+      return { error: "Double click on the Musixmatch provider to set up your token." };
+    }
     const track = trackBody?.message?.body?.track;
 
     if (!track) {
@@ -3581,7 +3593,8 @@ const ProviderSpotify = {
     const token = localStorage.getItem("lyricsPlusSpotifyToken");
 
     if (!token) {
-      console.log("[Spotify Debug] ✗ No token found in localStorage");
+      DEBUG.info('Provider', 'Spotify: No token found in localStorage.');
+      console.log("[Spotify Debug] ✗ No token found - double click on the provider to  set it up.");
       return { error: "Double click on the Spotify provider to set up your token.\n" + "A fresh token is required every hour/upon page reload for security." };
     }
     console.log("[Spotify Debug] ✓ Token found (length:", token.length, "characters)");
@@ -3612,7 +3625,9 @@ const ProviderSpotify = {
         console.log("[Spotify Debug] Response body:", text.substring(0, 200));
 
         if (res.status === 401) {
-          console.log("[Spotify Debug] ✗ Authentication failed - token expired or invalid");
+          localStorage.removeItem("lyricsPlusSpotifyToken");
+          DEBUG.info('Provider', 'Spotify 401: Token expired or invalid. Cleared from storage.');
+          console.log("[Spotify Debug] ✗ Authentication failed - token expired or invalid. Cleared from storage.");
           return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
         }
         if (res.status === 404) {
