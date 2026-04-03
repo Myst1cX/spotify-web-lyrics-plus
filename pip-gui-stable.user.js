@@ -360,6 +360,17 @@
   let pipWindowResizeFallbackActive = false;
   let pipNeedsPopupForLyrics = false;
 
+  // PiP Render Cache — avoids redundant DOM, localStorage, and canvas work each frame
+  let pipRenderCacheKey = '';
+  let pipCachedRows = null;
+  let pipCachedLyricsRef = null;
+  let pipCachedContainerRef = null;
+  let pipPlaybackPositionEl = null;
+  let pipCachedIsAmoled = false;
+  let pipCachedBaseFontSize = 22;
+  let pipCachedAnticipationOffset = 1000;
+  let pipLastLocalStorageReadAt = 0;
+
   // ------------------------
   // Constants & Configuration
   // ------------------------
@@ -1589,8 +1600,16 @@
    * unsynced lyrics and the "no lyrics" state.
    */
   function startPipRenderLoop() {
-      const render = () => {
-        if (!isPipActive) return;
+    // Reset caches so the first frame always does a fresh read
+    pipRenderCacheKey = '';
+    pipCachedRows = null;
+    pipCachedLyricsRef = null;
+    pipCachedContainerRef = null;
+    pipPlaybackPositionEl = null;
+    pipLastLocalStorageReadAt = 0;
+
+    const render = () => {
+      if (!isPipActive) return;
       const now = performance.now();
       if (now - pipLastFrameAt < PIP_FRAME_THROTTLE_MS) {
         pipAnimationFrame = requestAnimationFrame(render);
@@ -1603,16 +1622,22 @@
       const h = pipCanvas.height;
       const textMaxWidth = w - (PIP_CANVAS_H_PADDING * 2);
 
+      // Re-read localStorage at most once per second (avoids sync I/O on every frame)
+      if (now - pipLastLocalStorageReadAt >= 1000) {
+        pipCachedIsAmoled = localStorage.getItem('lyricsPlusTheme') === 'true';
+        pipCachedBaseFontSize = parseInt(localStorage.getItem(STORAGE_KEYS.FONT_SIZE) || '22', 10);
+        pipCachedAnticipationOffset = Number(localStorage.getItem('lyricsPlusAnticipationOffset') || 1000);
+        pipLastLocalStorageReadAt = now;
+      }
+
       // Background — respect AMOLED theme setting
-      const isAmoled = localStorage.getItem('lyricsPlusTheme') === 'true';
-      pipCtx.fillStyle = isAmoled ? '#000000' : '#121212';
+      pipCtx.fillStyle = pipCachedIsAmoled ? '#000000' : '#121212';
       pipCtx.fillRect(0, 0, w, h);
 
       const centerX = w / 2;
       const centerY = h / 2;
-      const baseFontSize = parseInt(localStorage.getItem(STORAGE_KEYS.FONT_SIZE) || '22', 10);
       const sizeScale = Math.max(0.7, Math.min(1.5, w / 640));
-      const activeFontSize = Math.max(18, Math.round(baseFontSize * 1.25 * sizeScale));
+      const activeFontSize = Math.max(18, Math.round(pipCachedBaseFontSize * 1.25 * sizeScale));
       const contextFontSize = Math.max(13, Math.round(activeFontSize * 0.72));
       const sublineFontSize = Math.max(11, Math.round(contextFontSize * 0.92));
       const activeLineHeight = Math.round(activeFontSize * 1.26);
@@ -1624,76 +1649,96 @@
       pipCtx.textBaseline = 'top';
 
       if (currentSyncedLyrics && currentSyncedLyrics.length > 0) {
-        // Determine the active line from current playback position
-        const posEl = document.querySelector('[data-testid="playback-position"]');
-        const curPosMs = posEl ? timeStringToMs(posEl.textContent) : 0;
-        const anticipatedMs = curPosMs + getAnticipationOffset();
+        // Re-use cached DOM reference; re-query only when the element leaves the document
+        if (!pipPlaybackPositionEl || !document.body.contains(pipPlaybackPositionEl)) {
+          pipPlaybackPositionEl = document.querySelector('[data-testid="playback-position"]');
+        }
+        const curPosMs = pipPlaybackPositionEl ? timeStringToMs(pipPlaybackPositionEl.textContent) : 0;
+        const anticipatedMs = curPosMs + pipCachedAnticipationOffset;
 
-        let activeIndex = -1;
-        for (let i = 0; i < currentSyncedLyrics.length; i++) {
-          if (anticipatedMs >= currentSyncedLyrics[i].time) activeIndex = i;
-          else break;
+        // Binary search for the last lyric line whose time <= anticipatedMs (O(log n))
+        let lo = 0, hi = currentSyncedLyrics.length - 1, activeIndex = -1;
+        while (lo <= hi) {
+          const mid = (lo + hi) >>> 1;
+          if (currentSyncedLyrics[mid].time <= anticipatedMs) {
+            activeIndex = mid;
+            lo = mid + 1;
+          } else {
+            hi = mid - 1;
+          }
         }
 
         if (activeIndex !== -1) {
-          const prevTexts = getPipLineGroupText(activeIndex - 1);
-          const activeTexts = getPipLineGroupText(activeIndex);
-          const nextTexts = getPipLineGroupText(activeIndex + 1);
+          // Recompute rows only when the active line, canvas width, font size, or lyrics data changes.
+          // This skips all DOM traversal and canvas measureText on the vast majority of frames.
+          const rowCacheKey = `${activeIndex}_${w}_${pipCachedBaseFontSize}`;
+          const lyricsChanged = currentSyncedLyrics !== pipCachedLyricsRef || currentLyricsContainer !== pipCachedContainerRef;
+          if (lyricsChanged || pipRenderCacheKey !== rowCacheKey) {
+            pipCachedLyricsRef = currentSyncedLyrics;
+            pipCachedContainerRef = currentLyricsContainer;
+            pipRenderCacheKey = rowCacheKey;
 
-          const fallbackActive = (currentSyncedLyrics[activeIndex]?.text || '').trim();
-          const fallbackPrev = activeIndex > 0 ? (currentSyncedLyrics[activeIndex - 1]?.text || '').trim() : '';
-          const fallbackNext = activeIndex < currentSyncedLyrics.length - 1 ? (currentSyncedLyrics[activeIndex + 1]?.text || '').trim() : '';
+            const prevTexts = getPipLineGroupText(activeIndex - 1);
+            const activeTexts = getPipLineGroupText(activeIndex);
+            const nextTexts = getPipLineGroupText(activeIndex + 1);
 
-          const blocks = [];
-          if (activeIndex > 0) {
-            blocks.push({
-              texts: prevTexts.length ? prevTexts : (fallbackPrev ? [fallbackPrev] : []),
-              color: 'white',
-              primaryFont: `${contextFontSize}px sans-serif`,
-              primaryLineHeight: contextLineHeight,
-              kind: 'context'
-            });
-          }
-          blocks.push({
-            texts: activeTexts.length ? activeTexts : (fallbackActive ? [fallbackActive] : []),
-            color: '#1db954',
-            primaryFont: `bold ${activeFontSize}px sans-serif`,
-            primaryLineHeight: activeLineHeight,
-            kind: 'active'
-          });
-          if (activeIndex < currentSyncedLyrics.length - 1) {
-            blocks.push({
-              texts: nextTexts.length ? nextTexts : (fallbackNext ? [fallbackNext] : []),
-              color: 'white',
-              primaryFont: `${contextFontSize}px sans-serif`,
-              primaryLineHeight: contextLineHeight,
-              kind: 'context'
-            });
-          }
+            const fallbackActive = (currentSyncedLyrics[activeIndex]?.text || '').trim();
+            const fallbackPrev = activeIndex > 0 ? (currentSyncedLyrics[activeIndex - 1]?.text || '').trim() : '';
+            const fallbackNext = activeIndex < currentSyncedLyrics.length - 1 ? (currentSyncedLyrics[activeIndex + 1]?.text || '').trim() : '';
 
-          const rows = [];
-          blocks.forEach((block, idx) => {
-            const blockTexts = block.texts.filter(Boolean);
-            const blockRows = flattenPipBlockRows(
-              pipCtx,
-              blockTexts,
-              textMaxWidth,
-              block.primaryFont,
-              block.primaryLineHeight,
-              `${sublineFontSize}px sans-serif`,
-              sublineLineHeight,
-              block.color,
-              block.kind
-            );
-            rows.push(...blockRows);
-            if (idx < blocks.length - 1 && blockRows.length > 0) {
-              rows.push({ spacer: true, lineHeight: blockGap });
+            const blocks = [];
+            if (activeIndex > 0) {
+              blocks.push({
+                texts: prevTexts.length ? prevTexts : (fallbackPrev ? [fallbackPrev] : []),
+                color: 'white',
+                primaryFont: `${contextFontSize}px sans-serif`,
+                primaryLineHeight: contextLineHeight,
+                kind: 'context'
+              });
             }
-          });
+            blocks.push({
+              texts: activeTexts.length ? activeTexts : (fallbackActive ? [fallbackActive] : []),
+              color: '#1db954',
+              primaryFont: `bold ${activeFontSize}px sans-serif`,
+              primaryLineHeight: activeLineHeight,
+              kind: 'active'
+            });
+            if (activeIndex < currentSyncedLyrics.length - 1) {
+              blocks.push({
+                texts: nextTexts.length ? nextTexts : (fallbackNext ? [fallbackNext] : []),
+                color: 'white',
+                primaryFont: `${contextFontSize}px sans-serif`,
+                primaryLineHeight: contextLineHeight,
+                kind: 'context'
+              });
+            }
 
-          const contentHeight = rows.reduce((sum, row) => sum + (row.lineHeight || 0), 0);
+            const newRows = [];
+            blocks.forEach((block, idx) => {
+              const blockTexts = block.texts.filter(Boolean);
+              const blockRows = flattenPipBlockRows(
+                pipCtx,
+                blockTexts,
+                textMaxWidth,
+                block.primaryFont,
+                block.primaryLineHeight,
+                `${sublineFontSize}px sans-serif`,
+                sublineLineHeight,
+                block.color,
+                block.kind
+              );
+              newRows.push(...blockRows);
+              if (idx < blocks.length - 1 && blockRows.length > 0) {
+                newRows.push({ spacer: true, lineHeight: blockGap });
+              }
+            });
+            pipCachedRows = newRows;
+          }
+
+          // Draw from the cached rows
+          const contentHeight = pipCachedRows.reduce((sum, row) => sum + (row.lineHeight || 0), 0);
           let drawY = Math.round(centerY - (contentHeight / 2));
-          rows.forEach((row) => {
+          pipCachedRows.forEach((row) => {
             if (row.spacer) {
               drawY += row.lineHeight;
               return;
@@ -1736,6 +1781,12 @@
       pipAnimationFrame = null;
     }
     pipLastFrameAt = 0;
+    pipRenderCacheKey = '';
+    pipCachedRows = null;
+    pipCachedLyricsRef = null;
+    pipCachedContainerRef = null;
+    pipPlaybackPositionEl = null;
+    pipLastLocalStorageReadAt = 0;
   }
 
   /**
@@ -1800,24 +1851,12 @@
   }
 
   function isSpotifyPlaying() {
-    // Try using Spotify's play/pause button aria-label (robust, language-universal)
-    let playPauseBtn =
-      document.querySelector('[data-testid="control-button-playpause"]') ||
-      document.querySelector('[aria-label]');
-
-    function isVisible(el) {
-      if (!el) return false;
-      const style = window.getComputedStyle(el);
-      return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
-    }
-
-    if (playPauseBtn && isVisible(playPauseBtn)) {
+    const playPauseBtn = document.querySelector('[data-testid="control-button-playpause"]');
+    if (playPauseBtn) {
       const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
       if (labelMeansPause(label)) return true; // "Pause" means music is playing
       if (labelMeansPlay(label)) return false; // "Play" means music is paused/stopped
     }
-
-    // Default: assume not playing
     return false;
   }
 
