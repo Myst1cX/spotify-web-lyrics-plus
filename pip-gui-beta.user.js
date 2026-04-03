@@ -1833,10 +1833,25 @@
         pipVideo.webkitPresentationMode === 'picture-in-picture';
 
       // --- Close ---
-      // Use our own state flag as primary check so clicking the toggle button always
-      // closes PiP even if the browser API check disagrees (e.g. timing or browser quirk).
-      if (isPipActive || isPagePipActive || inNativePip || inWebkitPip) {
-        closePip();
+      if (inNativePip && typeof document.exitPictureInPicture === 'function') {
+        await document.exitPictureInPicture();
+        return;
+      }
+      if (inWebkitPip && typeof pipVideo.webkitSetPresentationMode === 'function') {
+        pipVideo.webkitSetPresentationMode('inline');
+        return;
+      }
+      if (isPagePipActive || isPipActive) {
+        // Also close native pip window if the browser has one open (e.g. opened via
+        // the browser's own pip control on the video element).
+        if (document.pictureInPictureElement && typeof document.exitPictureInPicture === 'function') {
+          document.exitPictureInPicture().catch(() => {});
+        }
+        isPipActive = false;
+        isPagePipActive = false;
+        updatePipButtonState(false);
+        stopPipRenderLoop();
+        exitPipFromLyricsContainer();
         return;
       }
 
