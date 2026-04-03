@@ -355,6 +355,8 @@
   let isPagePipActive = false;
   let pipResizeObserver = null;
   let pipResizeRafPending = false;
+  let pipIgnoreMediaControlEvent = false;
+  let pipLastFrameAt = 0;
 
   // ------------------------
   // Constants & Configuration
@@ -1285,6 +1287,50 @@
     }
   }
 
+  function findSpotifyVolumeControl() {
+    return document.querySelector('[data-testid="volume-bar"]') ||
+           document.querySelector('[data-testid="volume-bar"] input[type="range"]') ||
+           document.querySelector('input[aria-label*="Volume"]');
+  }
+
+  function setSpotifyVolumeLevel(level) {
+    const volumeControl = findSpotifyVolumeControl();
+    if (!volumeControl) return false;
+
+    let input = null;
+    if (volumeControl instanceof HTMLInputElement && volumeControl.type === 'range') {
+      input = volumeControl;
+    } else {
+      input = volumeControl.querySelector('input[type="range"]');
+    }
+    if (!(input instanceof HTMLInputElement)) return false;
+
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 1);
+    const clamped = Math.min(1, Math.max(0, level));
+    const rawValue = min + ((max - min) * clamped);
+    input.value = String(rawValue);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
+  function getSpotifyVolumeLevel() {
+    const volumeControl = findSpotifyVolumeControl();
+    let input = null;
+    if (volumeControl instanceof HTMLInputElement && volumeControl.type === 'range') {
+      input = volumeControl;
+    } else if (volumeControl) {
+      input = volumeControl.querySelector('input[type="range"]');
+    }
+    if (!(input instanceof HTMLInputElement)) return null;
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 1);
+    const current = Number(input.value || 0);
+    if (!Number.isFinite(max - min) || max <= min) return null;
+    return (current - min) / (max - min);
+  }
+
   function setPipLineMetadata(lineEl, lineIndex) {
     if (!(lineEl instanceof HTMLElement)) return;
     lineEl.setAttribute('data-lyrics-line-index', String(lineIndex));
@@ -1307,7 +1353,10 @@
       const isTranslation = next.getAttribute('data-translated') === 'true';
       if (isTransliteration || isTranslation) {
         const text = (next.textContent || '').trim();
-        if (text) lines.push(text);
+        if (text) {
+          if (isTranslation) lines.push(`~TL~${text}`);
+          else lines.push(`~TR~${text}`);
+        }
       }
       next = next.nextElementSibling;
     }
@@ -1335,18 +1384,48 @@
     return out;
   }
 
-  function flattenPipBlockRows(ctx, texts, maxWidth, primaryFont, primaryLineHeight, secondaryFont, secondaryLineHeight, color) {
+  function flattenPipBlockRows(ctx, texts, maxWidth, primaryFont, primaryLineHeight, secondaryFont, secondaryLineHeight, color, blockKind = 'context') {
     const rows = [];
     texts.forEach((text, index) => {
+      const isTranslation = typeof text === 'string' && text.startsWith('~TL~');
+      const isTransliteration = typeof text === 'string' && text.startsWith('~TR~');
+      const cleanText = isTranslation || isTransliteration ? text.slice(4) : text;
       const rowFont = index === 0 ? primaryFont : secondaryFont;
       const rowLineHeight = index === 0 ? primaryLineHeight : secondaryLineHeight;
       ctx.font = rowFont;
-      const wrapped = splitPipTextToLines(ctx, text, maxWidth);
+      const wrapped = splitPipTextToLines(ctx, cleanText, maxWidth);
       wrapped.forEach((line) => {
-        rows.push({ text: line, font: rowFont, lineHeight: rowLineHeight, color });
+        rows.push({
+          text: line,
+          font: rowFont,
+          lineHeight: rowLineHeight,
+          color,
+          kind: isTranslation ? 'translation' : (isTransliteration ? 'transliteration' : 'lyric'),
+          blockKind
+        });
       });
     });
     return rows;
+  }
+
+  function syncPipMediaStateFromSpotify() {
+    if (!pipVideo) return;
+    const spotifyPlaying = isSpotifyPlaying();
+    const spotifyVolume = getSpotifyVolumeLevel();
+    pipIgnoreMediaControlEvent = true;
+    try {
+      if (spotifyPlaying && pipVideo.paused) {
+        pipVideo.play().catch(() => {});
+      } else if (!spotifyPlaying && !pipVideo.paused) {
+        pipVideo.pause();
+      }
+      if (spotifyVolume !== null) {
+        pipVideo.volume = Math.max(0, Math.min(1, spotifyVolume));
+        pipVideo.muted = spotifyVolume <= 0.001;
+      }
+    } finally {
+      setTimeout(() => { pipIgnoreMediaControlEvent = false; }, 0);
+    }
   }
 
   /**
@@ -1393,6 +1472,11 @@
     pipVideo.addEventListener('enterpictureinpicture', () => {
       isPipActive = true;
       updatePipButtonState(true);
+      syncPipMediaStateFromSpotify();
+      if (!pollingInterval) {
+        const popup = document.getElementById('lyrics-plus-popup');
+        startPollingForTrackChange(popup || { querySelector: () => null });
+      }
       startPipRenderLoop();
     });
 
@@ -1400,6 +1484,9 @@
       isPipActive = false;
       updatePipButtonState(false);
       stopPipRenderLoop();
+      if (!document.getElementById('lyrics-plus-popup')) {
+        stopPollingForTrackChange();
+      }
       if (!isPagePipActive) {
         if (document.body) {
           document.body.appendChild(pipVideo);
@@ -1421,6 +1508,27 @@
       if (active) startPipRenderLoop();
       else stopPipRenderLoop();
     });
+
+    pipVideo.addEventListener('play', () => {
+      if (pipIgnoreMediaControlEvent) return;
+      if (isSpotifyPlaying()) return;
+      sendSpotifyCommand('playpause');
+    });
+
+    pipVideo.addEventListener('pause', () => {
+      if (pipIgnoreMediaControlEvent) return;
+      if (!isSpotifyPlaying()) return;
+      sendSpotifyCommand('playpause');
+    });
+
+    pipVideo.addEventListener('volumechange', () => {
+      if (pipIgnoreMediaControlEvent) return;
+      if (pipVideo.muted || pipVideo.volume <= 0.001) {
+        setSpotifyVolumeLevel(0);
+      } else {
+        setSpotifyVolumeLevel(pipVideo.volume);
+      }
+    });
   }
 
   /**
@@ -1432,6 +1540,12 @@
   function startPipRenderLoop() {
     const render = () => {
       if (!isPipActive) return;
+      const now = performance.now();
+      if (now - pipLastFrameAt < 33) {
+        pipAnimationFrame = requestAnimationFrame(render);
+        return;
+      }
+      pipLastFrameAt = now;
       updatePipCanvasSize();
 
       const w = pipCanvas.width;
@@ -1485,35 +1599,40 @@
               texts: prevTexts.length ? prevTexts : (fallbackPrev ? [fallbackPrev] : []),
               color: 'rgba(255, 255, 255, 0.45)',
               primaryFont: `${contextFontSize}px sans-serif`,
-              primaryLineHeight: contextLineHeight
+              primaryLineHeight: contextLineHeight,
+              kind: 'context'
             });
           }
           blocks.push({
             texts: activeTexts.length ? activeTexts : (fallbackActive ? [fallbackActive] : []),
             color: '#1db954',
             primaryFont: `bold ${activeFontSize}px sans-serif`,
-            primaryLineHeight: activeLineHeight
+            primaryLineHeight: activeLineHeight,
+            kind: 'active'
           });
           if (activeIndex < currentSyncedLyrics.length - 1) {
             blocks.push({
               texts: nextTexts.length ? nextTexts : (fallbackNext ? [fallbackNext] : []),
               color: 'rgba(255, 255, 255, 0.45)',
               primaryFont: `${contextFontSize}px sans-serif`,
-              primaryLineHeight: contextLineHeight
+              primaryLineHeight: contextLineHeight,
+              kind: 'context'
             });
           }
 
           const rows = [];
           blocks.forEach((block, idx) => {
+            const blockTexts = block.texts.filter(Boolean);
             const blockRows = flattenPipBlockRows(
               pipCtx,
-              block.texts,
+              blockTexts,
               textMaxWidth,
               block.primaryFont,
               block.primaryLineHeight,
               `${sublineFontSize}px sans-serif`,
               sublineLineHeight,
-              block.color
+              block.color,
+              block.kind
             );
             rows.push(...blockRows);
             if (idx < blocks.length - 1 && blockRows.length > 0) {
@@ -1529,18 +1648,44 @@
               return;
             }
             pipCtx.font = row.font;
-            pipCtx.fillStyle = row.color;
+            if (row.kind === 'translation') {
+              pipCtx.fillStyle = 'rgba(170, 170, 170, 0.9)';
+            } else if (row.kind === 'transliteration' && row.blockKind === 'active') {
+              pipCtx.fillStyle = '#1db954';
+            } else {
+              pipCtx.fillStyle = row.color;
+            }
             pipCtx.fillText(row.text, centerX, drawY, textMaxWidth);
             drawY += row.lineHeight;
           });
         }
       } else if (currentUnsyncedLyrics && currentUnsyncedLyrics.length > 0) {
-        pipCtx.font = `bold ${activeFontSize}px sans-serif`;
-        pipCtx.fillStyle = 'white';
-        pipCtx.fillText('Unsynced Lyrics', centerX, centerY - Math.round(activeFontSize * 0.8), textMaxWidth);
-        pipCtx.font = `${Math.round(activeFontSize * 0.6)}px sans-serif`;
-        pipCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        pipCtx.fillText('Open popup for full lyrics', centerX, centerY + Math.round(activeFontSize * 0.6), textMaxWidth);
+        const visibleCount = 8;
+        const startIndex = Math.max(0, currentUnsyncedLyrics.length - visibleCount);
+        const lines = currentUnsyncedLyrics
+          .slice(startIndex, startIndex + visibleCount)
+          .map((line) => (line?.text || '').trim())
+          .filter(Boolean);
+        if (lines.length > 0) {
+          const rows = flattenPipBlockRows(
+            pipCtx,
+            lines,
+            textMaxWidth,
+            `${Math.round(activeFontSize * 0.7)}px sans-serif`,
+            Math.round(activeFontSize * 0.95),
+            `${Math.round(activeFontSize * 0.7)}px sans-serif`,
+            Math.round(activeFontSize * 0.95),
+            'rgba(255, 255, 255, 0.9)'
+          );
+          const contentHeight = rows.reduce((sum, row) => sum + row.lineHeight, 0);
+          let drawY = Math.max(12, Math.round((h - contentHeight) / 2));
+          rows.forEach((row) => {
+            pipCtx.font = row.font;
+            pipCtx.fillStyle = row.color;
+            pipCtx.fillText(row.text, centerX, drawY, textMaxWidth);
+            drawY += row.lineHeight;
+          });
+        }
       } else {
         pipCtx.font = `bold ${activeFontSize}px sans-serif`;
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
@@ -1549,6 +1694,7 @@
 
       pipAnimationFrame = requestAnimationFrame(render);
     };
+    pipLastFrameAt = 0;
     render();
   }
 
@@ -4157,7 +4303,7 @@ const Providers = {
       highlightTimer = null;
       DEBUG.debug('Cleanup', 'highlightTimer cleared');
     }
-    if (pollingInterval) {
+    if (pollingInterval && !isPipActive && !isPagePipActive) {
       clearInterval(pollingInterval);
       pollingInterval = null;
       DEBUG.debug('Cleanup', 'pollingInterval cleared');
@@ -4601,7 +4747,9 @@ const Providers = {
     closeBtn.onclick = () => {
       savePopupState(popup);
       removePopup();
-      stopPollingForTrackChange();
+      if (!isPipActive && !isPagePipActive) {
+        stopPollingForTrackChange();
+      }
     };
 
     // --- Translation Toggle Button ---
@@ -7652,6 +7800,10 @@ const Providers = {
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
         autodetectProviderAndLoad(popup, info);
+      }
+
+      if (isPipActive) {
+        syncPipMediaStateFromSpotify();
       }
 
       // Update last position for next iteration
