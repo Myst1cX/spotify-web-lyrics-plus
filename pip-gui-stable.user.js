@@ -352,6 +352,7 @@
   let pipCtx = null;
   let pipAnimationFrame = null;
   let isPipActive = false;
+  let isPagePipActive = false;
 
   // ------------------------
   // Constants & Configuration
@@ -1200,6 +1201,53 @@
 
   // Horizontal padding (px) reserved on each side of the PiP canvas text area.
   const PIP_CANVAS_H_PADDING = 60;
+  const PIP_PAGE_STYLE = 'position: relative; width: 100%; height: auto; border-radius: inherit;';
+  const PIP_PAGE_CONTAINER_SELECTORS = [
+    'nav[aria-label] > div:last-of-type',
+    '[data-testid="now-playing-widget"]',
+    '[data-testid="now-playing-bar"]'
+  ];
+
+  function applyHiddenPipVideoStyle() {
+    Object.assign(pipVideo.style, {
+      position: 'fixed',
+      left: '-9999px',
+      top: '-9999px',
+      width: '1px',
+      height: '1px',
+      opacity: '0',
+      pointerEvents: 'none',
+    });
+  }
+
+  function findPipPageContainer() {
+    for (const selector of PIP_PAGE_CONTAINER_SELECTORS) {
+      const node = document.querySelector(selector);
+      if (node instanceof HTMLElement) return node;
+    }
+    return null;
+  }
+
+  function openPagePipFallback() {
+    const container = findPipPageContainer();
+    if (!container) throw new Error('Page PiP container not found');
+    pipVideo.setAttribute('style', PIP_PAGE_STYLE);
+    container.appendChild(pipVideo);
+    isPagePipActive = true;
+    pipVideo.dispatchEvent(new CustomEvent('enterpictureinpicture'));
+  }
+
+  function closePagePipFallback() {
+    if (!isPagePipActive) return;
+    if (document.body) {
+      document.body.appendChild(pipVideo);
+    } else if (document.documentElement) {
+      document.documentElement.appendChild(pipVideo);
+    }
+    applyHiddenPipVideoStyle();
+    isPagePipActive = false;
+    pipVideo.dispatchEvent(new CustomEvent('leavepictureinpicture'));
+  }
 
   /**
    * Creates the hidden <canvas> and <video> elements used by the PiP feature.
@@ -1220,15 +1268,7 @@
     pipVideo.playsInline = true;
     pipVideo.width = pipCanvas.width;
     pipVideo.height = pipCanvas.height;
-    Object.assign(pipVideo.style, {
-      position: 'fixed',
-      left: '-9999px',
-      top: '-9999px',
-      width: '1px',
-      height: '1px',
-      opacity: '0',
-      pointerEvents: 'none',
-    });
+    applyHiddenPipVideoStyle();
     if (!pipVideo.parentNode) {
       if (document.body) {
         document.body.appendChild(pipVideo);
@@ -1407,6 +1447,11 @@
         return;
       }
 
+      if (isPagePipActive) {
+        closePagePipFallback();
+        return;
+      }
+
       const requestPiP =
         pipVideo.requestPictureInPicture ||
         (HTMLVideoElement.prototype && HTMLVideoElement.prototype.requestPictureInPicture);
@@ -1423,7 +1468,7 @@
       ) {
         pipVideo.webkitSetPresentationMode('picture-in-picture');
       } else {
-        throw new Error('Picture-in-Picture is not supported in this browser context');
+        openPagePipFallback();
       }
     } catch (err) {
       console.error('[Lyrics+] PiP error:', err);
@@ -3965,6 +4010,10 @@ const Providers = {
 
   function removePopup() {
     DEBUG.ui.popupRemoved();
+
+    if (isPagePipActive && pipVideo) {
+      closePagePipFallback();
+    }
 
     // Clear all intervals
     if (highlightTimer) {
