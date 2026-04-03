@@ -358,6 +358,7 @@
   let pipIgnoreMediaControlEvent = false;
   let pipLastFrameAt = 0;
   let pipWindowResizeFallbackActive = false;
+  let pipNeedsPopupForLyrics = false;
 
   // ------------------------
   // Constants & Configuration
@@ -1647,7 +1648,7 @@
           if (activeIndex > 0) {
             blocks.push({
               texts: prevTexts.length ? prevTexts : (fallbackPrev ? [fallbackPrev] : []),
-              color: 'rgba(255, 255, 255, 0.45)',
+              color: 'white',
               primaryFont: `${contextFontSize}px sans-serif`,
               primaryLineHeight: contextLineHeight,
               kind: 'context'
@@ -1663,7 +1664,7 @@
           if (activeIndex < currentSyncedLyrics.length - 1) {
             blocks.push({
               texts: nextTexts.length ? nextTexts : (fallbackNext ? [fallbackNext] : []),
-              color: 'rgba(255, 255, 255, 0.45)',
+              color: 'white',
               primaryFont: `${contextFontSize}px sans-serif`,
               primaryLineHeight: contextLineHeight,
               kind: 'context'
@@ -1710,6 +1711,13 @@
         pipCtx.font = `${Math.round(activeFontSize * 0.6)}px sans-serif`;
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         pipCtx.fillText('Open popup for full lyrics', centerX, centerY + Math.round(activeFontSize * 0.6), textMaxWidth);
+      } else if (pipNeedsPopupForLyrics) {
+        pipCtx.font = `bold ${activeFontSize}px sans-serif`;
+        pipCtx.fillStyle = 'white';
+        pipCtx.fillText('Open Lyrics+ popup', centerX, centerY - Math.round(activeFontSize * 0.8), textMaxWidth);
+        pipCtx.font = `${Math.round(activeFontSize * 0.6)}px sans-serif`;
+        pipCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        pipCtx.fillText('to resume lyric updates', centerX, centerY + Math.round(activeFontSize * 0.6), textMaxWidth);
       } else {
         pipCtx.font = `bold ${activeFontSize}px sans-serif`;
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
@@ -4336,6 +4344,7 @@ const Providers = {
 
   function removePopup() {
     DEBUG.ui.popupRemoved();
+    const wasPipActive = isPipActive || isPagePipActive;
 
     if (isPagePipActive && pipVideo) {
       closePagePipFallback();
@@ -4351,6 +4360,11 @@ const Providers = {
       clearInterval(pollingInterval);
       pollingInterval = null;
       DEBUG.debug('Cleanup', 'pollingInterval cleared');
+    }
+
+    if (wasPipActive) {
+      currentLyricsContainer = null;
+      pipNeedsPopupForLyrics = true;
     }
 
     if (pipVideo && !isPipActive && !isPagePipActive) {
@@ -4494,6 +4508,7 @@ const Providers = {
   function createPopup() {
     DEBUG.ui.popupCreated();
     removePopup();
+    pipNeedsPopupForLyrics = false;
 
     // Clear current provider so no provider is highlighted while searching for lyrics
     Providers.current = null;
@@ -7219,6 +7234,7 @@ const Providers = {
     currentLyricsContainer = lyricsContainer;
     currentSyncedLyrics = cachedData.synced;
     currentUnsyncedLyrics = cachedData.unsynced;
+    pipNeedsPopupForLyrics = false;
     currentLyricsMetadata = cachedData.metadata || null; // Restore metadata from cache
 
     // Reset translation state
@@ -7349,6 +7365,7 @@ const Providers = {
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
     if (!lyricsContainer) return;
     currentLyricsContainer = lyricsContainer;
+    pipNeedsPopupForLyrics = false;
     currentSyncedLyrics = null;
     currentUnsyncedLyrics = null;
     // Reset translation state when loading new lyrics
@@ -7798,6 +7815,7 @@ const Providers = {
     if (lyricsContainer) lyricsContainer.textContent = "No lyrics found from any provider";
     currentSyncedLyrics = null;
     currentLyricsContainer = lyricsContainer;
+    pipNeedsPopupForLyrics = false;
     // Reset translation state when no lyrics are found
     translationPresent = false;
     transliterationPresent = false;
@@ -7810,6 +7828,19 @@ const Providers = {
   function startPollingForTrackChange(popup) {
     if (pollingInterval) clearInterval(pollingInterval);
     pollingInterval = setInterval(() => {
+      const livePopup = document.getElementById("lyrics-plus-popup");
+      const activePopup = (popup && popup.isConnected) ? popup : livePopup;
+      if (isPipActive && !activePopup) {
+        currentLyricsContainer = null;
+        pipNeedsPopupForLyrics = true;
+      } else if (activePopup) {
+        const activeContainer = activePopup.querySelector("#lyrics-plus-content");
+        if (activeContainer) {
+          currentLyricsContainer = activeContainer;
+          pipNeedsPopupForLyrics = false;
+        }
+      }
+
       const info = getCurrentTrackInfo();
       if (!info) return;
 
@@ -7848,9 +7879,11 @@ const Providers = {
         currentTrackId = info.id;
         lastPlaybackPosition = 0;
         lastTrackDuration = info.duration || 0;
-        const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+        const lyricsContainer = activePopup ? activePopup.querySelector("#lyrics-plus-content") : null;
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
-        autodetectProviderAndLoad(popup, info);
+        if (activePopup) {
+          autodetectProviderAndLoad(activePopup, info);
+        }
       }
 
       if (isPipActive) {
@@ -7861,21 +7894,21 @@ const Providers = {
       lastPlaybackPosition = currentPosition;
 
       // Update all button states using DOM-cloned icons from Spotify's visible buttons
-      if (popup && popup._playPauseBtn) {
-        updatePlayPauseButton(popup._playPauseBtn.button, popup._playPauseBtn.iconWrapper);
+      if (activePopup && activePopup._playPauseBtn) {
+        updatePlayPauseButton(activePopup._playPauseBtn.button, activePopup._playPauseBtn.iconWrapper);
       }
-      if (popup && popup._shuffleBtn) {
-        updateShuffleButton(popup._shuffleBtn.button, popup._shuffleBtn.iconWrapper);
+      if (activePopup && activePopup._shuffleBtn) {
+        updateShuffleButton(activePopup._shuffleBtn.button, activePopup._shuffleBtn.iconWrapper);
       }
-      if (popup && popup._repeatBtn) {
-        updateRepeatButton(popup._repeatBtn.button, popup._repeatBtn.iconWrapper);
+      if (activePopup && activePopup._repeatBtn) {
+        updateRepeatButton(activePopup._repeatBtn.button, activePopup._repeatBtn.iconWrapper);
       }
       // Update prev/next button icons from Spotify's DOM
-      if (popup && popup._prevBtn) {
-        updatePreviousButtonIcon(popup._prevBtn.iconWrapper);
+      if (activePopup && activePopup._prevBtn) {
+        updatePreviousButtonIcon(activePopup._prevBtn.iconWrapper);
       }
-      if (popup && popup._nextBtn) {
-        updateNextButtonIcon(popup._nextBtn.iconWrapper);
+      if (activePopup && activePopup._nextBtn) {
+        updateNextButtonIcon(activePopup._nextBtn.iconWrapper);
       }
     }, TIMING.POLLING_INTERVAL_MS);
   }
