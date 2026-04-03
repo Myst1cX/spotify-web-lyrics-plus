@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.25
+// @version      17.26
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,6 +14,16 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.26): FIX FLASH OF LYRICS BEHIND PiP OVERLAY WHEN TOGGLING CHINESE CONVERSION
+// • rerenderLyrics() wipes lyricsContainer.innerHTML and rebuilds <p> elements; between the wipe
+//   and the re-insertion of pipVideo by enterPipInLyricsContainer() those new <p> elements were
+//   briefly visible behind the "This video is playing in picture-in-picture" overlay.
+// • Translation/transliteration avoid this because they update existing hidden elements in-place
+//   and never clear the container. Chinese conversion must do a full rebuild.
+// • Fix: set lyricsContainer.style.visibility = 'hidden' right before the wipe (when PiP is
+//   active) and restore it to '' immediately after enterPipInLyricsContainer() puts pipVideo back.
+//   The <p> elements are never rendered visible; pipVideo re-appears without a flash.
 
 // RESOLVED (17.25): FIX CHINESE CONVERSION NOT REFLECTED IN PiP WINDOW
 // • rerenderLyrics() was calling lyricsContainer.innerHTML = "" which removed the pipVideo element
@@ -7093,6 +7103,12 @@ const Providers = {
     translationPresent = false;
     transliterationPresent = false;
     lastTranslatedLang = null;
+    // When PiP is active, hide the container while we wipe and rebuild so the freshly
+    // created <p> elements are never visible before pipVideo covers them again.
+    // Translation/transliteration avoid this by updating existing hidden elements in-place;
+    // rerenderLyrics() must do a full rebuild, so we use visibility:hidden as a shield.
+    const rebuildingWhilePipActive = isPipActive || isPagePipActive;
+    if (rebuildingWhilePipActive) lyricsContainer.style.visibility = 'hidden';
     lyricsContainer.innerHTML = "";
 
     const transliterationEnabled = localStorage.getItem(STORAGE_KEYS.TRANSLITERATION_ENABLED) === 'true';
@@ -7159,8 +7175,11 @@ const Providers = {
     // freshly rendered <p> elements. lyricsContainer.innerHTML="" (above) removed the
     // pipVideo; enterPipInLyricsContainer() puts it back and saves/hides the new children
     // so getPipLineGroupText() can read Chinese-converted text on the next canvas frame.
-    if (isPipActive || isPagePipActive) {
+    // Restore visibility after pipVideo is back in place so the video shows immediately
+    // with no flash of the underlying <p> elements.
+    if (rebuildingWhilePipActive) {
       enterPipInLyricsContainer();
+      lyricsContainer.style.visibility = '';
     }
   }
 
