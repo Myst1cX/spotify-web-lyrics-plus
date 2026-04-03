@@ -15,7 +15,23 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
 // ==/UserScript==
 
-// RESOLVED (17.25): FIX: PiP now remains open across song transitions by protecting lyricsContainer clears.
+// TO FIX: 
+
+// 1. what i want is that by pressing on 'toggle picture in picture mode' button in lyrics+ popup's header to untoggle, which  
+// 'returns lyric+ popup's lyric container to the base lyrics container without any video canvas element', apart from doing that, this action  
+// at the same time also closes the opened native pip view (the one to which we reflect lyric lines, translation etc)  
+// since user now resumes paying attention to lyric+ popup's lyric container.  
+// additional explanation: 'toggle picture in picture mode' is a button in lyrics+ popup header.   
+// if you click it, the lyrics+ popup's lyrics container transforms into a container that's a video element, which gives it the pip mode button that   
+// opens native pip view. the native pip view also has a play/pause button, fullscreen button, mute button, back to tab button, and most importantly,   
+// a close button. after clicking that close button to close native pip view, the lyrics+ popup's lyric container is still displayed as video element   
+// (that is intended since only the 'toggle picture in picture button' can return it to original lyric container. now to iterate, i want the   
+// 'toggle picture in picture button' when it returns lyric container to original (removing video element), to also close   
+// the native pip view (if its still open)   
+// 2. chinese conversion should also be reflected in the pip if pip is open and we toggle chinese conversion..   
+// currently we already reflect lyric lines, translation lines and transliteration lines.  
+
+// RESOLVED (17.25): FIX: PiP now remains open across song transitions by protecting lyricsContainer clears.  
 
 // RESOLVED (17.24): ADDED PICTURE-IN-PICTURE (PiP) MODE
 // • Toggle PiP button added to the Lyrics+ popup header button group.
