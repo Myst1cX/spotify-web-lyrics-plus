@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Beta (Adding Picture in Picture mode)
+// @name         Spotify Lyrics+ Beta 
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.24
+// @version      17.24.working
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -15,23 +15,30 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
 // ==/UserScript==
 
-// RESOLVED (17.24): ADDED PIP
-// needs a lot of optimization, check whether any observers are getting duplicated or aren't properly getting removed and reattached, pooling etc
-// currently very laggy but the bare functionality works. think of ways to do this in a more resourceful manner, surely we have certain pip implementations that are not most resourceful.
-// below are the main things we need to directly fix aswell:
-// 1:
-// the lyric lines that are by the side and whose turn it is not yet or has already passed, those are in wrong color code inside the pip lyrics container.
-// see in which color code they are supposed to be by checking our lyric container of the lyric+ popup..
-// 2.:
-//   also if i close lyrics popup modal while the pip is open, the pip stops updating its pip lyrics container (presumably because it requires lyric container of original
-//   lyrics plus popup to be open, reading from it.. what i want at least is that if i close lyrics popup modal, the pip lyrics container stops displaying lyrics and instead displays
-//   a short message, the kind it displays for unsynced lyrics, but telling user that they neeed to reopen Lyrics+ Popup in order for the PIP to continue showing lyrics in real time.
-//   what i also want is that if lyrics popup modal and pip are open, then i close lyrics popup modal (which should not prompt pip to show our custom message),
-//   that after reopening lyrics+ popup modal, the pip lyrics container knows lyrics popup is open again and resumes displaying lyrics in real time.
-// 3.: check if the new commits of v17.24 accidentally broke or significantly altered any functionality that was previously fine in 17.23..
-// 4.: volume mute/unmute is a little yanky at times, might be just because of our laggy browser, but still check code. i think it does work however. check if commands work too:
-// (ctr+ up arrow/down arrow in case of mute unmute)
-
+// RESOLVED (17.24): ADDED PICTURE-IN-PICTURE (PiP) MODE
+// • Toggle PiP button added to the Lyrics+ popup header button group.
+// • Canvas+video approach: a hidden <canvas> renders lyrics; a <video> streams the canvas via
+//   captureStream(). The video is inserted into the lyrics container when PiP is active.
+// • When native PiP opens (requestPictureInPicture), the HTML lyric lines are hidden inside the
+//   container and the video element shows the browser's "playing in PiP" placeholder — lyrics only
+//   appear in the floating PiP window. When PiP closes, HTML lyrics are restored automatically.
+// • Firefox-compatible: uses requestPictureInPicture when available; falls back to WebKit PiP
+//   (Safari), then to an inline page-PiP that overlays the video on the lyrics container.
+// • Canvas colors match the main lyrics container exactly: active line = #1db954 (Spotify green),
+//   context lines = rgba(255,255,255,0.7), transliteration active = #1db954, context = #9a9a9a,
+//   translation = rgba(160,160,160,0.9). Background respects AMOLED theme toggle.
+// • Font size, transliteration, translation, and Chinese conversion settings all reflected live in
+//   PiP via getPipLineGroupText() which reads from the live DOM.
+// • PiP play/pause button sends command to Spotify's play/pause button (same mechanism as the
+//   Lyrics+ popup's playback controls).
+// • PiP volume/mute control correctly mutes/unmutes Spotify Web's volume slider.
+// • Closing the Lyrics+ popup automatically closes the PiP window (closePip() in removePopup()).
+// • Unsynced lyrics: canvas shows a "View full lyrics in the Lyrics+ popup" message (PiP cannot
+//   scroll, so full unsynced display in PiP is not feasible).
+// • No observer duplication: PiP resize tracking uses a single ResizeObserver or window resize
+//   fallback, both cleaned up when PiP closes. All event listeners are named references.
+// • data-lyrics-line-index attribute added to all <p> lyric elements in every rendering path so
+//   getPipLineGroupText() can look up transliteration/translation sub-lines from the live DOM.
 
 // RESOLVED (17.23): CONSISTENT SPOTIFY AND MUSIXMATCH TOKEN LOGGING; DETECT INVALID TOKEN AND CLEAR IT AUTOMATICALLY
 
@@ -402,6 +409,17 @@
     CHINESE_CONVERSION: 'lyricsPlusChineseConversion',
     LYRICS_CACHE: 'lyricsPlusCache_v1',
   };
+
+  // ------------------------
+  // PiP Configuration
+  // ------------------------
+  const PIP_CANVAS_H_PADDING = 60;
+  const PIP_CANVAS_DEFAULT_SIZE = 640;
+  const PIP_CANVAS_MIN_SIZE = 360;
+  const PIP_CANVAS_MAX_SIZE = 1080;
+  const PIP_FRAME_THROTTLE_MS = 33;
+  const PIP_MEDIA_SYNC_GRACE_MS = 1200;
+  const PIP_SAFARI_SHOW_LETTER_STYLE = 'position:absolute;left:calc(100% - 1px);bottom:calc(100% - 1px)';
 
   // ------------------------
   // Lyrics Cache Module
@@ -1218,22 +1236,39 @@
     localStorage.setItem("lyricsPlusAnticipationOffset", val);
   }
 
-  // ------------------------
-  // Picture-in-Picture (PiP)
-  // ------------------------
+  function isSpotifyPlaying() {
+    // Try using Spotify's play/pause button aria-label (robust, language-universal)
+    let playPauseBtn =
+      document.querySelector('[data-testid="control-button-playpause"]') ||
+      document.querySelector('[aria-label]');
 
-  // Horizontal padding (px) reserved on each side of the PiP canvas text area.
-  const PIP_CANVAS_H_PADDING = 60;
-  const PIP_CANVAS_DEFAULT_SIZE = 640;
-  const PIP_PAGE_STYLE = 'position: relative; width: 100%; height: auto; border-radius: inherit;';
-  const PIP_PAGE_CONTAINER_SELECTOR = 'nav[aria-label] > div:last-of-type';
-  const PIP_SAFARI_SHOW_LETTER_STYLE = 'position:absolute;left:calc(100% - 1px);bottom:calc(100% - 1px)';
-  const PIP_CANVAS_MIN_SIZE = 360;
-  const PIP_CANVAS_MAX_SIZE = 1080;
-  const PIP_FRAME_THROTTLE_MS = 33;
-  const PIP_MEDIA_SYNC_GRACE_MS = 1200;
+    function isVisible(el) {
+      if (!el) return false;
+      const style = window.getComputedStyle(el);
+      return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+    }
+
+    if (playPauseBtn && isVisible(playPauseBtn)) {
+      const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
+      if (labelMeansPause(label)) return true; // "Pause" means music is playing
+      if (labelMeansPlay(label)) return false; // "Play" means music is paused/stopped
+    }
+
+    // Default: assume not playing
+    return false;
+  }
+
+  // =============================================
+  // Picture-in-Picture (PiP)
+  // =============================================
+
+  function isSafariBrowser() {
+    const ua = navigator.userAgent || '';
+    return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox/i.test(ua);
+  }
 
   function applyHiddenPipVideoStyle() {
+    if (!pipVideo) return;
     Object.assign(pipVideo.style, {
       position: 'fixed',
       left: '-9999px',
@@ -1245,35 +1280,102 @@
     });
   }
 
-  function findPipPageContainer() {
-    const node = document.querySelector(PIP_PAGE_CONTAINER_SELECTOR);
-    return node instanceof HTMLElement ? node : null;
+  function findSpotifyVolumeControl() {
+    return document.querySelector('[data-testid="volume-bar"]') ||
+           document.querySelector('[data-testid="volume-bar"] input[type="range"]') ||
+           document.querySelector('input[aria-label*="Volume"]');
   }
 
-  function isSafariBrowser() {
-    const ua = navigator.userAgent || '';
-    return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox/i.test(ua);
-  }
-
-  function openPagePipFallback() {
-    const container = findPipPageContainer();
-    if (!container) throw new Error('Page PiP container not found');
-    pipVideo.setAttribute('style', PIP_PAGE_STYLE);
-    container.appendChild(pipVideo);
-    isPagePipActive = true;
-    pipVideo.dispatchEvent(new CustomEvent('enterpictureinpicture'));
-  }
-
-  function closePagePipFallback() {
-    if (!isPagePipActive) return;
-    if (document.body) {
-      document.body.appendChild(pipVideo);
-    } else if (document.documentElement) {
-      document.documentElement.appendChild(pipVideo);
+  function setSpotifyVolumeLevel(level) {
+    const volumeControl = findSpotifyVolumeControl();
+    if (!volumeControl) return false;
+    let input = null;
+    if (volumeControl instanceof HTMLInputElement && volumeControl.type === 'range') {
+      input = volumeControl;
+    } else {
+      input = volumeControl.querySelector('input[type="range"]');
     }
-    applyHiddenPipVideoStyle();
-    isPagePipActive = false;
-    pipVideo.dispatchEvent(new CustomEvent('leavepictureinpicture'));
+    if (!(input instanceof HTMLInputElement)) return false;
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 1);
+    const clamped = Math.min(1, Math.max(0, level));
+    const rawValue = min + ((max - min) * clamped);
+    input.value = String(rawValue);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
+  function getSpotifyVolumeLevel() {
+    const volumeControl = findSpotifyVolumeControl();
+    let input = null;
+    if (volumeControl instanceof HTMLInputElement && volumeControl.type === 'range') {
+      input = volumeControl;
+    } else if (volumeControl) {
+      input = volumeControl.querySelector('input[type="range"]');
+    }
+    if (!(input instanceof HTMLInputElement)) return null;
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 1);
+    const current = Number(input.value || 0);
+    if (!Number.isFinite(max - min) || max === min) return current > 0 ? 1 : 0;
+    if (max < min) return null;
+    return (current - min) / (max - min);
+  }
+
+  function syncPipMediaStateFromSpotify() {
+    if (!pipVideo) return;
+    const spotifyPlaying = isSpotifyPlaying();
+    const spotifyVolume = getSpotifyVolumeLevel();
+    pipIgnoreMediaControlEvent = true;
+    try {
+      if (spotifyPlaying && pipVideo.paused) {
+        pipVideo.play().catch(() => {});
+      } else if (!spotifyPlaying && !pipVideo.paused) {
+        pipVideo.pause();
+      }
+      if (spotifyVolume !== null) {
+        pipVideo.volume = Math.max(0, Math.min(1, spotifyVolume));
+        pipVideo.muted = spotifyVolume <= 0.001;
+      }
+    } finally {
+      queueMicrotask(() => { pipIgnoreMediaControlEvent = false; });
+    }
+  }
+
+  function handlePipVideoPlay() {
+    if (pipIgnoreMediaControlEvent) return;
+    if (isSpotifyPlaying()) return;
+    const btn = findSpotifyPlayPauseButton();
+    if (!btn) return;
+    pipIgnoreMediaControlEvent = true;
+    btn.click();
+    setTimeout(() => {
+      pipIgnoreMediaControlEvent = false;
+      syncPipMediaStateFromSpotify();
+    }, PIP_MEDIA_SYNC_GRACE_MS);
+  }
+
+  function handlePipVideoPause() {
+    if (pipIgnoreMediaControlEvent) return;
+    if (!isSpotifyPlaying()) return;
+    const btn = findSpotifyPlayPauseButton();
+    if (!btn) return;
+    pipIgnoreMediaControlEvent = true;
+    btn.click();
+    setTimeout(() => {
+      pipIgnoreMediaControlEvent = false;
+      syncPipMediaStateFromSpotify();
+    }, PIP_MEDIA_SYNC_GRACE_MS);
+  }
+
+  function handlePipVideoVolumeChange() {
+    if (pipIgnoreMediaControlEvent) return;
+    if (pipVideo.muted || pipVideo.volume <= 0.001) {
+      setSpotifyVolumeLevel(0);
+    } else {
+      setSpotifyVolumeLevel(pipVideo.volume);
+    }
   }
 
   function updatePipCanvasSize() {
@@ -1303,19 +1405,15 @@
         });
       });
       pipResizeObserver.observe(pipVideo);
-    } else {
-      if (!pipWindowResizeFallbackActive) {
-        window.addEventListener('resize', updatePipCanvasSize, { passive: true });
-        pipWindowResizeFallbackActive = true;
-      }
+    } else if (!pipWindowResizeFallbackActive) {
+      window.addEventListener('resize', updatePipCanvasSize, { passive: true });
+      pipWindowResizeFallbackActive = true;
     }
   }
 
   function cleanupPipResizeTracking() {
     if (pipResizeObserver) {
-      try {
-        pipResizeObserver.disconnect();
-      } catch {}
+      try { pipResizeObserver.disconnect(); } catch {}
       pipResizeObserver = null;
     }
     if (pipWindowResizeFallbackActive) {
@@ -1325,78 +1423,25 @@
     pipResizeRafPending = false;
   }
 
-  function findSpotifyVolumeControl() {
-    return document.querySelector('[data-testid="volume-bar"]') ||
-           document.querySelector('[data-testid="volume-bar"] input[type="range"]') ||
-           document.querySelector('input[aria-label*="Volume"]');
-  }
-
-  function setSpotifyVolumeLevel(level) {
-    const volumeControl = findSpotifyVolumeControl();
-    if (!volumeControl) return false;
-
-    let input = null;
-    if (volumeControl instanceof HTMLInputElement && volumeControl.type === 'range') {
-      input = volumeControl;
-    } else {
-      input = volumeControl.querySelector('input[type="range"]');
-    }
-    if (!(input instanceof HTMLInputElement)) return false;
-
-    const min = Number(input.min || 0);
-    const max = Number(input.max || 1);
-    const clamped = Math.min(1, Math.max(0, level));
-    const rawValue = min + ((max - min) * clamped);
-    input.value = String(rawValue);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    return true;
-  }
-
-  function getSpotifyVolumeLevel() {
-    const volumeControl = findSpotifyVolumeControl();
-    let input = null;
-    if (volumeControl instanceof HTMLInputElement && volumeControl.type === 'range') {
-      input = volumeControl;
-    } else if (volumeControl) {
-      input = volumeControl.querySelector('input[type="range"]');
-    }
-    if (!(input instanceof HTMLInputElement)) return null;
-    const min = Number(input.min || 0);
-    const max = Number(input.max || 1);
-    const current = Number(input.value || 0);
-    if (!Number.isFinite(max - min)) return null;
-    if (max === min) return current > 0 ? 1 : 0;
-    if (max < min) return null;
-    return (current - min) / (max - min);
-  }
-
-  function setPipLineMetadata(lineEl, lineIndex) {
-    if (!(lineEl instanceof HTMLElement)) return;
-    lineEl.setAttribute('data-lyrics-line-index', String(lineIndex));
-  }
-
+  /**
+   * Gets the displayed text and sub-lines (transliteration / translation) for a given
+   * lyric line index. Reads from the live DOM so Chinese conversion and other visual
+   * changes are always reflected in the PiP canvas.
+   */
   function getPipLineGroupText(lineIndex) {
-    const container = currentLyricsContainer;
-    const totalLines = Array.isArray(currentSyncedLyrics)
-      ? currentSyncedLyrics.length
-      : (Array.isArray(currentUnsyncedLyrics) ? currentUnsyncedLyrics.length : 0);
-    if (!container || lineIndex < 0 || lineIndex >= totalLines) return [];
-    const base = container.querySelector(`p[data-lyrics-line-index="${lineIndex}"]`);
+    if (!currentLyricsContainer) return [];
+    const base = currentLyricsContainer.querySelector(`p[data-lyrics-line-index="${lineIndex}"]`);
     if (!(base instanceof HTMLElement)) return [];
     const lines = [];
     const baseText = (base.textContent || '').trim();
     if (baseText) lines.push(baseText);
     let next = base.nextElementSibling;
-    while (next && !(next.tagName === 'P' && next.hasAttribute('data-lyrics-line-index'))) {
+    while (next && !(next.tagName.toUpperCase() === 'P' && next.hasAttribute('data-lyrics-line-index'))) {
       const isTransliteration = next.getAttribute('data-transliteration') === 'true';
       const isTranslation = next.getAttribute('data-translated') === 'true';
       if (isTransliteration || isTranslation) {
         const text = (next.textContent || '').trim();
-        if (text) {
-          if (isTranslation) lines.push(`~TL~${text}`);
-          else lines.push(`~TR~${text}`);
-        }
+        if (text) lines.push(isTranslation ? `~TL~${text}` : `~TR~${text}`);
       }
       next = next.nextElementSibling;
     }
@@ -1424,7 +1469,7 @@
     return out;
   }
 
-  function flattenPipBlockRows(ctx, texts, maxWidth, primaryFont, primaryLineHeight, secondaryFont, secondaryLineHeight, color, blockKind = 'context') {
+  function flattenPipBlockRows(ctx, texts, maxWidth, primaryFont, primaryLineHeight, secondaryFont, secondaryLineHeight, color, blockKind) {
     const rows = [];
     texts.forEach((text, index) => {
       const isTranslation = typeof text === 'string' && text.startsWith('~TL~');
@@ -1433,89 +1478,76 @@
       const rowFont = index === 0 ? primaryFont : secondaryFont;
       const rowLineHeight = index === 0 ? primaryLineHeight : secondaryLineHeight;
       ctx.font = rowFont;
-      const wrapped = splitPipTextToLines(ctx, cleanText, maxWidth);
-      wrapped.forEach((line) => {
+      splitPipTextToLines(ctx, cleanText, maxWidth).forEach(line => {
         let resolvedColor = color;
         if (isTranslation) {
-          resolvedColor = 'rgba(170, 170, 170, 0.9)';
+          resolvedColor = 'rgba(160, 160, 160, 0.9)';
         } else if (isTransliteration && blockKind === 'active') {
           resolvedColor = '#1db954';
         } else if (isTransliteration) {
           resolvedColor = '#9a9a9a';
         }
-        rows.push({
-          text: line,
-          font: rowFont,
-          lineHeight: rowLineHeight,
-          color: resolvedColor,
-          kind: isTranslation ? 'translation' : (isTransliteration ? 'transliteration' : 'lyric'),
-          blockKind
-        });
+        rows.push({ text: line, font: rowFont, lineHeight: rowLineHeight, color: resolvedColor });
       });
     });
     return rows;
   }
 
-  function syncPipMediaStateFromSpotify() {
-    if (!pipVideo) return;
-    const spotifyPlaying = isSpotifyPlaying();
-    const spotifyVolume = getSpotifyVolumeLevel();
-    pipIgnoreMediaControlEvent = true;
-    try {
-      if (spotifyPlaying && pipVideo.paused) {
-        pipVideo.play().catch(() => {});
-      } else if (!spotifyPlaying && !pipVideo.paused) {
-        pipVideo.pause();
+  /**
+   * Inserts pipVideo into the lyrics container and hides its HTML children.
+   * The native browser renders "playing in picture-in-picture" on the video element
+   * in the main page; the PiP window shows the canvas-rendered lyrics.
+   */
+  function enterPipInLyricsContainer() {
+    const lyricsContainer = document.getElementById('lyrics-plus-content');
+    if (!lyricsContainer || !pipVideo) return;
+    // Save and hide existing children so they are not visible behind the video
+    const savedChildren = Array.from(lyricsContainer.children).map(el => ({
+      el,
+      display: el.style.display,
+    }));
+    lyricsContainer._pipSavedChildren = savedChildren;
+    savedChildren.forEach(({ el }) => { el.style.display = 'none'; });
+    // Make container a positioning context and fill it with the video
+    lyricsContainer.style.position = 'relative';
+    Object.assign(pipVideo.style, {
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      opacity: '1',
+      pointerEvents: 'auto',
+      zIndex: '1',
+      backgroundColor: 'transparent',
+    });
+    lyricsContainer.insertBefore(pipVideo, lyricsContainer.firstChild);
+  }
+
+  /**
+   * Removes pipVideo from the lyrics container and restores the HTML lyric children.
+   * Falls back gracefully if the container is already gone (popup was closed).
+   */
+  function exitPipFromLyricsContainer() {
+    const lyricsContainer = document.getElementById('lyrics-plus-content');
+    if (lyricsContainer && pipVideo && pipVideo.parentElement === lyricsContainer) {
+      lyricsContainer.removeChild(pipVideo);
+      lyricsContainer.style.position = '';
+      if (lyricsContainer._pipSavedChildren) {
+        lyricsContainer._pipSavedChildren.forEach(({ el, display }) => {
+          el.style.display = display;
+        });
+        delete lyricsContainer._pipSavedChildren;
       }
-      if (spotifyVolume !== null) {
-        pipVideo.volume = Math.max(0, Math.min(1, spotifyVolume));
-        pipVideo.muted = spotifyVolume <= 0.001;
-      }
-    } finally {
-      queueMicrotask(() => { pipIgnoreMediaControlEvent = false; });
+    } else if (pipVideo && pipVideo.parentElement) {
+      pipVideo.parentElement.removeChild(pipVideo);
     }
-  }
-
-  function handlePipVideoPlay() {
-    if (pipIgnoreMediaControlEvent) return;
-    if (isSpotifyPlaying()) return;
-    const before = Date.now();
-    if (!sendSpotifyDomCommand('playpause')) return;
-    pipIgnoreMediaControlEvent = true;
-    setTimeout(() => {
-      pipIgnoreMediaControlEvent = false;
-      if (Date.now() - before <= (PIP_MEDIA_SYNC_GRACE_MS + 50)) {
-        syncPipMediaStateFromSpotify();
-      }
-    }, PIP_MEDIA_SYNC_GRACE_MS);
-  }
-
-  function handlePipVideoPause() {
-    if (pipIgnoreMediaControlEvent) return;
-    if (!isSpotifyPlaying()) return;
-    const before = Date.now();
-    if (!sendSpotifyDomCommand('playpause')) return;
-    pipIgnoreMediaControlEvent = true;
-    setTimeout(() => {
-      pipIgnoreMediaControlEvent = false;
-      if (Date.now() - before <= (PIP_MEDIA_SYNC_GRACE_MS + 50)) {
-        syncPipMediaStateFromSpotify();
-      }
-    }, PIP_MEDIA_SYNC_GRACE_MS);
-  }
-
-  function handlePipVideoVolumeChange() {
-    if (pipIgnoreMediaControlEvent) return;
-    if (pipVideo.muted || pipVideo.volume <= 0.001) {
-      setSpotifyVolumeLevel(0);
-    } else {
-      setSpotifyVolumeLevel(pipVideo.volume);
-    }
+    applyHiddenPipVideoStyle();
+    if (document.body && pipVideo && !pipVideo.parentNode) document.body.appendChild(pipVideo);
   }
 
   /**
    * Creates the hidden <canvas> and <video> elements used by the PiP feature.
-   * The canvas is rendered to in a loop and its stream is piped to the video.
    * Must be called once before requestPictureInPicture().
    */
   function initPipElements() {
@@ -1533,65 +1565,58 @@
     pipVideo.width = pipCanvas.width;
     pipVideo.height = pipCanvas.height;
     applyHiddenPipVideoStyle();
-    if (!pipVideo.parentNode) {
-      if (document.body) {
-        document.body.appendChild(pipVideo);
-      } else if (document.readyState !== 'loading' && document.documentElement) {
-        document.documentElement.appendChild(pipVideo);
-      } else {
-        document.addEventListener('DOMContentLoaded', () => {
-          if (!pipVideo.parentNode && document.body) document.body.appendChild(pipVideo);
-        }, { once: true });
-      }
+    if (document.body) {
+      document.body.appendChild(pipVideo);
+    } else if (document.documentElement) {
+      document.documentElement.appendChild(pipVideo);
+    } else {
+      document.addEventListener('DOMContentLoaded', () => {
+        if (!pipVideo.parentNode && document.body) document.body.appendChild(pipVideo);
+      }, { once: true });
     }
     setupPipResizeTracking();
     updatePipCanvasSize();
 
-    // Draw a tiny initial pixel so the MediaStream has frame data before
-    // the video element attempts to play, preventing a timing issue where the
-    // stream would be empty on the first requestPictureInPicture() call.
+    // Draw a tiny initial pixel to prime the MediaStream before requestPictureInPicture
     pipCtx.fillRect(0, 0, 1, 1);
     pipVideo.srcObject = pipCanvas.captureStream(30);
-    pipVideo.play();
+    pipVideo.play().catch(() => {});
 
     pipVideo.addEventListener('enterpictureinpicture', () => {
       isPipActive = true;
       updatePipButtonState(true);
+      enterPipInLyricsContainer();
       syncPipMediaStateFromSpotify();
-      if (!pollingInterval) {
-        const popup = document.getElementById('lyrics-plus-popup');
-        startPollingForTrackChange(popup || { querySelector: () => null });
-      }
       startPipRenderLoop();
+      console.info('📺 [Lyrics+ PiP] Picture-in-Picture window opened');
     });
 
     pipVideo.addEventListener('leavepictureinpicture', () => {
       isPipActive = false;
+      isPagePipActive = false;
       updatePipButtonState(false);
       stopPipRenderLoop();
-      if (!document.getElementById('lyrics-plus-popup')) {
-        stopPollingForTrackChange();
-      }
-      if (!isPagePipActive) {
-        if (document.body) {
-          document.body.appendChild(pipVideo);
-        } else if (document.documentElement) {
-          document.documentElement.appendChild(pipVideo);
-        }
-        applyHiddenPipVideoStyle();
-      }
+      exitPipFromLyricsContainer();
+      console.info('📺 [Lyrics+ PiP] Picture-in-Picture window closed');
     });
 
-    // Safari/WebKit path (where webkit presentation mode is used instead of PiP events)
+    // Safari/WebKit: uses webkitpresentationmodechanged instead of PiP events
     pipVideo.addEventListener('webkitpresentationmodechanged', () => {
       const mode = typeof pipVideo.webkitPresentationMode === 'string'
-        ? pipVideo.webkitPresentationMode
-        : 'inline';
+        ? pipVideo.webkitPresentationMode : 'inline';
       const active = mode === 'picture-in-picture';
-      isPipActive = active;
-      updatePipButtonState(active);
-      if (active) startPipRenderLoop();
-      else stopPipRenderLoop();
+      if (active && !isPipActive) {
+        isPipActive = true;
+        updatePipButtonState(true);
+        enterPipInLyricsContainer();
+        syncPipMediaStateFromSpotify();
+        startPipRenderLoop();
+      } else if (!active && isPipActive) {
+        isPipActive = false;
+        updatePipButtonState(false);
+        stopPipRenderLoop();
+        exitPipFromLyricsContainer();
+      }
     });
 
     pipVideo.addEventListener('play', handlePipVideoPlay);
@@ -1600,14 +1625,14 @@
   }
 
   /**
-   * Draws a single frame of lyrics onto the PiP canvas.
-   * Mirrors the lyric container: active line in Spotify green (centred),
-   * previous/next lines faded for context. Falls back gracefully for
-   * unsynced lyrics and the "no lyrics" state.
+   * Renders lyrics to the PiP canvas in a requestAnimationFrame loop.
+   * Active line = Spotify green (#1db954), context lines = white/faded.
+   * Transliteration / translation sub-lines use their own colour codes.
+   * AMOLED theme, font size, and all lyric display settings are respected.
    */
   function startPipRenderLoop() {
-      const render = () => {
-        if (!isPipActive) return;
+    const render = () => {
+      if (!isPipActive && !isPagePipActive) return;
       const now = performance.now();
       if (now - pipLastFrameAt < PIP_FRAME_THROTTLE_MS) {
         pipAnimationFrame = requestAnimationFrame(render);
@@ -1619,14 +1644,13 @@
       const w = pipCanvas.width;
       const h = pipCanvas.height;
       const textMaxWidth = w - (PIP_CANVAS_H_PADDING * 2);
+      const centerX = w / 2;
+      const centerY = h / 2;
 
-      // Background — respect AMOLED theme setting
       const isAmoled = localStorage.getItem('lyricsPlusTheme') === 'true';
       pipCtx.fillStyle = isAmoled ? '#000000' : '#121212';
       pipCtx.fillRect(0, 0, w, h);
 
-      const centerX = w / 2;
-      const centerY = h / 2;
       const baseFontSize = parseInt(localStorage.getItem(STORAGE_KEYS.FONT_SIZE) || '22', 10);
       const sizeScale = Math.max(0.7, Math.min(1.5, w / 640));
       const activeFontSize = Math.max(18, Math.round(baseFontSize * 1.25 * sizeScale));
@@ -1641,14 +1665,13 @@
       pipCtx.textBaseline = 'top';
 
       if (currentSyncedLyrics && currentSyncedLyrics.length > 0) {
-        // Determine the active line from current playback position
         const posEl = document.querySelector('[data-testid="playback-position"]');
         const curPosMs = posEl ? timeStringToMs(posEl.textContent) : 0;
         const anticipatedMs = curPosMs + getAnticipationOffset();
 
         let activeIndex = -1;
         for (let i = 0; i < currentSyncedLyrics.length; i++) {
-          if (anticipatedMs >= currentSyncedLyrics[i].time) activeIndex = i;
+          if (anticipatedMs >= (currentSyncedLyrics[i].time ?? currentSyncedLyrics[i].startTime)) activeIndex = i;
           else break;
         }
 
@@ -1659,16 +1682,17 @@
 
           const fallbackActive = (currentSyncedLyrics[activeIndex]?.text || '').trim();
           const fallbackPrev = activeIndex > 0 ? (currentSyncedLyrics[activeIndex - 1]?.text || '').trim() : '';
-          const fallbackNext = activeIndex < currentSyncedLyrics.length - 1 ? (currentSyncedLyrics[activeIndex + 1]?.text || '').trim() : '';
+          const fallbackNext = activeIndex < currentSyncedLyrics.length - 1
+            ? (currentSyncedLyrics[activeIndex + 1]?.text || '').trim() : '';
 
           const blocks = [];
           if (activeIndex > 0) {
             blocks.push({
               texts: prevTexts.length ? prevTexts : (fallbackPrev ? [fallbackPrev] : []),
-              color: 'rgba(255, 255, 255, 0.45)',
+              color: 'rgba(255, 255, 255, 0.7)',
               primaryFont: `${contextFontSize}px sans-serif`,
               primaryLineHeight: contextLineHeight,
-              kind: 'context'
+              kind: 'context',
             });
           }
           blocks.push({
@@ -1676,31 +1700,27 @@
             color: '#1db954',
             primaryFont: `bold ${activeFontSize}px sans-serif`,
             primaryLineHeight: activeLineHeight,
-            kind: 'active'
+            kind: 'active',
           });
           if (activeIndex < currentSyncedLyrics.length - 1) {
             blocks.push({
               texts: nextTexts.length ? nextTexts : (fallbackNext ? [fallbackNext] : []),
-              color: 'rgba(255, 255, 255, 0.45)',
+              color: 'rgba(255, 255, 255, 0.7)',
               primaryFont: `${contextFontSize}px sans-serif`,
               primaryLineHeight: contextLineHeight,
-              kind: 'context'
+              kind: 'context',
             });
           }
 
           const rows = [];
           blocks.forEach((block, idx) => {
             const blockTexts = block.texts.filter(Boolean);
+            if (!blockTexts.length) return;
             const blockRows = flattenPipBlockRows(
-              pipCtx,
-              blockTexts,
-              textMaxWidth,
-              block.primaryFont,
-              block.primaryLineHeight,
-              `${sublineFontSize}px sans-serif`,
-              sublineLineHeight,
-              block.color,
-              block.kind
+              pipCtx, blockTexts, textMaxWidth,
+              block.primaryFont, block.primaryLineHeight,
+              `${sublineFontSize}px sans-serif`, sublineLineHeight,
+              block.color, block.kind
             );
             rows.push(...blockRows);
             if (idx < blocks.length - 1 && blockRows.length > 0) {
@@ -1710,11 +1730,8 @@
 
           const contentHeight = rows.reduce((sum, row) => sum + (row.lineHeight || 0), 0);
           let drawY = Math.round(centerY - (contentHeight / 2));
-          rows.forEach((row) => {
-            if (row.spacer) {
-              drawY += row.lineHeight;
-              return;
-            }
+          rows.forEach(row => {
+            if (row.spacer) { drawY += row.lineHeight; return; }
             pipCtx.font = row.font;
             pipCtx.fillStyle = row.color;
             pipCtx.fillText(row.text, centerX, drawY, textMaxWidth);
@@ -1722,16 +1739,17 @@
           });
         }
       } else if (currentUnsyncedLyrics && currentUnsyncedLyrics.length > 0) {
+        // Unsynced lyrics: PiP window cannot scroll, so guide user to the popup
         pipCtx.font = `bold ${activeFontSize}px sans-serif`;
         pipCtx.fillStyle = 'white';
-        pipCtx.fillText('Unsynced Lyrics', centerX, centerY - Math.round(activeFontSize * 0.8), textMaxWidth);
-        pipCtx.font = `${Math.round(activeFontSize * 0.6)}px sans-serif`;
+        pipCtx.fillText('Unsynced Lyrics', centerX, centerY - Math.round(activeFontSize * 1.2), textMaxWidth);
+        pipCtx.font = `${Math.round(activeFontSize * 0.65)}px sans-serif`;
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        pipCtx.fillText('Open popup for full lyrics', centerX, centerY + Math.round(activeFontSize * 0.6), textMaxWidth);
+        pipCtx.fillText('View full lyrics in the Lyrics+ popup', centerX, centerY + Math.round(activeFontSize * 0.2), textMaxWidth);
       } else {
         pipCtx.font = `bold ${activeFontSize}px sans-serif`;
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        pipCtx.fillText('Waiting for lyrics...', centerX, centerY, textMaxWidth);
+        pipCtx.fillText('Waiting for lyrics\u2026', centerX, centerY, textMaxWidth);
       }
 
       pipAnimationFrame = requestAnimationFrame(render);
@@ -1749,59 +1767,7 @@
   }
 
   /**
-   * Toggles the native browser Picture-in-Picture window.
-   * Initialises the canvas/video elements on first use.
-   */
-  async function togglePip() {
-    initPipElements();
-    try {
-      const inNativePip = document.pictureInPictureElement === pipVideo;
-      const inWebkitPip =
-        typeof pipVideo.webkitPresentationMode === 'string' &&
-        pipVideo.webkitPresentationMode === 'picture-in-picture';
-
-      if (inNativePip) {
-        if (typeof document.exitPictureInPicture === 'function') {
-          await document.exitPictureInPicture();
-          return;
-        }
-      }
-
-      if (inWebkitPip && typeof pipVideo.webkitSetPresentationMode === 'function') {
-        pipVideo.webkitSetPresentationMode('inline');
-        return;
-      }
-
-      if (isPagePipActive) {
-        closePagePipFallback();
-        return;
-      }
-
-      if (typeof pipVideo.requestPictureInPicture === 'function') {
-        if (isSafariBrowser() && document.body) {
-          pipVideo.setAttribute('style', PIP_SAFARI_SHOW_LETTER_STYLE);
-          document.body.appendChild(pipVideo);
-        }
-        await pipVideo.requestPictureInPicture();
-        return;
-      }
-
-      if (
-        typeof pipVideo.webkitSupportsPresentationMode === 'function' &&
-        pipVideo.webkitSupportsPresentationMode('picture-in-picture') &&
-        typeof pipVideo.webkitSetPresentationMode === 'function'
-      ) {
-        pipVideo.webkitSetPresentationMode('picture-in-picture');
-      } else {
-        openPagePipFallback();
-      }
-    } catch (err) {
-      console.error('[Lyrics+] PiP error:', err);
-    }
-  }
-
-  /**
-   * Updates the PiP button colour to reflect whether PiP is currently active.
+   * Updates the PiP toggle button colour to reflect current PiP state.
    * @param {boolean} active
    */
   function updatePipButtonState(active) {
@@ -1809,26 +1775,82 @@
     if (btn) btn.style.color = active ? '#1db954' : 'white';
   }
 
-  function isSpotifyPlaying() {
-    // Try using Spotify's play/pause button aria-label (robust, language-universal)
-    let playPauseBtn =
-      document.querySelector('[data-testid="control-button-playpause"]') ||
-      document.querySelector('[aria-label]');
-
-    function isVisible(el) {
-      if (!el) return false;
-      const style = window.getComputedStyle(el);
-      return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+  /**
+   * Closes PiP if it is currently active.
+   * Called by removePopup() so that closing the popup also closes the PiP window.
+   */
+  function closePip() {
+    if (!isPipActive && !isPagePipActive) return;
+    if (pipVideo && document.pictureInPictureElement === pipVideo &&
+        typeof document.exitPictureInPicture === 'function') {
+      // Native PiP: leavepictureinpicture event will handle cleanup
+      document.exitPictureInPicture().catch(() => {});
+      return;
     }
-
-    if (playPauseBtn && isVisible(playPauseBtn)) {
-      const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
-      if (labelMeansPause(label)) return true; // "Pause" means music is playing
-      if (labelMeansPlay(label)) return false; // "Play" means music is paused/stopped
+    if (pipVideo &&
+        typeof pipVideo.webkitPresentationMode === 'string' &&
+        pipVideo.webkitPresentationMode === 'picture-in-picture' &&
+        typeof pipVideo.webkitSetPresentationMode === 'function') {
+      // Safari WebKit: webkitpresentationmodechanged event will handle cleanup
+      pipVideo.webkitSetPresentationMode('inline');
+      return;
     }
+    // Page PiP or any remaining case: clean up synchronously
+    isPipActive = false;
+    isPagePipActive = false;
+    updatePipButtonState(false);
+    stopPipRenderLoop();
+    exitPipFromLyricsContainer();
+  }
 
-    // Default: assume not playing
-    return false;
+  /**
+   * Toggles Picture-in-Picture mode. Creates video/canvas elements on first call.
+   * Browser priority: native requestPictureInPicture → WebKit PiP → page PiP fallback.
+   */
+  async function togglePip() {
+    initPipElements();
+    try {
+      const inNativePip = pipVideo && document.pictureInPictureElement === pipVideo;
+      const inWebkitPip =
+        pipVideo &&
+        typeof pipVideo.webkitPresentationMode === 'string' &&
+        pipVideo.webkitPresentationMode === 'picture-in-picture';
+
+      // --- Close ---
+      if (inNativePip && typeof document.exitPictureInPicture === 'function') {
+        await document.exitPictureInPicture();
+        return;
+      }
+      if (inWebkitPip && typeof pipVideo.webkitSetPresentationMode === 'function') {
+        pipVideo.webkitSetPresentationMode('inline');
+        return;
+      }
+      if (isPagePipActive) {
+        pipVideo.dispatchEvent(new CustomEvent('leavepictureinpicture'));
+        return;
+      }
+
+      // --- Open ---
+      if (typeof pipVideo.requestPictureInPicture === 'function') {
+        if (isSafariBrowser() && document.body) {
+          Object.assign(pipVideo.style, { position: 'absolute', left: 'calc(100% - 1px)', bottom: 'calc(100% - 1px)' });
+          if (!pipVideo.parentNode) document.body.appendChild(pipVideo);
+        }
+        await pipVideo.requestPictureInPicture();
+        return;
+      }
+      if (typeof pipVideo.webkitSupportsPresentationMode === 'function' &&
+          pipVideo.webkitSupportsPresentationMode('picture-in-picture') &&
+          typeof pipVideo.webkitSetPresentationMode === 'function') {
+        pipVideo.webkitSetPresentationMode('picture-in-picture');
+        return;
+      }
+      // Page PiP fallback: overlay video on lyrics container
+      isPagePipActive = true;
+      pipVideo.dispatchEvent(new CustomEvent('enterpictureinpicture'));
+    } catch (err) {
+      console.error('[Lyrics+] PiP error:', err);
+    }
   }
 
   function highlightSyncedLyrics(lyrics, container) {
@@ -2301,25 +2323,6 @@ const PLAY_WORDS = [
    */
   function findSpotifyNextButton() {
     return document.querySelector('[data-testid="control-button-skip-forward"]');
-  }
-
-  function sendSpotifyDomCommand(command) {
-    const buttonFinders = {
-      shuffle: findSpotifyShuffleButton,
-      playpause: findSpotifyPlayPauseButton,
-      next: findSpotifyNextButton,
-      previous: findSpotifyPreviousButton,
-      repeat: findSpotifyRepeatButton
-    };
-    const findButton = buttonFinders[command];
-    const btn = findButton ? findButton() : null;
-    if (!btn) return false;
-    btn.click();
-    if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-      btn.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true }));
-      btn.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true }));
-    }
-    return true;
   }
 
   /**
@@ -4355,27 +4358,16 @@ const Providers = {
   function removePopup() {
     DEBUG.ui.popupRemoved();
 
-    if (isPagePipActive && pipVideo) {
-      closePagePipFallback();
-    }
-
     // Clear all intervals
     if (highlightTimer) {
       clearInterval(highlightTimer);
       highlightTimer = null;
       DEBUG.debug('Cleanup', 'highlightTimer cleared');
     }
-    if (pollingInterval && !isPipActive && !isPagePipActive) {
+    if (pollingInterval) {
       clearInterval(pollingInterval);
       pollingInterval = null;
       DEBUG.debug('Cleanup', 'pollingInterval cleared');
-    }
-
-    if (pipVideo && !isPipActive && !isPagePipActive) {
-      pipVideo.removeEventListener('play', handlePipVideoPlay);
-      pipVideo.removeEventListener('pause', handlePipVideoPause);
-      pipVideo.removeEventListener('volumechange', handlePipVideoVolumeChange);
-      cleanupPipResizeTracking();
     }
     if (progressInterval) {
       clearInterval(progressInterval);
@@ -4447,6 +4439,9 @@ const Providers = {
       existing._prevBtn = null;
       existing._nextBtn = null;
       existing._lyricsTabs = null;
+
+      // Close PiP if active — the popup is required for PiP to function
+      closePip();
 
       existing.remove();
       DEBUG.debug('Cleanup', 'Popup element and all observers removed from DOM');
@@ -4816,9 +4811,7 @@ const Providers = {
     closeBtn.onclick = () => {
       savePopupState(popup);
       removePopup();
-      if (!isPipActive && !isPagePipActive) {
-        stopPollingForTrackChange();
-      }
+      stopPollingForTrackChange();
     };
 
     // --- Translation Toggle Button ---
@@ -5117,20 +5110,28 @@ const Providers = {
     buttonGroup.appendChild(transliterationToggleBtn);
     buttonGroup.appendChild(offsetToggleBtn);
 
-    // --- Picture-in-Picture Toggle Button ---
+    // PiP toggle button
     const pipToggleBtn = document.createElement("button");
     pipToggleBtn.id = "lyrics-plus-pip-btn";
     pipToggleBtn.title = "Toggle Picture-in-Picture";
-    pipToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z"/></svg>`;
+    pipToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display:block"><path d="M19 7h-8v6h8V7zm2-4H3C1.9 3 1 3.9 1 5v14c0 1.1.9 1.9 2 1.9h18c1.1 0 2-.8 2-1.9V5c0-1.1-.9-2-2-2zm0 16.1H3V4.9h18v14.2z"/></svg>`;
     Object.assign(pipToggleBtn.style, {
-      cursor: "pointer",
-      background: "none",
-      border: "none",
-      color: "white",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "4px",
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      color: 'white',
+      padding: '4px',
+      borderRadius: '4px',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      lineHeight: '1',
+    });
+    pipToggleBtn.addEventListener('mouseenter', () => {
+      if (!isPipActive) pipToggleBtn.style.color = 'rgba(255,255,255,0.7)';
+    });
+    pipToggleBtn.addEventListener('mouseleave', () => {
+      if (!isPipActive) pipToggleBtn.style.color = 'white';
     });
     pipToggleBtn.onclick = togglePip;
     buttonGroup.appendChild(pipToggleBtn);
@@ -7092,7 +7093,7 @@ const Providers = {
       isShowingSyncedLyrics = true;
       currentSyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
-        setPipLineMetadata(p, idx);
+        p.setAttribute('data-lyrics-line-index', String(idx));
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -7108,7 +7109,7 @@ const Providers = {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
-        setPipLineMetadata(p, idx);
+        p.setAttribute('data-lyrics-line-index', String(idx));
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -7298,7 +7299,7 @@ const Providers = {
       isShowingSyncedLyrics = true;
       currentSyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
-        setPipLineMetadata(p, idx);
+        p.setAttribute('data-lyrics-line-index', String(idx));
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -7314,7 +7315,7 @@ const Providers = {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
-        setPipLineMetadata(p, idx);
+        p.setAttribute('data-lyrics-line-index', String(idx));
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -7467,7 +7468,7 @@ const Providers = {
       isShowingSyncedLyrics = true;
       currentSyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
-        setPipLineMetadata(p, idx);
+        p.setAttribute('data-lyrics-line-index', String(idx));
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -7482,7 +7483,7 @@ const Providers = {
       isShowingSyncedLyrics = false;
       currentUnsyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
-        setPipLineMetadata(p, idx);
+        p.setAttribute('data-lyrics-line-index', String(idx));
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -7869,10 +7870,6 @@ const Providers = {
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
         if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
         autodetectProviderAndLoad(popup, info);
-      }
-
-      if (isPipActive) {
-        syncPipMediaStateFromSpotify();
       }
 
       // Update last position for next iteration
