@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Beta 
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.25.working
+// @version      17.26.working
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,22 +14,19 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
 // ==/UserScript==
-
-// TO FIX: 
-
-// 1. what i want is that by pressing on 'toggle picture in picture mode' button in lyrics+ popup's header to untoggle, which  
-// 'returns lyric+ popup's lyric container to the base lyrics container without any video canvas element', apart from doing that, this action  
-// at the same time also closes the opened native pip view (the one to which we reflect lyric lines, translation etc)  
-// since user now resumes paying attention to lyric+ popup's lyric container.  
-// additional explanation: 'toggle picture in picture mode' is a button in lyrics+ popup header.   
-// if you click it, the lyrics+ popup's lyrics container transforms into a container that's a video element, which gives it the pip mode button that   
-// opens native pip view. the native pip view also has a play/pause button, fullscreen button, mute button, back to tab button, and most importantly,   
-// a close button. after clicking that close button to close native pip view, the lyrics+ popup's lyric container is still displayed as video element   
-// (that is intended since only the 'toggle picture in picture button' can return it to original lyric container. now to iterate, i want the   
-// 'toggle picture in picture button' when it returns lyric container to original (removing video element), to also close   
-// the native pip view (if its still open)   
-// 2. chinese conversion should also be reflected in the pip if pip is open and we toggle chinese conversion..   
-// currently we already reflect lyric lines, translation lines and transliteration lines.  
+// RESOLVED (17.26): ADDED: UNTOGGLING PiP ALSO CLOSES NATIVE PiP WINDOW; CHINESE CONVERSION REFLECTED IN PiP CANVAS
+// • Added isPipContainerMode flag that tracks whether the video element is currently inside the
+//   lyrics container, independently of whether the native PiP window is open or closed.
+// • togglePip() close path now checks isPipContainerMode instead of individual pip state flags,
+//   so pressing the toggle button always removes the video from the lyrics container regardless
+//   of native PiP window state. If native PiP is still open when untoggling, it is closed first.
+// • leavepictureinpicture / webkitpresentationmodechanged: on native PiP window close only clears
+//   isPipActive — does not remove the video from the lyrics container. The video (and its canvas
+//   stream showing lyrics) remains visible in the popup until the toggle button is pressed.
+// • closePip() updated to use isPipContainerMode and always cleans up the container directly.
+// • rerenderLyrics() (Chinese conversion toggle): detaches pipVideo before innerHTML wipe and
+//   re-inserts it after the rebuild so the canvas render loop immediately picks up the newly
+//   converted text and reflects it in the PiP window.
 
 // RESOLVED (17.25): FIX: PiP now remains open across song transitions by protecting lyricsContainer clears.  
 
@@ -396,6 +393,7 @@
   let pipAnimationFrame = null;
   let isPipActive = false;
   let isPagePipActive = false;
+  let isPipContainerMode = false; // true while the video element lives inside the lyrics container
   let pipResizeObserver = null;
   let pipResizeRafPending = false;
   let pipIgnoreMediaControlEvent = false;
@@ -1540,6 +1538,7 @@
       backgroundColor: 'transparent',
     });
     lyricsContainer.insertBefore(pipVideo, lyricsContainer.firstChild);
+    isPipContainerMode = true;
   }
 
   /**
@@ -1562,6 +1561,7 @@
     }
     applyHiddenPipVideoStyle();
     if (document.body && pipVideo && !pipVideo.parentNode) document.body.appendChild(pipVideo);
+    isPipContainerMode = false;
   }
 
   /**
@@ -1571,7 +1571,7 @@
    * Re-insert with enterPipInLyricsContainer() after the container is rebuilt.
    */
   function pipVideoDetachIfInContainer() {
-    if (!(isPipActive || isPagePipActive) || !pipVideo) return;
+    if (!(isPipActive || isPagePipActive || isPipContainerMode) || !pipVideo) return;
     const lyricsContainer = document.getElementById('lyrics-plus-content');
     if (lyricsContainer && pipVideo.parentElement === lyricsContainer) {
       lyricsContainer.removeChild(pipVideo);
@@ -1626,11 +1626,10 @@
     });
 
     pipVideo.addEventListener('leavepictureinpicture', () => {
+      // Native PiP window closed. Clear native-pip flag but keep the video element
+      // inside the lyrics container — only the toggle button removes it.
       isPipActive = false;
       isPagePipActive = false;
-      updatePipButtonState(false);
-      stopPipRenderLoop();
-      exitPipFromLyricsContainer();
       console.info('📺 [Lyrics+ PiP] Picture-in-Picture window closed');
     });
 
@@ -1646,10 +1645,8 @@
         syncPipMediaStateFromSpotify();
         startPipRenderLoop();
       } else if (!active && isPipActive) {
+        // WebKit PiP window closed: clear native flag, keep video in container.
         isPipActive = false;
-        updatePipButtonState(false);
-        stopPipRenderLoop();
-        exitPipFromLyricsContainer();
       }
     });
 
@@ -1666,7 +1663,7 @@
    */
   function startPipRenderLoop() {
     const render = () => {
-      if (!isPipActive && !isPagePipActive) return;
+      if (!isPipActive && !isPagePipActive && !isPipContainerMode) return;
       const now = performance.now();
       if (now - pipLastFrameAt < PIP_FRAME_THROTTLE_MS) {
         pipAnimationFrame = requestAnimationFrame(render);
@@ -1814,22 +1811,20 @@
    * Called by removePopup() so that closing the popup also closes the PiP window.
    */
   function closePip() {
-    if (!isPipActive && !isPagePipActive) return;
+    if (!isPipActive && !isPagePipActive && !isPipContainerMode) return;
     if (pipVideo && document.pictureInPictureElement === pipVideo &&
         typeof document.exitPictureInPicture === 'function') {
-      // Native PiP: leavepictureinpicture event will handle cleanup
+      // Close native PiP window (async); leavepictureinpicture will set isPipActive=false.
+      // Fall through to synchronous container cleanup below.
       document.exitPictureInPicture().catch(() => {});
-      return;
     }
     if (pipVideo &&
         typeof pipVideo.webkitPresentationMode === 'string' &&
         pipVideo.webkitPresentationMode === 'picture-in-picture' &&
         typeof pipVideo.webkitSetPresentationMode === 'function') {
-      // Safari WebKit: webkitpresentationmodechanged event will handle cleanup
       pipVideo.webkitSetPresentationMode('inline');
-      return;
     }
-    // Page PiP or any remaining case: clean up synchronously
+    // Always clean up container synchronously (leavepictureinpicture no longer does it)
     isPipActive = false;
     isPagePipActive = false;
     updatePipButtonState(false);
@@ -1850,17 +1845,20 @@
         typeof pipVideo.webkitPresentationMode === 'string' &&
         pipVideo.webkitPresentationMode === 'picture-in-picture';
 
-      // --- Close ---
-      if (inNativePip && typeof document.exitPictureInPicture === 'function') {
-        await document.exitPictureInPicture();
-        return;
-      }
-      if (inWebkitPip && typeof pipVideo.webkitSetPresentationMode === 'function') {
-        pipVideo.webkitSetPresentationMode('inline');
-        return;
-      }
-      if (isPagePipActive) {
-        pipVideo.dispatchEvent(new CustomEvent('leavepictureinpicture'));
+      // --- Close (video element is currently in the lyrics container) ---
+      if (isPipContainerMode) {
+        // Also close the native PiP window if it is still open
+        if (inNativePip && typeof document.exitPictureInPicture === 'function') {
+          await document.exitPictureInPicture().catch(() => {});
+        } else if (inWebkitPip && typeof pipVideo.webkitSetPresentationMode === 'function') {
+          pipVideo.webkitSetPresentationMode('inline');
+        }
+        // Clean up container mode (leavepictureinpicture only sets isPipActive=false now)
+        isPipActive = false;
+        isPagePipActive = false;
+        updatePipButtonState(false);
+        stopPipRenderLoop();
+        exitPipFromLyricsContainer();
         return;
       }
 
@@ -5162,10 +5160,10 @@ const Providers = {
       lineHeight: '1',
     });
     pipToggleBtn.addEventListener('mouseenter', () => {
-      if (!isPipActive) pipToggleBtn.style.color = 'rgba(255,255,255,0.7)';
+      if (!isPipActive && !isPipContainerMode) pipToggleBtn.style.color = 'rgba(255,255,255,0.7)';
     });
     pipToggleBtn.addEventListener('mouseleave', () => {
-      if (!isPipActive) pipToggleBtn.style.color = 'white';
+      if (!isPipActive && !isPipContainerMode) pipToggleBtn.style.color = 'white';
     });
     pipToggleBtn.onclick = togglePip;
     buttonGroup.appendChild(pipToggleBtn);
@@ -7118,6 +7116,7 @@ const Providers = {
     translationPresent = false;
     transliterationPresent = false;
     lastTranslatedLang = null;
+    pipVideoDetachIfInContainer();
     lyricsContainer.innerHTML = "";
 
     const transliterationEnabled = localStorage.getItem(STORAGE_KEYS.TRANSLITERATION_ENABLED) === 'true';
@@ -7179,6 +7178,9 @@ const Providers = {
         transliterationBtn.title = "Hide transliteration";
       }
     }
+
+    // Re-insert pipVideo after lyrics are rebuilt so canvas reflects new conversion
+    if (isPipActive || isPagePipActive || isPipContainerMode) enterPipInLyricsContainer();
   }
 
   /**
@@ -7396,7 +7398,7 @@ const Providers = {
     }
 
     // Re-insert pipVideo after lyrics are rebuilt so PiP stays open during track transitions
-    if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
+    if (isPipActive || isPagePipActive || isPipContainerMode) enterPipInLyricsContainer();
 
     return true;
   }
@@ -7414,7 +7416,7 @@ const Providers = {
     lastTranslatedLang = null;
     pipVideoDetachIfInContainer();
     lyricsContainer.textContent = "Loading lyrics...";
-    if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
+    if (isPipActive || isPagePipActive || isPipContainerMode) enterPipInLyricsContainer();
 
     const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
     const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
@@ -7560,7 +7562,7 @@ const Providers = {
     }
 
     // Re-insert pipVideo after lyrics are rebuilt so PiP stays open during track transitions
-    if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
+    if (isPipActive || isPagePipActive || isPipContainerMode) enterPipInLyricsContainer();
 
     // Show/hide transliteration button based on data availability
     const transliterationBtn = popup._transliterationToggleBtn;
@@ -7915,7 +7917,7 @@ const Providers = {
         if (lyricsContainer) {
           pipVideoDetachIfInContainer();
           lyricsContainer.textContent = "Loading lyrics...";
-          if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
+          if (isPipActive || isPagePipActive || isPipContainerMode) enterPipInLyricsContainer();
         }
         autodetectProviderAndLoad(popup, info);
       }
