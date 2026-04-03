@@ -346,6 +346,13 @@
   let lastPlaybackPosition = 0;  // Track playback position for repeat detection
   let lastTrackDuration = 0;    // Track duration for repeat detection
 
+  // PiP State
+  let pipVideo = null;
+  let pipCanvas = null;
+  let pipCtx = null;
+  let pipAnimationFrame = null;
+  let isPipActive = false;
+
   // ------------------------
   // Constants & Configuration
   // ------------------------
@@ -1185,6 +1192,185 @@
   }
   function setAnticipationOffset(val) {
     localStorage.setItem("lyricsPlusAnticipationOffset", val);
+  }
+
+  // ------------------------
+  // Picture-in-Picture (PiP)
+  // ------------------------
+
+  // Horizontal padding (px) reserved on each side of the PiP canvas text area.
+  const PIP_CANVAS_H_PADDING = 60;
+
+  /**
+   * Creates the hidden <canvas> and <video> elements used by the PiP feature.
+   * The canvas is rendered to in a loop and its stream is piped to the video.
+   * Must be called once before requestPictureInPicture().
+   */
+  function initPipElements() {
+    if (pipVideo) return;
+
+    pipCanvas = document.createElement('canvas');
+    pipCanvas.width = 640;
+    pipCanvas.height = 640;
+    pipCtx = pipCanvas.getContext('2d');
+
+    pipVideo = document.createElement('video');
+    pipVideo.muted = true;
+    pipVideo.width = pipCanvas.width;
+    pipVideo.height = pipCanvas.height;
+
+    // Draw a transparent pixel so the MediaStream has initial frame data before
+    // the video element attempts to play, preventing a timing issue where the
+    // stream would be empty on the first requestPictureInPicture() call.
+    pipCtx.fillRect(0, 0, 1, 1);
+    pipVideo.srcObject = pipCanvas.captureStream(30);
+    pipVideo.play();
+
+    pipVideo.addEventListener('enterpictureinpicture', () => {
+      isPipActive = true;
+      updatePipButtonState(true);
+      startPipRenderLoop();
+    });
+
+    pipVideo.addEventListener('leavepictureinpicture', () => {
+      isPipActive = false;
+      updatePipButtonState(false);
+      stopPipRenderLoop();
+    });
+  }
+
+  /**
+   * Draws a single frame of lyrics onto the PiP canvas.
+   * Mirrors the lyric container: active line in Spotify green (centred),
+   * previous/next lines faded for context. Falls back gracefully for
+   * unsynced lyrics and the "no lyrics" state.
+   */
+  function startPipRenderLoop() {
+    const render = () => {
+      if (!isPipActive) return;
+
+      const w = pipCanvas.width;
+      const h = pipCanvas.height;
+
+      // Background — respect AMOLED theme setting
+      const isAmoled = localStorage.getItem('lyricsPlusTheme') === 'true';
+      pipCtx.fillStyle = isAmoled ? '#000000' : '#121212';
+      pipCtx.fillRect(0, 0, w, h);
+
+      const centerX = w / 2;
+      const centerY = h / 2;
+      // Scale the user's chosen font size for the larger PiP canvas
+      const baseFontSize = parseInt(localStorage.getItem('lyricsPlusFontSize') || '22', 10);
+      const fontSize = Math.round(baseFontSize * 1.8);
+
+      pipCtx.textAlign = 'center';
+      pipCtx.textBaseline = 'middle';
+
+      if (currentSyncedLyrics && currentSyncedLyrics.length > 0) {
+        // Determine the active line from current playback position
+        const posEl = document.querySelector('[data-testid="playback-position"]');
+        const curPosMs = posEl ? timeStringToMs(posEl.textContent) : 0;
+        const anticipatedMs = curPosMs + getAnticipationOffset();
+
+        let activeIndex = -1;
+        for (let i = 0; i < currentSyncedLyrics.length; i++) {
+          if (anticipatedMs >= currentSyncedLyrics[i].time) activeIndex = i;
+          else break;
+        }
+
+        if (activeIndex !== -1) {
+          // Active line — Spotify green, bold, centred
+          pipCtx.font = `bold ${fontSize}px sans-serif`;
+          pipCtx.fillStyle = '#1db954';
+          wrapPipText(pipCtx, currentSyncedLyrics[activeIndex].text, centerX, centerY, w - PIP_CANVAS_H_PADDING, fontSize * 1.3);
+
+          // Context lines — faded white, smaller
+          const ctxFontSize = Math.round(fontSize * 0.65);
+          pipCtx.font = `${ctxFontSize}px sans-serif`;
+          pipCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+          const gap = Math.round(fontSize * 1.7);
+          if (activeIndex > 0) {
+            pipCtx.fillText(currentSyncedLyrics[activeIndex - 1].text, centerX, centerY - gap, w - PIP_CANVAS_H_PADDING);
+          }
+          if (activeIndex < currentSyncedLyrics.length - 1) {
+            pipCtx.fillText(currentSyncedLyrics[activeIndex + 1].text, centerX, centerY + gap, w - PIP_CANVAS_H_PADDING);
+          }
+        }
+      } else if (currentUnsyncedLyrics && currentUnsyncedLyrics.length > 0) {
+        pipCtx.font = `bold ${fontSize}px sans-serif`;
+        pipCtx.fillStyle = 'white';
+        pipCtx.fillText('Unsynced Lyrics', centerX, centerY - Math.round(fontSize * 0.8), w - PIP_CANVAS_H_PADDING);
+        pipCtx.font = `${Math.round(fontSize * 0.6)}px sans-serif`;
+        pipCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        pipCtx.fillText('Open popup for full lyrics', centerX, centerY + Math.round(fontSize * 0.6), w - PIP_CANVAS_H_PADDING);
+      } else {
+        pipCtx.font = `bold ${fontSize}px sans-serif`;
+        pipCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        pipCtx.fillText('Waiting for lyrics\u2026', centerX, centerY, w - PIP_CANVAS_H_PADDING);
+      }
+
+      pipAnimationFrame = requestAnimationFrame(render);
+    };
+    render();
+  }
+
+  function stopPipRenderLoop() {
+    if (pipAnimationFrame) {
+      cancelAnimationFrame(pipAnimationFrame);
+      pipAnimationFrame = null;
+    }
+  }
+
+  /**
+   * Draws text onto a canvas context, wrapping at maxWidth.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {string} text
+   * @param {number} x        - Horizontal centre
+   * @param {number} y        - Vertical centre of the first line
+   * @param {number} maxWidth - Maximum line width in pixels
+   * @param {number} lineHeight
+   */
+  function wrapPipText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let currentY = y;
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+        ctx.fillText(line.trim(), x, currentY);
+        line = words[n] + ' ';
+        currentY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line.trim(), x, currentY);
+  }
+
+  /**
+   * Toggles the native browser Picture-in-Picture window.
+   * Initialises the canvas/video elements on first use.
+   */
+  async function togglePip() {
+    initPipElements();
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else {
+        await pipVideo.requestPictureInPicture();
+      }
+    } catch (err) {
+      console.error('[Lyrics+] PiP error:', err);
+    }
+  }
+
+  /**
+   * Updates the PiP button colour to reflect whether PiP is currently active.
+   * @param {boolean} active
+   */
+  function updatePipButtonState(active) {
+    const btn = document.getElementById('lyrics-plus-pip-btn');
+    if (btn) btn.style.color = active ? '#1db954' : 'white';
   }
 
   function isSpotifyPlaying() {
@@ -4462,6 +4648,25 @@ const Providers = {
     buttonGroup.appendChild(translationToggleBtn);
     buttonGroup.appendChild(transliterationToggleBtn);
     buttonGroup.appendChild(offsetToggleBtn);
+
+    // --- Picture-in-Picture Toggle Button ---
+    const pipToggleBtn = document.createElement("button");
+    pipToggleBtn.id = "lyrics-plus-pip-btn";
+    pipToggleBtn.title = "Toggle Picture-in-Picture";
+    pipToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z"/></svg>`;
+    Object.assign(pipToggleBtn.style, {
+      cursor: "pointer",
+      background: "none",
+      border: "none",
+      color: "white",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "4px",
+    });
+    pipToggleBtn.onclick = togglePip;
+    buttonGroup.appendChild(pipToggleBtn);
+
     buttonGroup.appendChild(closeBtn);
 
     header.appendChild(buttonGroup);
