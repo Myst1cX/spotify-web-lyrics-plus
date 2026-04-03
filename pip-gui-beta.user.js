@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Beta 
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.25
+// @version      17.26
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -1833,16 +1833,10 @@
         pipVideo.webkitPresentationMode === 'picture-in-picture';
 
       // --- Close ---
-      if (inNativePip && typeof document.exitPictureInPicture === 'function') {
-        await document.exitPictureInPicture();
-        return;
-      }
-      if (inWebkitPip && typeof pipVideo.webkitSetPresentationMode === 'function') {
-        pipVideo.webkitSetPresentationMode('inline');
-        return;
-      }
-      if (isPagePipActive) {
-        pipVideo.dispatchEvent(new CustomEvent('leavepictureinpicture'));
+      // Use our own state flag as primary check so clicking the toggle button always
+      // closes PiP even if the browser API check disagrees (e.g. timing or browser quirk).
+      if (isPipActive || isPagePipActive || inNativePip || inWebkitPip) {
+        closePip();
         return;
       }
 
