@@ -1202,11 +1202,8 @@
   // Horizontal padding (px) reserved on each side of the PiP canvas text area.
   const PIP_CANVAS_H_PADDING = 60;
   const PIP_PAGE_STYLE = 'position: relative; width: 100%; height: auto; border-radius: inherit;';
-  const PIP_PAGE_CONTAINER_SELECTORS = [
-    'nav[aria-label] > div:last-of-type',
-    '[data-testid="now-playing-widget"]',
-    '[data-testid="now-playing-bar"]'
-  ];
+  const PIP_PAGE_CONTAINER_SELECTOR = 'nav[aria-label] > div:last-of-type';
+  const PIP_SAFARI_SHOW_LITTER_STYLE = 'position:absolute;left:calc(100% - 1px);bottom:calc(100% - 1px)';
 
   function applyHiddenPipVideoStyle() {
     Object.assign(pipVideo.style, {
@@ -1221,11 +1218,13 @@
   }
 
   function findPipPageContainer() {
-    for (const selector of PIP_PAGE_CONTAINER_SELECTORS) {
-      const node = document.querySelector(selector);
-      if (node instanceof HTMLElement) return node;
-    }
-    return null;
+    const node = document.querySelector(PIP_PAGE_CONTAINER_SELECTOR);
+    return node instanceof HTMLElement ? node : null;
+  }
+
+  function isSafariBrowser() {
+    const ua = navigator.userAgent || '';
+    return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox/i.test(ua);
   }
 
   function openPagePipFallback() {
@@ -1298,6 +1297,14 @@
       isPipActive = false;
       updatePipButtonState(false);
       stopPipRenderLoop();
+      if (!isPagePipActive) {
+        if (document.body) {
+          document.body.appendChild(pipVideo);
+        } else if (document.documentElement) {
+          document.documentElement.appendChild(pipVideo);
+        }
+        applyHiddenPipVideoStyle();
+      }
     });
 
     // Safari/WebKit path (where webkit presentation mode is used instead of PiP events)
@@ -1457,6 +1464,10 @@
         (HTMLVideoElement.prototype && HTMLVideoElement.prototype.requestPictureInPicture);
 
       if (typeof requestPiP === 'function') {
+        if (isSafariBrowser() && document.body) {
+          pipVideo.setAttribute('style', PIP_SAFARI_SHOW_LITTER_STYLE);
+          document.body.appendChild(pipVideo);
+        }
         await requestPiP.call(pipVideo);
         return;
       }
