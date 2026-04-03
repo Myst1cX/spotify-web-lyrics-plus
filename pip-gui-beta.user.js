@@ -360,6 +360,7 @@
   let isTranslating = false;
   let transliterationPresent = false;
   let isShowingSyncedLyrics = false;
+  let isLyricsPopupOpen = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
   let lastPlaybackPosition = 0;  // Track playback position for repeat detection
   let lastTrackDuration = 0;    // Track duration for repeat detection
@@ -1640,8 +1641,7 @@
       pipCtx.textAlign = 'center';
       pipCtx.textBaseline = 'top';
 
-      const popupOpen = !!document.getElementById('lyrics-plus-popup');
-      if (!popupOpen) {
+      if (!isLyricsPopupOpen) {
         pipCtx.font = `bold ${activeFontSize}px sans-serif`;
         pipCtx.fillStyle = 'white';
         pipCtx.fillText('Lyrics+ popup closed', centerX, centerY - Math.round(activeFontSize * 0.8), textMaxWidth);
@@ -4366,6 +4366,7 @@ const Providers = {
 
   function removePopup() {
     DEBUG.ui.popupRemoved();
+    isLyricsPopupOpen = false;
 
     if (isPagePipActive && pipVideo) {
       closePagePipFallback();
@@ -4524,6 +4525,7 @@ const Providers = {
   function createPopup() {
     DEBUG.ui.popupCreated();
     removePopup();
+    isLyricsPopupOpen = true;
 
     // Clear current provider so no provider is highlighted while searching for lyrics
     Providers.current = null;
