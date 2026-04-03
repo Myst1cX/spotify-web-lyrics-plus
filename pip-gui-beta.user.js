@@ -17,7 +17,8 @@
 
 // RESOLVED (17.24): ADDED PIP
 // needs a lot of optimization, check whether any observers are getting duplicated or aren't properly getting removed and reattached, pooling etc
-// currently very laggy but the bare functionality works. below are the things we need to fix.
+// currently very laggy but the bare functionality works. think of ways to do this in a more resourceful manner, surely we have certain pip implementations that are not most resourceful.
+// below are the main things we need to directly fix aswell:
 // 1:
 // the lyric lines that are by the side and whose turn it is not yet or has already passed, those are in wrong color code inside the pip lyrics container.
 // see in which color code they are supposed to be by checking our lyric container of the lyric+ popup..
