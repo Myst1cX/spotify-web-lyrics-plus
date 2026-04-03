@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.24
+// @version      17.25
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -14,6 +14,15 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.25): FIX CHINESE CONVERSION NOT REFLECTED IN PiP WINDOW
+// • rerenderLyrics() was calling lyricsContainer.innerHTML = "" which removed the pipVideo element
+//   that enterPipInLyricsContainer() had placed inside the lyrics container, and left the newly
+//   rendered <p> elements visible in the popup while PiP was supposed to be showing the canvas.
+// • Fix: after rerenderLyrics() finishes building the new <p> elements, call
+//   enterPipInLyricsContainer() again if PiP is active. This re-inserts the video, saves and hides
+//   the fresh <p> elements, and lets getPipLineGroupText() read the Chinese-converted text from
+//   the live DOM on the next canvas frame.
 
 // RESOLVED (17.24): ADDED PICTURE-IN-PICTURE (PiP) MODE
 // • Toggle PiP button added to the Lyrics+ popup header button group.
@@ -7144,6 +7153,14 @@ const Providers = {
       if (transliterationBtn) {
         transliterationBtn.title = "Hide transliteration";
       }
+    }
+
+    // If PiP is active, re-insert the video into the lyrics container and hide the
+    // freshly rendered <p> elements. lyricsContainer.innerHTML="" (above) removed the
+    // pipVideo; enterPipInLyricsContainer() puts it back and saves/hides the new children
+    // so getPipLineGroupText() can read Chinese-converted text on the next canvas frame.
+    if (isPipActive || isPagePipActive) {
+      enterPipInLyricsContainer();
     }
   }
 
