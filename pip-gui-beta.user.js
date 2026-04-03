@@ -360,7 +360,7 @@
   let isTranslating = false;
   let transliterationPresent = false;
   let isShowingSyncedLyrics = false;
-  let isLyricsPopupOpen = !!document.getElementById('lyrics-plus-popup');
+  let isLyricsPopupOpen = false;
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
   let lastPlaybackPosition = 0;  // Track playback position for repeat detection
   let lastTrackDuration = 0;    // Track duration for repeat detection
@@ -1233,6 +1233,7 @@
   const PIP_CANVAS_MAX_SIZE = 1080;
   const PIP_FRAME_THROTTLE_MS = 33;
   const PIP_MEDIA_SYNC_GRACE_MS = 450;
+  const PIP_CONTEXT_LYRIC_COLOR = 'rgba(255, 255, 255, 0.8)';
 
   function applyHiddenPipVideoStyle() {
     Object.assign(pipVideo.style, {
@@ -1677,7 +1678,7 @@
           if (activeIndex > 0) {
             blocks.push({
               texts: prevTexts.length ? prevTexts : (fallbackPrev ? [fallbackPrev] : []),
-              color: 'rgba(255, 255, 255, 0.8)',
+              color: PIP_CONTEXT_LYRIC_COLOR,
               primaryFont: `${contextFontSize}px sans-serif`,
               primaryLineHeight: contextLineHeight,
               kind: 'context'
@@ -1693,7 +1694,7 @@
           if (activeIndex < currentSyncedLyrics.length - 1) {
             blocks.push({
               texts: nextTexts.length ? nextTexts : (fallbackNext ? [fallbackNext] : []),
-              color: 'rgba(255, 255, 255, 0.8)',
+              color: PIP_CONTEXT_LYRIC_COLOR,
               primaryFont: `${contextFontSize}px sans-serif`,
               primaryLineHeight: contextLineHeight,
               kind: 'context'
