@@ -1211,6 +1211,7 @@
   const PIP_SAFARI_SHOW_LETTER_STYLE = 'position:absolute;left:calc(100% - 1px);bottom:calc(100% - 1px)';
   const PIP_CANVAS_MIN_SIZE = 360;
   const PIP_CANVAS_MAX_SIZE = 1080;
+  const PIP_FRAME_THROTTLE_MS = 33;
 
   function applyHiddenPipVideoStyle() {
     Object.assign(pipVideo.style, {
@@ -1327,7 +1328,9 @@
     const min = Number(input.min || 0);
     const max = Number(input.max || 1);
     const current = Number(input.value || 0);
-    if (!Number.isFinite(max - min) || max <= min) return null;
+    if (!Number.isFinite(max - min)) return null;
+    if (max === min) return current > 0 ? 1 : 0;
+    if (max < min) return null;
     return (current - min) / (max - min);
   }
 
@@ -1395,11 +1398,17 @@
       ctx.font = rowFont;
       const wrapped = splitPipTextToLines(ctx, cleanText, maxWidth);
       wrapped.forEach((line) => {
+        let resolvedColor = color;
+        if (isTranslation) {
+          resolvedColor = 'rgba(170, 170, 170, 0.9)';
+        } else if (isTransliteration && blockKind === 'active') {
+          resolvedColor = '#1db954';
+        }
         rows.push({
           text: line,
           font: rowFont,
           lineHeight: rowLineHeight,
-          color,
+          color: resolvedColor,
           kind: isTranslation ? 'translation' : (isTransliteration ? 'transliteration' : 'lyric'),
           blockKind
         });
@@ -1424,7 +1433,7 @@
         pipVideo.muted = spotifyVolume <= 0.001;
       }
     } finally {
-      setTimeout(() => { pipIgnoreMediaControlEvent = false; }, 0);
+      queueMicrotask(() => { pipIgnoreMediaControlEvent = false; });
     }
   }
 
@@ -1538,10 +1547,10 @@
    * unsynced lyrics and the "no lyrics" state.
    */
   function startPipRenderLoop() {
-    const render = () => {
-      if (!isPipActive) return;
-      const now = performance.now();
-      if (now - pipLastFrameAt < 33) {
+      const render = () => {
+        if (!isPipActive) return;
+        const now = performance.now();
+      if (now - pipLastFrameAt < PIP_FRAME_THROTTLE_MS) {
         pipAnimationFrame = requestAnimationFrame(render);
         return;
       }
@@ -1648,13 +1657,7 @@
               return;
             }
             pipCtx.font = row.font;
-            if (row.kind === 'translation') {
-              pipCtx.fillStyle = 'rgba(170, 170, 170, 0.9)';
-            } else if (row.kind === 'transliteration' && row.blockKind === 'active') {
-              pipCtx.fillStyle = '#1db954';
-            } else {
-              pipCtx.fillStyle = row.color;
-            }
+            pipCtx.fillStyle = row.color;
             pipCtx.fillText(row.text, centerX, drawY, textMaxWidth);
             drawY += row.lineHeight;
           });
