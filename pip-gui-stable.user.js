@@ -357,6 +357,7 @@
   let pipResizeRafPending = false;
   let pipIgnoreMediaControlEvent = false;
   let pipLastFrameAt = 0;
+  let pipWindowResizeFallbackActive = false;
 
   // ------------------------
   // Constants & Configuration
@@ -1212,6 +1213,7 @@
   const PIP_CANVAS_MIN_SIZE = 360;
   const PIP_CANVAS_MAX_SIZE = 1080;
   const PIP_FRAME_THROTTLE_MS = 33;
+  const PIP_MEDIA_SYNC_GRACE_MS = 1200;
 
   function applyHiddenPipVideoStyle() {
     Object.assign(pipVideo.style, {
@@ -1284,8 +1286,25 @@
       });
       pipResizeObserver.observe(pipVideo);
     } else {
-      window.addEventListener('resize', updatePipCanvasSize, { passive: true });
+      if (!pipWindowResizeFallbackActive) {
+        window.addEventListener('resize', updatePipCanvasSize, { passive: true });
+        pipWindowResizeFallbackActive = true;
+      }
     }
+  }
+
+  function cleanupPipResizeTracking() {
+    if (pipResizeObserver) {
+      try {
+        pipResizeObserver.disconnect();
+      } catch {}
+      pipResizeObserver = null;
+    }
+    if (pipWindowResizeFallbackActive) {
+      window.removeEventListener('resize', updatePipCanvasSize);
+      pipWindowResizeFallbackActive = false;
+    }
+    pipResizeRafPending = false;
   }
 
   function findSpotifyVolumeControl() {
@@ -1403,6 +1422,8 @@
           resolvedColor = 'rgba(170, 170, 170, 0.9)';
         } else if (isTransliteration && blockKind === 'active') {
           resolvedColor = '#1db954';
+        } else if (isTransliteration) {
+          resolvedColor = '#9a9a9a';
         }
         rows.push({
           text: line,
@@ -1434,6 +1455,43 @@
       }
     } finally {
       queueMicrotask(() => { pipIgnoreMediaControlEvent = false; });
+    }
+  }
+
+  function handlePipVideoPlay() {
+    if (pipIgnoreMediaControlEvent) return;
+    if (isSpotifyPlaying()) return;
+    const before = Date.now();
+    if (!sendSpotifyDomCommand('playpause')) return;
+    pipIgnoreMediaControlEvent = true;
+    setTimeout(() => {
+      pipIgnoreMediaControlEvent = false;
+      if (Date.now() - before <= (PIP_MEDIA_SYNC_GRACE_MS + 50)) {
+        syncPipMediaStateFromSpotify();
+      }
+    }, PIP_MEDIA_SYNC_GRACE_MS);
+  }
+
+  function handlePipVideoPause() {
+    if (pipIgnoreMediaControlEvent) return;
+    if (!isSpotifyPlaying()) return;
+    const before = Date.now();
+    if (!sendSpotifyDomCommand('playpause')) return;
+    pipIgnoreMediaControlEvent = true;
+    setTimeout(() => {
+      pipIgnoreMediaControlEvent = false;
+      if (Date.now() - before <= (PIP_MEDIA_SYNC_GRACE_MS + 50)) {
+        syncPipMediaStateFromSpotify();
+      }
+    }, PIP_MEDIA_SYNC_GRACE_MS);
+  }
+
+  function handlePipVideoVolumeChange() {
+    if (pipIgnoreMediaControlEvent) return;
+    if (pipVideo.muted || pipVideo.volume <= 0.001) {
+      setSpotifyVolumeLevel(0);
+    } else {
+      setSpotifyVolumeLevel(pipVideo.volume);
     }
   }
 
@@ -1518,26 +1576,9 @@
       else stopPipRenderLoop();
     });
 
-    pipVideo.addEventListener('play', () => {
-      if (pipIgnoreMediaControlEvent) return;
-      if (isSpotifyPlaying()) return;
-      sendSpotifyDomCommand('playpause');
-    });
-
-    pipVideo.addEventListener('pause', () => {
-      if (pipIgnoreMediaControlEvent) return;
-      if (!isSpotifyPlaying()) return;
-      sendSpotifyDomCommand('playpause');
-    });
-
-    pipVideo.addEventListener('volumechange', () => {
-      if (pipIgnoreMediaControlEvent) return;
-      if (pipVideo.muted || pipVideo.volume <= 0.001) {
-        setSpotifyVolumeLevel(0);
-      } else {
-        setSpotifyVolumeLevel(pipVideo.volume);
-      }
-    });
+    pipVideo.addEventListener('play', handlePipVideoPlay);
+    pipVideo.addEventListener('pause', handlePipVideoPause);
+    pipVideo.addEventListener('volumechange', handlePipVideoVolumeChange);
   }
 
   /**
@@ -1686,6 +1727,7 @@
       cancelAnimationFrame(pipAnimationFrame);
       pipAnimationFrame = null;
     }
+    pipLastFrameAt = 0;
   }
 
   /**
@@ -4309,6 +4351,13 @@ const Providers = {
       clearInterval(pollingInterval);
       pollingInterval = null;
       DEBUG.debug('Cleanup', 'pollingInterval cleared');
+    }
+
+    if (pipVideo && !isPipActive && !isPagePipActive) {
+      pipVideo.removeEventListener('play', handlePipVideoPlay);
+      pipVideo.removeEventListener('pause', handlePipVideoPause);
+      pipVideo.removeEventListener('volumechange', handlePipVideoVolumeChange);
+      cleanupPipResizeTracking();
     }
     if (progressInterval) {
       clearInterval(progressInterval);
