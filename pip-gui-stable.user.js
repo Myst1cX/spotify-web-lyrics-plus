@@ -353,6 +353,7 @@
   let pipAnimationFrame = null;
   let isPipActive = false;
   let isPagePipActive = false;
+  let pipResizeObserver = null;
 
   // ------------------------
   // Constants & Configuration
@@ -1204,6 +1205,8 @@
   const PIP_PAGE_STYLE = 'position: relative; width: 100%; height: auto; border-radius: inherit;';
   const PIP_PAGE_CONTAINER_SELECTOR = 'nav[aria-label] > div:last-of-type';
   const PIP_SAFARI_SHOW_LETTER_STYLE = 'position:absolute;left:calc(100% - 1px);bottom:calc(100% - 1px)';
+  const PIP_CANVAS_MIN_SIZE = 360;
+  const PIP_CANVAS_MAX_SIZE = 1080;
 
   function applyHiddenPipVideoStyle() {
     Object.assign(pipVideo.style, {
@@ -1248,6 +1251,92 @@
     pipVideo.dispatchEvent(new CustomEvent('leavepictureinpicture'));
   }
 
+  function updatePipCanvasSize() {
+    if (!pipCanvas || !pipVideo) return;
+    const rect = pipVideo.getBoundingClientRect();
+    const side = Math.max(
+      PIP_CANVAS_MIN_SIZE,
+      Math.min(PIP_CANVAS_MAX_SIZE, Math.round(Math.max(rect.width || 0, rect.height || 0, 640)))
+    );
+    if (pipCanvas.width !== side || pipCanvas.height !== side) {
+      pipCanvas.width = side;
+      pipCanvas.height = side;
+      pipVideo.width = side;
+      pipVideo.height = side;
+    }
+  }
+
+  function setupPipResizeTracking() {
+    if (!pipVideo || pipResizeObserver) return;
+    if (typeof ResizeObserver === 'function') {
+      pipResizeObserver = new ResizeObserver(() => updatePipCanvasSize());
+      pipResizeObserver.observe(pipVideo);
+    } else {
+      window.addEventListener('resize', updatePipCanvasSize, { passive: true });
+    }
+  }
+
+  function setPipLineMetadata(lineEl, lineIndex) {
+    if (!(lineEl instanceof HTMLElement)) return;
+    lineEl.setAttribute('data-lyrics-line-index', String(lineIndex));
+  }
+
+  function getPipLineGroupText(lineIndex) {
+    const container = currentLyricsContainer;
+    if (!container || lineIndex < 0) return [];
+    const base = container.querySelector(`p[data-lyrics-line-index="${lineIndex}"]`);
+    if (!(base instanceof HTMLElement)) return [];
+    const lines = [];
+    const baseText = (base.textContent || '').trim();
+    if (baseText) lines.push(baseText);
+    let next = base.nextElementSibling;
+    while (next && !(next.tagName === 'P' && next.hasAttribute('data-lyrics-line-index'))) {
+      const isTransliteration = next.getAttribute('data-transliteration') === 'true';
+      const isTranslation = next.getAttribute('data-translated') === 'true';
+      if (isTransliteration || isTranslation) {
+        const text = (next.textContent || '').trim();
+        if (text) lines.push(text);
+      }
+      next = next.nextElementSibling;
+    }
+    return lines;
+  }
+
+  function splitPipTextToLines(ctx, text, maxWidth) {
+    const cleaned = (text || '').trim();
+    if (!cleaned) return [];
+    const words = cleaned.split(/\s+/);
+    const out = [];
+    let line = '';
+    for (let i = 0; i < words.length; i++) {
+      const candidate = line ? `${line} ${words[i]}` : words[i];
+      if (ctx.measureText(candidate).width <= maxWidth) {
+        line = candidate;
+      } else if (line) {
+        out.push(line);
+        line = words[i];
+      } else {
+        out.push(words[i]);
+      }
+    }
+    if (line) out.push(line);
+    return out;
+  }
+
+  function flattenPipBlockRows(ctx, texts, maxWidth, primaryFont, primaryLineHeight, secondaryFont, secondaryLineHeight, color) {
+    const rows = [];
+    texts.forEach((text, index) => {
+      const rowFont = index === 0 ? primaryFont : secondaryFont;
+      const rowLineHeight = index === 0 ? primaryLineHeight : secondaryLineHeight;
+      ctx.font = rowFont;
+      const wrapped = splitPipTextToLines(ctx, text, maxWidth);
+      wrapped.forEach((line) => {
+        rows.push({ text: line, font: rowFont, lineHeight: rowLineHeight, color });
+      });
+    });
+    return rows;
+  }
+
   /**
    * Creates the hidden <canvas> and <video> elements used by the PiP feature.
    * The canvas is rendered to in a loop and its stream is piped to the video.
@@ -1279,6 +1368,8 @@
         }, { once: true });
       }
     }
+    setupPipResizeTracking();
+    updatePipCanvasSize();
 
     // Draw a tiny initial pixel so the MediaStream has frame data before
     // the video element attempts to play, preventing a timing issue where the
@@ -1327,6 +1418,7 @@
   function startPipRenderLoop() {
     const render = () => {
       if (!isPipActive) return;
+      updatePipCanvasSize();
 
       const w = pipCanvas.width;
       const h = pipCanvas.height;
@@ -1339,12 +1431,18 @@
 
       const centerX = w / 2;
       const centerY = h / 2;
-      // Scale the user's chosen font size for the larger PiP canvas
-      const baseFontSize = parseInt(localStorage.getItem('lyricsPlusFontSize') || '22', 10);
-      const fontSize = Math.round(baseFontSize * 1.8);
+      const baseFontSize = parseInt(localStorage.getItem(STORAGE_KEYS.FONT_SIZE) || '22', 10);
+      const sizeScale = Math.max(0.7, Math.min(1.5, w / 640));
+      const activeFontSize = Math.max(18, Math.round(baseFontSize * 1.25 * sizeScale));
+      const contextFontSize = Math.max(13, Math.round(activeFontSize * 0.72));
+      const sublineFontSize = Math.max(11, Math.round(contextFontSize * 0.92));
+      const activeLineHeight = Math.round(activeFontSize * 1.26);
+      const contextLineHeight = Math.round(contextFontSize * 1.22);
+      const sublineLineHeight = Math.round(sublineFontSize * 1.2);
+      const blockGap = Math.max(8, Math.round(activeFontSize * 0.42));
 
       pipCtx.textAlign = 'center';
-      pipCtx.textBaseline = 'middle';
+      pipCtx.textBaseline = 'top';
 
       if (currentSyncedLyrics && currentSyncedLyrics.length > 0) {
         // Determine the active line from current playback position
@@ -1359,34 +1457,80 @@
         }
 
         if (activeIndex !== -1) {
-          // Active line — Spotify green, bold, centred
-          pipCtx.font = `bold ${fontSize}px sans-serif`;
-          pipCtx.fillStyle = '#1db954';
-          wrapPipText(pipCtx, currentSyncedLyrics[activeIndex].text, centerX, centerY, textMaxWidth, fontSize * 1.3);
+          const prevTexts = getPipLineGroupText(activeIndex - 1);
+          const activeTexts = getPipLineGroupText(activeIndex);
+          const nextTexts = getPipLineGroupText(activeIndex + 1);
 
-          // Context lines — faded white, smaller
-          const ctxFontSize = Math.round(fontSize * 0.65);
-          pipCtx.font = `${ctxFontSize}px sans-serif`;
-          pipCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-          const gap = Math.round(fontSize * 1.7);
+          const fallbackActive = (currentSyncedLyrics[activeIndex]?.text || '').trim();
+          const fallbackPrev = activeIndex > 0 ? (currentSyncedLyrics[activeIndex - 1]?.text || '').trim() : '';
+          const fallbackNext = activeIndex < currentSyncedLyrics.length - 1 ? (currentSyncedLyrics[activeIndex + 1]?.text || '').trim() : '';
+
+          const blocks = [];
           if (activeIndex > 0) {
-            pipCtx.fillText(currentSyncedLyrics[activeIndex - 1].text, centerX, centerY - gap, textMaxWidth);
+            blocks.push({
+              texts: prevTexts.length ? prevTexts : (fallbackPrev ? [fallbackPrev] : []),
+              color: 'rgba(255, 255, 255, 0.45)',
+              primaryFont: `${contextFontSize}px sans-serif`,
+              primaryLineHeight: contextLineHeight
+            });
           }
+          blocks.push({
+            texts: activeTexts.length ? activeTexts : (fallbackActive ? [fallbackActive] : []),
+            color: '#1db954',
+            primaryFont: `bold ${activeFontSize}px sans-serif`,
+            primaryLineHeight: activeLineHeight
+          });
           if (activeIndex < currentSyncedLyrics.length - 1) {
-            pipCtx.fillText(currentSyncedLyrics[activeIndex + 1].text, centerX, centerY + gap, textMaxWidth);
+            blocks.push({
+              texts: nextTexts.length ? nextTexts : (fallbackNext ? [fallbackNext] : []),
+              color: 'rgba(255, 255, 255, 0.45)',
+              primaryFont: `${contextFontSize}px sans-serif`,
+              primaryLineHeight: contextLineHeight
+            });
           }
+
+          const rows = [];
+          blocks.forEach((block, idx) => {
+            const blockRows = flattenPipBlockRows(
+              pipCtx,
+              block.texts,
+              textMaxWidth,
+              block.primaryFont,
+              block.primaryLineHeight,
+              `${sublineFontSize}px sans-serif`,
+              sublineLineHeight,
+              block.color
+            );
+            rows.push(...blockRows);
+            if (idx < blocks.length - 1 && blockRows.length > 0) {
+              rows.push({ spacer: true, lineHeight: blockGap });
+            }
+          });
+
+          const contentHeight = rows.reduce((sum, row) => sum + (row.lineHeight || 0), 0);
+          let drawY = Math.round(centerY - (contentHeight / 2));
+          rows.forEach((row) => {
+            if (row.spacer) {
+              drawY += row.lineHeight;
+              return;
+            }
+            pipCtx.font = row.font;
+            pipCtx.fillStyle = row.color;
+            pipCtx.fillText(row.text, centerX, drawY, textMaxWidth);
+            drawY += row.lineHeight;
+          });
         }
       } else if (currentUnsyncedLyrics && currentUnsyncedLyrics.length > 0) {
-        pipCtx.font = `bold ${fontSize}px sans-serif`;
+        pipCtx.font = `bold ${activeFontSize}px sans-serif`;
         pipCtx.fillStyle = 'white';
-        pipCtx.fillText('Unsynced Lyrics', centerX, centerY - Math.round(fontSize * 0.8), textMaxWidth);
-        pipCtx.font = `${Math.round(fontSize * 0.6)}px sans-serif`;
+        pipCtx.fillText('Unsynced Lyrics', centerX, centerY - Math.round(activeFontSize * 0.8), textMaxWidth);
+        pipCtx.font = `${Math.round(activeFontSize * 0.6)}px sans-serif`;
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        pipCtx.fillText('Open popup for full lyrics', centerX, centerY + Math.round(fontSize * 0.6), textMaxWidth);
+        pipCtx.fillText('Open popup for full lyrics', centerX, centerY + Math.round(activeFontSize * 0.6), textMaxWidth);
       } else {
-        pipCtx.font = `bold ${fontSize}px sans-serif`;
+        pipCtx.font = `bold ${activeFontSize}px sans-serif`;
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        pipCtx.fillText('Waiting for lyrics\u2026', centerX, centerY, textMaxWidth);
+        pipCtx.fillText('Waiting for lyrics...', centerX, centerY, textMaxWidth);
       }
 
       pipAnimationFrame = requestAnimationFrame(render);
@@ -1402,32 +1546,6 @@
   }
 
   /**
-   * Draws text onto a canvas context, wrapping at maxWidth.
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {string} text
-   * @param {number} x        - Horizontal centre
-   * @param {number} y        - Vertical centre of the first line
-   * @param {number} maxWidth - Maximum line width in pixels
-   * @param {number} lineHeight
-   */
-  function wrapPipText(ctx, text, x, y, maxWidth, lineHeight) {
-    const words = text.split(' ');
-    let line = '';
-    let currentY = y;
-    for (let n = 0; n < words.length; n++) {
-      const testLine = line + words[n] + ' ';
-      if (ctx.measureText(testLine).width > maxWidth && n > 0) {
-        ctx.fillText(line.trim(), x, currentY);
-        line = words[n] + ' ';
-        currentY += lineHeight;
-      } else {
-        line = testLine;
-      }
-    }
-    ctx.fillText(line.trim(), x, currentY);
-  }
-
-  /**
    * Toggles the native browser Picture-in-Picture window.
    * Initialises the canvas/video elements on first use.
    */
@@ -1440,9 +1558,7 @@
         pipVideo.webkitPresentationMode === 'picture-in-picture';
 
       if (inNativePip) {
-        const exitPiP =
-          document.exitPictureInPicture ||
-          (Document.prototype && Document.prototype.exitPictureInPicture);
+        const exitPiP = document.exitPictureInPicture;
         if (typeof exitPiP === 'function') {
           await exitPiP.call(document);
           return;
@@ -1459,9 +1575,7 @@
         return;
       }
 
-      const requestPiP =
-        pipVideo.requestPictureInPicture ||
-        (HTMLVideoElement.prototype && HTMLVideoElement.prototype.requestPictureInPicture);
+      const requestPiP = pipVideo.requestPictureInPicture;
 
       if (typeof requestPiP === 'function') {
         if (isSafariBrowser() && document.body) {
@@ -6748,8 +6862,9 @@ const Providers = {
 
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
-      currentSyncedLyrics.forEach(({ text, transliteration }) => {
+      currentSyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
+        setPipLineMetadata(p, idx);
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -6763,8 +6878,9 @@ const Providers = {
       highlightSyncedLyrics(normalizeLyricsTimeFormat(currentSyncedLyrics), lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
-      currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
+      currentUnsyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
+        setPipLineMetadata(p, idx);
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -6952,8 +7068,9 @@ const Providers = {
 
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
-      currentSyncedLyrics.forEach(({ text, transliteration }) => {
+      currentSyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
+        setPipLineMetadata(p, idx);
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -6967,8 +7084,9 @@ const Providers = {
       highlightSyncedLyrics(normalizeLyricsTimeFormat(currentSyncedLyrics), lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
-      currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
+      currentUnsyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
+        setPipLineMetadata(p, idx);
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -7119,8 +7237,9 @@ const Providers = {
 
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
-      currentSyncedLyrics.forEach(({ text, transliteration }) => {
+      currentSyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
+        setPipLineMetadata(p, idx);
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -7133,8 +7252,9 @@ const Providers = {
       highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
-      currentUnsyncedLyrics.forEach(({ text, transliteration }) => {
+      currentUnsyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
+        setPipLineMetadata(p, idx);
         p.textContent = convertText(text);
         p.style.margin = "0 0 6px 0";
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
