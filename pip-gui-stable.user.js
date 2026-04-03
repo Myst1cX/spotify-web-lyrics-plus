@@ -1216,10 +1216,32 @@
 
     pipVideo = document.createElement('video');
     pipVideo.muted = true;
+    pipVideo.autoplay = true;
+    pipVideo.playsInline = true;
     pipVideo.width = pipCanvas.width;
     pipVideo.height = pipCanvas.height;
+    Object.assign(pipVideo.style, {
+      position: 'fixed',
+      left: '-9999px',
+      top: '-9999px',
+      width: '1px',
+      height: '1px',
+      opacity: '0',
+      pointerEvents: 'none',
+    });
+    if (!pipVideo.parentNode) {
+      if (document.body) {
+        document.body.appendChild(pipVideo);
+      } else if (document.readyState !== 'loading' && document.documentElement) {
+        document.documentElement.appendChild(pipVideo);
+      } else {
+        document.addEventListener('DOMContentLoaded', () => {
+          if (!pipVideo.parentNode && document.body) document.body.appendChild(pipVideo);
+        }, { once: true });
+      }
+    }
 
-    // Draw a transparent pixel so the MediaStream has initial frame data before
+    // Draw a tiny initial pixel so the MediaStream has frame data before
     // the video element attempts to play, preventing a timing issue where the
     // stream would be empty on the first requestPictureInPicture() call.
     pipCtx.fillRect(0, 0, 1, 1);
@@ -1237,6 +1259,16 @@
       updatePipButtonState(false);
       stopPipRenderLoop();
     });
+
+    // Safari/WebKit path (where webkit presentation mode is used instead of PiP events)
+    pipVideo.addEventListener('webkitpresentationmodechanged', () => {
+      const mode = pipVideo.webkitPresentationMode;
+      const active = mode === 'picture-in-picture';
+      isPipActive = active;
+      updatePipButtonState(active);
+      if (active) startPipRenderLoop();
+      else stopPipRenderLoop();
+    });
   }
 
   /**
@@ -1251,6 +1283,7 @@
 
       const w = pipCanvas.width;
       const h = pipCanvas.height;
+      const textMaxWidth = w - (PIP_CANVAS_H_PADDING * 2);
 
       // Background — respect AMOLED theme setting
       const isAmoled = localStorage.getItem('lyricsPlusTheme') === 'true';
@@ -1282,7 +1315,7 @@
           // Active line — Spotify green, bold, centred
           pipCtx.font = `bold ${fontSize}px sans-serif`;
           pipCtx.fillStyle = '#1db954';
-          wrapPipText(pipCtx, currentSyncedLyrics[activeIndex].text, centerX, centerY, w - PIP_CANVAS_H_PADDING, fontSize * 1.3);
+          wrapPipText(pipCtx, currentSyncedLyrics[activeIndex].text, centerX, centerY, textMaxWidth, fontSize * 1.3);
 
           // Context lines — faded white, smaller
           const ctxFontSize = Math.round(fontSize * 0.65);
@@ -1290,23 +1323,23 @@
           pipCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
           const gap = Math.round(fontSize * 1.7);
           if (activeIndex > 0) {
-            pipCtx.fillText(currentSyncedLyrics[activeIndex - 1].text, centerX, centerY - gap, w - PIP_CANVAS_H_PADDING);
+            pipCtx.fillText(currentSyncedLyrics[activeIndex - 1].text, centerX, centerY - gap, textMaxWidth);
           }
           if (activeIndex < currentSyncedLyrics.length - 1) {
-            pipCtx.fillText(currentSyncedLyrics[activeIndex + 1].text, centerX, centerY + gap, w - PIP_CANVAS_H_PADDING);
+            pipCtx.fillText(currentSyncedLyrics[activeIndex + 1].text, centerX, centerY + gap, textMaxWidth);
           }
         }
       } else if (currentUnsyncedLyrics && currentUnsyncedLyrics.length > 0) {
         pipCtx.font = `bold ${fontSize}px sans-serif`;
         pipCtx.fillStyle = 'white';
-        pipCtx.fillText('Unsynced Lyrics', centerX, centerY - Math.round(fontSize * 0.8), w - PIP_CANVAS_H_PADDING);
+        pipCtx.fillText('Unsynced Lyrics', centerX, centerY - Math.round(fontSize * 0.8), textMaxWidth);
         pipCtx.font = `${Math.round(fontSize * 0.6)}px sans-serif`;
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        pipCtx.fillText('Open popup for full lyrics', centerX, centerY + Math.round(fontSize * 0.6), w - PIP_CANVAS_H_PADDING);
+        pipCtx.fillText('Open popup for full lyrics', centerX, centerY + Math.round(fontSize * 0.6), textMaxWidth);
       } else {
         pipCtx.font = `bold ${fontSize}px sans-serif`;
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        pipCtx.fillText('Waiting for lyrics\u2026', centerX, centerY, w - PIP_CANVAS_H_PADDING);
+        pipCtx.fillText('Waiting for lyrics\u2026', centerX, centerY, textMaxWidth);
       }
 
       pipAnimationFrame = requestAnimationFrame(render);
@@ -1354,10 +1387,43 @@
   async function togglePip() {
     initPipElements();
     try {
-      if (document.pictureInPictureElement) {
-        await document.exitPictureInPicture();
+      const inNativePip = document.pictureInPictureElement === pipVideo;
+      const inWebkitPip =
+        typeof pipVideo.webkitPresentationMode === 'string' &&
+        pipVideo.webkitPresentationMode === 'picture-in-picture';
+
+      if (inNativePip) {
+        const exitPiP =
+          document.exitPictureInPicture ||
+          (Document.prototype && Document.prototype.exitPictureInPicture);
+        if (typeof exitPiP === 'function') {
+          await exitPiP.call(document);
+          return;
+        }
+      }
+
+      if (inWebkitPip && typeof pipVideo.webkitSetPresentationMode === 'function') {
+        pipVideo.webkitSetPresentationMode('inline');
+        return;
+      }
+
+      const requestPiP =
+        pipVideo.requestPictureInPicture ||
+        (HTMLVideoElement.prototype && HTMLVideoElement.prototype.requestPictureInPicture);
+
+      if (typeof requestPiP === 'function') {
+        await requestPiP.call(pipVideo);
+        return;
+      }
+
+      if (
+        typeof pipVideo.webkitSupportsPresentationMode === 'function' &&
+        pipVideo.webkitSupportsPresentationMode('picture-in-picture') &&
+        typeof pipVideo.webkitSetPresentationMode === 'function'
+      ) {
+        pipVideo.webkitSetPresentationMode('picture-in-picture');
       } else {
-        await pipVideo.requestPictureInPicture();
+        throw new Error('Picture-in-Picture is not supported in this browser context');
       }
     } catch (err) {
       console.error('[Lyrics+] PiP error:', err);
