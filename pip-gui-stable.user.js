@@ -354,6 +354,7 @@
   let isPipActive = false;
   let isPagePipActive = false;
   let pipResizeObserver = null;
+  let pipResizeRafPending = false;
 
   // ------------------------
   // Constants & Configuration
@@ -1202,6 +1203,7 @@
 
   // Horizontal padding (px) reserved on each side of the PiP canvas text area.
   const PIP_CANVAS_H_PADDING = 60;
+  const PIP_CANVAS_DEFAULT_SIZE = 640;
   const PIP_PAGE_STYLE = 'position: relative; width: 100%; height: auto; border-radius: inherit;';
   const PIP_PAGE_CONTAINER_SELECTOR = 'nav[aria-label] > div:last-of-type';
   const PIP_SAFARI_SHOW_LETTER_STYLE = 'position:absolute;left:calc(100% - 1px);bottom:calc(100% - 1px)';
@@ -1256,7 +1258,7 @@
     const rect = pipVideo.getBoundingClientRect();
     const side = Math.max(
       PIP_CANVAS_MIN_SIZE,
-      Math.min(PIP_CANVAS_MAX_SIZE, Math.round(Math.max(rect.width || 0, rect.height || 0, 640)))
+      Math.min(PIP_CANVAS_MAX_SIZE, Math.round(Math.max(rect.width || 0, rect.height || 0, PIP_CANVAS_DEFAULT_SIZE)))
     );
     if (pipCanvas.width !== side || pipCanvas.height !== side) {
       pipCanvas.width = side;
@@ -1269,7 +1271,14 @@
   function setupPipResizeTracking() {
     if (!pipVideo || pipResizeObserver) return;
     if (typeof ResizeObserver === 'function') {
-      pipResizeObserver = new ResizeObserver(() => updatePipCanvasSize());
+      pipResizeObserver = new ResizeObserver(() => {
+        if (pipResizeRafPending) return;
+        pipResizeRafPending = true;
+        requestAnimationFrame(() => {
+          pipResizeRafPending = false;
+          updatePipCanvasSize();
+        });
+      });
       pipResizeObserver.observe(pipVideo);
     } else {
       window.addEventListener('resize', updatePipCanvasSize, { passive: true });
@@ -1283,7 +1292,10 @@
 
   function getPipLineGroupText(lineIndex) {
     const container = currentLyricsContainer;
-    if (!container || lineIndex < 0) return [];
+    const totalLines = Array.isArray(currentSyncedLyrics)
+      ? currentSyncedLyrics.length
+      : (Array.isArray(currentUnsyncedLyrics) ? currentUnsyncedLyrics.length : 0);
+    if (!container || lineIndex < 0 || lineIndex >= totalLines) return [];
     const base = container.querySelector(`p[data-lyrics-line-index="${lineIndex}"]`);
     if (!(base instanceof HTMLElement)) return [];
     const lines = [];
@@ -1346,8 +1358,8 @@
     if (pipVideo) return;
 
     pipCanvas = document.createElement('canvas');
-    pipCanvas.width = 640;
-    pipCanvas.height = 640;
+    pipCanvas.width = PIP_CANVAS_DEFAULT_SIZE;
+    pipCanvas.height = PIP_CANVAS_DEFAULT_SIZE;
     pipCtx = pipCanvas.getContext('2d');
 
     pipVideo = document.createElement('video');
@@ -1400,7 +1412,9 @@
 
     // Safari/WebKit path (where webkit presentation mode is used instead of PiP events)
     pipVideo.addEventListener('webkitpresentationmodechanged', () => {
-      const mode = pipVideo.webkitPresentationMode;
+      const mode = typeof pipVideo.webkitPresentationMode === 'string'
+        ? pipVideo.webkitPresentationMode
+        : 'inline';
       const active = mode === 'picture-in-picture';
       isPipActive = active;
       updatePipButtonState(active);
@@ -1558,9 +1572,8 @@
         pipVideo.webkitPresentationMode === 'picture-in-picture';
 
       if (inNativePip) {
-        const exitPiP = document.exitPictureInPicture;
-        if (typeof exitPiP === 'function') {
-          await exitPiP.call(document);
+        if (typeof document.exitPictureInPicture === 'function') {
+          await document.exitPictureInPicture();
           return;
         }
       }
@@ -1575,14 +1588,12 @@
         return;
       }
 
-      const requestPiP = pipVideo.requestPictureInPicture;
-
-      if (typeof requestPiP === 'function') {
+      if (typeof pipVideo.requestPictureInPicture === 'function') {
         if (isSafariBrowser() && document.body) {
           pipVideo.setAttribute('style', PIP_SAFARI_SHOW_LETTER_STYLE);
           document.body.appendChild(pipVideo);
         }
-        await requestPiP.call(pipVideo);
+        await pipVideo.requestPictureInPicture();
         return;
       }
 
