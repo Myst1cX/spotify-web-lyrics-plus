@@ -1436,7 +1436,7 @@
     const baseText = (base.textContent || '').trim();
     if (baseText) lines.push(baseText);
     let next = base.nextElementSibling;
-    while (next && !(next.tagName === 'P' && next.hasAttribute('data-lyrics-line-index'))) {
+    while (next && !(next.tagName.toUpperCase() === 'P' && next.hasAttribute('data-lyrics-line-index'))) {
       const isTransliteration = next.getAttribute('data-transliteration') === 'true';
       const isTranslation = next.getAttribute('data-translated') === 'true';
       if (isTransliteration || isTranslation) {
@@ -1543,7 +1543,7 @@
       pipVideo.parentElement.removeChild(pipVideo);
     }
     applyHiddenPipVideoStyle();
-    if (document.body) document.body.appendChild(pipVideo);
+    if (document.body && pipVideo && !pipVideo.parentNode) document.body.appendChild(pipVideo);
   }
 
   /**
@@ -1833,8 +1833,8 @@
       // --- Open ---
       if (typeof pipVideo.requestPictureInPicture === 'function') {
         if (isSafariBrowser() && document.body) {
-          pipVideo.setAttribute('style', PIP_SAFARI_SHOW_LETTER_STYLE);
-          document.body.appendChild(pipVideo);
+          Object.assign(pipVideo.style, { position: 'absolute', left: 'calc(100% - 1px)', bottom: 'calc(100% - 1px)' });
+          if (!pipVideo.parentNode) document.body.appendChild(pipVideo);
         }
         await pipVideo.requestPictureInPicture();
         return;
