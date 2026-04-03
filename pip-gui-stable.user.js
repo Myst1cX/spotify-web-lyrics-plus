@@ -1203,7 +1203,7 @@
   const PIP_CANVAS_H_PADDING = 60;
   const PIP_PAGE_STYLE = 'position: relative; width: 100%; height: auto; border-radius: inherit;';
   const PIP_PAGE_CONTAINER_SELECTOR = 'nav[aria-label] > div:last-of-type';
-  const PIP_SAFARI_SHOW_LITTER_STYLE = 'position:absolute;left:calc(100% - 1px);bottom:calc(100% - 1px)';
+  const PIP_SAFARI_SHOW_LETTER_STYLE = 'position:absolute;left:calc(100% - 1px);bottom:calc(100% - 1px)';
 
   function applyHiddenPipVideoStyle() {
     Object.assign(pipVideo.style, {
@@ -1465,7 +1465,7 @@
 
       if (typeof requestPiP === 'function') {
         if (isSafariBrowser() && document.body) {
-          pipVideo.setAttribute('style', PIP_SAFARI_SHOW_LITTER_STYLE);
+          pipVideo.setAttribute('style', PIP_SAFARI_SHOW_LETTER_STYLE);
           document.body.appendChild(pipVideo);
         }
         await requestPiP.call(pipVideo);
