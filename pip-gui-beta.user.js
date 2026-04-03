@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Beta 
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.24.working
+// @version      17.25
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -1544,6 +1544,22 @@
     }
     applyHiddenPipVideoStyle();
     if (document.body && pipVideo && !pipVideo.parentNode) document.body.appendChild(pipVideo);
+  }
+
+  /**
+   * Safely detaches pipVideo from lyricsContainer before any innerHTML/textContent wipe,
+   * keeping it in document.body so native PiP stays open during the mutation.
+   * Call this immediately before clearing lyricsContainer when PiP is active.
+   * Re-insert with enterPipInLyricsContainer() after the container is rebuilt.
+   */
+  function pipVideoDetachIfInContainer() {
+    if (!(isPipActive || isPagePipActive) || !pipVideo) return;
+    const lyricsContainer = document.getElementById('lyrics-plus-content');
+    if (lyricsContainer && pipVideo.parentElement === lyricsContainer) {
+      lyricsContainer.removeChild(pipVideo);
+      delete lyricsContainer._pipSavedChildren;
+      if (!pipVideo.parentNode) document.body.appendChild(pipVideo);
+    }
   }
 
   /**
@@ -7290,6 +7306,7 @@ const Providers = {
       return text;
     };
 
+    pipVideoDetachIfInContainer();
     lyricsContainer.innerHTML = "";
 
     const transliterationEnabled = localStorage.getItem(STORAGE_KEYS.TRANSLITERATION_ENABLED) === 'true';
@@ -7360,6 +7377,9 @@ const Providers = {
       }
     }
 
+    // Re-insert pipVideo after lyrics are rebuilt so PiP stays open during track transitions
+    if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
+
     return true;
   }
 
@@ -7374,7 +7394,9 @@ const Providers = {
     translationPresent = false;
     transliterationPresent = false;
     lastTranslatedLang = null;
+    pipVideoDetachIfInContainer();
     lyricsContainer.textContent = "Loading lyrics...";
+    if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
 
     const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
     const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
@@ -7456,6 +7478,7 @@ const Providers = {
       return text;
     };
 
+    pipVideoDetachIfInContainer();
     lyricsContainer.innerHTML = "";
     // Set globals for download
     currentSyncedLyrics = (synced && synced.length > 0) ? synced : null;
@@ -7517,6 +7540,9 @@ const Providers = {
       currentSyncedLyrics = null;
       currentUnsyncedLyrics = null;
     }
+
+    // Re-insert pipVideo after lyrics are rebuilt so PiP stays open during track transitions
+    if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
 
     // Show/hide transliteration button based on data availability
     const transliterationBtn = popup._transliterationToggleBtn;
@@ -7868,7 +7894,11 @@ const Providers = {
         lastPlaybackPosition = 0;
         lastTrackDuration = info.duration || 0;
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-        if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+        if (lyricsContainer) {
+          pipVideoDetachIfInContainer();
+          lyricsContainer.textContent = "Loading lyrics...";
+          if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
+        }
         autodetectProviderAndLoad(popup, info);
       }
 
