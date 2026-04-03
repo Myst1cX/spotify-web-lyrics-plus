@@ -1521,13 +1521,13 @@
     pipVideo.addEventListener('play', () => {
       if (pipIgnoreMediaControlEvent) return;
       if (isSpotifyPlaying()) return;
-      sendSpotifyCommand('playpause');
+      sendSpotifyDomCommand('playpause');
     });
 
     pipVideo.addEventListener('pause', () => {
       if (pipIgnoreMediaControlEvent) return;
       if (!isSpotifyPlaying()) return;
-      sendSpotifyCommand('playpause');
+      sendSpotifyDomCommand('playpause');
     });
 
     pipVideo.addEventListener('volumechange', () => {
@@ -1549,7 +1549,7 @@
   function startPipRenderLoop() {
       const render = () => {
         if (!isPipActive) return;
-        const now = performance.now();
+      const now = performance.now();
       if (now - pipLastFrameAt < PIP_FRAME_THROTTLE_MS) {
         pipAnimationFrame = requestAnimationFrame(render);
         return;
@@ -1663,32 +1663,12 @@
           });
         }
       } else if (currentUnsyncedLyrics && currentUnsyncedLyrics.length > 0) {
-        const visibleCount = 8;
-        const startIndex = Math.max(0, currentUnsyncedLyrics.length - visibleCount);
-        const lines = currentUnsyncedLyrics
-          .slice(startIndex, startIndex + visibleCount)
-          .map((line) => (line?.text || '').trim())
-          .filter(Boolean);
-        if (lines.length > 0) {
-          const rows = flattenPipBlockRows(
-            pipCtx,
-            lines,
-            textMaxWidth,
-            `${Math.round(activeFontSize * 0.7)}px sans-serif`,
-            Math.round(activeFontSize * 0.95),
-            `${Math.round(activeFontSize * 0.7)}px sans-serif`,
-            Math.round(activeFontSize * 0.95),
-            'rgba(255, 255, 255, 0.9)'
-          );
-          const contentHeight = rows.reduce((sum, row) => sum + row.lineHeight, 0);
-          let drawY = Math.max(12, Math.round((h - contentHeight) / 2));
-          rows.forEach((row) => {
-            pipCtx.font = row.font;
-            pipCtx.fillStyle = row.color;
-            pipCtx.fillText(row.text, centerX, drawY, textMaxWidth);
-            drawY += row.lineHeight;
-          });
-        }
+        pipCtx.font = `bold ${activeFontSize}px sans-serif`;
+        pipCtx.fillStyle = 'white';
+        pipCtx.fillText('Unsynced Lyrics', centerX, centerY - Math.round(activeFontSize * 0.8), textMaxWidth);
+        pipCtx.font = `${Math.round(activeFontSize * 0.6)}px sans-serif`;
+        pipCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        pipCtx.fillText('Open popup for full lyrics', centerX, centerY + Math.round(activeFontSize * 0.6), textMaxWidth);
       } else {
         pipCtx.font = `bold ${activeFontSize}px sans-serif`;
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
@@ -2261,6 +2241,25 @@ const PLAY_WORDS = [
    */
   function findSpotifyNextButton() {
     return document.querySelector('[data-testid="control-button-skip-forward"]');
+  }
+
+  function sendSpotifyDomCommand(command) {
+    const buttonFinders = {
+      shuffle: findSpotifyShuffleButton,
+      playpause: findSpotifyPlayPauseButton,
+      next: findSpotifyNextButton,
+      previous: findSpotifyPreviousButton,
+      repeat: findSpotifyRepeatButton
+    };
+    const findButton = buttonFinders[command];
+    const btn = findButton ? findButton() : null;
+    if (!btn) return false;
+    btn.click();
+    if (btn.offsetParent !== null && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      btn.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true }));
+      btn.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true }));
+    }
+    return true;
   }
 
   /**
