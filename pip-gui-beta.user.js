@@ -360,7 +360,7 @@
   let isTranslating = false;
   let transliterationPresent = false;
   let isShowingSyncedLyrics = false;
-  let isLyricsPopupOpen = false;
+  let isLyricsPopupOpen = !!document.getElementById('lyrics-plus-popup');
   let originalChineseScriptType = null; // 'traditional', 'simplified', or null
   let lastPlaybackPosition = 0;  // Track playback position for repeat detection
   let lastTrackDuration = 0;    // Track duration for repeat detection
@@ -1644,7 +1644,7 @@
       if (!isLyricsPopupOpen) {
         pipCtx.font = `bold ${activeFontSize}px sans-serif`;
         pipCtx.fillStyle = 'white';
-        pipCtx.fillText('Lyrics+ popup closed', centerX, centerY - Math.round(activeFontSize * 0.8), textMaxWidth);
+        pipCtx.fillText('Lyrics+ popup closed.', centerX, centerY - Math.round(activeFontSize * 0.8), textMaxWidth);
         pipCtx.font = `${Math.round(activeFontSize * 0.58)}px sans-serif`;
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         pipCtx.fillText('Reopen Lyrics+ popup to continue live lyrics', centerX, centerY + Math.round(activeFontSize * 0.6), textMaxWidth);
