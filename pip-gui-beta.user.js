@@ -1231,7 +1231,7 @@
   const PIP_CANVAS_MIN_SIZE = 360;
   const PIP_CANVAS_MAX_SIZE = 1080;
   const PIP_FRAME_THROTTLE_MS = 33;
-  const PIP_MEDIA_SYNC_GRACE_MS = 1200;
+  const PIP_MEDIA_SYNC_GRACE_MS = 450;
 
   function applyHiddenPipVideoStyle() {
     Object.assign(pipVideo.style, {
@@ -1640,6 +1640,18 @@
       pipCtx.textAlign = 'center';
       pipCtx.textBaseline = 'top';
 
+      const popupOpen = !!document.getElementById('lyrics-plus-popup');
+      if (!popupOpen) {
+        pipCtx.font = `bold ${activeFontSize}px sans-serif`;
+        pipCtx.fillStyle = 'white';
+        pipCtx.fillText('Lyrics+ popup closed', centerX, centerY - Math.round(activeFontSize * 0.8), textMaxWidth);
+        pipCtx.font = `${Math.round(activeFontSize * 0.58)}px sans-serif`;
+        pipCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        pipCtx.fillText('Reopen Lyrics+ popup to continue live lyrics', centerX, centerY + Math.round(activeFontSize * 0.6), textMaxWidth);
+        pipAnimationFrame = requestAnimationFrame(render);
+        return;
+      }
+
       if (currentSyncedLyrics && currentSyncedLyrics.length > 0) {
         // Determine the active line from current playback position
         const posEl = document.querySelector('[data-testid="playback-position"]');
@@ -1665,7 +1677,7 @@
           if (activeIndex > 0) {
             blocks.push({
               texts: prevTexts.length ? prevTexts : (fallbackPrev ? [fallbackPrev] : []),
-              color: 'rgba(255, 255, 255, 0.45)',
+              color: 'rgba(255, 255, 255, 0.8)',
               primaryFont: `${contextFontSize}px sans-serif`,
               primaryLineHeight: contextLineHeight,
               kind: 'context'
@@ -1681,7 +1693,7 @@
           if (activeIndex < currentSyncedLyrics.length - 1) {
             blocks.push({
               texts: nextTexts.length ? nextTexts : (fallbackNext ? [fallbackNext] : []),
-              color: 'rgba(255, 255, 255, 0.45)',
+              color: 'rgba(255, 255, 255, 0.8)',
               primaryFont: `${contextFontSize}px sans-serif`,
               primaryLineHeight: contextLineHeight,
               kind: 'context'
@@ -7947,7 +7959,9 @@ const Providers = {
         let popup = document.getElementById("lyrics-plus-popup");
         if (popup) {
           removePopup();
-          stopPollingForTrackChange();
+          if (!isPipActive && !isPagePipActive) {
+            stopPollingForTrackChange();
+          }
           return;
         }
         createPopup();
