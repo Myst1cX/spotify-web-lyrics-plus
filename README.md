@@ -69,6 +69,17 @@
 > 简 = Convert from Simplified to Traditional Chinese  
 > 繁 = Convert from Traditional to Simplified Chinese  
 > The conversion button appears automatically when Chinese lyrics are detected.  
+>
+> **PICTURE-IN-PICTURE (PiP) MODE**  
+> Float the lyrics in a native PiP window outside the browser — works even when Spotify is in the background.  
+> Toggle PiP using the dedicated button in the Lyrics+ popup header.  
+> Lyrics are rendered on a canvas (active line in Spotify green, context lines dimmed) and streamed to the floating window.  
+> Font size, transliteration, translation, and Chinese conversion settings are all reflected live in the PiP window.  
+> PiP play/pause and volume/mute controls sync with Spotify Web.  
+> Closing the Lyrics+ popup automatically closes the PiP window.  
+> Falls back to WebKit PiP (Safari) or an inline page-PiP overlay when the native API is unavailable.  
+> Unsynced lyrics show a prompt to view them in the main popup (scrolling is not feasible in a floating window).  
+> PiP stays open across song transitions.
 
 ## Screenshots
 
@@ -130,6 +141,7 @@
 > 7. **Chinese conversion:** Click 简 or 繁 (when Chinese lyrics are detected) to convert between Traditional and Simplified Chinese.    
 > 8. **Change font size:** Use the font size's "px" dropdown menu.  
 > 9. **Reset:** Click ↻ to restore default popup position/size.  
+> 10. **Picture-in-Picture:** Click the PiP button in the popup header to float the lyrics in a native PiP window. Click it again to exit PiP.  
 
 * * * 
 
