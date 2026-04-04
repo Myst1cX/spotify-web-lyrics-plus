@@ -144,8 +144,8 @@
 > 7. **Chinese conversion:** Click 简 or 繁 (when Chinese lyrics are detected) to convert between Traditional and Simplified Chinese.    
 > 8. **Change font size:** Use the font size's "px" dropdown menu.  
 > 9. **Reset:** Click ↻ to restore default popup position/size.  
-> 10. **Picture-in-Picture mode:** Turn the feature on to replace the lyrics container with a video element that streams a canvas rendering of the lyrics.
-> This allows the PiP toggle to appear. Click the PiP toggle to move the lyrics into a floating Picture-in-Picture window while the original lyrics container > receives a placeholder. Close the PiP window and toggle the feature off to restore the original lyrics container.  
+> 10. **Picture-in-Picture mode:** Turn the feature on to replace the lyrics container with a video element that streams a canvas rendering of the lyrics.  
+This allows the PiP toggle to appear. Click the PiP toggle to move the lyrics into a floating Picture-in-Picture window while the original lyrics container receives a placeholder. Close the PiP window and toggle the feature off to restore the original lyrics container.  
 
 * * * 
 
