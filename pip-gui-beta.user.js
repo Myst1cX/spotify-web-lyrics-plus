@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Beta 
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.25.working
+// @version      17.26.beta
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -15,9 +15,8 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
 // ==/UserScript==
 
-// TO FIX: 
-
-// 1. what i want is that by pressing on 'toggle picture in picture mode' button in lyrics+ popup's header to untoggle, which  
+// LEFT TO IMPROVE (MINOR INCONVENIENCE):
+// what i want is that by pressing on 'toggle picture in picture mode' button in lyrics+ popup's header to untoggle, which  
 // 'returns lyric+ popup's lyric container to the base lyrics container without any video canvas element', apart from doing that, this action  
 // at the same time also closes the opened native pip view (the one to which we reflect lyric lines, translation etc)  
 // since user now resumes paying attention to lyric+ popup's lyric container.  
@@ -28,12 +27,20 @@
 // (that is intended since only the 'toggle picture in picture button' can return it to original lyric container. now to iterate, i want the   
 // 'toggle picture in picture button' when it returns lyric container to original (removing video element), to also close   
 // the native pip view (if its still open)   
-// 2. chinese conversion should also be reflected in the pip if pip is open and we toggle chinese conversion..   
-// currently we already reflect lyric lines, translation lines and transliteration lines.  
 
-// RESOLVED (17.25): FIX: PiP now remains open across song transitions by protecting lyricsContainer clears.  
+// RESOLVED (17.26.beta - merged to stable build of 17.26): CHINESE CONVERSION IS NOW ALSO REFLECTED IN THE PIP CANVAS 
+// Had to also fix an issue which made the lyrics+ popup's lyrics container flash despite being 
+// under the "This video is playing in Picture-in-Picture mode" overlay, upon applying chinese conversion to pip canvas.
+// rerenderLyrics() (Chinese conversion toggle): when PiP is active, the video element is kept
+// inside the lyrics container while the HTML lyric children are rebuilt silently behind it.
+// Old non-video children are removed, new <p> elements are appended with display:none so they
+// never become visible, and _pipSavedChildren is updated to point to the new elements.
+// The canvas render loop reads the new text from the hidden DOM elements and the PiP window
+// reflects the conversion immediately — with no visual flash in the lyrics container.
 
-// RESOLVED (17.24): ADDED PICTURE-IN-PICTURE (PiP) MODE
+// RESOLVED (17.25.beta): FIX: PiP now remains open across song transitions by protecting lyricsContainer clears.  
+
+// RESOLVED (17.24.beta): ADDED PICTURE-IN-PICTURE (PiP) MODE
 // • Toggle PiP button added to the Lyrics+ popup header button group.
 // • Canvas+video approach: a hidden <canvas> renders lyrics; a <video> streams the canvas via
 //   captureStream(). The video is inserted into the lyrics container when PiP is active.
@@ -7118,7 +7125,20 @@ const Providers = {
     translationPresent = false;
     transliterationPresent = false;
     lastTranslatedLang = null;
-    lyricsContainer.innerHTML = "";
+
+    // When PiP is active the video element covers the lyrics container. Rebuild the
+    // hidden lyric children in-place without ever removing pipVideo — this prevents the
+    // container from being briefly uncovered (no visual flash behind the PiP overlay).
+    const pipIsInContainer = (isPipActive || isPagePipActive) &&
+      pipVideo && pipVideo.parentElement === lyricsContainer;
+    if (pipIsInContainer) {
+      // Remove all children except pipVideo (they are already display:none)
+      Array.from(lyricsContainer.children).forEach(child => {
+        if (child !== pipVideo) lyricsContainer.removeChild(child);
+      });
+    } else {
+      lyricsContainer.innerHTML = "";
+    }
 
     const transliterationEnabled = localStorage.getItem(STORAGE_KEYS.TRANSLITERATION_ENABLED) === 'true';
     let hasTransliterationData = false;
@@ -7135,6 +7155,7 @@ const Providers = {
           p.setAttribute('data-transliteration-text', transliteration);
           hasTransliterationData = true;
         }
+        if (pipIsInContainer) p.style.display = 'none';
         lyricsContainer.appendChild(p);
       });
       // Normalize cached lyrics time format for proper syncing (especially for KPoe provider)
@@ -7155,6 +7176,7 @@ const Providers = {
           p.setAttribute('data-transliteration-text', transliteration);
           hasTransliterationData = true;
         }
+        if (pipIsInContainer) p.style.display = 'none';
         lyricsContainer.appendChild(p);
       });
       // For unsynced, always allow user scroll
@@ -7163,6 +7185,13 @@ const Providers = {
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
+    }
+
+    if (pipIsInContainer) {
+      // Update _pipSavedChildren so exitPipFromLyricsContainer() correctly restores the
+      // newly built elements when PiP is eventually toggled off.
+      const newChildren = Array.from(lyricsContainer.children).filter(c => c !== pipVideo);
+      lyricsContainer._pipSavedChildren = newChildren.map(el => ({ el, display: '' }));
     }
 
     // Show/hide transliteration button based on data availability
