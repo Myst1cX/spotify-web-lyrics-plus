@@ -69,6 +69,20 @@
 > 简 = Convert from Simplified to Traditional Chinese  
 > 繁 = Convert from Traditional to Simplified Chinese  
 > The conversion button appears automatically when Chinese lyrics are detected.  
+>
+> **PICTURE-IN-PICTURE (PiP) MODE**  
+> Float the lyrics in a native floating PiP window. For synced lyrics only.  
+> Unsynced lyrics show a prompt to view them in the main lyrics+ popup's lyric container.  
+> Always on top. Works across browser tabs and even outside the browser.  
+> Font size, transliteration, translation, and Chinese conversion settings are all reflected live.  
+> Can be toggled on/off using the dedicated "Toggle Picture-in-Picture mode" button.  
+> When toggled on, the lyric+ popup's lyric container is replaced with a <video> element which streams a  
+> canvas onto which the lyrics are then rendered. A Picture-in-Picture toggle appears aswell.  
+> When the user activates the PiP toggle, the lyric lines inside the lyric container are hidden and  
+> the <video> element shows the browser's "This video is playing in Picture-in-Picture mode" placeholder.  
+> The lyrics appear in the floating PiP window that just opened.  
+> When the floating PiP window is closed, the <video> element with the lyrics is restored.  
+> Toggle off the "Toggle Picture-in-Picture mode" button to bring back the original lyrics container.  
 
 ## Screenshots
 
@@ -130,6 +144,7 @@
 > 7. **Chinese conversion:** Click 简 or 繁 (when Chinese lyrics are detected) to convert between Traditional and Simplified Chinese.    
 > 8. **Change font size:** Use the font size's "px" dropdown menu.  
 > 9. **Reset:** Click ↻ to restore default popup position/size.  
+> 10. **Picture-in-Picture mode:** Turn the feature on to replace the lyrics container with a <video> that streams a canvas rendering of the lyrics. This allows the PiP toggle to appear. Click the PiP toggle to move the lyrics into a floating Picture-in-Picture window while the original lyrics container receives a placeholder. Close the PiP window and toggle the feature off to restore the original lyrics container.  
 
 * * * 
 
@@ -179,6 +194,7 @@
 > [Natoune/SpotifyMobileLyricsAPI](https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src/fetchers.ts), [ibratabian17/YouLyPlus](https://github.com/search?q=repo%3Aibratabian17%2FYouLyPlus+kpoe&type=code)
 > 4. **Live Translation from** [raicigi/Cigi Spotify Translator (v1.0)](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
 > 5. **Chinese Conversion via open.cc (now using full.js instead of only t2cn.js) from** [holsoma/Spotify Lyrics: Trad ⇄ Simplified (v1.1.0)](https://greasyfork.org/en/scripts/555411-spotify-lyrics-trad-simplified)
+> 6. **Picture-in-Picture mode from** [mantou132/Spotify-Lyrics: pip.ts, (on 4.4.'26)](https://github.com/mantou132/Spotify-Lyrics/blob/master/src/page/pip.ts)
 
 ## License
 
