@@ -15,8 +15,8 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
 // ==/UserScript==
 
-// LEFT TO IMPROVE (MINOR INCONVENIENCE):
-// what i want is that by pressing on 'toggle picture in picture mode' button in lyrics+ popup's header to untoggle, which  
+// LEFT TO IMPROVE (MINOR INCONVENIENCES):
+// 1. what i want is that by pressing on 'toggle picture in picture mode' button in lyrics+ popup's header to untoggle, which  
 // 'returns lyric+ popup's lyric container to the base lyrics container without any video canvas element', apart from doing that, this action  
 // at the same time also closes the opened native pip view (the one to which we reflect lyric lines, translation etc)  
 // since user now resumes paying attention to lyric+ popup's lyric container.  
@@ -27,6 +27,10 @@
 // (that is intended since only the 'toggle picture in picture button' can return it to original lyric container. now to iterate, i want the   
 // 'toggle picture in picture button' when it returns lyric container to original (removing video element), to also close   
 // the native pip view (if its still open)   
+// 2. consider an alternative location for the "Toggle Picture-in-Picture mode" button (probably will remain in the header though)
+// 3. PiP mode doesn't work on mobile yet (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that   
+// can then open the native pip view - doesn't appear.)
+// 4. Lyrics+ popup gui: css fix for the header buttons (inconsistent spacing in some; also needs to be adjusted for mobile interface)
 
 // RESOLVED (17.26.beta - merged to stable build of 17.26): CHINESE CONVERSION IS NOW ALSO REFLECTED IN THE PIP CANVAS 
 // Had to also fix an issue which made the lyrics+ popup's lyrics container flash despite being 
