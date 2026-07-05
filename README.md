@@ -76,13 +76,9 @@
 > Always on top. Works across browser tabs and even outside the browser.  
 > Font size, transliteration, translation, and Chinese conversion settings are all reflected live.  
 > Can be toggled on/off using the dedicated "Toggle Picture-in-Picture mode" button.  
-> When toggled on, the lyric+ popup's lyric container is replaced with a video element which streams a  
-> canvas onto which the lyrics are then rendered. A Picture-in-Picture toggle appears aswell.  
-> When the user activates the PiP toggle, the lyric lines inside the lyric container are hidden and  
-> the video element shows the browser's "This video is playing in Picture-in-Picture mode" placeholder.  
+> When toggled on, the lyric lines inside the lyric+ popup's lyric container are hidden and replaced with a placeholder message "This video is playing in Picture-in-Picture mode".
 > The lyrics appear in the floating PiP window that just opened.  
-> When the floating PiP window is closed, the video element with the lyrics is restored.  
-> Toggle off the "Toggle Picture-in-Picture mode" button to bring back the original lyrics container.  
+> When the floating PiP window is closed or the "Toggle Picture-in-Picture mode" button is toggled off, the original lyrics container is restored.  
 
 ## Screenshots
 
