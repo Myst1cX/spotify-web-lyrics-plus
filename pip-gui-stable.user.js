@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.26
+// @version      17.27
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -16,24 +16,105 @@
 // ==/UserScript==
 
 // LEFT TO IMPROVE (MINOR INCONVENIENCES):
-// 1. what i want is that by pressing on 'toggle picture in picture mode' button in lyrics+ popup's header to untoggle, which  
-// 'returns lyric+ popup's lyric container to the base lyrics container without any video canvas element', apart from doing that, this action  
-// at the same time also closes the opened native pip view (the one to which we reflect lyric lines, translation etc)  
-// since user now resumes paying attention to lyric+ popup's lyric container.  
-// additional explanation: 'toggle picture in picture mode' is a button in lyrics+ popup header.   
-// if you click it, the lyrics+ popup's lyrics container transforms into a container that's a video element, which gives it the pip mode button that   
-// opens native pip view. the native pip view also has a play/pause button, fullscreen button, mute button, back to tab button, and most importantly,   
-// a close button. after clicking that close button to close native pip view, the lyrics+ popup's lyric container is still displayed as video element   
-// (that is intended since only the 'toggle picture in picture button' can return it to original lyric container. now to iterate, i want the   
-// 'toggle picture in picture button' when it returns lyric container to original (removing video element), to also close   
-// the native pip view (if its still open)   
-// 2. consider an alternative location for the "Toggle Picture-in-Picture mode" button (probably will remain in the header though)
-// 3. PiP mode doesn't work on mobile yet (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that   
+// 1. PiP mode doesn't work on mobile yet (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that
 // can then open the native pip view - doesn't appear.)
-// 4. Lyrics+ popup gui: css fix for the header buttons (inconsistent spacing in some; also needs to be adjusted for mobile interface)
+// 2. Lyrics+ popup gui: css fix for the header buttons (inconsistent spacing, adjusting specifically for mobile interface)
 
-// RESOLVED (17.26.beta - merged to stable build of 17.26): CHINESE CONVERSION IS NOW ALSO REFLECTED IN THE PIP CANVAS 
-// Had to also fix an issue which made the lyrics+ popup's lyrics container flash despite being 
+// RESOLVED (17.27):
+// • KPOE SERVERS EXPANDED 3 → 6, WITH RELABELED BACKUPS
+//   KPOE_SERVERS grew from [workers.dev, seven.vercel.app, backend.vercel.app]
+//   to a 6-entry list, reordered with new primaries: prjktla.my.id (youly's
+//   server), atomix.one (meow's mirror), binimum.org (binimum's server), then
+//   the original three demoted to backups 3-5 (workers.dev, seven.vercel.app,
+//   backend.vercel.app). The cache-stats table (getStats()) and the "loaded
+//   from cache" console log (loadLyricsFromCache()) were updated to label all
+//   six servers correctly (Primary / Backup 1-5). The retry loop itself
+//   (fetchKPoeLyrics) needed no changes since it already indexed generically
+//   into the array, so 429/503/500/fetch-error retries now cycle through all
+//   six servers automatically.
+//
+// • PIP: FIXED FIRST-TOGGLE "VIDEO READYSTATE IS HAVE_NOTHING" CRASH
+//   requestPictureInPicture() could fire before captureStream() delivered a
+//   frame. Added waitForPipVideoReady() (resolves on loadedmetadata/canplay,
+//   or a 1s safety timeout); initPipElements() is now async and awaits it,
+//   and togglePip() awaits initPipElements() before requesting PiP.
+//
+// • PIP: REWORKED HOW THE MAIN CONTAINER BEHAVES WHILE ACTIVE
+//   Old approach physically moved the <video> into the lyrics container,
+//   stacked over hidden lyric lines - moving it after requestPictureInPicture()
+//   was found to immediately kill the PiP session. New approach: pipVideo stays
+//   permanently in document.body and is never reparented. enterPipInLyrics
+//   Container() now just hides the lyric children and shows a new placeholder
+//   message ("This video is playing in Picture-in-Picture mode") via a new
+//   ensurePipNoticeShown() helper, mirroring the browser's native overlay text.
+//   exitPipFromLyricsContainer(), pipVideoDetachIfInContainer() (now a no-op),
+//   and rerenderLyrics() were all simplified to match this approach.
+//
+// • PIP: NON-LYRICS STATUS MESSAGES (LOADING/ERRORS/INSTRUMENTAL) FIXED DURING PIP
+//   Previously, if PiP was active when a status like "Loading lyrics...", "No
+//   lyrics found from any provider", or an instrumental notice appeared, the
+//   container could show that raw text AND the PiP notice at once (a stray
+//   text node wasn't hidden by the old child-hiding logic). Fix: new
+//   setLyricsStatusMessage() helper centralizes every status-text assignment;
+//   while PiP is active it stores the message and calls enterPipInLyrics
+//   Container() (which now also strips stray text nodes) instead of writing
+//   directly to the container. Every raw lyricsContainer.textContent = "..."
+//   call site across the file (loading states, provider errors, cache errors,
+//   "no lyrics found", manual provider selection, autodetect phases, track-
+//   change resets) was switched to this helper. The PiP canvas (drawPipFrame())
+//   now mirrors whatever status message the main container would show (via new
+//   currentLyricsStatusMessage variable) instead of a generic "Waiting for
+//   lyrics…" placeholder, including multi-line messages like the instrumental
+//   notice. currentLyricsStatusMessage is reset to null whenever real lyrics
+//   load or the track changes, so stale status text can't leak into a later
+//   PiP frame.
+//
+// • PIP: RENDER LOOP HARDENING + DIAGNOSTICS
+//   startPipRenderLoop()/stopPipRenderLoop() restructured: rendering pulled
+//   into a standalone drawPipFrame() function, plus a new setInterval fallback
+//   timer (pipFallbackTimer, every 500ms via PIP_FALLBACK_INTERVAL_MS) now also
+//   drives frame draws alongside the requestAnimationFrame loop, as a backstop
+//   in case rAF stalls while the tab isn't focused. Added diagnostic
+//   console.info logging in togglePip(), the enter/leave PiP event handlers,
+//   startPipRenderLoop(), stopPipRenderLoop(), and a throttled (every 2s) tick
+//   log inside drawPipFrame() showing playback position, active line index,
+//   and total line count. closePip() is now async and awaits
+//   document.exitPictureInPicture() instead of fire-and-forget .catch().
+//
+// • PIP TOGGLE BUTTON NOW MATCHES SPOTIFY'S NATIVE MINIPLAYER ICON
+//   Replaced the hand-drawn 24x24 rectangle-in-rectangle glyph with Spotify's
+//   actual "Open Miniplayer" SVG markup (viewBox corrected to 0 0 16 16).
+//   Added aria-label ("Open Miniplayer"/"Close Miniplayer"), aria-pressed, and
+//   data-active attributes, kept in sync by updatePipButtonState(). Removed
+//   the white ↔ #1db954 green color-swap that indicated active state - the
+//   icon now always stays white, matching Spotify's own default button
+//   styling; state is communicated only via ARIA/data attributes. Button
+//   background changed from 'none' to 'transparent'; shape changed from a 4px
+//   rounded square to a full circle (borderRadius: '50%') to match Spotify's
+//   icon-only tertiary buttons. Existing hover-dim behavior is unchanged.
+//
+// • SYNCED LYRICS CAN NOW FULLY CENTER NEAR THE END OF A SONG
+//   Added ensureLyricsBottomSpacer(), which appends/resizes an invisible
+//   spacer <div> (roughly half the container's height) after the last lyric
+//   line. Without it, scrollIntoView({block: "center"}) couldn't scroll far
+//   enough to center lines near the very end of the lyrics - there wasn't
+//   enough room below them - so the last few active lines sat below center
+//   instead of centered. Wired into highlightSyncedLyrics(): the spacer is
+//   created once and re-sized on every highlight tick so it stays correct if
+//   the popup is resized.
+//
+// • MINOR LOGIC TIGHTENING
+//   Re-showing the PiP notice after a lyrics update (updateLyricsContent,
+//   loadLyricsFromCache, etc.) is now gated on actually having synced/
+//   unsynced lyrics, rather than firing unconditionally whenever PiP happened
+//   to be active - avoiding redundant/incorrect notice re-entry when there's
+//   nothing to show yet.
+//   A handful of dead/commented-out old code blocks (an
+//   obsolete "OLD LOGIC: also trying backup servers on 404" block, an old
+//   nowPlayingViewBtn || micBtn fallback comment) were deleted outright.
+
+// RESOLVED (17.26.beta - merged to stable build of 17.26): CHINESE CONVERSION IS NOW ALSO REFLECTED IN THE PIP CANVAS
+// Had to also fix an issue which made the lyrics+ popup's lyrics container flash despite being
 // under the "This video is playing in Picture-in-Picture mode" overlay, upon applying chinese conversion to pip canvas.
 // rerenderLyrics() (Chinese conversion toggle): when PiP is active, the video element is kept
 // inside the lyrics container while the HTML lyric children are rebuilt silently behind it.
@@ -42,7 +123,7 @@
 // The canvas render loop reads the new text from the hidden DOM elements and the PiP window
 // reflects the conversion immediately — with no visual flash in the lyrics container.
 
-// RESOLVED (17.25.beta): FIX: PiP now remains open across song transitions by protecting lyricsContainer clears.  
+// RESOLVED (17.25.beta): FIX: PiP now remains open across song transitions by protecting lyricsContainer clears.
 
 // RESOLVED (17.24.beta): ADDED PICTURE-IN-PICTURE (PiP) MODE
 // • Toggle PiP button added to the Lyrics+ popup header button group.
@@ -412,6 +493,13 @@
   let pipIgnoreMediaControlEvent = false;
   let pipLastFrameAt = 0;
   let pipWindowResizeFallbackActive = false;
+  let pipFallbackTimer = null;
+  // Last non-lyrics status message shown in the lyrics container (e.g. "Loading
+  // lyrics...", "No lyrics found from any provider", instrumental-track notice).
+  // Mirrored into the PiP canvas by drawPipFrame() whenever there are no synced/
+  // unsynced lyrics to display yet, so the PiP window always reflects whatever the
+  // main container would be showing instead of a generic "Waiting for lyrics…".
+  let currentLyricsStatusMessage = null;
 
   // ------------------------
   // Constants & Configuration
@@ -448,15 +536,83 @@
   const PIP_CANVAS_MAX_SIZE = 1080;
   const PIP_FRAME_THROTTLE_MS = 33;
   const PIP_MEDIA_SYNC_GRACE_MS = 1200;
+  const PIP_FALLBACK_INTERVAL_MS = 500;
   const PIP_SAFARI_SHOW_LETTER_STYLE = 'position:absolute;left:calc(100% - 1px);bottom:calc(100% - 1px)';
+  const PIP_NOTICE_ID = 'lyrics-plus-pip-notice';
+  const LYRICS_BOTTOM_SPACER_ID = 'lyrics-plus-bottom-spacer';
+
+  /**
+   * Inserts a small placeholder message in the lyrics container while PiP is active,
+   * mirroring the browser's own "playing in Picture-in-Picture" overlay text, so the
+   * main container doesn't look blank/broken with the lyric lines hidden.
+   */
+  function ensurePipNoticeShown(lyricsContainer) {
+    if (!lyricsContainer) return;
+    if (lyricsContainer.querySelector(`#${PIP_NOTICE_ID}`)) return;
+    const notice = document.createElement('div');
+    notice.id = PIP_NOTICE_ID;
+    Object.assign(notice.style, {
+      color: 'rgba(255, 255, 255, 0.7)',
+      fontSize: '15px',
+      lineHeight: '1.5',
+      padding: '24px 12px',
+      textAlign: 'center',
+    });
+    notice.textContent = 'This video is playing in Picture-in-Picture mode';
+    lyricsContainer.appendChild(notice);
+  }
+
+  /**
+   * Sets a transient, non-lyrics status message (e.g. "Loading lyrics...", "No lyrics
+   * found from any provider", an instrumental-track notice) on the lyrics container.
+   *
+   * While PiP is active, the raw text is NOT written into the main container — it
+   * would otherwise sit right next to (or, after a prior textContent wipe, get
+   * orphaned alongside) the "This video is playing in Picture-in-Picture mode"
+   * notice, showing two messages at once. Instead the main container shows only the
+   * PiP notice, and the status text is stored so drawPipFrame() can mirror it inside
+   * the PiP window itself, where it belongs while no synced/unsynced lyrics exist yet.
+   */
+  function setLyricsStatusMessage(lyricsContainer, message) {
+    currentLyricsStatusMessage = message;
+    if (!lyricsContainer) return;
+    if (isPipActive || isPagePipActive) {
+      enterPipInLyricsContainer();
+    } else {
+      lyricsContainer.textContent = message;
+    }
+  }
+
+  /**
+   * Resolves once the video has enough data (readyState > HAVE_NOTHING) to be handed to
+   * requestPictureInPicture(). Needed because on the very first PiP toggle the canvas's
+   * captureStream() hasn't delivered a frame yet, so requestPictureInPicture() throws
+   * "Video readyState is HAVE_NOTHING".
+   */
+  function waitForPipVideoReady(video) {
+    return new Promise((resolve) => {
+      if (video.readyState >= 1) { // HAVE_METADATA or higher
+        resolve();
+        return;
+      }
+      const onReady = () => {
+        video.removeEventListener('loadedmetadata', onReady);
+        video.removeEventListener('canplay', onReady);
+        resolve();
+      };
+      video.addEventListener('loadedmetadata', onReady, { once: true });
+      video.addEventListener('canplay', onReady, { once: true });
+      setTimeout(resolve, 1000); // safety net
+    });
+  }
 
   // ------------------------
   // Lyrics Cache Module
   // ------------------------
   const LyricsCache = {
     // Safety limit for entry count (actual limit is typically 150-400 songs based on 6 MB size constraint)
-    CACHE_ENTRY_SAFETY_LIMIT: 1000,  // Generous safety limit; byte limit is primary constraint
-    MAX_BYTES: 6 * 1024 * 1024,  // Maximum cache size in bytes (6 MB) - PRIMARY LIMIT
+    CACHE_ENTRY_SAFETY_LIMIT: 1000, // Generous safety limit; byte limit is primary constraint
+    MAX_BYTES: 6 * 1024 * 1024, // Maximum cache size in bytes (6 MB) - PRIMARY LIMIT
 
     /**
      * Get all cached lyrics from localStorage
@@ -601,12 +757,18 @@
         if (data.metadata?.server) {
           const serverUrl = data.metadata.server;
           // Determine server label for KPoe servers
-          if (serverUrl.includes('lyricsplus.prjktla.workers.dev')) {
+          if (serverUrl.includes('lyricsplus.prjktla.my.id')) {
             serverInfo = 'Primary';
-          } else if (serverUrl.includes('lyricsplus-seven.vercel.app')) {
+          } else if (serverUrl.includes('lyricsplus.atomix.one')) {
             serverInfo = 'Backup 1';
-          } else if (serverUrl.includes('lyrics-plus-backend.vercel.app')) {
+          } else if (serverUrl.includes('lyricsplus.binimum.org')) {
             serverInfo = 'Backup 2';
+          } else if (serverUrl.includes('lyricsplus.prjktla.workers.dev')) {
+            serverInfo = 'Backup 3';
+          } else if (serverUrl.includes('lyricsplus-seven.vercel.app')) {
+            serverInfo = 'Backup 4';
+          } else if (serverUrl.includes('lyrics-plus-backend.vercel.app')) {
+            serverInfo = 'Backup 5';
           } else {
             // For other servers, show abbreviated URL
             serverInfo = serverUrl.replace(/^https?:\/\//, '').substring(0, 40);
@@ -630,7 +792,7 @@
       return {
         size: entries.length,
         safetyLimit: this.CACHE_ENTRY_SAFETY_LIMIT,
-        maxEntries: this.CACHE_ENTRY_SAFETY_LIMIT,  // Entry count safety limit (primary constraint is maxBytes)
+        maxEntries: this.CACHE_ENTRY_SAFETY_LIMIT, // Entry count safety limit (primary constraint is maxBytes)
         totalBytes: totalBytes,
         maxBytes: this.MAX_BYTES,
         totalKB: Math.round(totalBytes / 1024),
@@ -642,23 +804,23 @@
 
   // Context-to-emoji mapping for DEBUG wrapper labels
   const CONTEXT_EMOJI = {
-    Track:           '🎵', // music note
-    Cache:           '💾', // floppy disk
-    Provider:        '🔌', // electric plug
-    Autodetect:      '🔍', // magnifying glass
-    UI:              '💻', // laptop / UI
-    ResourceManager: '🔧', // wrench / resource management
-    OpenCC:          '🔤', // input symbol for latin letters
-    Button:          '🔘', // radio button
-    DOM:             '📄', // page facing up
-    Performance:     '⚡', // lightning / speed
-    Cleanup:         '🧹', // broom
-    Seekbar:         '⏩', // fast-forward
-    PopupResize:     '🔄', // arrows / resize
-    Translation:     '🌐', // globe with meridians
+    Track:           '🎵',
+    Cache:           '💾',
+    Provider:        '🔌',
+    Autodetect:      '🔍',
+    UI:              '💻',
+    ResourceManager: '🔧',
+    OpenCC:          '🔤',
+    Button:          '🔘',
+    DOM:             '📄',
+    Performance:     '⚡',
+    Cleanup:         '🧹',
+    Seekbar:         '⏩',
+    PopupResize:     '🔄',
+    Translation:     '🌐',
   };
 
-    // ------------------------
+  // ------------------------
   // Debug Logging Infrastructure
   // ------------------------
   const DEBUG = {
@@ -826,7 +988,7 @@
     }
   };
 
-  // ------------------------
+// ------------------------
   // Pre-initialized OpenCC converters (created once at startup)
   // ------------------------
   // Using the full.js bundle, we initialize converters at startup to avoid
@@ -1011,8 +1173,8 @@
         else if (changedToSimplified && changedToTraditional) {
           return asSimplified.length < str.length ? 'traditional' : 'simplified';
         }
-        // If neither changes, characters are common to both - assume simplified
         else {
+          // If neither changes, characters are common to both - assume simplified
           return 'simplified';
         }
       } catch (e) {
@@ -1037,7 +1199,7 @@
         // Only attempt if not already initialized (prevents race conditions)
         if (!openccInitialized && typeof OpenCC !== 'undefined' && OpenCC.Converter) {
           const converter = OpenCC.Converter({ from: 't', to: 'cn' });
-          openccT2CN = converter; // Cache for future use
+          openccT2CN = converter;
           return converter(str);
         }
         // Converter not available, return original
@@ -1061,7 +1223,7 @@
         // Only attempt if not already initialized (prevents race conditions)
         if (!openccInitialized && typeof OpenCC !== 'undefined' && OpenCC.Converter) {
           const converter = OpenCC.Converter({ from: 'cn', to: 't' });
-          openccCN2T = converter; // Cache for future use
+          openccCN2T = converter;
           return converter(str);
         }
         // Converter not available, return original
@@ -1135,7 +1297,6 @@
     let artist = makeSafeFilename(trackInfo?.artist || "unknown");
     let filename = `${artist} - ${title}.lrc`;
 
-
     // Try application/octet-stream for better compatibility (helps detect as .lrc in mobile browser)
     let blob = new Blob([lines], { type: "application/octet-stream" });
 
@@ -1147,7 +1308,7 @@
     document.body.removeChild(a);
   }
 
-  // --- Download Unsynced Lyrics as TXT ---
+   // --- Download Unsynced Lyrics as TXT ---
   function downloadUnsyncedLyrics(unsyncedLyrics, trackInfo, providerName) {
     if (!unsyncedLyrics || !unsyncedLyrics.length) return;
     let lines = unsyncedLyrics.map(line => line.text).join('\n');
@@ -1452,7 +1613,7 @@
     pipResizeRafPending = false;
   }
 
-  /**
+    /**
    * Gets the displayed text and sub-lines (transliteration / translation) for a given
    * lyric line index. Reads from the live DOM so Chinese conversion and other visual
    * changes are always reflected in the PiP canvas.
@@ -1523,79 +1684,81 @@
   }
 
   /**
-   * Inserts pipVideo into the lyrics container and hides its HTML children.
-   * The native browser renders "playing in picture-in-picture" on the video element
-   * in the main page; the PiP window shows the canvas-rendered lyrics.
+   * Visually hides the HTML lyric children so the placeholder notice is what's seen in the lyrics container area.
+   *
+   * IMPORTANT: pipVideo must NOT be moved/reparented here. Moving the video node
+   * after requestPictureInPicture() causes the browser to immediately fire
+   * leavepictureinpicture, killing the session. We leave pipVideo in document.body
+   * and just hide the lyric children so the container looks empty, then show a notice.
    */
   function enterPipInLyricsContainer() {
     const lyricsContainer = document.getElementById('lyrics-plus-content');
-    if (!lyricsContainer || !pipVideo) return;
-    // Save and hide existing children so they are not visible behind the video
+    if (!lyricsContainer) return;
+    // Strip any stray text nodes (e.g. "Loading lyrics...", or other raw status text
+    // left over from a plain textContent assignment). Only real lyric <p> elements
+    // should be preserved/hidden below; loose text would otherwise sit right next to
+    // the PiP notice and look like a duplicated message.
+    Array.from(lyricsContainer.childNodes).forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) node.remove();
+    });
     const savedChildren = Array.from(lyricsContainer.children).map(el => ({
       el,
       display: el.style.display,
     }));
     lyricsContainer._pipSavedChildren = savedChildren;
     savedChildren.forEach(({ el }) => { el.style.display = 'none'; });
-    // Make container a positioning context and fill it with the video
-    lyricsContainer.style.position = 'relative';
-    Object.assign(pipVideo.style, {
-      position: 'absolute',
-      top: '0',
-      left: '0',
-      width: '100%',
-      height: '100%',
-      opacity: '1',
-      pointerEvents: 'auto',
-      zIndex: '1',
-      backgroundColor: 'transparent',
-    });
-    lyricsContainer.insertBefore(pipVideo, lyricsContainer.firstChild);
+    lyricsContainer.setAttribute('data-pip-active', 'true');
+    ensurePipNoticeShown(lyricsContainer);
   }
 
   /**
-   * Removes pipVideo from the lyrics container and restores the HTML lyric children.
-   * Falls back gracefully if the container is already gone (popup was closed).
+   * Restores the HTML lyric children hidden by enterPipInLyricsContainer().
+   * pipVideo stays in document.body throughout — we never moved it.
    */
   function exitPipFromLyricsContainer() {
     const lyricsContainer = document.getElementById('lyrics-plus-content');
-    if (lyricsContainer && pipVideo && pipVideo.parentElement === lyricsContainer) {
-      lyricsContainer.removeChild(pipVideo);
-      lyricsContainer.style.position = '';
+    if (lyricsContainer) {
+      lyricsContainer.removeAttribute('data-pip-active');
+      const notice = lyricsContainer.querySelector(`#${PIP_NOTICE_ID}`);
+      if (notice) notice.remove(); // NEW in 17.28
       if (lyricsContainer._pipSavedChildren) {
         lyricsContainer._pipSavedChildren.forEach(({ el, display }) => {
           el.style.display = display;
         });
         delete lyricsContainer._pipSavedChildren;
       }
-    } else if (pipVideo && pipVideo.parentElement) {
-      pipVideo.parentElement.removeChild(pipVideo);
+      // If PiP was hiding a non-lyrics status message (e.g. "Loading lyrics...", "No
+      // lyrics found from any provider") rather than real lyric lines, there's no
+      // saved <p> element to restore above — put the status text back now that the
+      // PiP notice is gone, so the main container doesn't end up blank.
+      if (currentLyricsStatusMessage && !currentSyncedLyrics && !currentUnsyncedLyrics) {
+        lyricsContainer.textContent = currentLyricsStatusMessage;
+      }
     }
     applyHiddenPipVideoStyle();
     if (document.body && pipVideo && !pipVideo.parentNode) document.body.appendChild(pipVideo);
   }
 
   /**
-   * Safely detaches pipVideo from lyricsContainer before any innerHTML/textContent wipe,
-   * keeping it in document.body so native PiP stays open during the mutation.
-   * Call this immediately before clearing lyricsContainer when PiP is active.
-   * Re-insert with enterPipInLyricsContainer() after the container is rebuilt.
+   * No-op guard kept for call-site compatibility.
+   * pipVideo is never reparented into lyricsContainer in the new approach,
+   * so there is nothing to detach before innerHTML/textContent wipes.
    */
   function pipVideoDetachIfInContainer() {
-    if (!(isPipActive || isPagePipActive) || !pipVideo) return;
-    const lyricsContainer = document.getElementById('lyrics-plus-content');
-    if (lyricsContainer && pipVideo.parentElement === lyricsContainer) {
-      lyricsContainer.removeChild(pipVideo);
-      delete lyricsContainer._pipSavedChildren;
-      if (!pipVideo.parentNode) document.body.appendChild(pipVideo);
-    }
+    // pipVideo stays in document.body for the entire PiP session lifetime.
+    // Nothing to do here.
   }
 
   /**
    * Creates the hidden <canvas> and <video> elements used by the PiP feature.
-   * Must be called once before requestPictureInPicture().
+   * Must be called (and awaited) once before requestPictureInPicture().
+   * With version 17.27: this is now async and awaits waitForPipVideoReady() before returning,
+   * so the video has actually received a frame (readyState >= HAVE_METADATA) by the time
+   * togglePip() calls requestPictureInPicture(). Without this, the very first toggle could
+   * throw "Video readyState is HAVE_NOTHING" because captureStream() hadn't delivered a
+   * frame yet. On later toggles this resolves instantly since pipVideo already exists.
    */
-  function initPipElements() {
+  async function initPipElements() {
     if (pipVideo) return;
 
     pipCanvas = document.createElement('canvas');
@@ -1622,10 +1785,14 @@
     setupPipResizeTracking();
     updatePipCanvasSize();
 
-    // Draw a tiny initial pixel to prime the MediaStream before requestPictureInPicture
     pipCtx.fillRect(0, 0, 1, 1);
     pipVideo.srcObject = pipCanvas.captureStream(30);
-    pipVideo.play().catch(() => {});
+    try { await pipVideo.play(); } catch {}
+
+    // Wait for the stream to actually deliver metadata/a frame before this
+    // function resolves, so requestPictureInPicture() won't be called on a video that isn't
+    // ready yet.
+    await waitForPipVideoReady(pipVideo);
 
     pipVideo.addEventListener('enterpictureinpicture', () => {
       isPipActive = true;
@@ -1633,7 +1800,7 @@
       enterPipInLyricsContainer();
       syncPipMediaStateFromSpotify();
       startPipRenderLoop();
-      console.info('📺 [Lyrics+ PiP] Picture-in-Picture window opened');
+      console.info('📺 [Lyrics+ PiP] Picture-in-Picture window opened (isPipActive=%s isPagePipActive=%s)', isPipActive, isPagePipActive);
     });
 
     pipVideo.addEventListener('leavepictureinpicture', () => {
@@ -1642,10 +1809,10 @@
       updatePipButtonState(false);
       stopPipRenderLoop();
       exitPipFromLyricsContainer();
-      console.info('📺 [Lyrics+ PiP] Picture-in-Picture window closed');
+      console.info('📺 [Lyrics+ PiP] Picture-in-Picture window closed (isPipActive=%s isPagePipActive=%s)', isPipActive, isPagePipActive);
     });
 
-    // Safari/WebKit: uses webkitpresentationmodechanged instead of PiP events
+    // Safari/WebKit: uses webkitpresentationmodechanged instead of PiP events (need to test later)
     pipVideo.addEventListener('webkitpresentationmodechanged', () => {
       const mode = typeof pipVideo.webkitPresentationMode === 'string'
         ? pipVideo.webkitPresentationMode : 'inline';
@@ -1669,21 +1836,12 @@
     pipVideo.addEventListener('volumechange', handlePipVideoVolumeChange);
   }
 
-  /**
-   * Renders lyrics to the PiP canvas in a requestAnimationFrame loop.
-   * Active line = Spotify green (#1db954), context lines = white/faded.
-   * Transliteration / translation sub-lines use their own colour codes.
-   * AMOLED theme, font size, and all lyric display settings are respected.
-   */
-  function startPipRenderLoop() {
-    const render = () => {
-      if (!isPipActive && !isPagePipActive) return;
-      const now = performance.now();
-      if (now - pipLastFrameAt < PIP_FRAME_THROTTLE_MS) {
-        pipAnimationFrame = requestAnimationFrame(render);
+  let pipLastDebugLogAt = 0;
+  function drawPipFrame() {
+      if (!pipCtx || !pipCanvas || !pipVideo) {
+        console.warn('📺 [Lyrics+ PiP] drawPipFrame: bailing out, missing pipCtx/pipCanvas/pipVideo', { pipCtx: !!pipCtx, pipCanvas: !!pipCanvas, pipVideo: !!pipVideo });
         return;
       }
-      pipLastFrameAt = now;
       updatePipCanvasSize();
 
       const w = pipCanvas.width;
@@ -1718,6 +1876,12 @@
         for (let i = 0; i < currentSyncedLyrics.length; i++) {
           if (anticipatedMs >= (currentSyncedLyrics[i].time ?? currentSyncedLyrics[i].startTime)) activeIndex = i;
           else break;
+        }
+
+        if (performance.now() - pipLastDebugLogAt > 2000) {
+          pipLastDebugLogAt = performance.now();
+          console.info('📺 [Lyrics+ PiP] drawPipFrame tick: posElFound=%s posText=%s curPosMs=%s activeIndex=%s of %s',
+            !!posEl, posEl ? posEl.textContent : null, curPosMs, activeIndex, currentSyncedLyrics.length);
         }
 
         if (activeIndex !== -1) {
@@ -1784,7 +1948,6 @@
           });
         }
       } else if (currentUnsyncedLyrics && currentUnsyncedLyrics.length > 0) {
-        // Unsynced lyrics: PiP window cannot scroll, so guide user to the popup
         pipCtx.font = `bold ${activeFontSize}px sans-serif`;
         pipCtx.fillStyle = 'white';
         pipCtx.fillText('Unsynced Lyrics', centerX, centerY - Math.round(activeFontSize * 1.2), textMaxWidth);
@@ -1792,44 +1955,92 @@
         pipCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         pipCtx.fillText('View full lyrics in the Lyrics+ popup', centerX, centerY + Math.round(activeFontSize * 0.2), textMaxWidth);
       } else {
+        // Mirror whatever status message the main container would be
+        // showing (e.g. "Loading lyrics...", "No lyrics found from any provider",
+        // an instrumental-track notice), so the PiP window always reflects the
+        // real state rather than just "waiting".
+        // Split on newlines since some status messages (e.g. the instrumental
+        // notice) span multiple lines.
+        const statusText = currentLyricsStatusMessage || 'Waiting for lyrics\u2026';
+        const statusLines = statusText.split('\n').filter(Boolean);
         pipCtx.font = `bold ${activeFontSize}px sans-serif`;
-        pipCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        pipCtx.fillText('Waiting for lyrics\u2026', centerX, centerY, textMaxWidth);
+        // Opaque gray (#b3b3b3 ≈ white at 70% alpha) instead of rgba(255,255,255,0.7):
+        // keeps the same dimmed, grayish tone as before, but avoids the soft/blurry
+        // anti-aliased edges that come from actually blending a transparent fill
+        // over the dark background.
+        pipCtx.fillStyle = '#b3b3b3';
+        const statusLineHeight = Math.round(activeFontSize * 1.3);
+        const statusTotalHeight = statusLines.length * statusLineHeight;
+        let statusY = Math.round(centerY - (statusTotalHeight / 2));
+        statusLines.forEach(line => {
+          pipCtx.fillText(line, centerX, statusY, textMaxWidth);
+          statusY += statusLineHeight;
+        });
       }
+  }
 
-      pipAnimationFrame = requestAnimationFrame(render);
+    /**
+   * Renders lyrics to the PiP canvas in a requestAnimationFrame loop.
+   * Active line = Spotify green (#1db954), context lines = white/faded.
+   * Transliteration / translation sub-lines use their own colour codes.
+   * AMOLED theme, font size, and all lyric display settings are respected.
+   */
+  function startPipRenderLoop() {
+    console.info('📺 [Lyrics+ PiP] startPipRenderLoop called');
+    const rafTick = () => {
+      if (!isPipActive && !isPagePipActive) return;
+      const now = performance.now();
+      if (now - pipLastFrameAt >= PIP_FRAME_THROTTLE_MS) {
+        pipLastFrameAt = now;
+        drawPipFrame();
+      }
+      pipAnimationFrame = requestAnimationFrame(rafTick);
     };
+
     pipLastFrameAt = 0;
-    render();
+    pipAnimationFrame = requestAnimationFrame(rafTick);
+
+    if (pipFallbackTimer) clearInterval(pipFallbackTimer);
+    pipFallbackTimer = setInterval(() => {
+      if (!isPipActive && !isPagePipActive) {
+        clearInterval(pipFallbackTimer);
+        pipFallbackTimer = null;
+        return;
+      }
+      pipLastFrameAt = performance.now();
+      drawPipFrame();
+    }, PIP_FALLBACK_INTERVAL_MS);
+
+    drawPipFrame();
   }
 
   function stopPipRenderLoop() {
+    console.info('📺 [Lyrics+ PiP] stopPipRenderLoop called');
     if (pipAnimationFrame) {
       cancelAnimationFrame(pipAnimationFrame);
       pipAnimationFrame = null;
     }
+    if (pipFallbackTimer) {
+      clearInterval(pipFallbackTimer);
+      pipFallbackTimer = null;
+    }
     pipLastFrameAt = 0;
   }
 
-  /**
-   * Updates the PiP toggle button colour to reflect current PiP state.
-   * @param {boolean} active
-   */
   function updatePipButtonState(active) {
     const btn = document.getElementById('lyrics-plus-pip-btn');
-    if (btn) btn.style.color = active ? '#1db954' : 'white';
+    if (!btn) return;
+    btn.style.color = 'white';
+    btn.setAttribute('aria-pressed', String(active));
+    btn.setAttribute('data-active', String(active));
+    btn.setAttribute('aria-label', active ? 'Close Miniplayer' : 'Open Miniplayer');
   }
 
-  /**
-   * Closes PiP if it is currently active.
-   * Called by removePopup() so that closing the popup also closes the PiP window.
-   */
-  function closePip() {
+  async function closePip() {
     if (!isPipActive && !isPagePipActive) return;
     if (pipVideo && document.pictureInPictureElement === pipVideo &&
         typeof document.exitPictureInPicture === 'function') {
-      // Native PiP: leavepictureinpicture event will handle cleanup
-      document.exitPictureInPicture().catch(() => {});
+      try { await document.exitPictureInPicture(); } catch {}
       return;
     }
     if (pipVideo &&
@@ -1851,31 +2062,23 @@
   /**
    * Toggles Picture-in-Picture mode. Creates video/canvas elements on first call.
    * Browser priority: native requestPictureInPicture → WebKit PiP → page PiP fallback.
+   *
+   * With version 17.28: awaits initPipElements() so the video is confirmed ready
+   * (readyState >= HAVE_METADATA) before requestPictureInPicture() is called, fixing the
+   * "Video readyState is HAVE_NOTHING" error on the very first toggle.
    */
   async function togglePip() {
-    initPipElements();
+    console.info('📺 [Lyrics+ PiP] togglePip clicked. isPipActive=%s isPagePipActive=%s pictureInPictureElement===pipVideo=%s',
+      isPipActive, isPagePipActive, pipVideo && document.pictureInPictureElement === pipVideo);
+    if (isPipActive || isPagePipActive) {
+      console.info('📺 [Lyrics+ PiP] togglePip: closing (state flags say active)');
+      await closePip();
+      return;
+    }
+
+    console.info('📺 [Lyrics+ PiP] togglePip: opening (state flags say inactive)');
+    await initPipElements();
     try {
-      const inNativePip = pipVideo && document.pictureInPictureElement === pipVideo;
-      const inWebkitPip =
-        pipVideo &&
-        typeof pipVideo.webkitPresentationMode === 'string' &&
-        pipVideo.webkitPresentationMode === 'picture-in-picture';
-
-      // --- Close ---
-      if (inNativePip && typeof document.exitPictureInPicture === 'function') {
-        await document.exitPictureInPicture();
-        return;
-      }
-      if (inWebkitPip && typeof pipVideo.webkitSetPresentationMode === 'function') {
-        pipVideo.webkitSetPresentationMode('inline');
-        return;
-      }
-      if (isPagePipActive) {
-        pipVideo.dispatchEvent(new CustomEvent('leavepictureinpicture'));
-        return;
-      }
-
-      // --- Open ---
       if (typeof pipVideo.requestPictureInPicture === 'function') {
         if (isSafariBrowser() && document.body) {
           Object.assign(pipVideo.style, { position: 'absolute', left: 'calc(100% - 1px)', bottom: 'calc(100% - 1px)' });
@@ -1890,12 +2093,36 @@
         pipVideo.webkitSetPresentationMode('picture-in-picture');
         return;
       }
-      // Page PiP fallback: overlay video on lyrics container
       isPagePipActive = true;
       pipVideo.dispatchEvent(new CustomEvent('enterpictureinpicture'));
     } catch (err) {
       console.error('[Lyrics+] PiP error:', err);
     }
+  }
+
+  /**
+   * Appends (or resizes) a trailing spacer element after the last synced lyric line,
+   * roughly half the container's visible height. Without this, scrollIntoView({block:
+   * "center"}) can't fully center lines near the end of the song: there's not enough
+   * scrollable space below them, so the browser clamps the scroll position and the
+   * final active lines end up sitting below center instead of centered — unlike the
+   * PiP canvas, which draws the active line centered directly and isn't limited by
+   * how much content there is to scroll. (NEW in 17.29)
+   */
+  function ensureLyricsBottomSpacer(container) {
+    if (!container) return;
+    const desiredHeight = Math.max(0, Math.round((container.clientHeight || 0) / 2));
+    let spacer = container.querySelector(`#${LYRICS_BOTTOM_SPACER_ID}`);
+    if (!spacer) {
+      spacer = document.createElement('div');
+      spacer.id = LYRICS_BOTTOM_SPACER_ID;
+      spacer.setAttribute('aria-hidden', 'true');
+      spacer.style.pointerEvents = 'none';
+      container.appendChild(spacer);
+    } else if (spacer !== container.lastElementChild) {
+      container.appendChild(spacer); // keep it as the last child after re-renders
+    }
+    spacer.style.height = `${desiredHeight}px`;
   }
 
   function highlightSyncedLyrics(lyrics, container) {
@@ -1906,9 +2133,11 @@
       clearInterval(highlightTimer);
       highlightTimer = null;
     }
+    ensureLyricsBottomSpacer(container);
     highlightTimer = setInterval(() => {
       // Skip all style/size changes while popup is being resized
       if (window.lyricsPlusPopupIsResizing) return;
+      ensureLyricsBottomSpacer(container); // keep spacer sized to container as it resizes
 
       const posEl = document.querySelector('[data-testid="playback-position"]');
       const isPlaying = isSpotifyPlaying();
@@ -1917,7 +2146,7 @@
         if (isPlaying) {
           container.style.overflowY = "auto";
           container.style.pointerEvents = "none";
-          container.style.scrollbarWidth = "none"; // Firefox
+          container.style.scrollbarWidth = "none";  // Firefox
           container.style.msOverflowStyle = "none"; // IE 10+
           container.classList.add('hide-scrollbar');
         } else {
@@ -1976,8 +2205,8 @@
           // Highlight transliteration line with same green as highlighted lyric
           const nextEl = p.nextElementSibling;
           if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
-            nextEl.style.color = "#1db954";  // Same green as highlighted lyric
-            nextEl.style.fontWeight = "700";  // Bold like highlighted lyric
+            nextEl.style.color = "#1db954"; // Same green as highlighted lyric
+            nextEl.style.fontWeight = "700"; // Bold like highlighted lyric
             nextEl.style.filter = "none";
             nextEl.style.opacity = "1";
           }
@@ -2094,7 +2323,7 @@
   pauseSmallSVG.innerHTML = `<path d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7z"/>`;
 
   // --- Language-universal play/pause root words for major Spotify UI languages (Aids Play/Pause button detection to reflect playback state inside gui)---
-  const PAUSE_WORDS = [
+    const PAUSE_WORDS = [
   // English
   "pause",
   // Spanish, Italian, Portuguese, Galician, Filipino
@@ -2228,7 +2457,6 @@ const PLAY_WORDS = [
     if (!svg) return null;
 
     const clonedSvg = svg.cloneNode(true);
-    // Normalize size for consistent display in our popup
     clonedSvg.setAttribute('width', String(width));
     clonedSvg.setAttribute('height', String(height));
     clonedSvg.style.setProperty('--encore-icon-width', `${width}px`);
@@ -2267,7 +2495,7 @@ const PLAY_WORDS = [
     return totalPathLength > 150 && totalPathLength < 1000;
   }
 
-  /**
+   /**
    * Parses an RGB color string and checks if it represents Spotify green.
    * @param {string} colorStr - CSS color string (e.g., "rgb(30, 185, 84)")
    * @returns {boolean} True if the color is Spotify green
@@ -2283,7 +2511,7 @@ const PLAY_WORDS = [
            g > b * SPOTIFY_GREEN_RATIO_THRESHOLD;
   }
 
-  /**
+   /**
    * Finds the currently visible Spotify shuffle button.
    * The shuffle button doesn't have a data-testid, so we find it by looking at the
    * playback controls and finding a button with shuffle-like SVG structure.
@@ -2304,7 +2532,7 @@ const PLAY_WORDS = [
      * @returns {boolean} True if button appears to be shuffle button
      */
     function isShuffleButtonCandidate(btn) {
-      if (btn.offsetParent === null) return false; // Skip invisible buttons
+      if (btn.offsetParent === null) return false;
       const testId = btn.getAttribute('data-testid');
       if (knownTestIds.includes(testId)) return false;
       const svg = btn.querySelector('svg');
@@ -2405,7 +2633,7 @@ const PLAY_WORDS = [
     return false;
   }
 
-  /**
+   /**
    * Detects shuffle state based on visual indicators (language-independent).
    * Uses computed color to determine active state and SVG path count to detect smart shuffle.
    * @param {HTMLElement} shuffleBtn - The Spotify shuffle button
@@ -2461,15 +2689,13 @@ const PLAY_WORDS = [
     return 'off';
   }
 
-  // --- Global Button Update Functions ---
+  // --- Global Button Update Functions (new button-based detection, language-independent) ---
   function getShuffleState() {
-    // Use the new button-based detection (language-independent)
     const shuffleBtn = findSpotifyShuffleButton();
     return getShuffleStateFromButton(shuffleBtn);
   }
 
   function getRepeatState() {
-    // Use the new button-based detection (language-independent)
     const repeatBtn = findSpotifyRepeatButton();
     return getRepeatStateFromButton(repeatBtn);
   }
@@ -2590,7 +2816,6 @@ const PLAY_WORDS = [
   // Providers and Fetchers
   // ------------------------
 
-  // --- LRCLIB ---
   async function fetchLRCLibLyrics(songInfo, tryWithoutAlbum = false, lyricsType = 'auto') {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`[LRCLIB Debug] Starting lyrics search (synced preferred)`);
@@ -2629,7 +2854,7 @@ const PLAY_WORDS = [
     const response = await fetch(url, {
       cache: 'no-store',
       headers: {
-        // This header is okay to send — doesn’t break anything
+        // This header is okay to send — should not break anything
         "x-user-agent": "lyrics-plus-script"
       }
     });
@@ -2694,12 +2919,15 @@ const PLAY_WORDS = [
     }
   };
 
-   // --- KPoe ---
+  // --- KPoe ---
   // KPoe server configuration with fallback support
   const KPOE_SERVERS = [
-    "https://lyricsplus.prjktla.workers.dev",     // Primary server
-    "https://lyricsplus-seven.vercel.app",        // Backup 1
-    "https://lyrics-plus-backend.vercel.app"      // Backup 2
+    "https://lyricsplus.prjktla.my.id",       // Primary server (youly's server)
+    "https://lyricsplus.atomix.one/",         // Backup 1 (meow's mirror)
+    "https://lyricsplus.binimum.org",         // Backup 2 (binimum's server)
+    "https://lyricsplus.prjktla.workers.dev", // Backup 3 (ibra's cf worker)
+    "https://lyricsplus-seven.vercel.app",    // Backup 4 (jigen's mirror)
+    "https://lyrics-plus-backend.vercel.app"  // Backup 5 (ibra's vercel)
   ];
 
   async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0, lyricsType = 'auto') {
@@ -2765,7 +2993,6 @@ const PLAY_WORDS = [
           console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
           // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
           return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType);
-
 
    /*   A 404 response (Track not found on server) returns null immediately instead of trying backup servers
         (backup servers use the same upstream data source so trying them after a 404 is pointless)
@@ -3216,11 +3443,11 @@ btnSave.className = "lyrics-btn";
 btnSave.onclick = () => {
   localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
   modal.remove();
-   // Optionally: reload lyrics if popup open and provider is Musixmatch
+  // Optionally: reload lyrics if popup open and provider is Musixmatch
   const popup = document.getElementById("lyrics-plus-popup");
   if (popup && Providers.current === "Musixmatch") {
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-    if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+    if (lyricsContainer) setLyricsStatusMessage(lyricsContainer, "Loading lyrics...");
     updateLyricsContent(popup, getCurrentTrackInfo());
   }
 };
@@ -3457,7 +3684,7 @@ return data;
   getSynced: musixmatchGetSynced,
 };
 
-  // --- Genius ---
+// --- Genius ---
 async function fetchGeniusLyrics(info, lyricsType = 'auto') {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`[Genius Debug] Starting lyrics search (unsynced only)`);
@@ -3520,7 +3747,7 @@ async function fetchGeniusLyrics(info, lyricsType = 'auto') {
       .map(normalize);
   }
 
-  /**
+    /**
    * Check if one artist name contains another (fuzzy matching).
    * Helps match "Swisher" with "Swisher ROU" even if normalization missed something.
    * @param {string} artistA - First artist name (normalized)
@@ -3542,7 +3769,7 @@ async function fetchGeniusLyrics(info, lyricsType = 'auto') {
     return false;
   }
 
-  /**
+    /**
    * Calculate artist overlap with fuzzy matching support.
    * Tracks both exact and fuzzy matches to weight them differently in scoring.
    * @param {Set<string>} targetArtists - Artists from Spotify track
@@ -3584,7 +3811,6 @@ async function fetchGeniusLyrics(info, lyricsType = 'auto') {
   // Covers single words and phrases (bonus track, deluxe edition, etc.)
   return /\b(remix|deluxe|version|edit|live|explicit|remastered|bonus track|bonus|edition|expanded|special edition)\b/i.test(title);
 }
-
   // Scoring constants for artist matching
   const SCORE_PERFECT_MATCH = 10;        // All artists matched
   const SCORE_EXACT_BONUS = 2;           // Bonus when all matches are exact (not fuzzy)
@@ -4085,12 +4311,10 @@ const ProviderGenius = {
 };
 
   // --- Spotify ---
-
   function showSpotifyTokenModal() {
   // Remove any existing modal
   const old = document.getElementById("lyrics-plus-spotify-modal");
   if (old) old.remove();
-
   // Inject style for the modal, only once
   if (!document.getElementById("lyrics-plus-spotify-modal-style")) {
     const style = document.createElement("style");
@@ -4241,11 +4465,11 @@ const ProviderGenius = {
     const tokenValue = rawValue.startsWith(bearerPrefix) ? rawValue.slice(bearerPrefix.length) : rawValue;
     localStorage.setItem("lyricsPlusSpotifyToken", tokenValue);
     modal.remove();
-    // Optionally: reload lyrics if popup open and provider is Spotify
+  // Optionally: reload lyrics if popup open and provider is Spotify
   const popup = document.getElementById("lyrics-plus-popup");
   if (popup && Providers.current === "Spotify") {
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-    if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+    if (lyricsContainer) setLyricsStatusMessage(lyricsContainer, "Loading lyrics...");
     updateLyricsContent(popup, getCurrentTrackInfo());
   }
 };
@@ -4381,7 +4605,7 @@ getUnsynced(data) {
 },
 };
 
-  // --- Providers List ---
+// --- Providers List ---
 const Providers = {
   list: ["LRCLIB", "Spotify", "KPoe", "Musixmatch", "Genius"],
   map: {
@@ -5159,14 +5383,17 @@ const Providers = {
     const pipToggleBtn = document.createElement("button");
     pipToggleBtn.id = "lyrics-plus-pip-btn";
     pipToggleBtn.title = "Toggle Picture-in-Picture";
-    pipToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display:block"><path d="M19 7h-8v6h8V7zm2-4H3C1.9 3 1 3.9 1 5v14c0 1.1.9 1.9 2 1.9h18c1.1 0 2-.8 2-1.9V5c0-1.1-.9-2-2-2zm0 16.1H3V4.9h18v14.2z"/></svg>`;
+    pipToggleBtn.setAttribute('aria-label', 'Open Miniplayer');
+    pipToggleBtn.setAttribute('aria-pressed', 'false');
+    pipToggleBtn.setAttribute('data-active', 'false');
+    pipToggleBtn.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" style="display:block"><path d="M16 2.45c0-.8-.65-1.45-1.45-1.45H1.45C.65 1 0 1.65 0 2.45v11.1C0 14.35.65 15 1.45 15h5.557v-1.5H1.5v-11h13V7H16z"></path><path d="M15.25 9.007a.75.75 0 0 1 .75.75v4.493a.75.75 0 0 1-.75.75H9.325a.75.75 0 0 1-.75-.75V9.757a.75.75 0 0 1 .75-.75z"></path></svg>`;
     Object.assign(pipToggleBtn.style, {
-      background: 'none',
+      background: 'transparent',
       border: 'none',
       cursor: 'pointer',
       color: 'white',
       padding: '4px',
-      borderRadius: '4px',
+      borderRadius: '50%',
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -5430,7 +5657,6 @@ const Providers = {
         console.info("🔤 [Lyrics+ UI] Transliteration button clicked: SHOWN");
       }
     };
-
 
     // Offset Settings UI
     const offsetWrapper = document.createElement("div");
@@ -6375,13 +6601,13 @@ const Providers = {
       el._dragHandlers = { onDragMouseMove, onDragTouchMove, onDragMouseUp, onDragTouchEnd };
     })(popup, headerWrapper);
 
-    // Create a larger invisible hit area
+    // Create an invisible hit area
     const resizerHitArea = document.createElement("div");
     Object.assign(resizerHitArea.style, {
       position: "absolute",
       right: "0px",
       bottom: "0px",
-      width: "48px", // much larger for finger touch
+      width: "48px", // a bit larger, for finger touch
       height: "48px",
       zIndex: 19, // just below visible resizer
       background: "transparent",
@@ -6443,8 +6669,8 @@ const Providers = {
         let newWidth = startWidth + dx;
         let newHeight = startHeight + dy;
 
-        const minWidth = 360; // match your minWidth style
-        const minHeight = 240; // match your minHeight style
+        const minWidth = 360; // match the minWidth style
+        const minHeight = 240; // match the minHeight style
         const maxWidth = window.innerWidth - el.offsetLeft;
         const maxHeight = window.innerHeight - el.offsetTop;
 
@@ -6510,7 +6736,7 @@ const Providers = {
     if (info) {
       currentTrackId = info.id;
       const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-      if (lyricsContainer) lyricsContainer.textContent = "Loading lyrics...";
+      if (lyricsContainer) setLyricsStatusMessage(lyricsContainer, "Loading lyrics...");
       autodetectProviderAndLoad(popup, info);
     }
 
@@ -6576,7 +6802,7 @@ const Providers = {
       }
     }
 
-    /**
+     /**
      * readSpotifyProgressBarPercent()
      * Parses the --progress-bar-transform CSS variable from [data-testid="progress-bar"]
      * to get the current playback progress as a percentage (0-100).
@@ -6789,7 +7015,7 @@ const Providers = {
       return ms;
     }
 
-    /**
+     /**
      * seekTo(ms)
      * Attempts to seek Spotify's playback to the specified position in milliseconds.
      * Fallback order:
@@ -6933,7 +7159,7 @@ const Providers = {
                   // Pointer events failed, continue to mouse events
                 }
 
-                // Also try mouse events as fallback
+                 // Also try mouse events as fallback
                 const mouseDownEvent = new MouseEvent('mousedown', {
                   bubbles: true, cancelable: true,
                   clientX, clientY, button: 0
@@ -7102,13 +7328,12 @@ const Providers = {
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
     if (!lyricsContainer) return;
 
-    // If no cached lyrics, nothing to re-render
     if (!currentSyncedLyrics && !currentUnsyncedLyrics) return;
+    currentLyricsStatusMessage = null;
 
     const chineseConvBtn = popup._chineseConvBtn;
     const shouldConvertChinese = isChineseConversionEnabled();
 
-    // Update button text based on conversion state
     if (chineseConvBtn && popup._updateChineseConvBtnText) {
       popup._updateChineseConvBtnText();
     }
@@ -7130,19 +7355,8 @@ const Providers = {
     transliterationPresent = false;
     lastTranslatedLang = null;
 
-    // When PiP is active the video element covers the lyrics container. Rebuild the
-    // hidden lyric children in-place without ever removing pipVideo — this prevents the
-    // container from being briefly uncovered (no visual flash behind the PiP overlay).
-    const pipIsInContainer = (isPipActive || isPagePipActive) &&
-      pipVideo && pipVideo.parentElement === lyricsContainer;
-    if (pipIsInContainer) {
-      // Remove all children except pipVideo (they are already display:none)
-      Array.from(lyricsContainer.children).forEach(child => {
-        if (child !== pipVideo) lyricsContainer.removeChild(child);
-      });
-    } else {
-      lyricsContainer.innerHTML = "";
-    }
+    const pipCurrentlyActive = isPipActive || isPagePipActive;
+    lyricsContainer.innerHTML = "";
 
     const transliterationEnabled = localStorage.getItem(STORAGE_KEYS.TRANSLITERATION_ENABLED) === 'true';
     let hasTransliterationData = false;
@@ -7159,7 +7373,6 @@ const Providers = {
           p.setAttribute('data-transliteration-text', transliteration);
           hasTransliterationData = true;
         }
-        if (pipIsInContainer) p.style.display = 'none';
         lyricsContainer.appendChild(p);
       });
       // Normalize cached lyrics time format for proper syncing (especially for KPoe provider)
@@ -7180,7 +7393,6 @@ const Providers = {
           p.setAttribute('data-transliteration-text', transliteration);
           hasTransliterationData = true;
         }
-        if (pipIsInContainer) p.style.display = 'none';
         lyricsContainer.appendChild(p);
       });
       // For unsynced, always allow user scroll
@@ -7191,11 +7403,11 @@ const Providers = {
       lyricsContainer.style.msOverflowStyle = "";
     }
 
-    if (pipIsInContainer) {
-      // Update _pipSavedChildren so exitPipFromLyricsContainer() correctly restores the
-      // newly built elements when PiP is eventually toggled off.
-      const newChildren = Array.from(lyricsContainer.children).filter(c => c !== pipVideo);
-      lyricsContainer._pipSavedChildren = newChildren.map(el => ({ el, display: '' }));
+    // Reuse enterPipInLyricsContainer() instead of duplicating the
+    // hide-children/show-notice logic inline — this also correctly hides the
+    // synced-lyrics bottom spacer, which the old inline versions (before version 17.27) left visible.
+    if (pipCurrentlyActive) {
+      enterPipInLyricsContainer();
     }
 
     // Show/hide transliteration button based on data availability
@@ -7240,7 +7452,7 @@ const Providers = {
    */
   function cacheInstrumentalTrack(trackId, provider, trackInfo) {
     LyricsCache.set(trackId, {
-      provider: null,  // No specific provider since instrumental means no lyrics from any source
+      provider: null, // No specific provider since instrumental means no lyrics from any source
       synced: null,
       unsynced: null,
       instrumental: true,
@@ -7269,7 +7481,7 @@ const Providers = {
     }));
   }
 
-  /**
+    /**
    * Load and display lyrics from cache
    * @param {HTMLElement} popup - The popup element
    * @param {Object} info - Track information
@@ -7289,12 +7501,18 @@ const Providers = {
     if (cachedData.provider === 'KPoe' && cachedData.metadata?.server) {
       const serverUrl = cachedData.metadata.server;
       let serverLabel = 'Unknown server';
-      if (serverUrl.includes('lyricsplus.prjktla.workers.dev')) {
+      if (serverUrl.includes('lyricsplus.prjktla.my.id')) {
         serverLabel = 'Primary';
-      } else if (serverUrl.includes('lyricsplus-seven.vercel.app')) {
+      } else if (serverUrl.includes('lyricsplus.atomix.one')) {
         serverLabel = 'Backup 1';
-      } else if (serverUrl.includes('lyrics-plus-backend.vercel.app')) {
+      } else if (serverUrl.includes('lyricsplus.binimum.org')) {
         serverLabel = 'Backup 2';
+      } else if (serverUrl.includes('lyricsplus.prjktla.workers.dev')) {
+        serverLabel = 'Backup 3';
+      } else if (serverUrl.includes('lyricsplus-seven.vercel.app')) {
+        serverLabel = 'Backup 4';
+      } else if (serverUrl.includes('lyrics-plus-backend.vercel.app')) {
+        serverLabel = 'Backup 5';
       }
       providerDisplay = `KPoe - ${serverLabel}`;
     }
@@ -7303,6 +7521,7 @@ const Providers = {
     DEBUG.log('Cache', `Loading lyrics from cache for: ${info.title} - ${info.artist}`);
 
     currentLyricsContainer = lyricsContainer;
+    currentLyricsStatusMessage = null;
     currentSyncedLyrics = cachedData.synced;
     currentUnsyncedLyrics = cachedData.unsynced;
     currentLyricsMetadata = cachedData.metadata || null; // Restore metadata from cache
@@ -7360,6 +7579,7 @@ const Providers = {
     pipVideoDetachIfInContainer();
     lyricsContainer.innerHTML = "";
 
+    const pipCurrentlyActive = isPipActive || isPagePipActive;
     const transliterationEnabled = localStorage.getItem(STORAGE_KEYS.TRANSLITERATION_ENABLED) === 'true';
     let hasTransliterationData = false;
 
@@ -7377,7 +7597,7 @@ const Providers = {
         }
         lyricsContainer.appendChild(p);
       });
-      // Normalize cached lyrics time format for proper syncing (especially for KPoe provider)
+       // Normalize cached lyrics time format for proper syncing (especially for KPoe provider)
       highlightSyncedLyrics(normalizeLyricsTimeFormat(currentSyncedLyrics), lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
@@ -7404,13 +7624,19 @@ const Providers = {
       lyricsContainer.style.msOverflowStyle = "";
     }
 
+    // Reuse enterPipInLyricsContainer() instead of duplicating the
+    // hide-children/show-notice logic inline — this also correctly hides the
+    // synced-lyrics bottom spacer, which the old inline versions (before version 17.27) left visible.
+    if (pipCurrentlyActive) {
+      enterPipInLyricsContainer();
+    }
+
     // Show/hide transliteration button
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
       transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
     }
 
-    // Show transliteration if enabled
     if (transliterationEnabled && hasTransliterationData) {
       showTransliterationInPopup();
       if (transliterationBtn) {
@@ -7428,9 +7654,6 @@ const Providers = {
       }
     }
 
-    // Re-insert pipVideo after lyrics are rebuilt so PiP stays open during track transitions
-    if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
-
     return true;
   }
 
@@ -7446,8 +7669,7 @@ const Providers = {
     transliterationPresent = false;
     lastTranslatedLang = null;
     pipVideoDetachIfInContainer();
-    lyricsContainer.textContent = "Loading lyrics...";
-    if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
+    setLyricsStatusMessage(lyricsContainer, "Loading lyrics...");
 
     const downloadBtn = popup.querySelector('button[title="Download lyrics"]');
     const downloadDropdown = downloadBtn ? downloadBtn._dropdown : null;
@@ -7475,7 +7697,7 @@ const Providers = {
     }
 
     if (result.error) {
-      lyricsContainer.textContent = result.error;
+      setLyricsStatusMessage(lyricsContainer, result.error);
       if (downloadBtn) {
         downloadBtn.style.display = "none";
         console.info("📝 [Lyrics+ UI] Download button hidden (lyrics error)");
@@ -7540,6 +7762,7 @@ const Providers = {
 
     if (currentSyncedLyrics) {
       isShowingSyncedLyrics = true;
+      currentLyricsStatusMessage = null;
       currentSyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
         p.setAttribute('data-lyrics-line-index', String(idx));
@@ -7555,6 +7778,7 @@ const Providers = {
       highlightSyncedLyrics(currentSyncedLyrics, lyricsContainer);
     } else if (currentUnsyncedLyrics) {
       isShowingSyncedLyrics = false;
+      currentLyricsStatusMessage = null;
       currentUnsyncedLyrics.forEach(({ text, transliteration }, idx) => {
         const p = document.createElement("p");
         p.setAttribute('data-lyrics-line-index', String(idx));
@@ -7585,17 +7809,15 @@ const Providers = {
       lyricsContainer.classList.remove('hide-scrollbar');
       lyricsContainer.style.scrollbarWidth = "";
       lyricsContainer.style.msOverflowStyle = "";
-      if (!lyricsContainer.textContent.trim()) {
-        lyricsContainer.textContent = `No lyrics available from ${Providers.current}`;
-      }
+
       currentSyncedLyrics = null;
       currentUnsyncedLyrics = null;
+      setLyricsStatusMessage(lyricsContainer, `No lyrics available from ${Providers.current}`);
     }
 
-    // Re-insert pipVideo after lyrics are rebuilt so PiP stays open during track transitions
-    if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
+    if ((currentSyncedLyrics || currentUnsyncedLyrics) && (isPipActive || isPagePipActive)) enterPipInLyricsContainer();
 
-    // Show/hide transliteration button based on data availability
+   // Show/hide transliteration button based on data availability
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
       transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
@@ -7691,7 +7913,7 @@ const Providers = {
           // Display error message
           const lyricsContainer = popup.querySelector("#lyrics-plus-content");
           if (lyricsContainer) {
-            lyricsContainer.textContent = cachedData.error;
+            setLyricsStatusMessage(lyricsContainer, cachedData.error);
           }
 
           // Hide buttons
@@ -7757,7 +7979,7 @@ const Providers = {
             // Display error message through the standard error path
             const lyricsContainer = popup.querySelector("#lyrics-plus-content");
             if (lyricsContainer) {
-              lyricsContainer.textContent = result.error;
+              setLyricsStatusMessage(lyricsContainer, result.error);
             }
 
             const totalDuration = performance.now() - startTime;
@@ -7891,8 +8113,9 @@ const Providers = {
     if (popup._lyricsTabs) updateTabs(popup._lyricsTabs, true);
 
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-    if (lyricsContainer) lyricsContainer.textContent = "No lyrics found from any provider";
     currentSyncedLyrics = null;
+    currentUnsyncedLyrics = null;
+    if (lyricsContainer) setLyricsStatusMessage(lyricsContainer, "No lyrics found from any provider");
     currentLyricsContainer = lyricsContainer;
     // Reset translation state when no lyrics are found
     translationPresent = false;
@@ -7944,11 +8167,14 @@ const Providers = {
         currentTrackId = info.id;
         lastPlaybackPosition = 0;
         lastTrackDuration = info.duration || 0;
+        // Clear the previous track's lyrics so the PiP canvas doesn't keep showing
+        // stale lines during the gap before the new track's lyrics arrive. (NEW in 17.29)
+        currentSyncedLyrics = null;
+        currentUnsyncedLyrics = null;
         const lyricsContainer = popup.querySelector("#lyrics-plus-content");
         if (lyricsContainer) {
           pipVideoDetachIfInContainer();
-          lyricsContainer.textContent = "Loading lyrics...";
-          if (isPipActive || isPagePipActive) enterPipInLyricsContainer();
+          setLyricsStatusMessage(lyricsContainer, "Loading lyrics...");
         }
         autodetectProviderAndLoad(popup, info);
       }
