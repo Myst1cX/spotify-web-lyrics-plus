@@ -77,9 +77,8 @@
 > Font size, transliteration, translation, and Chinese conversion settings are all reflected live.  
 > Can be toggled on/off using the dedicated "Toggle Picture-in-Picture mode" button.  
 > When toggled on, the lyric lines inside the lyric+ popup's lyric container are hidden and replaced with a placeholder message  
-> "This video is playing in Picture-in-Picture mode".  
-> The lyrics appear in the floating PiP window that just opened.  
-> When the floating PiP window is closed or the "Toggle Picture-in-Picture mode" button is toggled off, the original lyrics container is restored.  
+> "This video is playing in Picture-in-Picture mode". The lyrics appear in the floating PiP window that just opened.  
+> When the floating PiP window is closed or the button is toggled off, the original lyrics container is restored.  
 
 ## Screenshots
 
