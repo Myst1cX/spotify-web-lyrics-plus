@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.28
+// @version      17.29
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icon/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -20,6 +20,8 @@
 // 1. PiP mode doesn't work on mobile yet (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that
 // can then open the native pip view - doesn't appear.)
 // 2. Lyrics+ popup gui: css fix for the header buttons (inconsistent spacing, adjusting specifically for mobile interface)
+
+// RESOLVED (17.29): CREATED A LOGO ICON FOR THE USERSCRIPT
 
 // RESOLVED (17.28):
 // • PIP: BACKGROUNDED-TAB REDRAWS NOW WORKER-DRIVEN, MATCHING MAIN CONTAINER'S CADENCE
