@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.27
+// @version      17.28
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
@@ -19,6 +19,45 @@
 // 1. PiP mode doesn't work on mobile yet (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that
 // can then open the native pip view - doesn't appear.)
 // 2. Lyrics+ popup gui: css fix for the header buttons (inconsistent spacing, adjusting specifically for mobile interface)
+
+// RESOLVED (17.28):
+// • PIP: BACKGROUNDED-TAB REDRAWS NOW WORKER-DRIVEN, MATCHING MAIN CONTAINER'S CADENCE
+//   drawPipFrame() was previously kept alive while the tab is hidden/backgrounded
+//   by pipFallbackTimer, a plain setInterval firing every 500ms
+//   (PIP_FALLBACK_INTERVAL_MS) - 10x coarser than the main container's
+//   highlightSyncedLyrics(), which ticks every 50ms (TIMING.HIGHLIGHT_INTERVAL_MS).
+//   Since requestAnimationFrame is unconditionally paused on hidden tabs, that
+//   500ms fallback was effectively PiP's only redraw source whenever the native
+//   PiP window was open and the Spotify tab itself was backgrounded - exactly
+//   the normal way PiP gets used. New getPipWorker() spins up a dedicated Worker
+//   whose internal setInterval posts a 'tick' message back at
+//   TIMING.HIGHLIGHT_INTERVAL_MS; startPipRenderLoop() now calls
+//   worker.postMessage('start') instead of arming pipFallbackTimer, and
+//   stopPipRenderLoop() posts 'stop'. Workers aren't subject to the page-
+//   visibility timer throttling window/document timers get, so this keeps PiP
+//   redrawing at the exact same cadence as the main container even while fully
+//   backgrounded. pipFallbackTimer/PIP_FALLBACK_INTERVAL_MS are kept as an
+//   automatic fallback (with onerror handling) for the rare case a Worker can't
+//   be created.
+//
+// • PIP: FIXED SYNCED LYRICS OCCASIONALLY SKIPPING A LINE
+//   Both drawPipFrame() and highlightSyncedLyrics() compute the active line
+//   from the same source - Spotify's displayed mm:ss position text - which
+//   only updates once per whole second. When two lyric lines land inside the
+//   same displayed second, the computed index can jump by 2 in a single read.
+//   The main container's CSS transitions and scrollIntoView({behavior:
+//   "smooth"}) visually glide through the skipped line so it's never
+//   noticeably missing there, but PiP's flat per-frame canvas snapshot had
+//   nothing to smooth it, so the skipped line's highlight state was never
+//   rendered at all - it would jump straight from line N to N+2, and the
+//   user would see line N+1 and N+2 both flash as "caught up" together. New
+//   pipRenderedIndex/pipRenderedLyricsRef state in drawPipFrame() decouples
+//   the *rendered* index from the *computed* one: forward jumps of 2+ now
+//   advance the rendered index by at most one step per redraw, guaranteeing
+//   every line is displayed for at least one frame before moving on (closing
+//   the gap within ~50-100ms, imperceptibly). Rewinds/seeks and track changes
+//   still snap the rendered index immediately - there's nothing to gradually
+//   catch up on in those cases.
 
 // RESOLVED (17.27):
 // • KPOE SERVERS EXPANDED 3 → 6, WITH RELABELED BACKUPS
@@ -494,6 +533,11 @@
   let pipLastFrameAt = 0;
   let pipWindowResizeFallbackActive = false;
   let pipFallbackTimer = null;
+  let pipWorker = null;
+  // Match TIMING.HIGHLIGHT_INTERVAL_MS so the PiP canvas redraws at the exact
+  // same cadence as the main container's highlightSyncedLyrics(), instead of
+  // the old 500ms fallback which was 10x coarser than main, independent of
+  // any tab-throttling behavior.
   // Last non-lyrics status message shown in the lyrics container (e.g. "Loading
   // lyrics...", "No lyrics found from any provider", instrumental-track notice).
   // Mirrored into the PiP canvas by drawPipFrame() whenever there are no synced/
@@ -1837,6 +1881,11 @@
   }
 
   let pipLastDebugLogAt = 0;
+  // Tracks the last lyrics array PiP rendered against, and the index it's
+  // actually displaying (which may lag one step behind the computed target -
+  // see pipRenderedIndex below).
+  let pipRenderedLyricsRef = null;
+  let pipRenderedIndex = -1;
   function drawPipFrame() {
       if (!pipCtx || !pipCanvas || !pipVideo) {
         console.warn('📺 [Lyrics+ PiP] drawPipFrame: bailing out, missing pipCtx/pipCanvas/pipVideo', { pipCtx: !!pipCtx, pipCanvas: !!pipCanvas, pipVideo: !!pipVideo });
@@ -1877,6 +1926,33 @@
           if (anticipatedMs >= (currentSyncedLyrics[i].time ?? currentSyncedLyrics[i].startTime)) activeIndex = i;
           else break;
         }
+
+        // Reset the dwell-tracking state whenever the lyrics array itself
+        // changes (new track / re-fetch), so we don't try to crawl forward
+        // from a stale index left over from a previous song.
+        if (currentSyncedLyrics !== pipRenderedLyricsRef) {
+          pipRenderedLyricsRef = currentSyncedLyrics;
+          pipRenderedIndex = activeIndex;
+        }
+
+        // Both drawPipFrame() and the main container's highlightSyncedLyrics()
+        // derive activeIndex from the same source: Spotify's displayed
+        // mm:ss position text, which only updates once per whole second. When
+        // two lyric lines fall inside the same displayed second, activeIndex
+        // can jump by 2 in a single read - the main container's CSS
+        // transitions/smooth-scroll visually glide past the skipped line so
+        // it's never noticeably missing, but PiP's flat canvas snapshot would
+        // otherwise just cut straight past it. To match what the main
+        // container effectively guarantees, advance the *rendered* index by
+        // at most one step per tick on forward jumps, so every line gets
+        // displayed for at least one redraw before moving on. Backward jumps
+        // (rewind/seek) snap immediately - there's nothing to "catch up" on.
+        if (activeIndex > pipRenderedIndex + 1) {
+          pipRenderedIndex += 1;
+        } else {
+          pipRenderedIndex = activeIndex;
+        }
+        activeIndex = pipRenderedIndex;
 
         if (performance.now() - pipLastDebugLogAt > 2000) {
           pipLastDebugLogAt = performance.now();
@@ -1980,6 +2056,70 @@
   }
 
     /**
+   * Lazily creates (or returns the existing) dedicated Worker that drives PiP
+   * frame redraws via postMessage ticks instead of a main-thread setInterval.
+   *
+   * Why: window/document timers (rAF, setInterval) get aggressively throttled
+   * by Chrome once the tab is hidden/backgrounded - exactly the situation a
+   * user watching a floating PiP window is usually in. After a few minutes of
+   * backgrounding, "intensive throttling" can drop setInterval to as rarely as
+   * once a minute. Workers are not subject to that page-visibility throttling,
+   * so a worker-driven tick keeps firing at a steady interval even while the
+   * Spotify tab is fully backgrounded, which is what replaces pipFallbackTimer.
+   */
+  function getPipWorker() {
+    if (pipWorker) return pipWorker;
+    const workerCode = `
+      let timer = null;
+      self.onmessage = (e) => {
+        if (e.data === 'start') {
+          if (timer) return;
+          timer = setInterval(() => self.postMessage('tick'), ${TIMING.HIGHLIGHT_INTERVAL_MS});
+        } else if (e.data === 'stop') {
+          clearInterval(timer);
+          timer = null;
+        }
+      };
+    `;
+    try {
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      const blobUrl = URL.createObjectURL(blob);
+      pipWorker = new Worker(blobUrl);
+      URL.revokeObjectURL(blobUrl); // only needed to construct the Worker, safe to release immediately
+      pipWorker.onmessage = (e) => {
+        if (e.data === 'tick' && (isPipActive || isPagePipActive)) {
+          drawPipFrame();
+        }
+      };
+      pipWorker.onerror = (err) => {
+        console.warn('📺 [Lyrics+ PiP] worker error, falling back to setInterval', err);
+        pipWorker.terminate();
+        pipWorker = null;
+        // The worker may have died mid-session (after start() already ran) -
+        // arm the main-thread fallback so redraws don't just silently stop.
+        if (isPipActive || isPagePipActive) armPipFallbackTimer();
+      };
+    } catch (err) {
+      console.warn('📺 [Lyrics+ PiP] Worker unavailable, falling back to setInterval', err);
+      pipWorker = null;
+    }
+    return pipWorker;
+  }
+
+  function armPipFallbackTimer() {
+    if (pipFallbackTimer) clearInterval(pipFallbackTimer);
+    pipFallbackTimer = setInterval(() => {
+      if (!isPipActive && !isPagePipActive) {
+        clearInterval(pipFallbackTimer);
+        pipFallbackTimer = null;
+        return;
+      }
+      pipLastFrameAt = performance.now();
+      drawPipFrame();
+    }, PIP_FALLBACK_INTERVAL_MS);
+  }
+
+  /**
    * Renders lyrics to the PiP canvas in a requestAnimationFrame loop.
    * Active line = Spotify green (#1db954), context lines = white/faded.
    * Transliteration / translation sub-lines use their own colour codes.
@@ -2000,16 +2140,15 @@
     pipLastFrameAt = 0;
     pipAnimationFrame = requestAnimationFrame(rafTick);
 
-    if (pipFallbackTimer) clearInterval(pipFallbackTimer);
-    pipFallbackTimer = setInterval(() => {
-      if (!isPipActive && !isPagePipActive) {
-        clearInterval(pipFallbackTimer);
-        pipFallbackTimer = null;
-        return;
-      }
-      pipLastFrameAt = performance.now();
-      drawPipFrame();
-    }, PIP_FALLBACK_INTERVAL_MS);
+    // Worker-driven tick: keeps redrawing at a steady rate even while the tab
+    // is backgrounded/hidden, since Workers escape rAF/setInterval throttling.
+    const worker = getPipWorker();
+    if (worker) {
+      worker.postMessage('start');
+    } else {
+      // Worker unsupported/failed - fall back to the old main-thread backstop.
+      armPipFallbackTimer();
+    }
 
     drawPipFrame();
   }
@@ -2019,6 +2158,9 @@
     if (pipAnimationFrame) {
       cancelAnimationFrame(pipAnimationFrame);
       pipAnimationFrame = null;
+    }
+    if (pipWorker) {
+      pipWorker.postMessage('stop');
     }
     if (pipFallbackTimer) {
       clearInterval(pipFallbackTimer);
