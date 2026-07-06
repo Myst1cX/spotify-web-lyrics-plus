@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Beta
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.32.beta
+// @version      17.33.beta
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icon/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -20,7 +20,7 @@
 // 1. PiP mode doesn't work on mobile - don't need it but i'll see what i can do.
 // (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that can then open the native pip view - doesn't appear.)
 
-// RESOLVED (17.32.beta):
+// RESOLVED (17.33.beta):
 // • HEADER ICON ROW: SOFTENED THE SCROLL-INDICATOR'S DRAG/WHEEL TRACKING
 //   onHeaderScrollDragStart/Move and onHeaderWheel used to write
 //   buttonGroup.scrollLeft directly from the pointer/wheel position on every
@@ -33,6 +33,14 @@
 //   into one write per frame and gives a small, pleasant "catch-up" settle
 //   once the pointer stops moving or lifts, for both touch drag and mouse
 //   drag.
+
+// RESOLVED (17.32):
+// Status changes while PiP was active (e.g. song change ->
+// "Loading lyrics..." -> "No lyrics found") could leave the container blank.
+// Cause: enterPipInLyricsContainer() re-hid the notice div itself on repeat
+// calls, and ensurePipNoticeShown()'s exists-check didn't catch it being
+// hidden. 
+// Fix: exclude the notice from the saved/hidden children set.
 
 // RESOLVED (17.31):
 // • HEADER ICON ROW: ADDED A VISIBLE SCROLL INDICATOR + DRAG-TO-SCROLL
