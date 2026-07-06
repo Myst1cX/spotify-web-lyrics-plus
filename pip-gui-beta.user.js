@@ -1873,10 +1873,19 @@ document.head.appendChild(buttonGroupScrollStyle);
     Array.from(lyricsContainer.childNodes).forEach(node => {
       if (node.nodeType === Node.TEXT_NODE) node.remove();
     });
-    const savedChildren = Array.from(lyricsContainer.children).map(el => ({
-      el,
-      display: el.style.display,
-    }));
+    // Exclude the PiP notice itself from the saved/hidden set. Otherwise, calling
+    // this function again while PiP is already active (e.g. a status message
+    // change like "Loading lyrics..." -> "No lyrics found from any provider")
+    // would re-capture the existing notice as one of the "children to hide",
+    // set it to display:none, and then ensurePipNoticeShown()'s existence check
+    // below would see the (now-hidden) notice already in the DOM and skip
+    // re-showing it -- leaving the container blank.
+    const savedChildren = Array.from(lyricsContainer.children)
+      .filter(el => el.id !== PIP_NOTICE_ID)
+      .map(el => ({
+        el,
+        display: el.style.display,
+      }));
     lyricsContainer._pipSavedChildren = savedChildren;
     savedChildren.forEach(({ el }) => { el.style.display = 'none'; });
     lyricsContainer.setAttribute('data-pip-active', 'true');
