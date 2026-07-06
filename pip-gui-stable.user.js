@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.32
+// @version      17.33
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icon/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -20,12 +20,14 @@
 // 1. PiP mode doesn't work on mobile - don't need it but i'll see what i can do.
 // (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that can then open the native pip view - doesn't appear.)
 
+// RESOLVED (17.33): IMPROVED THE HEADER'S SCROLLBAR THAT CAN SCROLL BETWEEN HEADER ICONS WHEN OVERFLOWN IN MINIMUM WIDTH MODAL
+
 // RESOLVED (17.32):
 // Status changes while PiP was active (e.g. song change ->
 // "Loading lyrics..." -> "No lyrics found") could leave the container blank.
 // Cause: enterPipInLyricsContainer() re-hid the notice div itself on repeat
 // calls, and ensurePipNoticeShown()'s exists-check didn't catch it being
-// hidden. 
+// hidden.
 // Fix: exclude the notice from the saved/hidden children set.
 
 // RESOLVED (17.31):
@@ -4949,6 +4951,12 @@ const Providers = {
         existing.removeEventListener?.("wheel", existing._headerWheelHandler); // no-op guard
         existing._headerWheelHandler = null;
       }
+      if (existing._headerArrowScrollHandlers) {
+        const { onHeaderArrowUp } = existing._headerArrowScrollHandlers;
+        window.removeEventListener("mouseup", onHeaderArrowUp);
+        window.removeEventListener("touchend", onHeaderArrowUp);
+        existing._headerArrowScrollHandlers = null;
+      }
       // Remove window mouseup handler for resize
       if (existing._resizeMouseupHandler) {
         window.removeEventListener("mouseup", existing._resizeMouseupHandler);
@@ -5833,120 +5841,218 @@ const Providers = {
 
     headerWrapper.appendChild(header);
 
+    // Real horizontal scrollbar in place of the old 1px "delimiter line"
+    // mimicking a scrollbar: left/right arrow buttons flanking a track+thumb,
+    // same spot/footprint as before (bleeds to the popup's edges).
     const headerScrollTrack = document.createElement("div");
-headerScrollTrack.id = "lyrics-plus-header-scroll-track";
-Object.assign(headerScrollTrack.style, {
-  position: "relative",
-  height: "1px",
-  marginTop: "12px",
-  marginLeft: "-12px",
-  marginRight: "-12px",
-  backgroundColor: "#333",
-  flexShrink: "0",
-});
+    headerScrollTrack.id = "lyrics-plus-header-scroll-track";
+    Object.assign(headerScrollTrack.style, {
+      display: "none", // shown only while buttonGroup is actually overflowing
+      alignItems: "center",
+      gap: "2px",
+      height: "14px",
+      marginTop: "9px",
+      marginLeft: "-12px",
+      marginRight: "-12px",
+      paddingLeft: "12px",
+      paddingRight: "12px",
+      flexShrink: "0",
+      boxSizing: "border-box",
+    });
 
-// Invisible, taller hit area layered over the 1px track so it's actually
-// grabbable with a mouse/finger, without changing the track's visual size
-// (same pattern as resizerHitArea for the corner resize handle).
-const headerScrollHitArea = document.createElement("div");
-headerScrollHitArea.id = "lyrics-plus-header-scroll-hitarea";
-Object.assign(headerScrollHitArea.style, {
-  position: "absolute",
-  left: "0",
-  right: "0",
-  top: "-7px",
-  height: "15px",
-  cursor: "pointer",
-  touchAction: "none", // we handle the drag ourselves
-  display: "none", // shown only while buttonGroup is actually overflowing
-});
-headerScrollTrack.appendChild(headerScrollHitArea);
+    // Left/right arrow buttons. Held down, they auto-repeat (short delay,
+    // then a fast interval) same as a native OS scrollbar's end arrows.
+    function makeHeaderScrollArrow(direction) {
+      const arrow = document.createElement("button");
+      arrow.type = "button";
+      arrow.className = "lyrics-plus-header-scroll-arrow";
+      arrow.setAttribute("aria-label", direction < 0 ? "Scroll icons left" : "Scroll icons right");
+      const points = direction < 0 ? "10,2 4,8 10,14" : "6,2 12,8 6,14";
+      arrow.innerHTML = `<svg viewBox="0 0 16 16" width="9" height="9"><polygon points="${points}" fill="currentColor"/></svg>`;
+      Object.assign(arrow.style, {
+        background: "transparent",
+        border: "none",
+        cursor: "pointer",
+        color: "rgba(255,255,255,0.6)",
+        padding: "0",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "14px",
+        height: "14px",
+        flexShrink: "0",
+        boxSizing: "border-box",
+      });
+      arrow.addEventListener("mouseenter", () => { if (!arrow.disabled) arrow.style.color = "rgba(255,255,255,0.95)"; });
+      arrow.addEventListener("mouseleave", () => { if (!arrow.disabled) arrow.style.color = "rgba(255,255,255,0.6)"; });
+      return arrow;
+    }
+    const headerScrollArrowLeft = makeHeaderScrollArrow(-1);
+    const headerScrollArrowRight = makeHeaderScrollArrow(1);
+    headerScrollTrack.appendChild(headerScrollArrowLeft);
 
-const headerScrollThumb = document.createElement("div");
-headerScrollThumb.id = "lyrics-plus-header-scroll-thumb";
-Object.assign(headerScrollThumb.style, {
-  position: "absolute",
-  top: "0",
-  left: "0",
-  height: "100%",
-  width: "0%",
-  backgroundColor: "rgba(255, 255, 255, 0.4)",
-  opacity: "0",
-  transition: "opacity 0.15s",
-  pointerEvents: "none", // purely visual - hitArea handles input, clicks pass through
-});
-headerScrollTrack.appendChild(headerScrollThumb);
-headerWrapper.appendChild(headerScrollTrack);
+    // Inner track: the actual bar the thumb rides on, between the two arrows.
+    const headerScrollTrackInner = document.createElement("div");
+    headerScrollTrackInner.id = "lyrics-plus-header-scroll-track-inner";
+    Object.assign(headerScrollTrackInner.style, {
+      position: "relative",
+      flex: "1 1 auto",
+      minWidth: "0",
+      height: "5px",
+      borderRadius: "3px",
+      backgroundColor: "rgba(255,255,255,0.12)",
+    });
 
-function updateHeaderScrollIndicator() {
-  const scrollWidth = buttonGroup.scrollWidth;
-  const clientWidth = buttonGroup.clientWidth;
-  const isOverflowing = scrollWidth > clientWidth + 1;
-  if (!isOverflowing) {
-    headerScrollThumb.style.opacity = "0";
-    headerScrollHitArea.style.display = "none";
-    return;
-  }
-  const MIN_THUMB_PERCENT = 15;
-  const widthPercent = Math.max(MIN_THUMB_PERCENT, (clientWidth / scrollWidth) * 100);
-  const scrollableWidth = scrollWidth - clientWidth;
-  const scrollFraction = scrollableWidth > 0 ? buttonGroup.scrollLeft / scrollableWidth : 0;
-  const leftPercent = scrollFraction * (100 - widthPercent);
-  headerScrollThumb.style.width = widthPercent + "%";
-  headerScrollThumb.style.left = leftPercent + "%";
-  headerScrollThumb.style.opacity = "1";
-  headerScrollHitArea.style.display = "block";
-}
-buttonGroup.addEventListener("scroll", updateHeaderScrollIndicator, { passive: true });
-const headerScrollResizeObserver = new ResizeObserver(() => updateHeaderScrollIndicator());
-headerScrollResizeObserver.observe(buttonGroup);
-popup._headerScrollResizeObserver = headerScrollResizeObserver;
-requestAnimationFrame(updateHeaderScrollIndicator);
+    // Invisible, taller hit area layered over the thin visual track so it's
+    // actually grabbable with a mouse/finger, without changing its visual size
+    // (same pattern as resizerHitArea for the corner resize handle).
+    const headerScrollHitArea = document.createElement("div");
+    headerScrollHitArea.id = "lyrics-plus-header-scroll-hitarea";
+    Object.assign(headerScrollHitArea.style, {
+      position: "absolute",
+      left: "0",
+      right: "0",
+      top: "-5px",
+      bottom: "-5px",
+      cursor: "pointer",
+      touchAction: "none", // we handle the drag ourselves
+    });
+    headerScrollTrackInner.appendChild(headerScrollHitArea);
 
-// --- Drag-to-scroll for the scroll indicator ---
-// headerWrapper is itself the popup's drag-to-move handle (see makeDraggable
-// below) - without stopPropagation here, mousedown/touchstart on this hit
-// area would bubble up and start moving the whole popup instead of
-// scrolling buttonGroup. That's exactly the "mouse not detecting there's a
-// scroll item" behavior: the drag handler was winning the event every time.
-let headerScrollDragging = false;
+    const headerScrollThumb = document.createElement("div");
+    headerScrollThumb.id = "lyrics-plus-header-scroll-thumb";
+    Object.assign(headerScrollThumb.style, {
+      position: "absolute",
+      top: "0",
+      left: "0",
+      height: "100%",
+      width: "0%",
+      borderRadius: "3px",
+      backgroundColor: "rgba(255, 255, 255, 0.45)",
+      pointerEvents: "none", // purely visual - hitArea handles input, clicks pass through
+    });
+    headerScrollTrackInner.appendChild(headerScrollThumb);
+    headerScrollTrack.appendChild(headerScrollTrackInner);
+    headerScrollTrack.appendChild(headerScrollArrowRight);
+    headerWrapper.appendChild(headerScrollTrack);
 
-function headerScrollPointerToScrollLeft(clientX) {
-  const trackRect = headerScrollTrack.getBoundingClientRect();
-  const scrollableWidth = buttonGroup.scrollWidth - buttonGroup.clientWidth;
-  if (scrollableWidth <= 0 || trackRect.width <= 0) return 0;
-  const fraction = clamp((clientX - trackRect.left) / trackRect.width, 0, 1);
-  return fraction * scrollableWidth;
-}
+    function updateHeaderScrollIndicator() {
+      const scrollWidth = buttonGroup.scrollWidth;
+      const clientWidth = buttonGroup.clientWidth;
+      const isOverflowing = scrollWidth > clientWidth + 1;
+      if (!isOverflowing) {
+        headerScrollTrack.style.display = "none";
+        return;
+      }
+      headerScrollTrack.style.display = "flex";
+      const MIN_THUMB_PERCENT = 15;
+      const widthPercent = Math.max(MIN_THUMB_PERCENT, (clientWidth / scrollWidth) * 100);
+      const scrollableWidth = scrollWidth - clientWidth;
+      const scrollFraction = scrollableWidth > 0 ? buttonGroup.scrollLeft / scrollableWidth : 0;
+      const leftPercent = scrollFraction * (100 - widthPercent);
+      headerScrollThumb.style.width = widthPercent + "%";
+      headerScrollThumb.style.left = leftPercent + "%";
 
-function onHeaderScrollDragStart(e) {
-  e.stopPropagation();
-  e.preventDefault();
-  headerScrollDragging = true;
-  const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
-  buttonGroup.scrollLeft = headerScrollPointerToScrollLeft(clientX);
-}
+      const atStart = buttonGroup.scrollLeft <= 0;
+      const atEnd = buttonGroup.scrollLeft >= scrollableWidth - 1;
+      headerScrollArrowLeft.disabled = atStart;
+      headerScrollArrowRight.disabled = atEnd;
+      headerScrollArrowLeft.style.color = atStart ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.6)";
+      headerScrollArrowRight.style.color = atEnd ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.6)";
+      headerScrollArrowLeft.style.cursor = atStart ? "default" : "pointer";
+      headerScrollArrowRight.style.cursor = atEnd ? "default" : "pointer";
+    }
+    buttonGroup.addEventListener("scroll", updateHeaderScrollIndicator, { passive: true });
+    const headerScrollResizeObserver = new ResizeObserver(() => updateHeaderScrollIndicator());
+    headerScrollResizeObserver.observe(buttonGroup);
+    popup._headerScrollResizeObserver = headerScrollResizeObserver;
+    requestAnimationFrame(updateHeaderScrollIndicator);
 
-function onHeaderScrollDragMove(e) {
-  if (!headerScrollDragging) return;
-  e.stopPropagation();
-  if (e.type === "touchmove") e.preventDefault();
-  const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
-  buttonGroup.scrollLeft = headerScrollPointerToScrollLeft(clientX);
-}
+    // --- Drag-to-scroll for the thumb ---
+    // headerWrapper is itself the popup's drag-to-move handle (see makeDraggable
+    // below) - without stopPropagation here, mousedown/touchstart on this hit
+    // area would bubble up and start moving the whole popup instead of
+    // scrolling buttonGroup.
+    let headerScrollDragging = false;
 
-function onHeaderScrollDragEnd() {
-  headerScrollDragging = false;
-}
+    function headerScrollPointerToScrollLeft(clientX) {
+      const trackRect = headerScrollTrackInner.getBoundingClientRect();
+      const scrollableWidth = buttonGroup.scrollWidth - buttonGroup.clientWidth;
+      if (scrollableWidth <= 0 || trackRect.width <= 0) return 0;
+      const fraction = clamp((clientX - trackRect.left) / trackRect.width, 0, 1);
+      return fraction * scrollableWidth;
+    }
 
-headerScrollHitArea.addEventListener("mousedown", onHeaderScrollDragStart);
-headerScrollHitArea.addEventListener("touchstart", onHeaderScrollDragStart, { passive: false });
-window.addEventListener("mousemove", onHeaderScrollDragMove);
-window.addEventListener("touchmove", onHeaderScrollDragMove, { passive: false });
-window.addEventListener("mouseup", onHeaderScrollDragEnd);
-window.addEventListener("touchend", onHeaderScrollDragEnd);
+    function onHeaderScrollDragStart(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      headerScrollDragging = true;
+      const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
+      buttonGroup.scrollLeft = headerScrollPointerToScrollLeft(clientX);
+    }
 
-popup._headerScrollDragHandlers = { onHeaderScrollDragMove, onHeaderScrollDragEnd };
+    function onHeaderScrollDragMove(e) {
+      if (!headerScrollDragging) return;
+      e.stopPropagation();
+      if (e.type === "touchmove") e.preventDefault();
+      const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
+      buttonGroup.scrollLeft = headerScrollPointerToScrollLeft(clientX);
+    }
+
+    function onHeaderScrollDragEnd() {
+      headerScrollDragging = false;
+    }
+
+    headerScrollHitArea.addEventListener("mousedown", onHeaderScrollDragStart);
+    headerScrollHitArea.addEventListener("touchstart", onHeaderScrollDragStart, { passive: false });
+    window.addEventListener("mousemove", onHeaderScrollDragMove);
+    window.addEventListener("touchmove", onHeaderScrollDragMove, { passive: false });
+    window.addEventListener("mouseup", onHeaderScrollDragEnd);
+    window.addEventListener("touchend", onHeaderScrollDragEnd);
+
+    popup._headerScrollDragHandlers = { onHeaderScrollDragMove, onHeaderScrollDragEnd };
+
+    // --- Click-and-hold on the arrow buttons: step-scroll, then auto-repeat ---
+    const ARROW_SCROLL_STEP = 50;
+    const ARROW_REPEAT_DELAY = 350;
+    const ARROW_REPEAT_INTERVAL = 60;
+    let headerArrowRepeatTimeout = null;
+    let headerArrowRepeatInterval = null;
+
+    function scrollButtonGroupBy(delta) {
+      const scrollableWidth = buttonGroup.scrollWidth - buttonGroup.clientWidth;
+      buttonGroup.scrollLeft = clamp(buttonGroup.scrollLeft + delta, 0, scrollableWidth);
+    }
+
+    function clearHeaderArrowRepeat() {
+      if (headerArrowRepeatTimeout) { clearTimeout(headerArrowRepeatTimeout); headerArrowRepeatTimeout = null; }
+      if (headerArrowRepeatInterval) { clearInterval(headerArrowRepeatInterval); headerArrowRepeatInterval = null; }
+    }
+
+    function onHeaderArrowDown(direction, e) {
+      if ((direction < 0 && headerScrollArrowLeft.disabled) || (direction > 0 && headerScrollArrowRight.disabled)) return;
+      e.stopPropagation();
+      e.preventDefault();
+      scrollButtonGroupBy(direction * ARROW_SCROLL_STEP);
+      clearHeaderArrowRepeat();
+      headerArrowRepeatTimeout = setTimeout(() => {
+        headerArrowRepeatInterval = setInterval(() => scrollButtonGroupBy(direction * ARROW_SCROLL_STEP), ARROW_REPEAT_INTERVAL);
+      }, ARROW_REPEAT_DELAY);
+    }
+    function onHeaderArrowUp() {
+      clearHeaderArrowRepeat();
+    }
+
+    headerScrollArrowLeft.addEventListener("mousedown", (e) => onHeaderArrowDown(-1, e));
+    headerScrollArrowLeft.addEventListener("touchstart", (e) => onHeaderArrowDown(-1, e), { passive: false });
+    headerScrollArrowRight.addEventListener("mousedown", (e) => onHeaderArrowDown(1, e));
+    headerScrollArrowRight.addEventListener("touchstart", (e) => onHeaderArrowDown(1, e), { passive: false });
+    headerScrollArrowLeft.addEventListener("mouseleave", onHeaderArrowUp);
+    headerScrollArrowRight.addEventListener("mouseleave", onHeaderArrowUp);
+    window.addEventListener("mouseup", onHeaderArrowUp);
+    window.addEventListener("touchend", onHeaderArrowUp);
+
+    popup._headerArrowScrollHandlers = { onHeaderArrowUp };
 
 // --- Wheel-to-horizontal-scroll for the header icon row ---
 // Scrolling up (deltaY negative) moves right; scrolling down (deltaY positive) moves left.
