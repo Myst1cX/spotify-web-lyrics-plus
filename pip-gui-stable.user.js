@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.29
+// @version      17.31
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icon/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -17,9 +17,108 @@
 // ==/UserScript==
 
 // LEFT TO IMPROVE (MINOR INCONVENIENCES):
-// 1. PiP mode doesn't work on mobile yet (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that
-// can then open the native pip view - doesn't appear.)
-// 2. Lyrics+ popup gui: css fix for the header buttons (inconsistent spacing, adjusting specifically for mobile interface)
+// 1. PiP mode doesn't work on mobile - don't need it but i'll see what i can do.
+// (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that can then open the native pip view - doesn't appear.)
+
+// RESOLVED (17.31):
+// • HEADER ICON ROW: ADDED A VISIBLE SCROLL INDICATOR + DRAG-TO-SCROLL
+//   buttonGroup previously scrolled horizontally on narrow widths with a
+//   completely hidden scrollbar (.hide-scrollbar) - there was no visual cue
+//   that more icons existed off-screen, and no way to scroll it except a
+//   trackpad/touch swipe. Added a thin 1px track (headerScrollTrack) below
+//   the header row, with a proportionally-sized thumb (headerScrollThumb)
+//   that reflects buttonGroup's scrollWidth/clientWidth/scrollLeft via a new
+//   updateHeaderScrollIndicator() function. The thumb is purely visual
+//   (pointer-events: none); an invisible, taller hit area layered over the
+//   track (headerScrollHitArea, same "invisible hit area over a thin visual
+//   element" pattern as the corner resize handle) is what's actually
+//   draggable, so it's easy to grab with a mouse or finger without changing
+//   the track's 1px visual footprint. Dragging the hit area computes
+//   buttonGroup.scrollLeft directly from pointer position along the track
+//   (headerScrollPointerToScrollLeft). The indicator is hidden entirely
+//   (opacity 0, hit area display:none) whenever buttonGroup isn't actually
+//   overflowing. A ResizeObserver on buttonGroup (headerScrollResizeObserver)
+//   keeps it in sync as the popup is resized; buttonGroup's own 'scroll'
+//   event keeps the thumb tracking scrollLeft during swipes/drags too.
+//
+// • HEADER ICON ROW: FIXED DRAG-TO-SCROLL FIGHTING WITH POPUP DRAG-TO-MOVE
+//   headerWrapper (which contains the new scroll track) is also the popup's
+//   drag-to-move handle. Without stopPropagation() in the scroll-thumb's
+//   mousedown/touchstart handlers, grabbing the indicator would bubble up
+//   and start dragging the whole popup instead of scrolling the icon row.
+//   onHeaderScrollDragStart/Move now call stopPropagation() (and
+//   preventDefault() for touch) before doing anything else.
+//
+// • HEADER ICON ROW: ADDED MOUSE-WHEEL HORIZONTAL SCROLLING
+//   Added a wheel listener on headerWrapper (onHeaderWheel): scrolling up
+//   (negative deltaY) now scrolls the icon row right, scrolling down moves
+//   it left - the standard "vertical wheel drives horizontal scroll"
+//   convention for horizontally-scrolling UI, so users with a normal mouse
+//   (no shift-scroll, no trackpad) can reach icons that scrolled out of
+//   view. The listener is a no-op (and lets the page scroll normally)
+//   whenever buttonGroup isn't overflowing.
+//
+// • HEADER ICON ROW: CLOSE BUTTON NO LONGER SCROLLS OUT OF VIEW
+//   closeBtn was previously the last child inside buttonGroup itself, so on
+//   narrow widths it could scroll off-screen along with every other icon,
+//   leaving no way to close the popup without first scrolling all the way
+//   right. closeBtn is now appended as a sibling of buttonGroup directly
+//   under header (same pattern as titleBar on the left), so it stays
+//   permanently visible regardless of buttonGroup's scroll position.
+//   buttonGroup itself switched justify-content from flex-end to flex-start
+//   and gained flex: "1 1 auto" to correctly claim the remaining header
+//   width now that closeBtn no longer counts as one of its children.
+//
+// • DOWNLOAD BUTTON: RESTORED RIGHT-ALIGNMENT WITHOUT REINTRODUCING OVERFLOW
+//   Switching buttonGroup to justify-content: flex-start (needed for the
+//   scroll-track math to stay predictable) meant the icon row - starting
+//   with the download button - would otherwise hug the left edge with a gap
+//   before the close button instead of sitting flush right like before.
+//   downloadBtnWrapper now gets margin-left: auto, which visually reproduces
+//   flex-end's right-alignment when there's slack space, but - unlike
+//   flex-end - collapses to 0 under overflow instead of shoving content past
+//   the unreachable left edge, so scrollLeft:0 still shows the download
+//   button first and scrolling/dragging right reveals the rest of the icons.
+//
+// • CLEANUP: ALL NEW LISTENERS/OBSERVERS PROPERLY TORN DOWN IN removePopup()
+//   headerScrollResizeObserver is disconnected, the window-level drag
+//   listeners (onHeaderScrollDragMove/onHeaderScrollDragEnd) are removed via
+//   a new popup._headerScrollDragHandlers reference, and the wheel handler
+//   reference is cleared - consistent with the existing _dragHandlers/
+//   _resizeHandlers cleanup pattern used for popup move/resize, avoiding the
+//   same kind of listener-leak-per-popup-cycle bug fixed for those in 17.21.
+
+// RESOLVED (17.30):
+// • HEADER ICONS UNIFIED: ALL BUTTONS NOW SHARE ONE 28x28 BOX + REAL HOVER
+//   Every header icon (restore-default, chinese-conv, translation,
+//   transliteration, settings, pip, close) now uses the same 28x28 box
+//   instead of mismatched fontSize/padding values, so spacing between them
+//   is actually equal rather than approximate. Settings gear and translation
+//   button were still raw emoji with no hover - replaced both with line-style
+//   SVGs that hover-dim like the rest. Close button's oversized "×" glyph
+//   replaced with a thin-stroke X SVG in the same box. Download button's SVG
+//   had a hardcoded stroke="#fff" blocking its hover color - fixed to
+//   currentColor and added the missing hover listeners. Chinese-conv button's
+//   old manual padding hack removed (no longer needed with a shared gap).
+//   Transliteration button's display toggle switched inline-block →
+//   inline-flex so its emoji stays centered instead of block-aligning.
+//   buttonGroup gap tightened 4px → 2px → 1px across passes.
+//
+// • HEADER ICONS: FIXED SPILL-OVER ON NARROW WIDTHS
+//   buttonGroup had flexShrink:0, which meant it could never shrink - instead
+//   of scrolling on narrow widths it just spilled past the popup's edge.
+//   Switched to default flexShrink + minWidth:0 on the group (children stay
+//   flexShrink:0 so icons don't distort), so once the group is narrower than
+//   its content it scrolls horizontally (hidden scrollbar) instead of
+//   overflowing. titleBar set to flexShrink:0 so the title keeps priority.
+//
+// • DOWNLOAD DROPDOWN: FIXED INVISIBLE CLIPPING
+//   Side effect of the fix above: overflow-x:auto on buttonGroup also clips
+//   overflow-y, which was silently clipping the dropdown (it opened, just
+//   invisible). Moved the dropdown to document.body with position:fixed,
+//   position computed from downloadBtn.getBoundingClientRect() on each open.
+//   zIndex bumped above the popup's; removePopup() now removes it explicitly
+//   since it's no longer a DOM child of the popup.
 
 // RESOLVED (17.29): CREATED A LOGO ICON FOR THE USERSCRIPT
 
@@ -479,15 +578,14 @@
 // Shuffle button found by SVG icon patterns instead of aria-label text
 // Static SVGs are kept as fallbacks when DOM elements are not available
 
-// WHEN THE TIME IS RIGHT:
+// NOTE:
 // Improve google translation, currently only translates line by line (tho it outputs all lines instantly, line by line causes lack of content awareness = lower quality translation)
-// Lol spotify ad getting detected as track in console. Maybe do something to block them. Also refresh Spotifuck userscript adblock method.
+// Current id of Spotify advertisement object (we blocked it from getting detected as track in console)
 // • Object { id: "Spotify-Advertisement", title: "Spotify", artist: "Advertisement", album: "", duration: 26000, uri: "", trackId: null }
 
 // CONSIDER CONVERTING TO BROWSER EXTENSION:
 // Converting the userscript into a browser extension would unlock two things:
-// 1. Possibilitate having a floating popup ui with spotify lyrics (always on top) that works on other sites too, outside open.spotify.com
-// 2. Auto fetch spotify token for user when it expires and apply it --> tried, CSP prevents it. (plan was: maybe for Musixmatch too if user logged in inside browser)
+// 1. Auto fetch spotify token for user when it expires and apply it --> tried, CSP prevents it. (plan was: maybe for Musixmatch too if user logged in inside browser)
 
 // PROBABLY NOT:
 // Add Deezer provider (synced and unsynced)
@@ -1377,6 +1475,19 @@
     .hide-scrollbar { scrollbar-width: none !important; ms-overflow-style: none !important; }
   `;
   document.head.appendChild(style);
+
+  const buttonGroupScrollStyle = document.createElement('style');
+buttonGroupScrollStyle.textContent = `
+  #lyrics-plus-button-group::-webkit-scrollbar {
+    display: none;
+    height: 0;
+  }
+  #lyrics-plus-button-group {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+`;
+document.head.appendChild(buttonGroupScrollStyle);
 
   // ------------------------
   // Utility Functions
@@ -4805,7 +4916,22 @@ const Providers = {
         ResourceManager.cleanupObserver(existing._repeatObserver);
         existing._repeatObserver = null;
       }
-
+      if (existing._headerScrollResizeObserver) {
+        try { existing._headerScrollResizeObserver.disconnect(); } catch (e) {}
+        existing._headerScrollResizeObserver = null;
+      }
+      if (existing._headerScrollDragHandlers) {
+        const { onHeaderScrollDragMove, onHeaderScrollDragEnd } = existing._headerScrollDragHandlers;
+        window.removeEventListener("mousemove", onHeaderScrollDragMove);
+        window.removeEventListener("touchmove", onHeaderScrollDragMove);
+        window.removeEventListener("mouseup", onHeaderScrollDragEnd);
+        window.removeEventListener("touchend", onHeaderScrollDragEnd);
+        existing._headerScrollDragHandlers = null;
+      }
+      if (existing._headerWheelHandler) {
+        existing.removeEventListener?.("wheel", existing._headerWheelHandler); // no-op guard
+        existing._headerWheelHandler = null;
+      }
       // Remove window mouseup handler for resize
       if (existing._resizeMouseupHandler) {
         window.removeEventListener("mouseup", existing._resizeMouseupHandler);
@@ -4856,6 +4982,12 @@ const Providers = {
 
       // Close PiP if active — the popup is required for PiP to function
       closePip();
+
+      // The download dropdown now lives on document.body (not inside the
+      // popup) so it can escape buttonGroup's overflow clipping - it won't
+      // be removed by existing.remove() below, so clean it up explicitly.
+      const orphanedDownloadDropdown = document.getElementById("lyrics-plus-download-dropdown");
+      if (orphanedDownloadDropdown) orphanedDownloadDropdown.remove();
 
       existing.remove();
       DEBUG.debug('Cleanup', 'Popup element and all observers removed from DOM');
@@ -5074,10 +5206,19 @@ const Providers = {
       color: "#fff",
       fontWeight: "bold",
       fontSize: "18px",
-      display: "flex",
+      display: "inline-flex",
       justifyContent: "center",
       alignItems: "center",
-      userSelect: "none"
+      userSelect: "none",
+      padding: "0",
+      flexShrink: "0",
+      boxSizing: "border-box",
+    });
+    btnReset.addEventListener('mouseenter', () => {
+      btnReset.style.color = "rgba(255, 255, 255, 0.7)";
+    });
+    btnReset.addEventListener('mouseleave', () => {
+      btnReset.style.color = "#fff";
     });
     console.info("✅ [Lyrics+ UI] Restore default position button created");
     btnReset.innerHTML = `
@@ -5205,22 +5346,29 @@ const Providers = {
     translationControls.appendChild(removeBtn);
 
     const closeBtn = document.createElement("button");
-    closeBtn.textContent = "×";
     closeBtn.title = "Close Lyrics+";
+    closeBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="display:block"><path d="M6,6 L18,18 M18,6 L6,18"/></svg>`;
     Object.assign(closeBtn.style, {
       cursor: "pointer",
       background: "none",
       border: "none",
       color: "white",
-      fontSize: "18px",
-      fontWeight: "bold",
       lineHeight: "1",
       userSelect: "auto",
-      height: "32px",
-      display: "flex",
+      width: "28px",
+      height: "28px",
+      display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
+      padding: "0",
+      flexShrink: "0",
       boxSizing: "border-box",
+    });
+    closeBtn.addEventListener('mouseenter', () => {
+      closeBtn.style.color = "rgba(255, 255, 255, 0.7)";
+    });
+    closeBtn.addEventListener('mouseleave', () => {
+      closeBtn.style.color = "white";
     });
     closeBtn.onclick = () => {
       savePopupState(popup);
@@ -5230,15 +5378,28 @@ const Providers = {
 
     // --- Translation Toggle Button ---
     const translationToggleBtn = document.createElement("button");
-    translationToggleBtn.textContent = "🌐";
     translationToggleBtn.title = "Show/hide translation controls";
+    translationToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" style="display:block"><path d="M12.87,15.07L10.33,12.56L10.36,12.53C12.1,10.59 13.34,8.36 14.07,6H17V4H10V2H8V4H1V6H12.17C11.5,7.92 10.44,9.75 9,11.35C8.07,10.32 7.3,9.19 6.69,8H4.69C5.42,9.63 6.42,11.17 7.67,12.56L2.58,17.58L4,19L9,14L12.11,17.11L12.87,15.07M18.5,10H16.5L12,22H14L15.12,19H19.87L21,22H23L18.5,10M15.88,17L17.5,12.67L19.12,17H15.88Z"/></svg>`;
     Object.assign(translationToggleBtn.style, {
       cursor: "pointer",
       background: "none",
       border: "none",
       color: "white",
-      fontSize: "16px",
       lineHeight: "1",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "28px",
+      height: "28px",
+      padding: "0",
+      flexShrink: "0",
+      boxSizing: "border-box",
+    });
+    translationToggleBtn.addEventListener('mouseenter', () => {
+      translationToggleBtn.style.color = "rgba(255, 255, 255, 0.7)";
+    });
+    translationToggleBtn.addEventListener('mouseleave', () => {
+      translationToggleBtn.style.color = "white";
     });
 
     // --- Transliteration Toggle Button ---
@@ -5253,6 +5414,19 @@ const Providers = {
       fontSize: "16px",
       lineHeight: "1",
       display: "none", // Hidden by default, shown when transliteration data is available
+      alignItems: "center",
+      justifyContent: "center",
+      width: "28px",
+      height: "28px",
+      padding: "0",
+      flexShrink: "0",
+      boxSizing: "border-box",
+    });
+    transliterationToggleBtn.addEventListener('mouseenter', () => {
+      transliterationToggleBtn.style.color = "rgba(255, 255, 255, 0.7)";
+    });
+    transliterationToggleBtn.addEventListener('mouseleave', () => {
+      transliterationToggleBtn.style.color = "white";
     });
 
     console.info("✅ [Lyrics+ UI] Transliteration button created (hidden by default, shows when transliteration data available)");
@@ -5270,10 +5444,22 @@ const Providers = {
       color: "white",
       fontSize: "16px",
       lineHeight: "1",
-      padding: "0 4px 0 0", // (top, right, bottom, left)
-      /* Manually fixing the spacing between chineseConvBtn and btnReset: set to 4px on the right, so it no longer borders on translationToggleBtn
-         Spacing left unchanged on the left - btnReset already spacing similar to chineseConvBtn's of 4px applied from before */
       display: "none", // Hidden by default, shown when Chinese lyrics are present
+      alignItems: "center",
+      justifyContent: "center",
+      width: "28px",
+      height: "28px",
+      padding: "0",
+      flexShrink: "0",
+      boxSizing: "border-box",
+    });
+    // Now that every header icon shares the same 28x28 box + a real `gap` on
+    // buttonGroup, the old manual right-padding hack for spacing is no longer needed.
+    chineseConvBtn.addEventListener('mouseenter', () => {
+      chineseConvBtn.style.color = "rgba(255, 255, 255, 0.7)";
+    });
+    chineseConvBtn.addEventListener('mouseleave', () => {
+      chineseConvBtn.style.color = "white";
     });
 
     // Helper to update button text based on original script type and conversion state
@@ -5313,6 +5499,15 @@ const Providers = {
     // --- Download Synced Lyrics Button ---
     const downloadBtnWrapper = document.createElement("div");
     downloadBtnWrapper.style.position = "relative"; // For dropdown positioning
+    downloadBtnWrapper.style.display = "inline-flex";
+    downloadBtnWrapper.style.alignItems = "center";
+    downloadBtnWrapper.style.flexShrink = "0";
+    // Pushes the whole icon row to the right when there's slack space (visually
+    // identical to justify-content:flex-end), but unlike flex-end this collapses
+    // to 0 on overflow instead of shoving content off the unreachable left side -
+    // so scrollLeft:0 correctly shows the download button and scrolling right
+    // reveals the rest.
+    downloadBtnWrapper.style.marginLeft = "auto";
 
     const downloadBtn = document.createElement("button");
     downloadBtn.title = "Download lyrics";
@@ -5328,11 +5523,20 @@ const Providers = {
       alignItems: "center",
       justifyContent: "center",
       transition: "none",
-      position: "relative"
+      position: "relative",
+      padding: "0",
+      flexShrink: "0",
+      boxSizing: "border-box",
+    });
+    downloadBtn.addEventListener('mouseenter', () => {
+      downloadBtn.style.color = "rgba(255, 255, 255, 0.7)";
+    });
+    downloadBtn.addEventListener('mouseleave', () => {
+      downloadBtn.style.color = "#fff";
     });
 
     downloadBtn.innerHTML = `
-  <svg id="lyrics-download-svg" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#fff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" style="display:block;">
+  <svg id="lyrics-download-svg" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" style="display:block;">
     <path d="M12 5v9"></path>
     <polyline points="8 13 12 17 16 13"></polyline>
     <rect x="4" y="19" width="16" height="2" rx="1"></rect>
@@ -5340,19 +5544,26 @@ const Providers = {
 `;
 
     // Dropdown menu for download types
+    // NOTE: positioned as "fixed" (not "absolute") and appended to document.body
+    // rather than downloadBtnWrapper. Since buttonGroup now scrolls horizontally
+    // on narrow/mobile widths (overflow-x: auto), it also clips overflow on the
+    // y-axis as an unavoidable side effect of that - which was silently clipping
+    // this dropdown invisible even though it was opening correctly. Moving it to
+    // body sidesteps that ancestor clipping entirely; position is computed fresh
+    // each time it's opened, in downloadBtn.onclick below.
     const downloadDropdown = document.createElement("div");
     downloadDropdown.id = "lyrics-plus-download-dropdown";
     downloadBtn._dropdown = downloadDropdown;
     Object.assign(downloadDropdown.style, {
-      position: "absolute",
-      top: "110%",
+      position: "fixed",
+      top: "0",
       left: "0",
       minWidth: "90px",
       backgroundColor: "#121212",
       border: "1px solid #444",
       borderRadius: "8px",
       boxShadow: "0 2px 12px #0009",
-      zIndex: 99999,
+      zIndex: 100001, // must exceed the popup's own zIndex (100000) now that it's a body-level sibling
       display: "none",
       flexDirection: "column",
       padding: "4px 4px"
@@ -5395,7 +5606,7 @@ const Providers = {
     downloadDropdown.appendChild(unsyncOption);
 
     downloadBtnWrapper.appendChild(downloadBtn);
-    downloadBtnWrapper.appendChild(downloadDropdown);
+    document.body.appendChild(downloadDropdown);
 
     console.info("✅ [Lyrics+ UI] Download button created and added to DOM");
 
@@ -5424,6 +5635,9 @@ const Providers = {
           removeHideHandler();
           return;
         }
+        const btnRect = downloadBtn.getBoundingClientRect();
+        downloadDropdown.style.top = (btnRect.bottom + 4) + "px";
+        downloadDropdown.style.left = btnRect.left + "px";
         downloadDropdown.style.display = "flex";
         setTimeout(() => {
           removeHideHandler();
@@ -5470,6 +5684,10 @@ const Providers = {
     fontSizeSelect.style.color = "white";
     fontSizeSelect.style.fontSize = "14px";
     fontSizeSelect.style.lineHeight = "1";
+    fontSizeSelect.style.height = "28px";
+    fontSizeSelect.style.width = "64px";
+    fontSizeSelect.style.flexShrink = "0";
+    fontSizeSelect.style.boxSizing = "border-box";
     ["16", "22", "28", "32", "38", "44", "50", "56"].forEach(size => {
       const opt = document.createElement("option");
       opt.value = size;
@@ -5489,18 +5707,34 @@ const Providers = {
 
     // Toggle offset section
     const offsetToggleBtn = document.createElement("button");
-    offsetToggleBtn.textContent = "⚙️";
     offsetToggleBtn.title = "Show/hide timing offset";
-    offsetToggleBtn.style.cursor = "pointer";
-    offsetToggleBtn.style.background = "none";
-    offsetToggleBtn.style.border = "none";
-    offsetToggleBtn.style.color = "white";
-    offsetToggleBtn.style.fontSize = "16px";
-    offsetToggleBtn.style.lineHeight = "1";
+    offsetToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" style="display:block"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87c-0.12,0.21-0.08,0.47,0.12,0.61l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>`;
+    Object.assign(offsetToggleBtn.style, {
+      cursor: "pointer",
+      background: "none",
+      border: "none",
+      color: "white",
+      lineHeight: "1",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "28px",
+      height: "28px",
+      padding: "0",
+      flexShrink: "0",
+      boxSizing: "border-box",
+    });
+    offsetToggleBtn.addEventListener('mouseenter', () => {
+      offsetToggleBtn.style.color = "rgba(255, 255, 255, 0.7)";
+    });
+    offsetToggleBtn.addEventListener('mouseleave', () => {
+      offsetToggleBtn.style.color = "white";
+    });
 
     const titleBar = document.createElement("div");
     titleBar.style.display = "flex";
     titleBar.style.alignItems = "center";
+    titleBar.style.flexShrink = "0";
     titleBar.appendChild(title);
 
     // GitHub profile icon
@@ -5513,9 +5747,26 @@ const Providers = {
 
     // Button group right side
     const buttonGroup = document.createElement("div");
+    buttonGroup.id = "lyrics-plus-button-group";
     buttonGroup.style.display = "flex";
     buttonGroup.style.alignItems = "center";
-    buttonGroup.style.gap = "4px";
+    buttonGroup.style.justifyContent = "flex-start";
+    buttonGroup.style.flex = "1 1 auto";
+    buttonGroup.style.gap = "1px";
+    // NOTE: this must stay shrinkable (flex-shrink defaults to 1, minWidth 0)
+    // so it can actually give up width to titleBar in the header's flex row.
+    // A previous version pinned this to flexShrink:0, which meant the group
+    // could never get narrower than its content and instead spilled past the
+    // popup's edge on small/mobile widths. Since every icon child below is
+    // individually flexShrink:0, the *children* still hold their fixed size -
+    // it's only the group's own box that shrinks, and once that box is
+    // narrower than its children's total width, overflow-x kicks in and the
+    // group scrolls horizontally (scrollbar hidden via .hide-scrollbar)
+    // instead of icons overlapping or spilling out.
+    buttonGroup.style.minWidth = "0";
+    buttonGroup.style.flexWrap = "nowrap";
+    buttonGroup.style.overflowX = "auto";
+    buttonGroup.style.overflowY = "hidden";
     buttonGroup.appendChild(downloadBtnWrapper);
     buttonGroup.appendChild(fontSizeSelect);
     buttonGroup.appendChild(btnReset);
@@ -5537,12 +5788,16 @@ const Providers = {
       border: 'none',
       cursor: 'pointer',
       color: 'white',
-      padding: '4px',
+      padding: '0',
       borderRadius: '50%',
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
       lineHeight: '1',
+      width: '28px',
+      height: '28px',
+      flexShrink: '0',
+      boxSizing: 'border-box',
     });
     pipToggleBtn.addEventListener('mouseenter', () => {
       if (!isPipActive) pipToggleBtn.style.color = 'rgba(255,255,255,0.7)';
@@ -5553,10 +5808,139 @@ const Providers = {
     pipToggleBtn.onclick = togglePip;
     buttonGroup.appendChild(pipToggleBtn);
 
-    buttonGroup.appendChild(closeBtn);
-
+    // closeBtn is a sibling of buttonGroup, not a child - keeps it permanently
+    // pinned/visible regardless of buttonGroup's scroll position, same as
+    // titleBar (Lyrics+ + GitHub icon) on the left.
     header.appendChild(buttonGroup);
+    header.appendChild(closeBtn);
+
     headerWrapper.appendChild(header);
+
+    const headerScrollTrack = document.createElement("div");
+headerScrollTrack.id = "lyrics-plus-header-scroll-track";
+Object.assign(headerScrollTrack.style, {
+  position: "relative",
+  height: "1px",
+  marginTop: "12px",
+  marginLeft: "-12px",
+  marginRight: "-12px",
+  backgroundColor: "#333",
+  flexShrink: "0",
+});
+
+// Invisible, taller hit area layered over the 1px track so it's actually
+// grabbable with a mouse/finger, without changing the track's visual size
+// (same pattern as resizerHitArea for the corner resize handle).
+const headerScrollHitArea = document.createElement("div");
+headerScrollHitArea.id = "lyrics-plus-header-scroll-hitarea";
+Object.assign(headerScrollHitArea.style, {
+  position: "absolute",
+  left: "0",
+  right: "0",
+  top: "-7px",
+  height: "15px",
+  cursor: "pointer",
+  touchAction: "none", // we handle the drag ourselves
+  display: "none", // shown only while buttonGroup is actually overflowing
+});
+headerScrollTrack.appendChild(headerScrollHitArea);
+
+const headerScrollThumb = document.createElement("div");
+headerScrollThumb.id = "lyrics-plus-header-scroll-thumb";
+Object.assign(headerScrollThumb.style, {
+  position: "absolute",
+  top: "0",
+  left: "0",
+  height: "100%",
+  width: "0%",
+  backgroundColor: "rgba(255, 255, 255, 0.4)",
+  opacity: "0",
+  transition: "opacity 0.15s",
+  pointerEvents: "none", // purely visual - hitArea handles input, clicks pass through
+});
+headerScrollTrack.appendChild(headerScrollThumb);
+headerWrapper.appendChild(headerScrollTrack);
+
+function updateHeaderScrollIndicator() {
+  const scrollWidth = buttonGroup.scrollWidth;
+  const clientWidth = buttonGroup.clientWidth;
+  const isOverflowing = scrollWidth > clientWidth + 1;
+  if (!isOverflowing) {
+    headerScrollThumb.style.opacity = "0";
+    headerScrollHitArea.style.display = "none";
+    return;
+  }
+  const MIN_THUMB_PERCENT = 15;
+  const widthPercent = Math.max(MIN_THUMB_PERCENT, (clientWidth / scrollWidth) * 100);
+  const scrollableWidth = scrollWidth - clientWidth;
+  const scrollFraction = scrollableWidth > 0 ? buttonGroup.scrollLeft / scrollableWidth : 0;
+  const leftPercent = scrollFraction * (100 - widthPercent);
+  headerScrollThumb.style.width = widthPercent + "%";
+  headerScrollThumb.style.left = leftPercent + "%";
+  headerScrollThumb.style.opacity = "1";
+  headerScrollHitArea.style.display = "block";
+}
+buttonGroup.addEventListener("scroll", updateHeaderScrollIndicator, { passive: true });
+const headerScrollResizeObserver = new ResizeObserver(() => updateHeaderScrollIndicator());
+headerScrollResizeObserver.observe(buttonGroup);
+popup._headerScrollResizeObserver = headerScrollResizeObserver;
+requestAnimationFrame(updateHeaderScrollIndicator);
+
+// --- Drag-to-scroll for the scroll indicator ---
+// headerWrapper is itself the popup's drag-to-move handle (see makeDraggable
+// below) - without stopPropagation here, mousedown/touchstart on this hit
+// area would bubble up and start moving the whole popup instead of
+// scrolling buttonGroup. That's exactly the "mouse not detecting there's a
+// scroll item" behavior: the drag handler was winning the event every time.
+let headerScrollDragging = false;
+
+function headerScrollPointerToScrollLeft(clientX) {
+  const trackRect = headerScrollTrack.getBoundingClientRect();
+  const scrollableWidth = buttonGroup.scrollWidth - buttonGroup.clientWidth;
+  if (scrollableWidth <= 0 || trackRect.width <= 0) return 0;
+  const fraction = clamp((clientX - trackRect.left) / trackRect.width, 0, 1);
+  return fraction * scrollableWidth;
+}
+
+function onHeaderScrollDragStart(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  headerScrollDragging = true;
+  const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
+  buttonGroup.scrollLeft = headerScrollPointerToScrollLeft(clientX);
+}
+
+function onHeaderScrollDragMove(e) {
+  if (!headerScrollDragging) return;
+  e.stopPropagation();
+  if (e.type === "touchmove") e.preventDefault();
+  const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
+  buttonGroup.scrollLeft = headerScrollPointerToScrollLeft(clientX);
+}
+
+function onHeaderScrollDragEnd() {
+  headerScrollDragging = false;
+}
+
+headerScrollHitArea.addEventListener("mousedown", onHeaderScrollDragStart);
+headerScrollHitArea.addEventListener("touchstart", onHeaderScrollDragStart, { passive: false });
+window.addEventListener("mousemove", onHeaderScrollDragMove);
+window.addEventListener("touchmove", onHeaderScrollDragMove, { passive: false });
+window.addEventListener("mouseup", onHeaderScrollDragEnd);
+window.addEventListener("touchend", onHeaderScrollDragEnd);
+
+popup._headerScrollDragHandlers = { onHeaderScrollDragMove, onHeaderScrollDragEnd };
+
+// --- Wheel-to-horizontal-scroll for the header icon row ---
+// Scrolling up (deltaY negative) moves right; scrolling down (deltaY positive) moves left.
+function onHeaderWheel(e) {
+  const scrollableWidth = buttonGroup.scrollWidth - buttonGroup.clientWidth;
+  if (scrollableWidth <= 0) return; // nothing to scroll, let the page handle it normally
+  e.preventDefault();
+  buttonGroup.scrollLeft = clamp(buttonGroup.scrollLeft - e.deltaY, 0, scrollableWidth);
+}
+headerWrapper.addEventListener("wheel", onHeaderWheel, { passive: false });
+popup._headerWheelHandler = onHeaderWheel;
 
     // Tabs container
     const tabs = document.createElement("div");
@@ -7558,7 +7942,7 @@ const Providers = {
     // Show/hide transliteration button based on data availability
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
-      transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
+      transliterationBtn.style.display = hasTransliterationData ? "inline-flex" : "none";
       console.info("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
     }
 
@@ -7779,7 +8163,7 @@ const Providers = {
     // Show/hide transliteration button
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
-      transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
+      transliterationBtn.style.display = hasTransliterationData ? "inline-flex" : "none";
     }
 
     if (transliterationEnabled && hasTransliterationData) {
@@ -7965,7 +8349,7 @@ const Providers = {
    // Show/hide transliteration button based on data availability
     const transliterationBtn = popup._transliterationToggleBtn;
     if (transliterationBtn) {
-      transliterationBtn.style.display = hasTransliterationData ? "inline-block" : "none";
+      transliterationBtn.style.display = hasTransliterationData ? "inline-flex" : "none";
       console.info("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
     }
 
