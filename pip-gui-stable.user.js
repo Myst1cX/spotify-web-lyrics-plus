@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.33
+// @version      17.34
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icon/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -19,6 +19,67 @@
 // LEFT TO IMPROVE (MINOR INCONVENIENCES):
 // 1. PiP mode doesn't work on mobile - don't need it but i'll see what i can do.
 // (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that can then open the native pip view - doesn't appear.)
+
+// RESOLVED (17.34):
+// • TRANSLATION/TRANSLITERATION COULD LEAK INTO THE MAIN CONTAINER DURING PIP
+//   translateLyricsInPopup() and showTransliterationInPopup() insert their
+//   result divs directly into lyricsContainer via insertBefore(), which runs
+//   *after* enterPipInLyricsContainer() has already hidden the existing lyric
+//   lines and shown the "This video is playing in Picture-in-Picture mode"
+//   notice. Those newly-inserted divs were never part of that hide pass, so
+//   while PiP was active they showed up visible in the main container right
+//   alongside the notice - even though the PiP window itself rendered the
+//   translation correctly, since it reads the text via data attributes
+//   independent of layout/visibility.
+//   Fix: new hideElementWhilePipActive()/unhideElementWhilePipActive() helpers.
+//   The former hides an element immediately if PiP is currently active and
+//   registers it in the same lyricsContainer._pipSavedChildren list that
+//   exitPipFromLyricsContainer() already restores from, so it correctly
+//   reappears on PiP exit; the latter unregisters an element from that list
+//   right before it's removed (removeTranslatedLyrics()/
+//   removeTransliterationLyrics()) so the restore step never touches an
+//   already-removed node. Called after each translation/transliteration div
+//   insertion. (Deliberately not just re-calling enterPipInLyricsContainer()
+//   from those paths - the lyric <p> elements are already hidden by that
+//   point, so a second call would re-save their already-"none" display as the
+//   "original" value and leave lyrics hidden forever after exiting PiP.)
+//
+// • HEADER SCROLL INDICATOR: NOW UPDATES WHEN BUTTONS DYNAMICALLY SHOW/HIDE
+//   updateHeaderScrollIndicator() previously only re-ran on buttonGroup's
+//   'scroll' event, a ResizeObserver on buttonGroup itself, and once via
+//   requestAnimationFrame at popup creation. chineseConvBtn/
+//   transliterationToggleBtn/downloadBtn toggle their own display
+//   none<->inline-flex later (updateLyricsContent(), loadLyricsFromCache(),
+//   rerenderLyrics(), hideButtonsForInstrumental()) without triggering any of
+//   those - a ResizeObserver on buttonGroup fires when buttonGroup's own box
+//   changes size, not when a child inside it appears/disappears while
+//   flexbox keeps buttonGroup's own width fixed. If one of those buttons
+//   popping in after a track loads was what pushed the row into overflow,
+//   the scroll track/thumb wouldn't appear until the user happened to
+//   scroll or resize the window. Fix: updateHeaderScrollIndicator is now
+//   exposed as popup._updateHeaderScrollIndicator and called right after
+//   every one of those display-toggle sites.
+//
+// • HEADER SCROLLBAR: WHEEL LISTENER CLEANUP NOW TARGETS THE RIGHT ELEMENT
+//   removePopup() called existing.removeEventListener("wheel", ...) on the
+//   popup div, but the listener was attached to headerWrapper - a no-op that
+//   was harmless only because the whole subtree gets removed and GC'd right
+//   after anyway. Now looked up via existing.querySelector
+//   ("#lyrics-plus-header-wrapper") and removed from the correct element.
+//
+// • HEADER SCROLLBAR: ARROW AUTO-REPEAT AND DRAG NO LONGER GET STUCK
+//   headerArrowRepeatTimeout/Interval were plain closure variables, cleared
+//   only via a window mouseup/touchend listener - if removePopup() ran while
+//   an arrow was held (e.g. the popup torn down by a track/provider event
+//   mid-press), nothing stopped the interval, which kept calling
+//   scrollButtonGroupBy() against a now-detached buttonGroup and pinned that
+//   DOM subtree in memory. Also, only touchend was handled, not touchcancel -
+//   an interrupted touch (incoming call, OS gesture, etc.) fires touchcancel
+//   instead, so the repeat (and, separately, the scroll-thumb drag state)
+//   could get stuck active. Fix: clearHeaderArrowRepeat is now exposed as
+//   popup._clearHeaderArrowRepeat and invoked from removePopup(); touchcancel
+//   is now handled alongside touchend for both the arrow-repeat and
+//   thumb-drag listeners, with matching removePopup() teardown.
 
 // RESOLVED (17.33): IMPROVED THE HEADER'S SCROLLBAR THAT CAN SCROLL BETWEEN HEADER ICONS WHEN OVERFLOWN IN MINIMUM WIDTH MODAL
 
@@ -1914,6 +1975,39 @@ document.head.appendChild(buttonGroupScrollStyle);
     }
     applyHiddenPipVideoStyle();
     if (document.body && pipVideo && !pipVideo.parentNode) document.body.appendChild(pipVideo);
+  }
+
+  /**
+   * Translation/transliteration divs are inserted directly into
+   * lyricsContainer by translateLyricsInPopup()/showTransliterationInPopup(),
+   * *after* enterPipInLyricsContainer() has already hidden the existing lyric
+   * lines and shown the PiP notice. Without this, those newly-inserted divs
+   * are never hidden - the PiP window shows the translation correctly (it
+   * reads the text via data attributes, independent of layout), but the same
+   * divs also sit in the main container, visible right alongside/under the
+   * "This video is playing in Picture-in-Picture mode" notice.
+   *
+   * Call this right after inserting any such element while PiP may be
+   * active, so it gets hidden immediately and restored correctly (instead of
+   * staying visible until PiP is exited) by exitPipFromLyricsContainer().
+   */
+  function hideElementWhilePipActive(lyricsContainer, el) {
+    if (!lyricsContainer || !el) return;
+    if (!(isPipActive || isPagePipActive)) return;
+    if (!lyricsContainer._pipSavedChildren) lyricsContainer._pipSavedChildren = [];
+    lyricsContainer._pipSavedChildren.push({ el, display: el.style.display });
+    el.style.display = 'none';
+  }
+
+  /**
+   * Counterpart to hideElementWhilePipActive(): call before/after removing an
+   * element that may have been registered there (e.g. removeTranslatedLyrics()/
+   * removeTransliterationLyrics()), so exitPipFromLyricsContainer() doesn't
+   * later try to restore display on an element no longer in the DOM.
+   */
+  function unhideElementWhilePipActive(lyricsContainer, el) {
+    if (!lyricsContainer || !lyricsContainer._pipSavedChildren) return;
+    lyricsContainer._pipSavedChildren = lyricsContainer._pipSavedChildren.filter(entry => entry.el !== el);
   }
 
   /**
@@ -4945,17 +5039,30 @@ const Providers = {
         window.removeEventListener("touchmove", onHeaderScrollDragMove);
         window.removeEventListener("mouseup", onHeaderScrollDragEnd);
         window.removeEventListener("touchend", onHeaderScrollDragEnd);
+        window.removeEventListener("touchcancel", onHeaderScrollDragEnd);
         existing._headerScrollDragHandlers = null;
       }
       if (existing._headerWheelHandler) {
-        existing.removeEventListener?.("wheel", existing._headerWheelHandler); // no-op guard
+        // The listener is attached to headerWrapper, not the popup itself -
+        // look it up by id rather than calling removeEventListener on the
+        // wrong element (previously a harmless no-op, masked by the whole
+        // subtree being removed/GC'd right after anyway).
+        const headerWrapperEl = existing.querySelector("#lyrics-plus-header-wrapper");
+        headerWrapperEl?.removeEventListener("wheel", existing._headerWheelHandler);
         existing._headerWheelHandler = null;
       }
       if (existing._headerArrowScrollHandlers) {
         const { onHeaderArrowUp } = existing._headerArrowScrollHandlers;
         window.removeEventListener("mouseup", onHeaderArrowUp);
         window.removeEventListener("touchend", onHeaderArrowUp);
+        window.removeEventListener("touchcancel", onHeaderArrowUp);
         existing._headerArrowScrollHandlers = null;
+      }
+      // Stop any in-flight arrow auto-repeat immediately, rather than letting
+      // its interval keep firing against a now-detached buttonGroup until GC.
+      if (existing._clearHeaderArrowRepeat) {
+        existing._clearHeaderArrowRepeat();
+        existing._clearHeaderArrowRepeat = null;
       }
       // Remove window mouseup handler for resize
       if (existing._resizeMouseupHandler) {
@@ -5966,6 +6073,13 @@ const Providers = {
     const headerScrollResizeObserver = new ResizeObserver(() => updateHeaderScrollIndicator());
     headerScrollResizeObserver.observe(buttonGroup);
     popup._headerScrollResizeObserver = headerScrollResizeObserver;
+    // Exposed so code elsewhere (e.g. chineseConvBtn/transliterationToggleBtn
+    // display toggles in updateLyricsContent/loadLyricsFromCache/rerenderLyrics)
+    // can force a re-check after changing a child button's visibility, since
+    // the ResizeObserver above only fires when buttonGroup's own box resizes,
+    // not when a child inside it appears/disappears while flexbox keeps
+    // buttonGroup's own width fixed.
+    popup._updateHeaderScrollIndicator = updateHeaderScrollIndicator;
     requestAnimationFrame(updateHeaderScrollIndicator);
 
     // --- Drag-to-scroll for the thumb ---
@@ -6009,6 +6123,9 @@ const Providers = {
     window.addEventListener("touchmove", onHeaderScrollDragMove, { passive: false });
     window.addEventListener("mouseup", onHeaderScrollDragEnd);
     window.addEventListener("touchend", onHeaderScrollDragEnd);
+    // Without this, an interrupted touch (touchcancel, not touchend) leaves
+    // headerScrollDragging stuck true.
+    window.addEventListener("touchcancel", onHeaderScrollDragEnd);
 
     popup._headerScrollDragHandlers = { onHeaderScrollDragMove, onHeaderScrollDragEnd };
 
@@ -6051,8 +6168,16 @@ const Providers = {
     headerScrollArrowRight.addEventListener("mouseleave", onHeaderArrowUp);
     window.addEventListener("mouseup", onHeaderArrowUp);
     window.addEventListener("touchend", onHeaderArrowUp);
+    // touchend alone misses an interrupted touch (incoming call, OS gesture,
+    // etc.), which fires touchcancel instead and would otherwise leave the
+    // repeat running indefinitely.
+    window.addEventListener("touchcancel", onHeaderArrowUp);
 
     popup._headerArrowScrollHandlers = { onHeaderArrowUp };
+    // Let removePopup() stop any in-flight repeat immediately (e.g. if the
+    // popup is torn down mid-press by a track/provider event) instead of
+    // leaving the interval spinning on a now-detached buttonGroup.
+    popup._clearHeaderArrowRepeat = clearHeaderArrowRepeat;
 
 // --- Wheel-to-horizontal-scroll for the header icon row ---
 // Scrolling up (deltaY negative) moves right; scrolling down (deltaY positive) moves left.
@@ -6165,7 +6290,10 @@ popup._headerWheelHandler = onHeaderWheel;
 
     function removeTranslatedLyrics() {
       const translatedEls = lyricsContainer.querySelectorAll('[data-translated="true"]');
-      translatedEls.forEach(el => el.remove());
+      translatedEls.forEach(el => {
+        unhideElementWhilePipActive(lyricsContainer, el);
+        el.remove();
+      });
       translationPresent = false;
       lastTranslatedLang = null;
     }
@@ -6200,6 +6328,7 @@ popup._headerWheelHandler = onHeaderWheel;
           }
 
           p.parentNode.insertBefore(translationDiv, insertionPoint);
+          hideElementWhilePipActive(lyricsContainer, translationDiv);
         }));
         lastTranslatedLang = targetLang;
         translationPresent = true;
@@ -6211,7 +6340,10 @@ popup._headerWheelHandler = onHeaderWheel;
 
     function removeTransliterationLyrics() {
       const transliterationEls = lyricsContainer.querySelectorAll('[data-transliteration="true"]');
-      transliterationEls.forEach(el => el.remove());
+      transliterationEls.forEach(el => {
+        unhideElementWhilePipActive(lyricsContainer, el);
+        el.remove();
+      });
       transliterationPresent = false;
     }
 
@@ -6243,6 +6375,7 @@ popup._headerWheelHandler = onHeaderWheel;
           // No translation or next sibling is something else - insert after lyric
           p.parentNode.insertBefore(transliterationDiv, insertionPoint);
         }
+        hideElementWhilePipActive(lyricsContainer, transliterationDiv);
       });
       transliterationPresent = true;
     }
@@ -8068,6 +8201,7 @@ popup._headerWheelHandler = onHeaderWheel;
       transliterationBtn.style.display = hasTransliterationData ? "inline-flex" : "none";
       console.info("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
     }
+    popup._updateHeaderScrollIndicator?.();
 
     // Show transliteration if enabled and data is available
     if (transliterationEnabled && hasTransliterationData) {
@@ -8094,6 +8228,7 @@ popup._headerWheelHandler = onHeaderWheel;
     }
     if (chineseConvBtn) chineseConvBtn.style.display = "none";
     if (transliterationBtn) transliterationBtn.style.display = "none";
+    popup._updateHeaderScrollIndicator?.();
   }
 
   /**
@@ -8215,6 +8350,7 @@ popup._headerWheelHandler = onHeaderWheel;
         chineseConvBtn.style.display = "none";
       }
     }
+    popup._updateHeaderScrollIndicator?.();
 
     const shouldConvertChinese = isChineseConversionEnabled();
     const convertText = (text) => {
@@ -8356,6 +8492,7 @@ popup._headerWheelHandler = onHeaderWheel;
       }
       if (downloadDropdown) downloadDropdown.style.display = "none";
       if (chineseConvBtn) chineseConvBtn.style.display = "none";
+      popup._updateHeaderScrollIndicator?.();
       return;
     }
 
@@ -8387,6 +8524,7 @@ popup._headerWheelHandler = onHeaderWheel;
         chineseConvBtn.style.display = "none";
       }
     }
+    popup._updateHeaderScrollIndicator?.();
 
     // Check if Chinese conversion is enabled
     const shouldConvertChinese = isChineseConversionEnabled();
@@ -8475,6 +8613,7 @@ popup._headerWheelHandler = onHeaderWheel;
       transliterationBtn.style.display = hasTransliterationData ? "inline-flex" : "none";
       console.info("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
     }
+    popup._updateHeaderScrollIndicator?.();
 
     // Show transliteration if enabled and data is available
     if (transliterationEnabled && hasTransliterationData) {
@@ -8495,6 +8634,9 @@ popup._headerWheelHandler = onHeaderWheel;
         if (downloadDropdown) downloadDropdown.style.display = "none";
       }
     }
+    // downloadBtn lives in buttonGroup too, so its visibility can also affect
+    // overflow - refresh again after it changes.
+    popup._updateHeaderScrollIndicator?.();
 
     // Cache lyrics for future use (repeat one, recent songs)
     if (currentSyncedLyrics || currentUnsyncedLyrics) {
