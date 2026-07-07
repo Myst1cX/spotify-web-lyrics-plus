@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.34
+// @version      17.35
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icon/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -19,6 +19,19 @@
 // LEFT TO IMPROVE (MINOR INCONVENIENCES):
 // 1. PiP mode doesn't work on mobile - don't need it but i'll see what i can do.
 // (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that can then open the native pip view - doesn't appear.)
+
+// RESOLVED (17.35): PIP STATUS MESSAGES NO LONGER GET SQUISHED/MANGLED WHEN LONG
+// drawPipFrame()'s status branch only split currentLyricsStatusMessage on
+// literal \n, then handed the resulting line straight to fillText(line,
+// centerX, statusY, textMaxWidth). fillText's 4th arg doesn't wrap - it
+// horizontally compresses the glyphs to force a too-wide line into that
+// width. Long single-line messages with no \n (e.g. the Spotify token
+// refresh notice) had no line breaks at all, so the whole sentence got
+// squished into one line.
+// Fix: each paragraph (already split on \n) is now also word-wrapped to
+// textMaxWidth via splitPipTextToLines() - the same helper flattenPipBlockRows()
+// uses for the actual lyrics rows - before drawing, and fillText is called
+// without a maxWidth argument since every line already fits.
 
 // RESOLVED (17.34):
 // • TRANSLATION/TRANSLITERATION COULD LEAK INTO THE MAIN CONTAINER DURING PIP
@@ -2265,18 +2278,25 @@ document.head.appendChild(buttonGroupScrollStyle);
         // Split on newlines since some status messages (e.g. the instrumental
         // notice) span multiple lines.
         const statusText = currentLyricsStatusMessage || 'Waiting for lyrics\u2026';
-        const statusLines = statusText.split('\n').filter(Boolean);
+        const statusParagraphs = statusText.split('\n').filter(Boolean);
         pipCtx.font = `bold ${activeFontSize}px sans-serif`;
         // Opaque gray (#b3b3b3 ≈ white at 70% alpha) instead of rgba(255,255,255,0.7):
         // keeps the same dimmed, grayish tone as before, but avoids the soft/blurry
         // anti-aliased edges that come from actually blending a transparent fill
         // over the dark background.
         pipCtx.fillStyle = '#b3b3b3';
+        // Word-wrap each paragraph to textMaxWidth via splitPipTextToLines (the same
+        // helper the lyrics rows use), rather than passing textMaxWidth straight into
+        // fillText(). fillText's maxWidth argument doesn't wrap - it horizontally
+        // squishes/compresses the glyphs to force a too-wide line into that width,
+        // which is what produced the mangled/squashed look on long single-line
+        // messages (e.g. the Spotify token-refresh notice) that contain no \n.
+        const statusLines = statusParagraphs.flatMap(p => splitPipTextToLines(pipCtx, p, textMaxWidth));
         const statusLineHeight = Math.round(activeFontSize * 1.3);
         const statusTotalHeight = statusLines.length * statusLineHeight;
         let statusY = Math.round(centerY - (statusTotalHeight / 2));
         statusLines.forEach(line => {
-          pipCtx.fillText(line, centerX, statusY, textMaxWidth);
+          pipCtx.fillText(line, centerX, statusY);
           statusY += statusLineHeight;
         });
       }
