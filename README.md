@@ -138,7 +138,7 @@
 > 3. **Auto-detect logic:** Script automatically chooses the best lyric provider for each track.  
 > 4. **Manually switch between lyric providers:** Click between the lyric source provider tabs.  
 > 8. **Settings panel:** Click the <img src="icons/header/settings.svg" width="16" height="16" align="absmiddle" alt="settings icon"/> settings menu button to open/close the settings panel (show/hide lyric source tabs, show/hide seekbar, show/hide playback controls, set timing offset, enable/disable AMOLED theme).   
-> 5. **Translate lyrics:** Click the <img src="icons/header/translate.svg" width="16" height="16" align="absmiddle" alt="translate icon"/> translate button to toggle translation controls, pick your language, and press on "Translate".  
+> 5. **Translate lyrics:** Click the <img src="icons/header/translate.svg" width="16" height="16" align="absmiddle" alt="translate icon"/> translate button to toggle translation controls, pick your language, and press on "Translate". Click on "Original" to remove the translated lines.   
 > 6. **Transliteration:** Click 🔡 (KPoe provider only, when available in the lyric source) to show/hide romanized transliteration alongside lyrics.  
 > 7. **Chinese conversion:** Click 简 or 繁 (when Chinese lyrics are detected) to convert between Traditional and Simplified Chinese.    
 > 8. **Change font size:** Use the font size's "px" dropdown menu.  
