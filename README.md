@@ -17,7 +17,7 @@
 > **POPUP WINDOW**  
 > Move and resize anywhere on your screen.  
 > Remembers position, size, font, provider, and translation settings.  
-> <img src="icons/header/reset.svg" width="16" height="16" alt="reset icon"/> Reset button to restore default popup position/size.
+> Reset button <img src="icons/header/reset.svg" width="16" height="16" alt="reset icon"/> to restore default popup position/size.
 > 
 > **FONT SIZE PICKER**  
 > Choose your favorite lyrics text size.  
@@ -51,10 +51,11 @@
 >
 > **AMOLED THEME**  
 > A pitch-black theme for the Lyrics+ popup.  
-> Can be toggled on/off from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu.
+> Can be toggled on/off from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu.   
 > 
 > **LYRICS DOWNLOAD**  
-> Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability.
+> Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability, using the dedicated    
+> <img src="icons/header/download.svg" width="16" height="16" alt="download icon"/> download button.   
 > 
 > **LIVE TRANSLATION**  
 > Instantly translate any lyrics (70+ languages, using the Google translate api).
@@ -76,7 +77,7 @@
 > Unsynced lyrics show a prompt to view them in the main lyrics+ popup's lyric container.  
 > Always on top. Works across browser tabs and even outside the browser.  
 > Font size, transliteration, translation, and Chinese conversion settings are all reflected live.  
-> Can be toggled on/off using the <img src="icons/header/pip.svg" width="16" height="16" alt="PiP icon"/> dedicated PiP icon button (styled to match Spotify's own native Picture-in-Picture icon).  
+> Can be toggled on/off using the dedicated <img src="icons/header/pip.svg" width="16" height="16" alt="PiP icon"/> PiP icon button (styled to match Spotify's own native Picture-in-Picture icon).  
 > When toggled on, the lyric lines inside the lyric+ popup's lyric container are hidden and replaced with a placeholder message  
 > "This video is playing in Picture-in-Picture mode". The lyrics appear in the floating PiP window that just opened.  
 > When the floating PiP window is closed or the button is toggled off, the original lyrics container is restored.  
