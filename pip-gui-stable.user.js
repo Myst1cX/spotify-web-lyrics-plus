@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.35
+// @version      17.36
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -19,6 +19,28 @@
 // LEFT TO IMPROVE (MINOR INCONVENIENCES):
 // 1. PiP mode doesn't work on mobile - don't need it but i'll see what i can do.
 // (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that can then open the native pip view - doesn't appear.)
+
+// RESOLVED (17.36): CHINESE CONVERSION TOGGLE NO LONGER WIPES ACTIVE TRANSLATION
+// rerenderLyrics() (the Chinese-conversion button handler) rebuilt the whole
+// lyrics container from scratch on every toggle: lyricsContainer.innerHTML = ""
+// then recreated every <p> line from currentSyncedLyrics/currentUnsyncedLyrics.
+// That indiscriminately destroyed the translation/transliteration <div>
+// siblings too. Transliteration was then explicitly re-shown afterward (gated
+// on STORAGE_KEYS.TRANSLITERATION_ENABLED), but translation had no equivalent
+// persisted "was showing" flag, so it just silently disappeared - from both
+// the main container and the PiP canvas (getPipLineGroupText() reads live DOM
+// siblings of the <p>, so a removed translation div reads as gone there too).
+// Root cause: a script conversion never changes line count/order/sync state,
+// only the glyphs inside each existing <p> - a full rebuild was never
+// necessary for this path in the first place.
+// Fix: rerenderLyrics() now just mutates the textContent of each existing
+// <p data-lyrics-line-index> in place via convertText() and returns. It no
+// longer touches lyricsContainer.innerHTML, no longer needs to reset/restore
+// translationPresent/transliterationPresent, no longer re-runs
+// highlightSyncedLyrics() or enterPipInLyricsContainer() (nothing was hidden
+// or removed to begin with), and translation text itself doesn't need
+// re-fetching - Traditional/Simplified are the same underlying language, so a
+// translation done against one script is still correct against the other.
 
 // RESOLVED (17.35): PIP STATUS MESSAGES NO LONGER GET SQUISHED/MANGLED WHEN LONG
 // drawPipFrame()'s status branch only split currentLyricsStatusMessage on
@@ -8128,13 +8150,16 @@ popup._headerWheelHandler = onHeaderWheel;
     startPollingForTrackChange(popup);
   }
 
-  // Re-render cached lyrics without fetching from provider (used for Chinese conversion toggle)
+  // Re-render cached lyrics without fetching from provider (used for Chinese conversion toggle).
+  // Mutates existing <p> text content in place instead of rebuilding the container - the line
+  // count/order/sync state never changes for a script conversion, only the glyphs shown. This
+  // deliberately leaves translation/transliteration <div> siblings untouched so they survive the
+  // toggle instead of being wiped (see 17.36 changelog entry below).
   function rerenderLyrics(popup) {
     const lyricsContainer = popup.querySelector("#lyrics-plus-content");
     if (!lyricsContainer) return;
 
     if (!currentSyncedLyrics && !currentUnsyncedLyrics) return;
-    currentLyricsStatusMessage = null;
 
     const chineseConvBtn = popup._chineseConvBtn;
     const shouldConvertChinese = isChineseConversionEnabled();
@@ -8155,81 +8180,19 @@ popup._headerWheelHandler = onHeaderWheel;
       return text;
     };
 
-    // Reset translation state when re-rendering lyrics
-    translationPresent = false;
-    transliterationPresent = false;
-    lastTranslatedLang = null;
+    const lines = currentSyncedLyrics || currentUnsyncedLyrics;
+    const existingLines = lyricsContainer.querySelectorAll('p[data-lyrics-line-index]');
 
-    const pipCurrentlyActive = isPipActive || isPagePipActive;
-    lyricsContainer.innerHTML = "";
+    // Fallback: if there's nothing to mutate yet (shouldn't happen - this is only wired to the
+    // Chinese-conversion button, which is only shown once lyrics are already rendered) bail out
+    // rather than silently doing nothing.
+    if (existingLines.length === 0) return;
 
-    const transliterationEnabled = localStorage.getItem(STORAGE_KEYS.TRANSLITERATION_ENABLED) === 'true';
-    let hasTransliterationData = false;
-
-    if (currentSyncedLyrics) {
-      isShowingSyncedLyrics = true;
-      currentSyncedLyrics.forEach(({ text, transliteration }, idx) => {
-        const p = document.createElement("p");
-        p.setAttribute('data-lyrics-line-index', String(idx));
-        p.textContent = convertText(text);
-        p.style.margin = "0 0 6px 0";
-        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-        if (transliteration) {
-          p.setAttribute('data-transliteration-text', transliteration);
-          hasTransliterationData = true;
-        }
-        lyricsContainer.appendChild(p);
-      });
-      // Normalize cached lyrics time format for proper syncing (especially for KPoe provider)
-      highlightSyncedLyrics(normalizeLyricsTimeFormat(currentSyncedLyrics), lyricsContainer);
-    } else if (currentUnsyncedLyrics) {
-      isShowingSyncedLyrics = false;
-      currentUnsyncedLyrics.forEach(({ text, transliteration }, idx) => {
-        const p = document.createElement("p");
-        p.setAttribute('data-lyrics-line-index', String(idx));
-        p.textContent = convertText(text);
-        p.style.margin = "0 0 6px 0";
-        p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
-        p.style.color = "white";
-        p.style.fontWeight = "400";
-        p.style.filter = "blur(0.7px)";
-        p.style.opacity = "0.8";
-        if (transliteration) {
-          p.setAttribute('data-transliteration-text', transliteration);
-          hasTransliterationData = true;
-        }
-        lyricsContainer.appendChild(p);
-      });
-      // For unsynced, always allow user scroll
-      lyricsContainer.style.overflowY = "auto";
-      lyricsContainer.style.pointerEvents = "";
-      lyricsContainer.classList.remove('hide-scrollbar');
-      lyricsContainer.style.scrollbarWidth = "";
-      lyricsContainer.style.msOverflowStyle = "";
-    }
-
-    // Reuse enterPipInLyricsContainer() instead of duplicating the
-    // hide-children/show-notice logic inline — this also correctly hides the
-    // synced-lyrics bottom spacer, which the old inline versions (before version 17.27) left visible.
-    if (pipCurrentlyActive) {
-      enterPipInLyricsContainer();
-    }
-
-    // Show/hide transliteration button based on data availability
-    const transliterationBtn = popup._transliterationToggleBtn;
-    if (transliterationBtn) {
-      transliterationBtn.style.display = hasTransliterationData ? "inline-flex" : "none";
-      console.info("📝 [Lyrics+ UI] Transliteration button visibility updated:", hasTransliterationData ? "SHOWN (transliteration data available)" : "HIDDEN (no transliteration data)");
-    }
-    popup._updateHeaderScrollIndicator?.();
-
-    // Show transliteration if enabled and data is available
-    if (transliterationEnabled && hasTransliterationData) {
-      showTransliterationInPopup();
-      if (transliterationBtn) {
-        transliterationBtn.title = "Hide transliteration";
-      }
-    }
+    existingLines.forEach(p => {
+      const idx = Number(p.getAttribute('data-lyrics-line-index'));
+      const raw = lines[idx]?.text;
+      if (raw != null) p.textContent = convertText(raw);
+    });
   }
 
   /**
