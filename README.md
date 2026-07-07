@@ -133,7 +133,7 @@
 
 ## Usage
 
-> 1. **Open/close popup:** Click the Lyrics+ button. You can also close the popup modal using the dedicated <img src="icons/header/reset.svg" width="16" height="16" align="absmiddle" alt="close icon"/> close button.
+> 1. **Open/close popup:** Click the Lyrics+ button. You can also close the popup modal using the dedicated <img src="icons/header/close.svg" width="16" height="16" align="absmiddle" alt="close icon"/> close button.
 > 2. **Move/resize:** Drag the header or the triangle in the corner.  
 > 3. **Auto-detect logic:** Script automatically chooses the best lyric provider for each track.  
 > 4. **Manually switch between lyric providers:** Click between the lyric source provider tabs.  
