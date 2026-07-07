@@ -48,7 +48,7 @@
 > **LYRICS TIMING OFFSET**  
 > Fine-tune lyric timing in milliseconds for perfect sync.  
 > Accessible from the <img src="icons/header/settings.svg" width="16" height="16" align="absmiddle" alt="settings icon"/> settings menu.  
-> The chosen setting saves locally. By default, is is set to 1000ms.
+> The chosen setting saves locally. By default, it is set to 1000ms.
 >
 > **AMOLED THEME**  
 > A pitch-black theme for the Lyrics+ popup.  
