@@ -1,8 +1,7 @@
 ## SPOTIFY WEB LYRICS+
 
 > Injects a powerful lyrics popup into the Spotify Web Player.  
-> Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, **lyrics download**,   
-> **Chinese script conversion** and **transliteration** (the  latter is limited to KPoe provider, when available in the lyric source).  
+> Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, **lyrics download**, **Chinese script conversion** and **transliteration** (the  latter is limited to KPoe provider, when available in the lyric source).  
 > **Playback controls** and **seekbar** can be enabled specifically for the Lyrics+ lyric popup to facilitate song navigation.  
 > **Amoled theme** support.  
 > **State saving** popup modal - remembers all your settings and preferences.  
@@ -17,7 +16,7 @@
 > **POPUP WINDOW**  
 > Move and resize anywhere on your screen.  
 > Remembers position, size, font, provider, and translation settings.  
-> Reset button <img src="icons/header/reset.svg" width="16" height="16" alt="reset icon"/> to restore default popup position/size.
+> <img src="icons/header/reset.svg" width="16" height="16" alt="reset icon" style="vertical-align:middle"/> Reset button to restore default popup position/size.
 > 
 > **FONT SIZE PICKER**  
 > Choose your favorite lyrics text size.  
@@ -29,39 +28,37 @@
 >
 > **LYRIC SOURCE PROVIDER TABS**  
 > Manually switch between lyric providers.  
-> Option to show/hide the lyric source tabs menu is available in the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu.
+> Option to show/hide the lyric source tabs menu is available in the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon" style="vertical-align:middle"/> settings menu.
 >
 > **LYRICS CACHING**  
 > Lyrics are automatically cached locally (up to 6 MB, typically 150–400 songs; limit currently set to 1000 songs).  
 > Cached songs load instantly with no network request. Evicts oldest entries automatically.  
-> If a song is set to "Repeat One", the lyrics container automatically reloads the song's lyrics from cache after the song restarts,   
-> without consuming another fetch request.   
+> If a song is set to "Repeat One", the lyrics container automatically reloads the song's lyrics from cache after the song restarts, without consuming another fetch request.
 > 
 > **SEEKBAR**  
 > Jump to any position in the track by dragging or clicking on the seekbar. 
-> Enable the seekbar from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu.
+> Enable the seekbar from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon" style="vertical-align:middle"/> settings menu.
 >
 > **PLAYBACK CONTROLS**  
 > Play/pause, next/previous track, shuffle and repeat buttons accessible directly inside the popup.  
-> Enable the playback controls from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu.
+> Enable the playback controls from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon" style="vertical-align:middle"/> settings menu.
 >
 > **LYRICS TIMING OFFSET**  
 > Fine-tune lyric timing in milliseconds for perfect sync.  
-> Accessible from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu.  
+> Accessible from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon" style="vertical-align:middle"/> settings menu.  
 > The chosen setting saves locally. By default, is is set to 1000ms.
 >
 > **AMOLED THEME**  
 > A pitch-black theme for the Lyrics+ popup.  
-> Can be toggled on/off from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu.   
+> Can be toggled on/off from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon" style="vertical-align:middle"/> settings menu.
 > 
 > **LYRICS DOWNLOAD**  
-> Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability,   
-> using the dedicated <img src="icons/header/download.svg" width="16" height="16" alt="download icon"/> download button.   
+> Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability.
 > 
 > **LIVE TRANSLATION**  
 > Instantly translate any lyrics (70+ languages, using the Google translate api).
 > It may not always be accurate as it performs translation line-by-line.
-> Show/hide translation controls using the <img src="icons/header/translate.svg" width="16" height="16" alt="translate icon"/> translate button. 
+> Show/hide translation controls using the <img src="icons/header/translate.svg" width="16" height="16" alt="translate icon" style="vertical-align:middle"/> translate icon button. 
 >
 > **TRANSLITERATION**  
 > Show/hide romanized transliteration alongside lyrics using the 🔡 button.  
@@ -78,7 +75,7 @@
 > Unsynced lyrics show a prompt to view them in the main lyrics+ popup's lyric container.  
 > Always on top. Works across browser tabs and even outside the browser.  
 > Font size, transliteration, translation, and Chinese conversion settings are all reflected live.  
-> Can be toggled on/off using the dedicated <img src="icons/header/pip.svg" width="16" height="16" alt="PiP icon"/> PiP button (styled to match Spotify's own native Picture-in-Picture icon).  
+> Can be toggled on/off using the <img src="icons/header/pip.svg" width="16" height="16" alt="PiP icon" style="vertical-align:middle"/> dedicated PiP icon button (styled to match Spotify's own native Picture-in-Picture icon).  
 > When toggled on, the lyric lines inside the lyric+ popup's lyric container are hidden and replaced with a placeholder message  
 > "This video is playing in Picture-in-Picture mode". The lyrics appear in the floating PiP window that just opened.  
 > When the floating PiP window is closed or the button is toggled off, the original lyrics container is restored.  
@@ -137,12 +134,12 @@
 > 2. **Move/resize:** Drag the header or the triangle in the corner.  
 > 3. **Auto-detect logic:** Script automatically chooses the best lyric provider for each track.  
 > 4. **Manually switch between lyric providers:** Click between the lyric source provider tabs.  
-> 8. **Settings panel:** Click the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu button to open/close the settings panel (show/hide lyric source tabs, show/hide seekbar, show/hide playback controls, set timing offset, enable/disable AMOLED theme).   
-> 5. **Translate lyrics:** Click the <img src="icons/header/translate.svg" width="16" height="16" alt="translate icon"/> translate button to toggle translation controls, pick your language, and press on "Translate".  
+> 8. **Settings panel:** Click the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon" style="vertical-align:middle"/> settings icon button to open/close the settings panel (show/hide lyric source tabs, show/hide seekbar, show/hide playback controls, set timing offset, enable/disable AMOLED theme).   
+> 5. **Translate lyrics:** Click the <img src="icons/header/translate.svg" width="16" height="16" alt="translate icon" style="vertical-align:middle"/> translate icon button to toggle translation controls, pick your language, and press on "Translate".  
 > 6. **Transliteration:** Click 🔡 (KPoe provider only, when available in the lyric source) to show/hide romanized transliteration alongside lyrics.  
 > 7. **Chinese conversion:** Click 简 or 繁 (when Chinese lyrics are detected) to convert between Traditional and Simplified Chinese.    
 > 8. **Change font size:** Use the font size's "px" dropdown menu.  
-> 9. **Reset:** Click the <img src="icons/header/reset.svg" width="16" height="16" alt="reset icon"/> reset button to restore default popup position/size.  
+> 9. **Reset:** Click the <img src="icons/header/reset.svg" width="16" height="16" alt="reset icon" style="vertical-align:middle"/> reset icon button to restore default popup position/size.  
 > 10. **Picture-in-Picture mode:** Click the PiP toggle to move the lyrics into a floating Picture-in-Picture window while the original lyrics container receives a placeholder. Close the PiP window to restore the original lyrics container.  
 
 * * * 
@@ -177,7 +174,7 @@
 
 ## Troubleshooting
 
-> **Lyrics out of sync?** - Adjust the timing offset from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu.  
+> **Lyrics out of sync?** - Adjust the timing offset from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon" style="vertical-align:middle"/> settings menu.  
 > 
 > **For feedback or bug reports, open an issue:**    
 > [https://github.com/Myst1cX/spotify-web-lyrics-plus/issues](https://github.com/Myst1cX/spotify-web-lyrics-plus/issues)
