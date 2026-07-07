@@ -56,12 +56,12 @@
 > 
 > **LYRICS DOWNLOAD**  
 > Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability, using the dedicated    
-> <img src="icons/header/download.svg" width="16" height="16" alt="download icon"/> download button.   
+> download button <img src="icons/header/download.svg" width="16" height="16" alt="download icon"/>.   
 > 
 > **LIVE TRANSLATION**  
 > Instantly translate any lyrics (70+ languages, using the Google translate api).
 > It may not always be accurate as it performs translation line-by-line.
-> Show/hide translation controls using the <img src="icons/header/translate.svg" width="16" height="16" alt="translate icon"/> translate icon button. 
+> Show/hide translation controls using the <img src="icons/header/translate.svg" width="16" height="16" alt="translate icon"/> translate button. 
 >
 > **TRANSLITERATION**  
 > Show/hide romanized transliteration alongside lyrics using the 🔡 button.  
@@ -78,7 +78,7 @@
 > Unsynced lyrics show a prompt to view them in the main lyrics+ popup's lyric container.  
 > Always on top. Works across browser tabs and even outside the browser.  
 > Font size, transliteration, translation, and Chinese conversion settings are all reflected live.  
-> Can be toggled on/off using the dedicated <img src="icons/header/pip.svg" width="16" height="16" alt="PiP icon"/> PiP icon button (styled to match Spotify's own native Picture-in-Picture icon).  
+> Can be toggled on/off using the dedicated <img src="icons/header/pip.svg" width="16" height="16" alt="PiP icon"/> PiP button (styled to match Spotify's own native Picture-in-Picture icon).  
 > When toggled on, the lyric lines inside the lyric+ popup's lyric container are hidden and replaced with a placeholder message  
 > "This video is playing in Picture-in-Picture mode". The lyrics appear in the floating PiP window that just opened.  
 > When the floating PiP window is closed or the button is toggled off, the original lyrics container is restored.  
@@ -137,12 +137,12 @@
 > 2. **Move/resize:** Drag the header or the triangle in the corner.  
 > 3. **Auto-detect logic:** Script automatically chooses the best lyric provider for each track.  
 > 4. **Manually switch between lyric providers:** Click between the lyric source provider tabs.  
-> 8. **Settings panel:** Click the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings icon button to open/close the settings panel (show/hide lyric source tabs, show/hide seekbar, show/hide playback controls, set timing offset, enable/disable AMOLED theme).   
-> 5. **Translate lyrics:** Click the <img src="icons/header/translate.svg" width="16" height="16" alt="translate icon"/> translate icon button to toggle translation controls, pick your language, and press on "Translate".  
+> 8. **Settings panel:** Click the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu button to open/close the settings panel (show/hide lyric source tabs, show/hide seekbar, show/hide playback controls, set timing offset, enable/disable AMOLED theme).   
+> 5. **Translate lyrics:** Click the <img src="icons/header/translate.svg" width="16" height="16" alt="translate icon"/> translate button to toggle translation controls, pick your language, and press on "Translate".  
 > 6. **Transliteration:** Click 🔡 (KPoe provider only, when available in the lyric source) to show/hide romanized transliteration alongside lyrics.  
 > 7. **Chinese conversion:** Click 简 or 繁 (when Chinese lyrics are detected) to convert between Traditional and Simplified Chinese.    
 > 8. **Change font size:** Use the font size's "px" dropdown menu.  
-> 9. **Reset:** Click the <img src="icons/header/reset.svg" width="16" height="16" alt="reset icon"/> reset icon button to restore default popup position/size.  
+> 9. **Reset:** Click the <img src="icons/header/reset.svg" width="16" height="16" alt="reset icon"/> reset button to restore default popup position/size.  
 > 10. **Picture-in-Picture mode:** Click the PiP toggle to move the lyrics into a floating Picture-in-Picture window while the original lyrics container receives a placeholder. Close the PiP window to restore the original lyrics container.  
 
 * * * 
