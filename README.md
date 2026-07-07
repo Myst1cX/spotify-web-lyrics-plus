@@ -55,8 +55,8 @@
 > Can be toggled on/off from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu.   
 > 
 > **LYRICS DOWNLOAD**  
-> Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability, using the dedicated    
-> download button <img src="icons/header/download.svg" width="16" height="16" alt="download icon"/>.   
+> Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability,   
+> using the dedicated <img src="icons/header/download.svg" width="16" height="16" alt="download icon"/> download button.   
 > 
 > **LIVE TRANSLATION**  
 > Instantly translate any lyrics (70+ languages, using the Google translate api).
