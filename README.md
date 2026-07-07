@@ -177,7 +177,7 @@
 
 ## Troubleshooting
 
-> **Lyrics out of sync?** - Adjust the timing offset from the <img src="icons/header/settings.svg" width="16" height="16" alt="settings icon"/> settings menu.  
+> **Lyrics out of sync?** - Adjust the timing offset from the <img src="icons/header/settings.svg" width="16" height="16" align="absmiddle" alt="settings icon"/> settings menu.  
 > 
 > **For feedback or bug reports, open an issue:**    
 > [https://github.com/Myst1cX/spotify-web-lyrics-plus/issues](https://github.com/Myst1cX/spotify-web-lyrics-plus/issues)
