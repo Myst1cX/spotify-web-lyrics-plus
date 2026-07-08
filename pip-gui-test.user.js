@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Test
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.37.test
+// @version      17.38.test
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -20,7 +20,27 @@
 // 1. PiP mode doesn't work on mobile - don't need it but i'll see what i can do.
 // (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that can then open the native pip view - doesn't appear.)
 
-// --- TEST VERSION: ---
+// --- TEST VERSIONS: ---
+
+// RESOLVED (17.38.test): UNSUPPORTED-PIP DETECTION NO LONGER DEPENDS ON A REJECTION AT ALL
+// 17.37 assumed requestPictureInPicture() rejects with NotSupportedError on
+// Firefox/Android. Testing showed no such rejection is ever logged - the
+// promise likely resolves (or 'enterpictureinpicture' fires) without ever
+// throwing, so 17.37's catch-based normalization, while harmless, wasn't
+// actually the code path doing the work. (Turned out 17.37 was still
+// triggering the fallback correctly - the missing console line was just a
+// devtools log-level filter - but the reliance on rejection was fragile and
+// not the real signal.)
+// Fix: after await pipVideo.requestPictureInPicture() resolves without
+// throwing, now explicitly verify document.pictureInPictureElement ===
+// pipVideo before treating it as a real session and returning. Per spec that
+// property is set before the promise resolves/event fires, so it can't be
+// faked by a browser that resolves the promise without actually presenting a
+// window. If it's not set, the same normalization (isPipActive = false, stop
+// the render loop) runs and falls through to activatePipUnsupportedFallback().
+// The rejection-based catch from 17.37 is kept as a defensive secondary path
+// for browsers that do genuinely reject.
+
 // RESOLVED (17.37.test): PIP TOGGLE NO LONGER GOES SILENT ON BROWSERS WHERE
 // requestPictureInPicture() REJECTS
 // togglePip() called pipVideo.requestPictureInPicture() inside a single
@@ -2544,17 +2564,26 @@ document.head.appendChild(buttonGroupScrollStyle);
           if (!pipVideo.parentNode) document.body.appendChild(pipVideo);
         }
         await pipVideo.requestPictureInPicture();
-        return;
+        // Confirmed via testing: on Firefox/Android this promise does NOT reject -
+        // no NotSupportedError, nothing thrown at all. It resolves as if PiP were
+        // entered (and 'enterpictureinpicture' may fire, setting isPipActive = true
+        // via the listener below), but no floating window is ever actually
+        // presented, since there's no native PiP implementation on that platform to
+        // back the "success" it just reported. document.pictureInPictureElement is
+        // the one signal a browser can't fake here - the spec requires it to be set
+        // to the video element before the promise resolves/the event fires, so if
+        // it's not pipVideo right now, nothing real happened despite the resolve.
+        if (document.pictureInPictureElement === pipVideo) return;
+        console.info('📺 [Lyrics+ PiP] requestPictureInPicture() resolved but document.pictureInPictureElement is not pipVideo - treating as unsupported');
+        if (isPipActive) {
+          isPipActive = false;
+          stopPipRenderLoop();
+        }
       } catch (err) {
         console.info('📺 [Lyrics+ PiP] requestPictureInPicture() rejected (%s) - trying next fallback', err && err.name);
-        // Some browsers (observed on Firefox/Android) fire 'enterpictureinpicture'
-        // optimistically the moment requestPictureInPicture() is called, before the
-        // returned promise actually settles - so by the time this catch runs, the
-        // listener below may already have set isPipActive = true, hidden the lyrics,
-        // and shown the "real" PiP notice, even though the request is rejecting right
-        // now and no floating window ever appeared. Tear that fake "real" session
-        // back down before falling through, so it doesn't get stuck showing a false
-        // "this video is playing in PiP" message with no floating window behind it.
+        // Kept as a defensive fallback in case some other browser DOES reject while
+        // having already fired 'enterpictureinpicture' optimistically - same
+        // normalization as the resolve-but-fake-success path above.
         if (isPipActive) {
           isPipActive = false;
           stopPipRenderLoop();
@@ -2578,17 +2607,17 @@ document.head.appendChild(buttonGroupScrollStyle);
 
   /**
    * Called when no real PiP mechanism actually worked: requestPictureInPicture
-   * either doesn't exist on pipVideo, or exists but rejected (e.g. Firefox on
-   * Android); same for the WebKit path. There is no floating window in this case -
+   * doesn't exist on pipVideo, or it resolved/rejected without a genuine floating
+   * window ever backing it (confirmed on Firefox/Android: the promise resolves,
+   * no error is ever thrown, but document.pictureInPictureElement never actually
+   * becomes pipVideo since there's no native PiP implementation on that platform);
+   * same for the WebKit path. There is no floating window in this case -
    * pipVideo/pipCanvas stay hidden off-screen the whole time (applyHiddenPipVideoStyle
    * keeps them at -9999px/1x1px/opacity 0) - so, unlike a real PiP session, this must
    * NOT set isPipActive and must NOT start the render loop (nothing is visible to
    * render to). It only sets isPagePipActive, which enterPipInLyricsContainer()
    * checks to show the honest PIP_UNSUPPORTED_NOTICE_TEXT instead of claiming a PiP
-   * window opened. Previously this path dispatched a synthetic
-   * 'enterpictureinpicture' event on pipVideo, which the real listener below picked
-   * up and set isPipActive = true anyway - making the fake and real sessions
-   * indistinguishable and starting a render loop nobody could see.
+   * window opened.
    */
   function activatePipUnsupportedFallback() {
     isPagePipActive = true;
