@@ -91,7 +91,7 @@
 
 > 1. Install [Violentmonkey](https://violentmonkey.github.io/)  
 > 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
-> 3. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker)  
+> 3. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify AdBlocker](https://github.com/Myst1cX/uSpot/)  
 > 4. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)  
 > 5. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)  
 > 6. Open [Spotify Web Player](https://open.spotify.com/)   
@@ -103,7 +103,7 @@
 > 1. Download the latest version of Firefox (must be the Original version; Nightly or other releases might break your userscript manager).  
 > 2. Install [Violentmonkey](https://violentmonkey.github.io/)    
 > 3. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
-> 4. Recommended: [Spotify AdBlocker](https://greasyfork.org/en/scripts/522592-spotify-adblocker) (not sure if still working)   
+> 4. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify AdBlocker](https://github.com/Myst1cX/uSpot/)
 > 5. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)  
 > 6. Install [Spotifuck](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v5.user.js) (does some silent ad blocking too)   
 > 7. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)   
