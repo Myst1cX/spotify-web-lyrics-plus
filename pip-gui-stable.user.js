@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.36
+// @version      17.37
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,9 +16,33 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// LEFT TO IMPROVE (MINOR INCONVENIENCES):
-// 1. PiP mode doesn't work on mobile - don't need it but i'll see what i can do.
-// (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that can then open the native pip view - doesn't appear.)
+// RESOLVED (17.37): PIP TOGGLE NO LONGER SHOWS A FALSE "PLAYING IN PIP" NOTICE ON BROWSERS WITHOUT REAL PIP SUPPORT
+// togglePip() called pipVideo.requestPictureInPicture() inside a single
+// try/catch that also contained the WebKit check and the page-PiP fallback
+// below it. On browsers where that call rejects (Gecko-based Android
+// browsers - Firefox and its forks - which expose the function on every
+// platform but reject it on Android with NotSupportedError, confirmed via
+// Mozilla's own "Intent to prototype & ship: Picture in Picture API" notice:
+// Android has no native PiP implementation to back it), the await threw
+// straight into the outer catch, which just logged the error and returned -
+// the WebKit check and fallback a few lines below never ran. Separately, the
+// fallback's own notice text ("This video is playing in Picture-in-Picture
+// mode") was reused for this case too, describing a PiP window that never
+// visually existed, since pipVideo/pipCanvas stay hidden off-screen the
+// whole time (applyHiddenPipVideoStyle keeps them at -9999px/1x1px/opacity
+// 0). Chromium-based Android browsers (Chrome, Edge, Opera, Brave, Vivaldi -
+// same Blink engine as desktop Chrome) are unaffected either way: they
+// resolve requestPictureInPicture() genuinely, including for the
+// MediaStream/canvas.captureStream() source pipVideo uses here (supported
+// since Chrome 71), and get a real floating window.
+// Fix: gave requestPictureInPicture() its own try/catch so a rejection falls
+// through to the WebKit check and then to a new
+// activatePipUnsupportedFallback(), instead of dead-ending. That function
+// sets only isPagePipActive (never isPipActive) and skips
+// startPipRenderLoop() entirely, since there's nothing to render to.
+// enterPipInLyricsContainer() now picks between PIP_ACTIVE_NOTICE_TEXT (real
+// sessions) and a new, honest PIP_UNSUPPORTED_NOTICE_TEXT based on
+// isPagePipActive, instead of always showing the "playing in PiP" text.
 
 // RESOLVED (17.36): CHINESE CONVERSION TOGGLE NO LONGER WIPES ACTIVE TRANSLATION
 // rerenderLyrics() (the Chinese-conversion button handler) rebuilt the whole
@@ -791,26 +815,38 @@
   const PIP_SAFARI_SHOW_LETTER_STYLE = 'position:absolute;left:calc(100% - 1px);bottom:calc(100% - 1px)';
   const PIP_NOTICE_ID = 'lyrics-plus-pip-notice';
   const LYRICS_BOTTOM_SPACER_ID = 'lyrics-plus-bottom-spacer';
+  // Shown while a real PiP window (native or WebKit) is open.
+  const PIP_ACTIVE_NOTICE_TEXT = 'This video is playing in Picture-in-Picture mode';
+  // Shown instead of the above when isPagePipActive is true, i.e. there is no
+  // floating window at all - the browser either lacks PiP entirely or exposes
+  // requestPictureInPicture but rejects it (e.g. Firefox on Android, which has
+  // no native PiP implementation on that platform). Says so honestly instead of
+  // reusing PIP_ACTIVE_NOTICE_TEXT's claim that a PiP window opened, and hints at
+  // the toggle since the lyrics are hidden behind this message either way.
+  const PIP_UNSUPPORTED_NOTICE_TEXT = "Picture-in-Picture mode isn't available in this browser";
 
   /**
-   * Inserts a small placeholder message in the lyrics container while PiP is active,
-   * mirroring the browser's own "playing in Picture-in-Picture" overlay text, so the
-   * main container doesn't look blank/broken with the lyric lines hidden.
+   * Inserts (or updates) a small placeholder message in the lyrics container while
+   * PiP/the PiP fallback is active, so the main container doesn't look blank/broken
+   * with the lyric lines hidden. `message` distinguishes a genuine PiP session from
+   * the unsupported fallback - see enterPipInLyricsContainer().
    */
-  function ensurePipNoticeShown(lyricsContainer) {
+  function ensurePipNoticeShown(lyricsContainer, message) {
     if (!lyricsContainer) return;
-    if (lyricsContainer.querySelector(`#${PIP_NOTICE_ID}`)) return;
-    const notice = document.createElement('div');
-    notice.id = PIP_NOTICE_ID;
-    Object.assign(notice.style, {
-      color: 'rgba(255, 255, 255, 0.7)',
-      fontSize: '15px',
-      lineHeight: '1.5',
-      padding: '24px 12px',
-      textAlign: 'center',
-    });
-    notice.textContent = 'This video is playing in Picture-in-Picture mode';
-    lyricsContainer.appendChild(notice);
+    let notice = lyricsContainer.querySelector(`#${PIP_NOTICE_ID}`);
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.id = PIP_NOTICE_ID;
+      Object.assign(notice.style, {
+        color: 'rgba(255, 255, 255, 0.7)',
+        fontSize: '15px',
+        lineHeight: '1.5',
+        padding: '24px 12px',
+        textAlign: 'center',
+      });
+      lyricsContainer.appendChild(notice);
+    }
+    notice.textContent = message;
   }
 
   /**
@@ -1981,7 +2017,10 @@ document.head.appendChild(buttonGroupScrollStyle);
     lyricsContainer._pipSavedChildren = savedChildren;
     savedChildren.forEach(({ el }) => { el.style.display = 'none'; });
     lyricsContainer.setAttribute('data-pip-active', 'true');
-    ensurePipNoticeShown(lyricsContainer);
+    // isPagePipActive here means the unsupported fallback (see
+    // activatePipUnsupportedFallback()) - no floating window exists in that case,
+    // so the notice must say so instead of claiming a PiP window opened.
+    ensurePipNoticeShown(lyricsContainer, isPagePipActive ? PIP_UNSUPPORTED_NOTICE_TEXT : PIP_ACTIVE_NOTICE_TEXT);
   }
 
   /**
@@ -2489,26 +2528,67 @@ document.head.appendChild(buttonGroupScrollStyle);
 
     console.info('📺 [Lyrics+ PiP] togglePip: opening (state flags say inactive)');
     await initPipElements();
-    try {
-      if (typeof pipVideo.requestPictureInPicture === 'function') {
+
+    // Each entry point below gets its OWN try/catch. Previously the whole native +
+    // WebKit + fallback sequence shared one try/catch, so a rejection from
+    // requestPictureInPicture() (e.g. Firefox on Android, which exposes the
+    // function but always rejects with NotSupportedError since there's no native
+    // PiP implementation on that platform) jumped straight past the WebKit check
+    // and the fallback and landed in the outer catch - which just logged the error
+    // and returned, leaving the button looking like it did nothing at all.
+    if (typeof pipVideo.requestPictureInPicture === 'function') {
+      try {
         if (isSafariBrowser() && document.body) {
           Object.assign(pipVideo.style, { position: 'absolute', left: 'calc(100% - 1px)', bottom: 'calc(100% - 1px)' });
           if (!pipVideo.parentNode) document.body.appendChild(pipVideo);
         }
         await pipVideo.requestPictureInPicture();
+        // Chromium-based Android browsers (Chrome, Edge, Opera, Brave, Vivaldi - same
+        // Blink engine as desktop Chrome) resolve this genuinely, including for
+        // MediaStream/canvas.captureStream() sources like pipVideo here (supported
+        // since Chrome 71). A real floating window exists; nothing more to do.
         return;
+      } catch (err) {
+        // Gecko-based Android browsers (Firefox and its forks) reject here with
+        // NotSupportedError - confirmed via Mozilla's own "Intent to prototype &
+        // ship" notice: Android has no native PiP implementation to back this API,
+        // so it's rejected there by design, not a bug on their end. Fall through to
+        // the remaining entry points below instead of stopping here.
+        console.info('📺 [Lyrics+ PiP] requestPictureInPicture() rejected (%s) - trying next fallback', err && err.name);
       }
-      if (typeof pipVideo.webkitSupportsPresentationMode === 'function' &&
-          pipVideo.webkitSupportsPresentationMode('picture-in-picture') &&
-          typeof pipVideo.webkitSetPresentationMode === 'function') {
+    }
+
+    if (typeof pipVideo.webkitSupportsPresentationMode === 'function' &&
+        pipVideo.webkitSupportsPresentationMode('picture-in-picture') &&
+        typeof pipVideo.webkitSetPresentationMode === 'function') {
+      try {
         pipVideo.webkitSetPresentationMode('picture-in-picture');
         return;
+      } catch (err) {
+        console.error('[Lyrics+] PiP error (webkit path):', err);
       }
-      isPagePipActive = true;
-      pipVideo.dispatchEvent(new CustomEvent('enterpictureinpicture'));
-    } catch (err) {
-      console.error('[Lyrics+] PiP error:', err);
     }
+
+    activatePipUnsupportedFallback();
+  }
+
+  /**
+   * Called when no real PiP mechanism worked: requestPictureInPicture doesn't
+   * exist on pipVideo, or it exists but rejected (confirmed: Gecko-based Android
+   * browsers - Firefox and forks - reject with NotSupportedError, since Android
+   * has no native PiP implementation to back it); same for the WebKit path. There
+   * is no floating window in this case - pipVideo/pipCanvas stay hidden off-screen
+   * the whole time (applyHiddenPipVideoStyle keeps them at -9999px/1x1px/opacity
+   * 0) - so, unlike a real PiP session, this must NOT set isPipActive and must NOT
+   * start the render loop (nothing is visible to render to). It only sets
+   * isPagePipActive, which enterPipInLyricsContainer() checks to show the honest
+   * PIP_UNSUPPORTED_NOTICE_TEXT instead of claiming a PiP window opened.
+   */
+  function activatePipUnsupportedFallback() {
+    isPagePipActive = true;
+    updatePipButtonState(true);
+    enterPipInLyricsContainer();
+    console.info('📺 [Lyrics+ PiP] No working PiP mechanism found - showing unsupported fallback notice (isPipActive=%s isPagePipActive=%s)', isPipActive, isPagePipActive);
   }
 
   /**
