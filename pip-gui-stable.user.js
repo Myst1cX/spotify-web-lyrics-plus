@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.37
+// @version      17.38
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,28 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.38): LYRICS+ BUTTON INJECTION NO LONGER SPAMS RETRIES/CONSOLE
+// buttonInjectionObserver (document.body) and pageObserver (#main) both
+// called addButton() unconditionally on every single DOM mutation, which on
+// Spotify's constantly-churning UI meant dozens of calls per second. Each
+// call, when the mic/lyrics button target wasn't mounted yet, started its
+// own independent tryAdd() retry chain (up to BUTTON_ADD_MAX_RETRIES
+// setTimeout attempts with DEBUG logging on every attempt/failure) - so many
+// overlapping chains ran at once and kept logging even after the button had
+// already been successfully injected.
+// Root cause: the mic/lyrics button ([data-testid="lyrics-button"]), which
+// addButton() inserts next to, only mounts once the full player UI loads -
+// which normally only happens once the user actually plays something. There
+// was no cheap early-out for "target not mounted yet" or "already injected",
+// so every mutation blindly (re)entered the retry machinery.
+// Fix: addButton() now returns immediately (no retry chain, no logging) if
+// #lyrics-plus-btn already exists, if a retry chain is already in flight
+// (new lyricsButtonInjectionInFlight guard), or if the mic button isn't in
+// the DOM yet (new lyricsButtonInjected guard tracks success so the
+// observers become no-ops afterward). A retry chain now only ever starts
+// once the mic button is actually present, i.e. once playback has
+// initialized the full player UI, and it runs exactly once.
 
 // RESOLVED (17.37): PIP TOGGLE NO LONGER SHOWS A FALSE "PLAYING IN PIP" NOTICE ON BROWSERS WITHOUT REAL PIP SUPPORT
 // togglePip() called pipVideo.requestPictureInPicture() inside a single
@@ -9066,12 +9088,37 @@ popup._headerWheelHandler = onHeaderWheel;
     }
   }
 
+  // Guards so a MutationObserver storm can't spawn overlapping retry chains
+  // or keep re-attempting once the button is already in the DOM.
+  let lyricsButtonInjected = false;
+  let lyricsButtonInjectionInFlight = false;
+
   function addButton(maxRetries = LIMITS.BUTTON_ADD_MAX_RETRIES) {
+    // Already there - nothing to do (cheap check, no logging/spam).
+    if (document.getElementById("lyrics-plus-btn")) {
+      lyricsButtonInjected = true;
+      return;
+    }
+    lyricsButtonInjected = false;
+
+    // Don't start a second overlapping retry chain while one is in flight.
+    if (lyricsButtonInjectionInFlight) return;
+
+    // const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
+    // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
+    const micBtn = document.querySelector('[data-testid="lyrics-button"]');
+
+    // The mic/lyrics button (and the rest of the full player controls) only
+    // mounts once the user actually plays something. Until then, just bail
+    // silently instead of spinning up a retry loop - the observer below will
+    // call addButton() again on the next relevant DOM change.
+    if (!micBtn) {
+      return;
+    }
+
+    lyricsButtonInjectionInFlight = true;
     let attempts = 0;
     const tryAdd = () => {
-      // const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
-      // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
-      const micBtn = document.querySelector('[data-testid="lyrics-button"]');
       const targetBtn = micBtn; // previously: nowPlayingViewBtn || micBtn;
       const controls = targetBtn?.parentElement;
       if (!controls) {
@@ -9081,10 +9128,13 @@ popup._headerWheelHandler = onHeaderWheel;
           setTimeout(tryAdd, TIMING.BUTTON_ADD_RETRY_MS);
         } else {
           DEBUG.error('Button', `Failed to inject Lyrics+ button after ${maxRetries} attempts`);
+          lyricsButtonInjectionInFlight = false;
         }
         return;
       }
       if (document.getElementById("lyrics-plus-btn")) {
+        lyricsButtonInjected = true;
+        lyricsButtonInjectionInFlight = false;
         return;
       }
       const btn = document.createElement("button");
@@ -9114,12 +9164,19 @@ popup._headerWheelHandler = onHeaderWheel;
         createPopup();
       };
       controls.insertBefore(btn, targetBtn);
+      lyricsButtonInjected = true;
+      lyricsButtonInjectionInFlight = false;
     };
     tryAdd();
   }
 
-  // Global observer to inject Lyrics+ button when DOM changes
+  // Global observer to inject Lyrics+ button once the full player UI (and its
+  // mic/lyrics button) mounts - which normally only happens once the user
+  // starts playing something. addButton() itself now no-ops immediately if
+  // the button already exists or the mic button isn't mounted yet, so this
+  // firing on unrelated DOM churn is cheap and won't spam retries/console.
   const buttonInjectionObserver = new MutationObserver(() => {
+    if (lyricsButtonInjected) return;
     addButton();
   });
   ResourceManager.registerObserver(buttonInjectionObserver, 'Global button injection (document.body)');
@@ -9144,6 +9201,7 @@ popup._headerWheelHandler = onHeaderWheel;
   const appRoot = document.querySelector('#main');
   if (appRoot) {
     const pageObserver = new MutationObserver(() => {
+      if (lyricsButtonInjected) return;
       addButton();
     });
     ResourceManager.registerObserver(pageObserver, 'Page observer (appRoot)');
