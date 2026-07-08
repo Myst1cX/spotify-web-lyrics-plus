@@ -20,7 +20,30 @@
 // 1. PiP mode doesn't work on mobile - don't need it but i'll see what i can do.
 // (the lyrics+ popup's lyrics container transforms into a container that's a video element, but the pip mode button - that can then open the native pip view - doesn't appear.)
 
-// TEST VERSION
+// --- TEST VERSION: ---
+// RESOLVED (17.37.test): PIP TOGGLE NO LONGER GOES SILENT ON BROWSERS WHERE
+// requestPictureInPicture() REJECTS
+// togglePip() called pipVideo.requestPictureInPicture() inside a single
+// try/catch that also contained the WebKit check and the page-PiP fallback
+// below it. On browsers where that call rejects (observed: Firefox/Android,
+// which exposes the function on every platform but rejects it there with no
+// native PiP implementation to back it), the await threw straight into the
+// outer catch, which just logged the error and returned - the WebKit check
+// and fallback a few lines below never ran. Separately, the fallback's own
+// notice text ("This video is playing in Picture-in-Picture mode") was
+// reused for this case too, describing a PiP window that never visually
+// existed, since pipVideo/pipCanvas stay hidden off-screen the whole time.
+// Fix: gave requestPictureInPicture() its own try/catch so a rejection falls
+// through to the WebKit check and then to a new
+// activatePipUnsupportedFallback(), instead of dead-ending. That function
+// sets only isPagePipActive (never isPipActive) and skips
+// startPipRenderLoop() entirely, since there's nothing to render to.
+// enterPipInLyricsContainer() now picks between PIP_ACTIVE_NOTICE_TEXT (real
+// sessions) and a new, honest PIP_UNSUPPORTED_NOTICE_TEXT based on
+// isPagePipActive, instead of always showing the "playing in PiP" text. The
+// catch block also normalizes isPipActive back to false and stops the render
+// loop if enterpictureinpicture had already fired optimistically before the
+// rejection landed, so a fake "real" session can't get stuck open.
 
 // RESOLVED (17.36): CHINESE CONVERSION TOGGLE NO LONGER WIPES ACTIVE TRANSLATION
 // rerenderLyrics() (the Chinese-conversion button handler) rebuilt the whole
