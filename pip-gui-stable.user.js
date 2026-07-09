@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.38
+// @version      17.40
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,73 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.40): KPOE 5-ATTEMPT NORMALIZATION NO LONGER GUARANTEES A 400 ON NON-LATIN-SCRIPT SONGS
+// FINDING: Utils.normalize() keeps only ASCII word characters plus a small punctuation
+// allowlist (see its regex) - built to strip accents/diacritics from Latin text (e.g.
+// "cafe" -> "cafe"), but on a title/artist made entirely of non-Latin-script characters
+// (Japanese, Cyrillic, Arabic, etc.) there's nothing in that allowlist for it to keep, so it
+// silently deletes the whole field instead of normalizing it. Real logs: Songs "夜に駆ける" and
+// "アイドル" (by YOASOBI) both normalized to "" on the title-normalizing attempts, producing
+// a request URL with `title=` empty - guaranteed 400 (missing required params: title and
+// artist, or isrc, or platformId) on whichever server got asked, wasting a request that could
+// never have found anything.
+// Fix: rather than hardcode which scripts count as "non-Latin" (which would need constant
+// upkeep and still miss cases), check normalize()'s own output - if a field had real input but
+// normalizing it produced nothing, the normalization was destructive, not useful, so fall back
+// to the raw value for that attempt instead (`Utils.normalize(x) || x || ""`). Side effect: for
+// an all-non-Latin field, the "normalized" attempt now resolves to the same combo as an earlier
+// raw attempt, so the existing `triedCombos` dedup (17.39) skips it outright - no new dedup
+// logic needed, no wasted request, no guaranteed-400 attempt burned on a search that already
+// has better ways to spend its 5 attempts.
+
+// RESOLVED (17.39): KPOE PROVIDER SEARCH OVERHAUL - SERVER CASCADE NOW CLASSIFIES FAILURES
+// INSTEAD OF TREATING THEM ALL THE SAME, DEDUPES REDUNDANT QUERIES, AND NO LONGER GIVES UP
+// EARLY WHILE LIVE SERVERS OR BANKED CANDIDATES STILL REMAIN
+// Consolidates everything found testing the KPoe cascade (fetchKPoeLyrics) and the 5-attempt
+// query loop (ProviderKPoe.findLyrics) against real server logs:
+//  - >=500 now catches every server-error code (was only exactly 500/503), so Cloudflare edge
+//    codes (502/520/521/522/524) cascade to the next server instead of erroring out on server 1.
+//  - 421 (Fastly TLS/SAN routing mismatch, e.g. atomix.one) and 402 (Vercel deployment quota,
+//    e.g. the two .vercel.app backups) now cascade to the next server instead of hard-stopping.
+//  - 404 now cascades instead of aborting the whole search - real logs showed one server 404
+//    while another returned valid lyrics for the identical query (and vice versa), so servers
+//    don't share one upstream and a 404 on one says nothing about the rest.
+//  - Any other unrecognized 4xx (401/403/405/409/418/etc.) now also cascades instead of
+//    silently stopping - >=500 already classifies every server error, so anything left is a
+//    4xx by elimination, and every 4xx diagnosed so far is request-specific, not server-down.
+//  - A 200 OK response with an empty/missing lyrics body now cascades to the next server too,
+//    instead of ending the whole search - some KPoe servers return 200+empty-array for "not
+//    found" instead of a proper 404, and that case was silently falling through uncascaded.
+//  - The per-attempt server cascade no longer stops at the first any-type success - it keeps a
+//    `bestSoFar` candidate and keeps checking remaining servers, only stopping early on Line
+//    (synced) type, matching the outer loop's existing Line > Word > None priority.
+//  - The 5-attempt loop no longer aborts early just because one attempt's cascade returned
+//    "all servers unavailable" - it only gives up once every server is actually,session-wide
+//    dead (tracked via `deadServers`), not on a generic error string that also fires from a
+//    single query-dependent 404. A live server that only 404'd on one attempt's query still
+//    gets a fair shot from a later attempt's differently-normalized query.
+//  - Added a `deadServers` Set, shared across all 5 attempts: a server that fails for a
+//    session-wide reason (429/421/402/>=500/network-exception) is skipped - no request sent -
+//    on every later attempt and cascade. 404/400/unrecognized-4xx are deliberately NOT added,
+//    since those depend on the query text and deserve a fresh try each attempt. Once every
+//    server is dead, remaining attempts are skipped outright instead of each one recursing
+//    through a fully-dead list for nothing.
+//  - Added a `triedCombos` Set: an attempt whose resolved {artist, title, album} was already
+//    tried this search is skipped outright (no servers touched at all) - Utils.normalize() is
+//    a no-op on plain text and an empty album makes includeAlbum true/false identical, so
+//    multiple attempts can resolve to the same exact query. The dedup key also mirrors
+//    fetchKPoeLyrics' own album-drop rule (album omitted from the request whenever it equals
+//    the title), so an includeAlbum:true attempt that collapses to the same URL as an
+//    includeAlbum:false attempt is correctly recognized as a duplicate too.
+// Current per-status behavior (fetchKPoeLyrics):
+//   429/421/402/>=500     -> retry next server, server marked dead for the rest of this search
+//   404/other 4xx           -> retry next server, server NOT marked dead (query-dependent)
+//   400                      -> return bestSoFar if any, else error - no retry (request itself
+//                               is malformed, a different server won't help)
+//   network exception        -> retry next server, server marked dead
+//   200 + empty lyrics        -> retry next server, server NOT marked dead
+//   exhausted servers          -> return bestSoFar if any, else error
 
 // RESOLVED (17.38): LYRICS+ BUTTON INJECTION NO LONGER SPAMS RETRIES/CONSOLE
 // buttonInjectionObserver (document.body) and pageObserver (#main) both
@@ -3443,11 +3510,31 @@ const PLAY_WORDS = [
     "https://lyrics-plus-backend.vercel.app"  // Backup 5 (ibra's vercel)
   ];
 
-  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0, lyricsType = 'auto') {
-    // If we've tried all servers, return null
+  async function fetchKPoeLyrics(songInfo, sourceOrder = '', forceReload = false, serverIndex = 0, lyricsType = 'auto', bestSoFar = null, deadServers = null) {
+    // deadServers tracks, for this ENTIRE search (all 5 attempts in ProviderKPoe.findLyrics,
+    // not just this one cascade), which server indices already failed for reasons that don't
+    // depend on the query text (quota, rate limit, CDN/TLS misconfig, server error, network
+    // error). Those reasons won't un-happen just because a later attempt sends a differently
+    // normalized artist/title, so there's no point spending a request re-checking them. Lazily
+    // created here so the function still works if ever called directly without one.
+    if (!deadServers) deadServers = new Set();
+
+    // If we've tried all servers, return whatever best candidate we accumulated along the way
+    // (Word/None type from an earlier server), rather than discarding it just because no
+    // later server had a Line (synced) result.
     if (serverIndex >= KPOE_SERVERS.length) {
+      if (bestSoFar) {
+        console.log(`[KPoe Debug] ✓ All servers checked, no Line type found - returning best available (${bestSoFar.type} type) from ${bestSoFar.metadata?.server}`);
+        return bestSoFar;
+      }
       console.log("[KPoe Debug] ✗ All servers exhausted");
       return { error: "All KPoe servers are currently unavailable or rate limited" };
+    }
+
+    // Skip servers already known dead for this search - no request made, just move on
+    if (deadServers.has(serverIndex)) {
+      console.log(`[KPoe Debug] ⏭ Skipping ${KPOE_SERVERS[serverIndex]} (already unavailable this search - no point re-checking with a different query)`);
+      return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType, bestSoFar, deadServers);
     }
 
     const currentServer = KPOE_SERVERS[serverIndex];
@@ -3496,39 +3583,69 @@ const PLAY_WORDS = [
         // Handle rate limiting and service unavailability by trying next server
         if (response.status === 429) {
           console.log(`[KPoe Debug] ✗ Rate limit exceeded on ${currentServer}`);
+          deadServers.add(serverIndex); // session-wide, not query-dependent - won't clear up mid-search
           // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType);
-        } else if (response.status === 503) {
-          console.log(`[KPoe Debug] ✗ Service unavailable on ${currentServer}`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType, bestSoFar, deadServers);
+        } else if (response.status === 421) {
+          // Fastly/CDN routing error - the edge node's TLS cert doesn't cover the Host header
+          // being requested (SAN mismatch). This is a misconfiguration on that specific server's
+          // CDN, not something retrying the same server would fix, but a different backup server
+          // isn't affected by it - so cascade to the next one same as other server errors.
+          console.log(`[KPoe Debug] ✗ CDN routing/TLS mismatch (421) on ${currentServer}`);
+          deadServers.add(serverIndex); // infra misconfig, unrelated to query - retrying later is pointless
           // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType);
-        } else if (response.status === 500) {
-          console.log(`[KPoe Debug] ✗ Internal Server Error on ${currentServer}`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType, bestSoFar, deadServers);
+        } else if (response.status === 402) {
+          // "Payment Required" - seen on Vercel-hosted backups when that specific deployment
+          // hits its free-tier usage quota. This is a per-deployment billing/quota issue, not
+          // a real client error, and doesn't affect other backups (different deployments) -
+          // so cascade to the next server same as other server-side errors.
+          console.log(`[KPoe Debug] ✗ Payment required (402, likely deployment quota) on ${currentServer}`);
+          deadServers.add(serverIndex); // quota won't reset mid-search - skip on later attempts
           // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType, bestSoFar, deadServers);
+        } else if (response.status >= 500) {
+          // Catch-all for server errors (500, 503, and Cloudflare edge codes like 502/520/521/522/524)
+          console.log(`[KPoe Debug] ✗ Server error (${response.status}) on ${currentServer}`);
+          deadServers.add(serverIndex); // not query-dependent - a different attempt won't fix a downed server
+          // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType, bestSoFar, deadServers);
 
-   /*   A 404 response (Track not found on server) returns null immediately instead of trying backup servers
-        (backup servers use the same upstream data source so trying them after a 404 is pointless)
+   /*   FINDING (observed in real logs, prompted this fix): a 404 on one server does NOT reliably
+        predict a 404 on the next. In one run, Primary (prjktla.my.id) 404'd on a query while
+        Backup 2 (binimum.org) independently returned a 200 with Deezer-sourced lyrics for the
+        same exact query. In a later run against the *same song*, that same Backup 2 also 404'd -
+        meaning its earlier success was a cache hit that had since expired/evicted, not a
+        guarantee, but it still proves the servers aren't just mirrors of one shared upstream
+        with identical coverage. The old assumption written here ("backup servers use the same
+        upstream data source so trying them after a 404 is pointless") does not hold - different
+        KPoe servers can aggregate from different sources (Apple/Spotify/Deezer/etc.) and one
+        server's miss says nothing about another's. So a 404 must now cascade like any other
+        server-specific failure instead of aborting the whole search.
+        IMPORTANT: unlike 429/421/402/5xx above, a 404 is query-dependent (it means "not found
+        for THIS title/artist"), so the server is NOT added to deadServers here - a later attempt
+        with a differently normalized query is a genuinely different lookup and deserves a real
+        chance on this server, not a skip.
    */
         } else if (response.status === 404) {
           console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
-          return null;
-
-   /*   OLD LOGIC: ALSO TRYING BACKUP SERVERS ON SONG NOT FOUND RESPONSE
-
-        } else if (response.status === 404) {
-          console.log(`[KPoe Debug] ✗ Track not found on ${currentServer}`);
-          // Try backup servers - sometimes they have different data
-          console.log(`[KPoe Debug] 🔄 Trying backup server ${serverIndex + 1}...`);
-          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1);
-   */
+          // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType, bestSoFar, deadServers);
 
         } else if (response.status === 400) {
+          // Bad request - could stem from how this specific attempt formatted its params, so
+          // not marked dead either; a differently-normalized attempt might not hit the same issue.
           console.log("[KPoe Debug] ✗ Bad request - Invalid parameters");
+          if (bestSoFar) return bestSoFar;
           return { error: "Bad request - Invalid parameters" };
         } else {
-          console.log(`[KPoe Debug] ✗ Request failed: ${response.status} ${response.statusText}`);
-          return { error: `Request failed: ${response.status} ${response.statusText}` };
+          // Any other 4xx not specifically diagnosed yet (401/403/405/409/418/etc). >=500 above
+          // already catches every server-error code, known or not, so by elimination anything
+          // reaching here is a 4xx. Every 4xx diagnosed so far (400, 404) is query/request-
+          // specific, not server-down - so unknowns get the same treatment as 404: cascade,
+          // don't blacklist (deadServers unchanged).
+          console.log(`[KPoe Debug] ⚠ Unrecognized status (${response.status}) on ${currentServer}`);
+          return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType, bestSoFar, deadServers);
         }
       }
 
@@ -3559,15 +3676,37 @@ const PLAY_WORDS = [
         data.metadata = data.metadata || {};
         data.metadata.server = currentServer;
         data.metadata.cached = isCached;
-        return data;
+
+        if (data.type === "Line") {
+          // Best possible type (synced) - stop searching immediately
+          return data;
+        }
+
+        // Word or None type (unsynced) - keep it as a candidate, but keep looking at
+        // remaining servers in case one of them has a Line (synced) result instead.
+        const typePriority = { "Line": 3, "Word": 2, "None": 1 };
+        const newPriority = typePriority[data.type] ?? 0;
+        const bestPriority = bestSoFar ? (typePriority[bestSoFar.type] ?? 0) : -1;
+        const updatedBest = newPriority > bestPriority ? data : bestSoFar;
+        console.log(`[KPoe Debug] ↳ ${data.type} type stored as candidate, continuing to check remaining servers for a synced result...`);
+        return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType, updatedBest, deadServers);
       }
 
-      console.log("[KPoe Debug] ✗ No lyrics in response");
-      return null;
+      // FIX (parallels the 17.43 404 fix): a 200 OK with an empty/missing lyrics body means
+      // THIS server doesn't have the song for this query - it does not mean no server does.
+      // Some KPoe servers return 200+empty-array instead of a proper 404 for "not found", so
+      // without this the search would previously give up on the whole cascade the moment one
+      // server responded 200 with nothing, even though later servers (or even earlier ones,
+      // via a different attempt's normalized query) might still have it. Treat it exactly like
+      // 404: cascade to the next server, and don't mark this server dead since the outcome is
+      // query-dependent, not a session-wide server failure.
+      console.log("[KPoe Debug] ✗ No lyrics in response (empty body) - trying next server");
+      return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType, bestSoFar, deadServers);
     } catch (e) {
       console.error("[KPoe Debug] ✗ Fetch error on", currentServer, ":", e.message || e);
+      deadServers.add(serverIndex); // network/CORS/DNS-level failure - not query-dependent, won't fix itself mid-search
       // "🔄 Trying backup server X..." is logged at the top of the next fetchKPoeLyrics call (moved there so it leads its own log block)
-      return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType);
+      return await fetchKPoeLyrics(songInfo, sourceOrder, forceReload, serverIndex + 1, lyricsType, bestSoFar, deadServers);
     }
   }
   function parseKPoeFormat(data) {
@@ -3655,29 +3794,89 @@ const PLAY_WORDS = [
         let bestResult = null;
         let bestResultType = null;
         let lastError = null; // Track the last error for reporting
+        // Shared across ALL 5 attempts (not reset per-attempt, unlike bestSoFar inside
+        // fetchKPoeLyrics) - once a server fails for a session-wide, non-query-dependent
+        // reason (quota/rate-limit/CDN misconfig/server error/network error), later attempts
+        // skip it instantly instead of re-sending a request that's guaranteed to fail the
+        // same way regardless of how the artist/title text is normalized.
+        const deadServers = new Set();
+        // Tracks the actual {artist, title, album} combo each attempt ends up producing.
+        // Utils.normalize() is a no-op on text with no accents/punctuation to strip, and an
+        // empty album makes includeAlbum:true/false identical - so multiple "attempts" can
+        // resolve to the exact same query. No point re-running the whole server cascade for
+        // a query already tried this search.
+        const triedCombos = new Set();
 
         for (let i = 0; i < attempts.length; i++) {
+          // FIX: once every server has been marked dead (quota/rate-limit/CDN/5xx/network
+          // failure), there is no server left to check regardless of how a later attempt
+          // normalizes the query - stop instead of burning the remaining attempts, each of
+          // which would just recurse straight through every dead server to the same
+          // "All KPoe servers unavailable" outcome for no benefit.
+          if (deadServers.size >= KPOE_SERVERS.length) {
+            console.log(`[KPoe Debug] ⏭ All ${KPOE_SERVERS.length} servers are dead for this search - stopping remaining attempts`);
+            break;
+          }
           const attempt = attempts[i];
           console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
           console.log(`[KPoe Debug] Attempt ${i + 1}/${attempts.length}: ${attempt.description}`);
 
           let songInfo = {
-            artist: attempt.normalizeArtist ? Utils.normalize(info.artist) : (info.artist || ""),
-            title: attempt.normalizeTitle ? Utils.normalize(info.title) : (info.title || ""),
+            // GUARD: Utils.normalize() only keeps ASCII word chars plus a small punctuation
+            // allowlist (see its regex) - it's meant to strip accents/diacritics from Latin
+            // text (e.g. "café" -> "cafe"), but on text made entirely of non-Latin-script
+            // characters (Japanese, Cyrillic, Arabic, etc.) there's nothing in that allowlist
+            // for it to keep, so it silently deletes the whole field instead of "normalizing"
+            // it. An empty title/artist then guarantees a 400 (missing required params: title
+            // and artist, or isrc, or platformId) on every server this attempt touches - a
+            // wasted request that couldn't ever have found anything. Rather than hardcode which
+            // scripts count as "non-Latin", check normalize()'s own output: if it had real
+            // input but returned nothing, the normalization was destructive, not useful - fall
+            // back to the raw value instead.
+            artist: attempt.normalizeArtist ? (Utils.normalize(info.artist) || info.artist || "") : (info.artist || ""),
+            title: attempt.normalizeTitle ? (Utils.normalize(info.title) || info.title || "") : (info.title || ""),
             album: attempt.includeAlbum ? (info.album || "") : "",
             duration
           };
 
+          // FIX: mirror fetchKPoeLyrics' own rule for when album is actually sent
+          // (`songInfo.album && songInfo.album !== songInfo.title`). Without this, an
+          // attempt with includeAlbum:true whose album happens to equal the title collapses
+          // to the exact same request URL as an includeAlbum:false attempt, but the raw
+          // comboKey below would still see them as different combos ("...|Album" vs "...|")
+          // and re-run the whole server cascade for a request that was already made.
+          const effectiveAlbum = (songInfo.album && songInfo.album !== songInfo.title) ? songInfo.album : "";
+          const comboKey = `${songInfo.artist}|${songInfo.title}|${effectiveAlbum}`;
+          if (triedCombos.has(comboKey)) {
+            console.log(`[KPoe Debug] ⏭ Skipping attempt ${i + 1} - same query as an earlier attempt, no servers to re-check`);
+            continue;
+          }
+          triedCombos.add(comboKey);
+
           // Start with primary server (serverIndex = 0)
-          // fetchKPoeLyrics will automatically try backup servers on rate limit/errors
-          let result = await fetchKPoeLyrics(songInfo, '', false, 0, lyricsType);
+          // fetchKPoeLyrics will automatically try backup servers on rate limit/errors,
+          // skipping any already in deadServers from a previous attempt.
+          let result = await fetchKPoeLyrics(songInfo, '', false, 0, lyricsType, null, deadServers);
 
           // Handle errors - log but continue trying other attempts
           if (result && result.error) {
             lastError = result.error; // Track the last error
             console.log(`[KPoe Debug] ✗ Error on attempt ${i + 1}: ${result.error}`);
-            // If error is about all servers being unavailable, break early
-            if (result.error.includes("All KPoe servers")) {
+            // FIX: the "All KPoe servers unavailable" string fires any time fetchKPoeLyrics's
+            // recursion bottoms out with nothing found - including when a server only 404'd
+            // (query-dependent, so it's deliberately NOT added to deadServers) rather than
+            // actually being dead. Pattern-matching that string meant a single attempt where
+            // every server either failed hard OR just 404'd on that specific query was enough
+            // to abort the whole 5-attempt search, even though a live server that only 404'd
+            // might still return something for a later attempt's differently-normalized query
+            // (this is exactly what happened in practice: a manual retry moments later got a
+            // 200 from a server that had 404'd during autofetch's only attempt). Check the real
+            // signal instead - deadServers - and only give up early once every server is
+            // actually, session-wide dead. Also still requires !bestResult: if a Word/None
+            // candidate is already banked, keep trying remaining attempts regardless, since a
+            // later query might upgrade it to Line even against a fully-dead server set (via
+            // fetchKPoeLyrics's own bestSoFar fallback) - matches the 17.44 fix's intent.
+            if (!bestResult && deadServers.size >= KPOE_SERVERS.length) {
               break;
             }
             // Continue to next attempt - sometimes one of them goes through
@@ -9349,3 +9548,4 @@ popup._headerWheelHandler = onHeaderWheel;
 
   init();
 })();
+
