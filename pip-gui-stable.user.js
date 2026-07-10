@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.41
+// @version      17.42
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,11 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.42): TRANSLATION TEXT NOW MATCHES TRANSLITERATION'S SMALLER FONT SIZE
+// translationDiv now sets fontSize: '0.85em' (same as transliterationDiv), so in the
+// popup, translation is no longer full lyric size when shown alongside transliteration;
+// matches the sizing PiP already used for both sub-lines.
 
 // RESOLVED (17.41): TRANSLITERATION BUTTON NOW USES A DEDICATED SVG ICON
 // transliterationToggleBtn now renders a custom SVG glyph (A / arrow / arrow / 拼)
@@ -6664,6 +6669,7 @@ popup._headerWheelHandler = onHeaderWheel;
           const translationDiv = document.createElement('div');
           translationDiv.textContent = translatedText;
           translationDiv.style.color = 'gray';
+          translationDiv.style.fontSize = '0.85em'; // Match transliteration sizing (and PiP secondary-line sizing)
           translationDiv.setAttribute('data-translated', 'true');
 
           // Find correct insertion point: after transliteration if it exists, otherwise after lyric
