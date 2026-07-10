@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.44
+// @version      17.45
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,15 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.45): PIP'S ACTIVE-LINE TRANSLITERATION NOW MATCHES THE MAIN POPUP'S BOLD STYLE
+// In the main popup, highlightSyncedLyrics() makes the current line's transliteration
+// both green AND bold (fontWeight 700) to match the highlighted lyric above it. PiP's
+// canvas renderer only copied the green color, not the bold (oversight on my part).
+// flattenPipBlockRows() drew every sub-line (translation and transliteration alike) 
+// in the same regular-weight font.
+// Now it prepends "bold" to that line's font specifically when it's transliteration on
+// the active line, so PiP's highlight matches the popup exactly. 
 
 // RESOLVED (17.44): TRANSLATION TEXT ONLY SHRINKS WHEN TRANSLITERATION IS ALSO ON-SCREEN
 // Refines 17.42: with just original lyric + translation, translation stays full size again.
@@ -2087,7 +2096,14 @@ document.head.appendChild(buttonGroupScrollStyle);
       const isTranslation = typeof text === 'string' && text.startsWith('~TL~');
       const isTransliteration = typeof text === 'string' && text.startsWith('~TR~');
       const cleanText = isTranslation || isTransliteration ? text.slice(4) : text;
-      const rowFont = index === 0 ? primaryFont : secondaryFont;
+      // On the active line, the main container bolds the transliteration text to match
+      // the highlighted lyric (see highlightSyncedLyrics(): nextEl.style.fontWeight =
+      // "700"). Apply the same "bold" font prefix here so PiP matches - translation is
+      // left as-is since the main container never bolds it either.
+      const isActiveTransliteration = isTransliteration && blockKind === 'active';
+      const rowFont = index === 0
+        ? primaryFont
+        : (isActiveTransliteration ? `bold ${secondaryFont}` : secondaryFont);
       const rowLineHeight = index === 0 ? primaryLineHeight : secondaryLineHeight;
       ctx.font = rowFont;
       splitPipTextToLines(ctx, cleanText, maxWidth).forEach(line => {
