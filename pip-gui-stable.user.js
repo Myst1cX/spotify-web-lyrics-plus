@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.45
+// @version      17.46
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,15 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.46): TRANSLATION NOW PARTICIPATES IN THE ACTIVE-LINE HIGHLIGHT TOO
+// highlightSyncedLyrics() now walks every sub-line after a lyric via updateSubLines(p, active),
+// so translation (previously ignored, stuck gray forever) gets its own active/inactive state
+// alongside transliteration. Active-line green for lyric, transliteration, and translation is
+// now a deliberate three-step hierarchy (solid #1db954, then rgba(45,205,100,0.85), then
+// rgba(60,225,120,0.7)) instead of a flat green/gray split, pulled into shared constants
+// TRANSLATION_ACTIVE_COLOR / TRANSLITERATION_ACTIVE_COLOR so the main popup and PiP's
+// flattenPipBlockRows() can't drift out of sync again - color codes unified.
 
 // RESOLVED (17.45): PIP'S ACTIVE-LINE TRANSLITERATION NOW MATCHES THE MAIN POPUP'S BOLD STYLE
 // In the main popup, highlightSyncedLyrics() makes the current line's transliteration
@@ -855,6 +864,22 @@
 
 (function () {
   'use strict';
+
+  // ------------------------
+  // Shared color constants
+  // ------------------------
+
+  // Single source of truth for the active-translation-line tint, used by both
+  // highlightSyncedLyrics() (main popup, DOM) and flattenPipBlockRows() (PiP, canvas).
+  // Keeping this in one place prevents the two renderers from drifting apart again.
+  const TRANSLATION_ACTIVE_COLOR = 'rgba(60, 225, 120, 0.7)';
+
+  // Same idea for the active-transliteration-line color, previously hardcoded as a plain
+  // '#1db954' in both renderers. Tuned to sit visually between the solid lyric green
+  // (#1db954, opacity 1) and the livelier translation tint above - brighter than
+  // the lyric, less saturated/opaque than the translation - since transliteration
+  // ranks just below the lyric itself but above translation in importance.
+  const TRANSLITERATION_ACTIVE_COLOR = 'rgba(45, 205, 100, 0.85)';
 
   // ------------------------
   // State Variables
@@ -2108,10 +2133,12 @@ document.head.appendChild(buttonGroupScrollStyle);
       ctx.font = rowFont;
       splitPipTextToLines(ctx, cleanText, maxWidth).forEach(line => {
         let resolvedColor = color;
-        if (isTranslation) {
+        if (isTranslation && blockKind === 'active') {
+          resolvedColor = TRANSLATION_ACTIVE_COLOR;
+        } else if (isTranslation) {
           resolvedColor = 'rgba(160, 160, 160, 0.9)';
         } else if (isTransliteration && blockKind === 'active') {
-          resolvedColor = '#1db954';
+          resolvedColor = TRANSLITERATION_ACTIVE_COLOR;
         } else if (isTransliteration) {
           resolvedColor = '#9a9a9a';
         }
@@ -2802,6 +2829,36 @@ document.head.appendChild(buttonGroupScrollStyle);
         if (anticipatedMs >= (lyrics[i].time ?? lyrics[i].startTime)) activeIndex = i;
         else break;
       }
+
+      // Walks the sub-line div(s) that follow a lyric <p> - transliteration, translation,
+      // or both (in that order) - and gives each its own active/inactive look. Stops as
+      // soon as it hits something that isn't a recognized sub-line (e.g. the next lyric's
+      // <p>), so it doesn't matter whether one, both, or neither is present.
+      function updateSubLines(p, active) {
+        let el = p.nextElementSibling;
+        while (el) {
+          if (el.getAttribute('data-transliteration') === 'true') {
+            // Transliteration is the same words as the lyric, just re-scripted - treat it
+            // exactly like the lyric line: solid green, bold, when active.
+            el.style.color = active ? TRANSLITERATION_ACTIVE_COLOR : "#9a9a9a";
+            el.style.fontWeight = active ? "700" : "400";
+            el.style.filter = active ? "none" : "blur(0.7px)";
+            el.style.opacity = active ? "1" : "0.8";
+          } else if (el.getAttribute('data-translated') === 'true') {
+            // Translation is separate content, not the lyric itself - keep it subdued so it
+            // doesn't compete with the lyric/transliteration, but still tint it green and
+            // brighten it while active so it visibly tracks the current line.
+            el.style.color = active ? TRANSLATION_ACTIVE_COLOR : "gray";
+            el.style.fontWeight = "400";
+            el.style.filter = active ? "none" : "blur(0.7px)";
+            el.style.opacity = active ? "1" : "0.8";
+          } else {
+            break;
+          }
+          el = el.nextElementSibling;
+        }
+      }
+
       if (activeIndex === -1) {
         pElements.forEach(p => {
           p.style.color = "white";
@@ -2811,14 +2868,7 @@ document.head.appendChild(buttonGroupScrollStyle);
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
 
-          // Reset transliteration line if present
-          const nextEl = p.nextElementSibling;
-          if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
-            nextEl.style.color = "#9a9a9a";
-            nextEl.style.fontWeight = "400";
-            nextEl.style.filter = "blur(0.7px)";
-            nextEl.style.opacity = "0.8";
-          }
+          updateSubLines(p, false);
         });
         return;
       }
@@ -2831,14 +2881,7 @@ document.head.appendChild(buttonGroupScrollStyle);
           p.style.transform = "scale(1.10)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
 
-          // Highlight transliteration line with same green as highlighted lyric
-          const nextEl = p.nextElementSibling;
-          if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
-            nextEl.style.color = "#1db954"; // Same green as highlighted lyric
-            nextEl.style.fontWeight = "700"; // Bold like highlighted lyric
-            nextEl.style.filter = "none";
-            nextEl.style.opacity = "1";
-          }
+          updateSubLines(p, true);
         } else {
           p.style.color = "white";
           p.style.fontWeight = "400";
@@ -2847,14 +2890,7 @@ document.head.appendChild(buttonGroupScrollStyle);
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
 
-          // Reset transliteration line if present
-          const nextEl = p.nextElementSibling;
-          if (nextEl && nextEl.getAttribute('data-transliteration') === 'true') {
-            nextEl.style.color = "#9a9a9a";
-            nextEl.style.fontWeight = "400";
-            nextEl.style.filter = "blur(0.7px)";
-            nextEl.style.opacity = "0.8";
-          }
+          updateSubLines(p, false);
         }
       });
 
