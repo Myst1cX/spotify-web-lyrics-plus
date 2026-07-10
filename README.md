@@ -154,14 +154,13 @@ Click on "Original" to remove the translated lines.
 
 > 1. Go to [Musixmatch](https://www.musixmatch.com/) and click on the Login button at the top of the screen.  
 > 2. Select `Community` as your product and sign in using your Google account.  
-> 3. Open DevTools (Press F12 or Right click and Inspect).    
-> 4. [Accessing DevTools on Mobile](https://addons.mozilla.org/en-US/android/addon/mobidevtools/)  
-> 5. Go to the Network tab, and look for the `www.musixmatch.com` domain.  
-> 6. Click on `www.musixmatch.com` and go to the Cookies section.  
-> 7. Find `musixmatchUserToken`, right-click its content and select Copy value.  
-> 8. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click Process. 
-> 9. Copy the value of `web-desktop-app-v1.0` — this is your user token.  
-> 10. In the Lyrics+ popup, double-click on the Musixmatch provider, paste your token and press Save.
+> 3. Open DevTools (Press F12 or Right click and Inspect).      
+> 4. Go to the Network tab, and look for the `www.musixmatch.com` domain.  
+> 5. Click on `www.musixmatch.com` and go to the Cookies section.  
+> 6. Find `musixmatchUserToken`, right-click its content and select Copy value.  
+> 7. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click Process. 
+> 8. Copy the value of `web-desktop-app-v1.0` — this is your user token.  
+> 9. In the Lyrics+ popup, double-click on the Musixmatch provider, paste your token and press Save.
 
 ## Retrieve your Spotify user token
 
