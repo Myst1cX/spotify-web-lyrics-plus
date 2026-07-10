@@ -64,7 +64,7 @@
 > Show/hide translation controls using the <img src="icons/header/translate.svg" width="16" height="16" align="absmiddle" alt="translate icon"/> translate button. 
 >
 > **TRANSLITERATION**  
-> Show/hide romanized transliteration alongside lyrics using the dedicated <img src="icons/header/transliteration.svg" width="16" height="16" align="absmiddle" alt="transliteration icon"/> transliteation button.  
+> Show/hide romanized transliteration alongside lyrics using the dedicated <img src="icons/header/transliteration.svg" width="16" height="16" align="absmiddle" alt="transliteration icon"/> transliteration button.  
 > Limited to the KPoe provider, when transliteration is available in the lyric source.  
 >
 > **CHINESE SCRIPT CONVERSION**  
