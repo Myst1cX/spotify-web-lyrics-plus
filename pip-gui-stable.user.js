@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.42
+// @version      17.44
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,9 +16,30 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (17.44): TRANSLATION TEXT ONLY SHRINKS WHEN TRANSLITERATION IS ALSO ON-SCREEN
+// Refines 17.42: with just original lyric + translation, translation stays full size again.
+// It only drops to the smaller 0.85em (matching transliteration) once both sub-lines are
+// showing together. Works whichever gets turned on first - translateLyricsInPopup() checks
+// transliterationPresent to pick the right size when creating translationDiv, while
+// showTransliterationInPopupFor() shrinks an already-showing translation the moment
+// transliteration is added, and removeTransliterationLyricsFor() grows it back to full
+// size once transliteration is turned off again.
+
+// RESOLVED (17.43): FIXED A SILENT CRASH THAT COULD LEAVE THE WRONG PROVIDER CACHED
+// FINDING: showTransliterationInPopup() only existed inside createPopup(), but
+// updateLyricsContent() and loadLyricsFromCache() - which live outside it - called it too.
+// For any song with transliteration turned on, this threw "ReferenceError: not defined" and
+// stopped those functions partway through, before they could reach LyricsCache.set(). Net
+// effect: picking a different provider (e.g. KPoe) for an already-cached song looked like it
+// worked, but the cache silently kept the old provider (e.g. LRCLIB), so replaying the song
+// later reverted back to it.
+// FIX: Moved the real logic to two top-level functions, showTransliterationInPopupFor(lyricsContainer)
+// and removeTransliterationLyricsFor(lyricsContainer), that any function can call regardless of
+// scope. createPopup()'s original versions now just forward to these.
+
 // RESOLVED (17.42): TRANSLATION TEXT NOW MATCHES TRANSLITERATION'S SMALLER FONT SIZE
 // translationDiv now sets fontSize: '0.85em' (same as transliterationDiv), so in the
-// popup, translation is no longer full lyric size when shown alongside transliteration;
+// popup, translation is no longer full lyric size when shown alongside transliteration -
 // matches the sizing PiP already used for both sub-lines.
 
 // RESOLVED (17.41): TRANSLITERATION BUTTON NOW USES A DEDICATED SVG ICON
@@ -6669,7 +6690,9 @@ popup._headerWheelHandler = onHeaderWheel;
           const translationDiv = document.createElement('div');
           translationDiv.textContent = translatedText;
           translationDiv.style.color = 'gray';
-          translationDiv.style.fontSize = '0.85em'; // Match transliteration sizing (and PiP secondary-line sizing)
+          // Only shrink to match transliteration's size when transliteration is also
+          // shown alongside it; with just original + translation, keep it full size.
+          translationDiv.style.fontSize = transliterationPresent ? '0.85em' : '';
           translationDiv.setAttribute('data-translated', 'true');
 
           // Find correct insertion point: after transliteration if it exists, otherwise after lyric
@@ -6693,46 +6716,21 @@ popup._headerWheelHandler = onHeaderWheel;
       }
     }
 
+    // NOTE (17.43): removeTransliterationLyrics/showTransliterationInPopup were moved to
+    // top-level scope (see below rerenderLyrics/hideButtonsForInstrumental) because
+    // updateLyricsContent() and loadLyricsFromCache() - both outer-scope functions -
+    // need to call them too, and being nested inside createPopup() made them
+    // inaccessible from outside it (ReferenceError: showTransliterationInPopup is not
+    // defined), silently aborting those callers before they reached their own
+    // remaining logic (e.g. LyricsCache.set(), so manually-selected/refetched lyrics
+    // with transliteration data never got cached). These thin wrappers preserve the
+    // original zero-argument call sites used inside createPopup().
     function removeTransliterationLyrics() {
-      const transliterationEls = lyricsContainer.querySelectorAll('[data-transliteration="true"]');
-      transliterationEls.forEach(el => {
-        unhideElementWhilePipActive(lyricsContainer, el);
-        el.remove();
-      });
-      transliterationPresent = false;
+      removeTransliterationLyricsFor(lyricsContainer);
     }
 
     function showTransliterationInPopup() {
-      if (!lyricsContainer || transliterationPresent) return;
-      const pEls = Array.from(lyricsContainer.querySelectorAll('p[data-transliteration-text]'));
-      pEls.forEach((p) => {
-        const transliterationText = p.getAttribute('data-transliteration-text');
-        const transliterationDiv = document.createElement('div');
-        transliterationDiv.textContent = transliterationText;
-        // Use #9a9a9a (lighter gray than translation) for better distinction
-        transliterationDiv.style.color = '#9a9a9a';
-        transliterationDiv.style.fontSize = '0.85em'; // Slightly smaller
-        transliterationDiv.style.marginTop = '2px';
-        transliterationDiv.style.marginBottom = '8px';
-        transliterationDiv.style.transition = "color 0.15s, filter 0.13s, opacity 0.13s";
-        transliterationDiv.setAttribute('data-transliteration', 'true');
-
-        // Always insert transliteration immediately after lyric line
-        // If translation exists, insert before it; otherwise after lyric
-        let insertionPoint = p.nextSibling;
-
-        // Check if the next sibling is a translation div
-        if (insertionPoint && insertionPoint.nodeType === 1 &&
-            insertionPoint.getAttribute('data-translated') === 'true') {
-          // Translation exists - insert transliteration before it
-          p.parentNode.insertBefore(transliterationDiv, insertionPoint);
-        } else {
-          // No translation or next sibling is something else - insert after lyric
-          p.parentNode.insertBefore(transliterationDiv, insertionPoint);
-        }
-        hideElementWhilePipActive(lyricsContainer, transliterationDiv);
-      });
-      transliterationPresent = true;
+      showTransliterationInPopupFor(lyricsContainer);
     }
 
     // Translator Controls Container
@@ -8722,7 +8720,7 @@ popup._headerWheelHandler = onHeaderWheel;
     }
 
     if (transliterationEnabled && hasTransliterationData) {
-      showTransliterationInPopup();
+      showTransliterationInPopupFor(lyricsContainer);
       if (transliterationBtn) {
         transliterationBtn.title = "Hide transliteration";
       }
@@ -8739,6 +8737,62 @@ popup._headerWheelHandler = onHeaderWheel;
     }
 
     return true;
+  }
+
+  // Top-level (scope-safe) versions - see NOTE (17.43) above createPopup()'s thin
+  // wrappers of the same name. Take lyricsContainer as a parameter instead of
+  // closing over it, so any function can call these regardless of where it's declared.
+  function removeTransliterationLyricsFor(lyricsContainer) {
+    if (!lyricsContainer) return;
+    const transliterationEls = lyricsContainer.querySelectorAll('[data-transliteration="true"]');
+    transliterationEls.forEach(el => {
+      unhideElementWhilePipActive(lyricsContainer, el);
+      el.remove();
+    });
+    transliterationPresent = false;
+    // Transliteration is gone - if translation is still showing, it's now the only
+    // sub-line, so restore it to full lyric size.
+    lyricsContainer.querySelectorAll('[data-translated="true"]').forEach(el => {
+      el.style.fontSize = '';
+    });
+  }
+
+  function showTransliterationInPopupFor(lyricsContainer) {
+    if (!lyricsContainer || transliterationPresent) return;
+    const pEls = Array.from(lyricsContainer.querySelectorAll('p[data-transliteration-text]'));
+    pEls.forEach((p) => {
+      const transliterationText = p.getAttribute('data-transliteration-text');
+      const transliterationDiv = document.createElement('div');
+      transliterationDiv.textContent = transliterationText;
+      // Use #9a9a9a (lighter gray than translation) for better distinction
+      transliterationDiv.style.color = '#9a9a9a';
+      transliterationDiv.style.fontSize = '0.85em'; // Slightly smaller
+      transliterationDiv.style.marginTop = '2px';
+      transliterationDiv.style.marginBottom = '8px';
+      transliterationDiv.style.transition = "color 0.15s, filter 0.13s, opacity 0.13s";
+      transliterationDiv.setAttribute('data-transliteration', 'true');
+
+      // Always insert transliteration immediately after lyric line
+      // If translation exists, insert before it; otherwise after lyric
+      let insertionPoint = p.nextSibling;
+
+      // Check if the next sibling is a translation div
+      if (insertionPoint && insertionPoint.nodeType === 1 &&
+          insertionPoint.getAttribute('data-translated') === 'true') {
+        // Translation exists - insert transliteration before it
+        p.parentNode.insertBefore(transliterationDiv, insertionPoint);
+      } else {
+        // No translation or next sibling is something else - insert after lyric
+        p.parentNode.insertBefore(transliterationDiv, insertionPoint);
+      }
+      hideElementWhilePipActive(lyricsContainer, transliterationDiv);
+    });
+    transliterationPresent = true;
+    // Transliteration just appeared - if translation is already showing, shrink it to
+    // match, since both sub-lines are now present.
+    lyricsContainer.querySelectorAll('[data-translated="true"]').forEach(el => {
+      el.style.fontSize = '0.85em';
+    });
   }
 
   async function updateLyricsContent(popup, info, cachedResult = null) {
@@ -8913,7 +8967,7 @@ popup._headerWheelHandler = onHeaderWheel;
 
     // Show transliteration if enabled and data is available
     if (transliterationEnabled && hasTransliterationData) {
-      showTransliterationInPopup();
+      showTransliterationInPopupFor(lyricsContainer);
       if (transliterationBtn) {
         transliterationBtn.title = "Hide transliteration";
       }
