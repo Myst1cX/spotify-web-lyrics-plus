@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.40
+// @version      17.41
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,13 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.41): TRANSLITERATION BUTTON NOW USES A DEDICATED SVG ICON
+// transliterationToggleBtn now renders a custom SVG glyph (A / arrow / arrow / 拼)
+// in place of the 🔡 emoji, matching the style of the other header buttons
+// (currentColor fill, full 0-24 viewBox, no extra padding wrapper - same
+// convention as translationToggleBtn). The 拼 character is sourced from Noto
+// Sans CJK SC Bold via fonttools for an accurate glyph outline. 
 
 // RESOLVED (17.40): KPOE 5-ATTEMPT NORMALIZATION NO LONGER GUARANTEES A 400 ON NON-LATIN-SCRIPT SONGS
 // FINDING: Utils.normalize() keeps only ASCII word characters plus a small punctuation
@@ -5879,14 +5886,13 @@ const Providers = {
 
     // --- Transliteration Toggle Button ---
     const transliterationToggleBtn = document.createElement("button");
-    transliterationToggleBtn.textContent = "🔡";
+    transliterationToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" style="display:block"><path fill-rule="evenodd" d="M 1.17,11.3 L 5.11,0.8 L 6.99,0.8 L 10.93,11.3 L 9.12,11.3 L 8.19,8.63 L 3.94,8.63 L 2.98,11.3 L 1.17,11.3 M 4.49,7.1 L 7.61,7.1 L 6.09,2.76 L 5.99,2.76 L 4.49,7.1"/><path d="M 22.03,10.13 L 22.03,7.8 Q 22.03,7.07 21.52,6.56 Q 21.01,6.05 20.28,6.05 L 14.93,6.05 L 17.03,8.15 L 16.2,8.97 L 12.7,5.47 L 16.2,1.97 L 17.03,2.78 L 14.93,4.88 L 20.28,4.88 Q 21.49,4.88 22.35,5.74 Q 23.2,6.59 23.2,7.8 L 23.2,10.13 L 22.03,10.13"/><path d="M 1.97,13.87 L 1.97,16.2 Q 1.97,16.93 2.48,17.44 Q 2.99,17.95 3.72,17.95 L 9.07,17.95 L 6.97,15.85 L 7.8,15.03 L 11.3,18.53 L 7.8,22.03 L 6.97,21.22 L 9.07,19.12 L 3.72,19.12 Q 2.51,19.12 1.65,18.26 Q 0.8,17.41 0.8,16.2 L 0.8,13.87 L 1.97,13.87"/><path d="M13.91 12.53V14.67H12.74V15.92H13.91V17.93L12.56 18.27L12.85 19.57L13.91 19.26V21.53C13.91 21.67 13.87 21.72 13.73 21.72C13.6 21.72 13.19 21.72 12.79 21.71C12.96 22.09 13.12 22.68 13.17 23.03C13.89 23.03 14.4 22.99 14.76 22.76C15.11 22.54 15.23 22.17 15.23 21.53V18.88L16.19 18.59L16.02 17.36L15.23 17.59V15.92H16.15V14.67H15.23V12.53ZM20.43 16.09V17.84H19.22V16.09ZM21.35 12.5C21.14 13.21 20.76 14.14 20.41 14.81H18.54L19.41 14.45C19.24 13.93 18.82 13.13 18.44 12.56L17.27 13.01C17.6 13.57 17.94 14.3 18.12 14.81H16.72V16.09H17.9V17.84H16.37V19.14H17.84C17.71 20.25 17.33 21.46 16.11 22.24C16.41 22.46 16.84 22.92 17.02 23.2C18.48 22.14 19.0 20.6 19.16 19.14H20.43V23.11H21.77V19.14H23.14V17.84H21.77V16.09H22.88V14.81H21.77C22.09 14.25 22.44 13.6 22.77 12.98Z"/></svg>`;
     transliterationToggleBtn.title = "Show transliteration";
     Object.assign(transliterationToggleBtn.style, {
       cursor: "pointer",
       background: "none",
       border: "none",
       color: "white",
-      fontSize: "16px",
       lineHeight: "1",
       display: "none", // Hidden by default, shown when transliteration data is available
       alignItems: "center",
@@ -9548,4 +9554,3 @@ popup._headerWheelHandler = onHeaderWheel;
 
   init();
 })();
-
