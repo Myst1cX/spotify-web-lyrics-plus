@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.46
+// @version      17.47
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,24 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.47): REMOVED THE PERMANENT NOWPLAYINGVIEW-HIDING CSS (CONFLICTED WITH SPOTIFUCK)
+// This script used to inject a permanent style rule collapsing the
+// `.zjCIcN96KsMfWwRo` panel container to zero-width any time it contained
+// NowPlayingView (`.zjCIcN96KsMfWwRo:has([aria-label="Now playing view"]),
+// .zjCIcN96KsMfWwRo:has(.NowPlayingView) { min-width:0; max-width:0;
+// flex-basis:0; overflow:hidden; }`), plus a rule hiding Spotify's own
+// "Show Now Playing view" button (`.wJiY1vDfuci2a4db { display:none; }`).
+// That was fine on its own, but breaks when this script is run alongside
+// the new version of Spotifuck/SpotiKit desktop ++ (those are two separate 
+// userscripts many users, myself included, run together with this one for 
+// the rest of its UI/playback changes):
+// Spotifuck/SpotiKit desktop ++ now have their own dedicated Now Playing view button and guard, which
+// opens/closes NPV by toggling the real panel's aria-hidden state. We had to delete the CSS above since it
+// ran independently and could force the panel to zero-width regardless, so even a legitimate open through 
+// Spotifuck's own button could render completely invisible. 
+// Fix: removed the style injection entirely. NowPlayingView's visibility is
+// no longer touched by this script at all. 
 
 // RESOLVED (17.46): TRANSLATION NOW PARTICIPATES IN THE ACTIVE-LINE HIGHLIGHT TOO
 // highlightSyncedLyrics() now walks every sub-line after a lyric via updateSubLines(p, active),
@@ -1471,34 +1489,18 @@
   // Attempt initialization immediately
   initOpenCCConverters();
 
-  /* NowPlayingView logic: Using the original `.zjCIcN96KsMfWwRo` container approach.
-      The `.zjCIcN96KsMfWwRo` is the panel where NPV, Queue, and Connect a device are all displayed after clicking their respective buttons.
-      We apply the hiding style ONLY when .zjCIcN96KsMfWwRo contains NowPlayingView (identified by aria-label="Now playing view" or .NowPlayingView class).
-      This ensures Queue and Connect modals remain unaffected while NowPlayingView is hidden.
-      The container is collapsed to zero width, allowing the rest of the UI to expand and fill the area.
-      NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching (ProviderSpotify needs it).
-  */
-
-  const styleId = 'lyricsplus-hide-npv-style';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
-          .zjCIcN96KsMfWwRo:has([aria-label="Now playing view"]),
-          .zjCIcN96KsMfWwRo:has(.NowPlayingView) {
-              min-width: 0 !important;
-              max-width: 0 !important;
-              flex-basis: 0 !important;
-              overflow: hidden !important;
-          }
-
-          .wJiY1vDfuci2a4db { /* The "Show Now Playing view" button */
-              display: none !important;
-          }
-
-      `;
-    document.head.appendChild(style);
-  }
+  // NowPlayingView is no longer hidden/managed here - handled entirely by
+  // Spotifuck (used alongside this script) via its own npBtn/guard, which is
+  // now the single source of truth for opening/closing/showing NPV. The old
+  // permanent CSS-collapse here would have fought that: it forced the NPV
+  // panel container to zero-width any time NPV was present in the DOM,
+  // regardless of whether Spotifuck's guard had it open or closed - so even
+  // a legitimate open via Spotifuck's button would render invisible.
+  //
+  // Track/lyrics fetching (ProviderSpotify) reads NPV's DOM structure
+  // directly and was unaffected by that CSS either way - it never depended
+  // on the panel being visually hidden or shown, only on it existing in the
+  // DOM, which Spotify controls independently of this script's own styling.
 
   // ------------------------
   // Utils.js Functions
@@ -9421,8 +9423,6 @@ popup._headerWheelHandler = onHeaderWheel;
     // Don't start a second overlapping retry chain while one is in flight.
     if (lyricsButtonInjectionInFlight) return;
 
-    // const nowPlayingViewBtn = document.querySelector('[data-testid="control-button-npv"]');
-    // NowPlayingView control button is no longer a fallback as it has been removed in a Spotify UI revamp change
     const micBtn = document.querySelector('[data-testid="lyrics-button"]');
 
     // The mic/lyrics button (and the rest of the full player controls) only
@@ -9436,8 +9436,7 @@ popup._headerWheelHandler = onHeaderWheel;
     lyricsButtonInjectionInFlight = true;
     let attempts = 0;
     const tryAdd = () => {
-      const targetBtn = micBtn; // previously: nowPlayingViewBtn || micBtn;
-      const controls = targetBtn?.parentElement;
+      const controls = micBtn?.parentElement;
       if (!controls) {
         if (attempts < maxRetries) {
           attempts++;
@@ -9480,7 +9479,7 @@ popup._headerWheelHandler = onHeaderWheel;
         }
         createPopup();
       };
-      controls.insertBefore(btn, targetBtn);
+      controls.insertBefore(btn, micBtn);
       lyricsButtonInjected = true;
       lyricsButtonInjectionInFlight = false;
     };
