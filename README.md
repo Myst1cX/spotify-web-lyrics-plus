@@ -93,11 +93,12 @@
 > 1. Install [Violentmonkey](https://violentmonkey.github.io/)  
 > 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
 > 3. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify AdBlocker](https://github.com/Myst1cX/uSpot/releases/)  
-> 4. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)  
-> 5. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)  
-> 6. Open [Spotify Web Player](https://open.spotify.com/)   
-> 7. Play a song  
-> 8. Click on the Lyrics+ button to open the interface popup and see the song lyrics  
+> 4. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
+> 5. Optional - visual premium spoof, ad-slot removal, restoration of the old Now Playing View button: [SpotiwebJS](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js)     
+> 6. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)  
+> 7. Open [Spotify Web Player](https://open.spotify.com/)   
+> 8. Play a song  
+> 9. Click on the Lyrics+ button to open the interface popup and see the song lyrics  
 
 ## Make it work on a mobile device
 
