@@ -166,7 +166,7 @@ Click on "Original" to remove the translated lines.
 
 > 1. Go to [Spotify Web Player](https://open.spotify.com/) and login. Play a song.  
 > 2. Open DevTools (Press F12 or Right click and Inspect).   
-> 3. [Accessing DevTools on Mobile](https://addons.mozilla.org/en-US/android/addon/mobidevtools/)  
+> 3. [Accessing DevTools on Mobile](https://addons.mozilla.org/en-US/android/addon/mobidevtools/) (if it does refuse to load, obtain the token via PC)    
 > 4. Go to the Network tab and search for `spclient`.   
 > 5. You may have to wait a little for it to load.
 > 6. Click on one of the spclient domains and go to the Headers section. 
