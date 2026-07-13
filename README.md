@@ -92,32 +92,54 @@
 
 > 1. Install [Violentmonkey](https://violentmonkey.github.io/)  
 > 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
-> 3. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify AdBlocker](https://github.com/Myst1cX/uSpot/releases/)  
-> 4. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
+> 3. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases). Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
+> 4. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator - broken, may fork shortly](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
 > 5. Optional - ad-slot removal, visual premium and forced English locale spoof, restoration of the old Now Playing View button: [SpotiwebJS](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js)     
 > 6. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)  
 > 7. Open [Spotify Web Player](https://open.spotify.com/)   
-> 8. Play a song  
-> 9. Click on the Lyrics+ button to open the interface popup and see the song lyrics  
+> 8. Play a song   
+> 9. Click on the Lyrics+ button to open the interface popup and see the song lyrics   
 
 ## Make it work on a mobile device
+> NEW 'QUETTA BROWSER + USER-AGENT SWITCHER AND MANAGER' METHOD:    
+> Credits to: [u/soujunim/](https://www.reddit.com/r/SpotifyLatestModAPK/comments/1upaed1/mobile_browser_spotifuck_ui_and_adblock/)
+> 
+> 1. Download and install the Quetta Browser.    
+> 2. Quetta Browser > Open Spotify Web and login to your account   
+> 3. Press on the three dots next to the search bar's tab counter.   
+> 4. Click on the Extensions tab > Manage Extensions > Search Extensions and get the following: 'Violentmonkey', 'User-Agent Switcher and Manager', 'Spotify Ad-Blocker (Blockify)'   
+> 5. Backup ad-blocking extension: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases)    
+> Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
+> 6. NOTE: Keep only 1 ad-blocking extension enabled at the same time.    
+> 7. Optional - for a lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator - broken, may fork shortly](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)   
+> 8. Install: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Make sure to read the README.md for the setup and feature list.   
+> 9. Install [Spotifuck](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)   
+> 10. Open the Spotify web player > Press on the three dots next to the search bar's tab counter > Click on the Extensions tab > Click on the 'User-Agent Switcher and Manager' extension icon > Select the first option (a Chrome Windows 10 user agent) > Click 'Apply (this tab' and then 'Refresh Tab'.   
+> 11. Spotify web player should reload. The interface should now be mobile-friendly.   
+> 12. NOTE: Keep Desktop Mode (browser setting) disabled.    
+> 13. Play a song   
+> 14. Click on the Lyrics+ button to open the interface popup and see the song lyrics   
 
+* * * 
+
+> LEGACY 'FIREFOX BROWSER + CHAMELEON EXTENSION' METHOD (SLOWER, LESS RESPONSIVE):
 > 1. Download the latest version of Firefox (must be the Original version; Nightly or other releases might break your userscript manager).  
 > 2. Install [Violentmonkey](https://violentmonkey.github.io/)    
 > 3. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
-> 4. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify AdBlocker](https://github.com/Myst1cX/uSpot/releases/)
-> 5. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)  
-> 6. Install [Spotifuck](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
-> 7. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)   
+> 4. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases). Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
+> 5. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
+> 6. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js) Make sure to read the README.md for the setup and feature list.   
+> 7. Install [Spotifuck](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
 > 8. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/) extension   
 > 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)  
 > 10. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option  
 > 11. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"  
 > 12. Restart Firefox  
 > 13. Open Spotify Web and login to your account  
-> 14. The interface should change to a wider window > If it ever resets, repeat steps 7 and 8 > Keep Desktop Mode Disabled   
-> 15. Play a song  
-> 16. Click on the Lyrics+ button to open the interface popup and see the song lyrics  
+> 14. The interface should be mobile friendly > If it ever resets, try redoing the Chameleon extension configuration and refreshing the Spotify page
+> 15. NOTE: Keep Desktop Mode (browser setting) disabled.
+> 16. Play a song  
+> 17. Click on the Lyrics+ button to open the interface popup and see the song lyrics  
 
 * * * 
 
