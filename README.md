@@ -94,7 +94,7 @@
 > 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
 > 3. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify AdBlocker](https://github.com/Myst1cX/uSpot/releases/)  
 > 4. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
-> 5. Optional - visual premium spoof, ad-slot removal, forced English locale spoof, restoration of the old Now Playing View button: [SpotiwebJS](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js)     
+> 5. Optional - ad-slot removal, visual premium and forced English locale spoof, restoration of the old Now Playing View button: [SpotiwebJS](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js)     
 > 6. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)  
 > 7. Open [Spotify Web Player](https://open.spotify.com/)   
 > 8. Play a song  
