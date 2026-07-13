@@ -81,7 +81,8 @@
 > Can be toggled on/off using the dedicated <img src="icons/header/pip.svg" width="16" height="16" align="absmiddle" alt="PiP icon"/> PiP button (styled to match Spotify's own native Picture-in-Picture icon).  
 > When toggled on, the lyric lines inside the lyric+ popup's lyric container are hidden and replaced with a placeholder message  
 > "This video is playing in Picture-in-Picture mode". The lyrics appear in the floating PiP window that just opened.  
-> When the floating PiP window is closed or the button is toggled off, the original lyrics container is restored.  
+> When the floating PiP window is closed or the button is toggled off, the original lyrics container is restored.
+> On browsers that don't support the native PIP view, an unsupported placeholder message is displayed instead: "Picture-in-Picture mode isn't available in this browser".   
 
 ## Screenshots
 
