@@ -95,7 +95,7 @@
 > 3. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases). Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
 > 4. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator - broken, may fork shortly](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
 > 5. Optional - ad-slot removal, visual premium and forced English locale spoof, restoration of the old Now Playing View button: [SpotiwebJS](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js)     
-> 6. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js)  
+> 6. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.    
 > 7. Open [Spotify Web Player](https://open.spotify.com/)   
 > 8. Play a song   
 > 9. Click on the Lyrics+ button to open the interface popup and see the song lyrics   
@@ -112,7 +112,7 @@
 > Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
 > 6. NOTE: Keep only 1 ad-blocking extension enabled at the same time.    
 > 7. Optional - for a lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator - broken, may fork shortly](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)   
-> 8. Install: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Make sure to read the README.md for the setup and feature list.   
+> 8. Install: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.   
 > 9. Install [Spotifuck](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)   
 > 10. Open the Spotify web player > Press on the three dots next to the search bar's tab counter > Click on the Extensions tab > Click on the 'User-Agent Switcher and Manager' extension icon > Select the first option (a Chrome Windows 10 user agent) > Click 'Apply (this tab' and then 'Refresh Tab'.   
 > 11. Spotify web player should reload. The interface should now be mobile-friendly.   
@@ -128,7 +128,7 @@
 > 3. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
 > 4. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases). Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
 > 5. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
-> 6. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js) Make sure to read the README.md for the setup and feature list.   
+> 6. Install [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.    
 > 7. Install [Spotifuck](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
 > 8. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/) extension   
 > 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)  
