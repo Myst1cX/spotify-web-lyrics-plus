@@ -143,13 +143,12 @@
 
 * * * 
 
-> 17. RECOMMENDED: While on the Spotify web instance in Firefox, click on the hamburger menu in the top right corner of the browser and press "Add to home screen".  
-> This transforms the website into a PWA (Priority Web Application) and gives you an easy access shortcut to the Spotify player.  
-> 18. SIDE NOTE: You can begin playing a song in the web interface and then open the Spotify app - it will let you play music there and control playback without any limitations.  
+> **TIP**: Add Spotify Web Player to your home screen for a PWA-like experience. PWA (Priority Web Application) gives you an easy access shortcut to the Spotify player.  
+> **SIDE NOTE**: You can begin playing a song in the web interface and then open the Spotify app - it will let you play music there and control playback without any limitations.  
 
 * * * 
 
-> 19. REMEMBER: PWA's essentially allow running an entire app in your web browser.    
+> REMEMBER: PWA's essentially allow running an entire app in your web browser.    
 > A good way of finding progressive web apps is through `store.app`  
 > The degree to which you can block ads varies depending on the app, but it is often times better than using the actual app - a PWA also uses less storage than installing a native app.  
 
