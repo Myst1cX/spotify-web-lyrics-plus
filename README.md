@@ -89,7 +89,7 @@
 > (Coming Soon)
 
 ## Installation
-
+a) DESKTOP INSTALLATION:
 > 1. Install [Violentmonkey](https://violentmonkey.github.io/)  
 > 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
 > 3. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases). Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
@@ -100,7 +100,7 @@
 > 8. Play a song   
 > 9. Click on the Lyrics+ button to open the interface popup and see the song lyrics   
 
-## Make it work on a mobile device
+b) MOBILE INSTALLATION:
 > NEW 'QUETTA BROWSER + USER-AGENT SWITCHER AND MANAGER' METHOD:    
 > Credits to: [u/soujunim/](https://www.reddit.com/r/SpotifyLatestModAPK/comments/1upaed1/mobile_browser_spotifuck_ui_and_adblock/)
 > 
