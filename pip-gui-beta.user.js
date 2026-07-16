@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Stable
+// @name         Spotify Lyrics+ Beta
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.49
+// @version      17.49.beta
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -12,11 +12,11 @@
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
 // ==/UserScript==
 
-// RESOLVED (17.49): PLAY FROM PIP NO LONGER SILENTLY NO-OPS; PIP NOW REFLECTS SPOTIFY'S OWN CONTROLS TOO
+// RESOLVED (17.49.beta): PLAY FROM PIP NO LONGER SILENTLY NO-OPS; PIP NOW REFLECTS SPOTIFY'S OWN CONTROLS TOO
 // FINDING #1 (play from PiP doing nothing): handlePipVideoPlay()/handlePipVideoPause() (added in
 // 17.48) only clicked Spotify's real play/pause button, then watpaited the full
 // PIP_MEDIA_SYNC_GRACE_MS (1200ms) before syncPipMediaStateFromSpotify() ever updated pipVideo's
@@ -42,7 +42,7 @@
 // pipLastKnownSpotifyPlaying per tick, calling syncPipMediaStateFromSpotify() only on an actual
 // change. No new timer/observer added; this rides the render loop that was already running.
 
-// RESOLVED (17.48): PLAY/PAUSE IN NATIVE PIP NO LONGER CLOSES THE PIP WINDOW; ADDED PREV/NEXT TRACK BUTTONS
+// RESOLVED (17.48.beta): PLAY/PAUSE IN NATIVE PIP NO LONGER CLOSES THE PIP WINDOW; ADDED PREV/NEXT TRACK BUTTONS
 // FINDING: pipVideo's source is pipCanvas.captureStream(30), a MediaStream, so pipVideo.duration
 // reports Infinity - Chromium classifies that as a "live" source, same bucket as a webcam feed.
 // For live-classified sources, Chromium's native PiP window only draws a real play/pause toggle
