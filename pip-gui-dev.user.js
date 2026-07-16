@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.50.dev
+// @version      17.49.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,32 +16,30 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
 
-// NEW (17.50.dev): PIP NOW USES DOCUMENT PICTURE-IN-PICTURE WHEN AVAILABLE, ADDING REAL
-// SEEK/PREV/NEXT/MUTE BUTTONS (CHROME 116+, FIREFOX 151+)
-// The old PiP path (canvas -> canvas.captureStream() -> hidden <video> ->
-// video.requestPictureInPicture()) can only ever offer play/pause/mute, because
-// Chromium's native video-PiP overlay gates its seek/skip buttons on the Media
-// Session API (which the browser-drawn PiP chrome for THIS delivery mechanism
-// never consults for custom buttons the way it does for a real <video controls>
-// element), and Firefox's native video-PiP overlay drives its seek bar by
-// manipulating the underlying <video>'s real currentTime/duration - meaningless
-// on a live canvas.captureStream() with no seekable ranges. Neither gives a
-// working seek gesture on this architecture, confirmed against Chromium's own
-// docs and Firefox's bug tracker rather than assumed.
-// Document Picture-in-Picture (a DIFFERENT API - documentPictureInPicture
-// .requestWindow()) opens an always-on-top window with a real HTML document
-// instead of a single <video>, so it can hold arbitrary custom controls.
-// togglePip() now tries this first via the new supportsDocumentPip() check:
-// openDocumentPip() moves the existing pipCanvas (same node, same 2D context,
-// same drawPipFrame()/render loop - nothing about lyric rendering changed) into
-// the new window and layers a hover-reveal HTML bar on top with play/pause,
-// prev/next track, seek back/forward 10s, and mute - each wired to the script's
-// existing Spotify-control helpers (findSpotifyPlayPauseButton(), seekTo(),
-// setSpotifyVolumeLevel(), etc.), not to anything new.
-// Falls through unchanged to the existing requestPictureInPicture()/WebKit/
-// page-PiP chain wherever Document PiP isn't available - Safari/WebKit (no
-// support at all), Firefox ESR, and any older Chromium/Firefox release.
-//
+// ADDED (17.49.dev): CHROMIUM PIP SEEK/PLAY/PAUSE BUTTONS VIA MEDIASESSION
+// Chromium's native video-PiP overlay draws play/pause/seek buttons from registered
+// navigator.mediaSession action handlers, not from whether pipVideo is actually seekable -
+// pipVideo is a MediaStream via canvas.captureStream(), which has no real seekable ranges
+// and (per Chromium's docs) can also cause the play/pause button to be hidden unless
+// mediaSession 'play'/'pause' handlers are registered explicitly.
+// Added setupPipMediaSessionHandlers()/teardownPipMediaSessionHandlers(), registering
+// 'play', 'pause', 'seekbackward', 'seekforward' on native enterpictureinpicture and
+// clearing them on leavepictureinpicture, so we're not silently hijacking OS/hardware
+// media-key behavior while PiP is closed. The seek handlers offset from a best-effort
+// current position (new getSpotifyPositionMs()) by details.seekOffset (falling back to
+// a 10s default) and call the existing seekTo(), clamped to [0, track duration].
+// seekTo() and its helpers (findSpotifyRangeInput, applySeekEndBuffer, formatMs) used to
+// be declared inside createPopup(), so they were only reachable while the lyrics popup
+// happened to exist - not usable by these PiP handlers, which can fire independently of
+// the popup. Hoisted all four to top-level scope (same fix pattern as 17.43's
+// showTransliterationInPopupFor); createPopup()'s own callers (updateProgressUIFromSpotify,
+// the progress bar's manual seek) are unaffected and now just resolve the same functions
+// via closure over the outer scope.
+// Firefox's native PiP overlay does not consult MediaSession for its own seek buttons (see
+// pip-seek-controls-analysis.md) - this remains a Chromium-only enhancement and is simply
+// inert, not harmful, elsewhere. Document Picture-in-Picture (the fuller cross-browser fix)
+// is a separate, larger change and intentionally not part of this one.
+
 // RESOLVED (17.48): POPUP COULDN'T BE DRAGGED/RESIZED OVER SPOTIFUCK'S BOTTOM NAV BAR
 // The popup could be dragged/resized over almost anything on the page except Spotifuck's
 // bottom nav bar (#sp-bottom-nav) - the popup itself kept extending normally into that
@@ -993,16 +991,6 @@
   let pipWindowResizeFallbackActive = false;
   let pipFallbackTimer = null;
   let pipWorker = null;
-  // Document Picture-in-Picture state (Chrome 116+, Firefox 151+). When
-  // supported, this is tried before requestPictureInPicture() in togglePip() -
-  // it opens an always-on-top window with a real HTML document instead of a
-  // single <video>, which is what makes custom seek/prev/next buttons possible
-  // at all (see analysis doc). pipCanvas/pipCtx/drawPipFrame() are reused
-  // unchanged; only the *delivery* mechanism differs from the video-PiP path.
-  let docPipWindow = null;
-  let isDocPipActive = false;
-  let docPipSyncInterval = null;
-  let pipUserVolumeBeforeMute = null;
   // Match TIMING.HIGHLIGHT_INTERVAL_MS so the PiP canvas redraws at the exact
   // same cadence as the main container's highlightSyncedLyrics(), instead of
   // the old 500ms fallback which was 10x coarser than main, independent of
@@ -1970,6 +1958,302 @@ document.head.appendChild(buttonGroupScrollStyle);
     return false;
   }
 
+  /**
+   * findSpotifyRangeInput()
+   * Attempts to find Spotify's native range input for playback progress.
+   * Fallback order:
+   *   1. Hidden numeric input[type=range] with max > 0 (preferred - most accurate)
+   *   2. Visible range inputs with max > 0
+   *   3. Any range input with numeric max/min/step
+   * @returns {HTMLInputElement|null}
+   */
+  function findSpotifyRangeInput() {
+    try {
+      // Collect all range inputs in the document
+      const allRanges = Array.from(document.querySelectorAll('input[type="range"]'));
+
+      // Filter for hidden ranges with max > 0 (preferred - Spotify often uses hidden inputs)
+      const hiddenRanges = allRanges.filter(inp => {
+        const max = Number(inp.max);
+        // Check if hidden: not visible in DOM (hidden-visually class, or offsetParent null)
+        // Use specific class matching to avoid false positives like 'unhidden'
+        const isHidden = inp.offsetParent === null ||
+                         inp.closest('label.hidden-visually') !== null ||
+                         inp.closest('.hidden-visually') !== null ||
+                         inp.closest('[class~="hidden"]') !== null;
+        return isHidden && max > 0;
+      });
+      if (hiddenRanges.length > 0) {
+        // Prefer the one with the largest max value (likely the playback progress)
+        hiddenRanges.sort((a, b) => Number(b.max) - Number(a.max));
+        return hiddenRanges[0];
+      }
+
+      // Fallback: visible range inputs with max > 0
+      const visibleRanges = allRanges.filter(inp => {
+        const max = Number(inp.max);
+        return inp.offsetParent !== null && max > 0;
+      });
+      if (visibleRanges.length > 0) {
+        visibleRanges.sort((a, b) => Number(b.max) - Number(a.max));
+        return visibleRanges[0];
+      }
+
+      // Last resort: any range with valid numeric attributes
+      const anyValid = allRanges.find(inp =>
+        inp.max && !isNaN(Number(inp.max)) && Number(inp.max) > 0 &&
+        inp.step && !isNaN(Number(inp.step))
+      );
+      return anyValid || null;
+    } catch (e) {
+      console.warn('findSpotifyRangeInput error:', e);
+      return null;
+    }
+  }
+
+  /**
+   * formatMs(ms)
+   * Converts milliseconds to a human-readable time string (m:ss).
+   * @param {number} ms - Milliseconds
+   * @returns {string} Formatted time string
+   */
+  function formatMs(ms) {
+    if (!ms || isNaN(ms)) return "0:00";
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${String(sec).padStart(2, '0')}`;
+  }
+
+  /**
+   * applySeekEndBuffer(ms, durationMs, bufferMs)
+   * Prevents seeking to exact track end by applying a buffer.
+   * This avoids the audio "ended" state that conflicts with repeat functionality.
+   * @param {number} ms - Target seek position in milliseconds
+   * @param {number} durationMs - Track duration in milliseconds
+   * @param {number} bufferMs - Buffer size in milliseconds (default 200ms)
+   * @returns {number} Safe seek position
+   */
+  function applySeekEndBuffer(ms, durationMs, bufferMs = 200) {
+    if (ms >= durationMs - bufferMs) {
+      DEBUG.debug('Seekbar', `Applied end buffer: ${ms}ms → ${durationMs - bufferMs}ms to prevent "ended" state`);
+      return durationMs - bufferMs;
+    }
+    return ms;
+  }
+
+  /**
+   * seekTo(ms)
+   * Attempts to seek Spotify's playback to the specified position in milliseconds.
+   * Fallback order:
+   *   (a) Hidden/native range input value + dispatch input/change + pointer events
+   *   (b) Emulate pointer/mouse events on CSS progress-bar handle (last resort)
+   * @param {number} ms - Target position in milliseconds
+   * @returns {boolean} Whether seeking was attempted
+   *
+   * NOTE (17.49): hoisted here from inside createPopup() (was private to that function's
+   * scope) so PiP's MediaSession seekbackward/seekforward handlers - which can fire while
+   * the lyrics popup isn't even open - can call the same real seek logic instead of
+   * duplicating it. createPopup()'s own callers are unaffected: with the nested declarations
+   * removed, they now resolve seekTo/findSpotifyRangeInput/formatMs/applySeekEndBuffer via
+   * closure over this outer scope instead, same as before.
+   */
+  function seekTo(ms) {
+    try {
+      const SEEK_END_BUFFER_MS = 200;
+
+      DEBUG.debug('Seekbar', `Seeking to ${ms}ms (${formatMs(ms)})`);
+
+      // --- (a) Try hidden/native range input ---
+      const spotifyRange = findSpotifyRangeInput();
+      if (spotifyRange) {
+        try {
+          const max = Number(spotifyRange.max) || 0;
+          if (max > 0) {
+            const safeMs = applySeekEndBuffer(ms, max, SEEK_END_BUFFER_MS);
+            // Set the value
+            spotifyRange.value = String(clamp(safeMs, 0, max));
+
+            // Dispatch input and change events
+            spotifyRange.dispatchEvent(new Event('input', { bubbles: true }));
+            spotifyRange.dispatchEvent(new Event('change', { bubbles: true }));
+
+            // Also try pointer events for better compatibility
+            // Note: We omit 'view' property as it can cause errors in Firefox extensions
+            const rangeRect = spotifyRange.getBoundingClientRect();
+            const percentage = clamp(safeMs, 0, max) / max;
+            const clientX = rangeRect.left + rangeRect.width * percentage;
+            const clientY = rangeRect.top + rangeRect.height / 2;
+
+            try {
+              const pointerDownEvent = new PointerEvent('pointerdown', {
+                bubbles: true, cancelable: true,
+                clientX, clientY, button: 0, buttons: 1
+              });
+              const pointerUpEvent = new PointerEvent('pointerup', {
+                bubbles: true, cancelable: true,
+                clientX, clientY, button: 0
+              });
+
+              spotifyRange.dispatchEvent(pointerDownEvent);
+              spotifyRange.dispatchEvent(pointerUpEvent);
+            } catch (pointerErr) {
+              // Pointer events failed, try mouse events instead
+              const mouseDownEvent = new MouseEvent('mousedown', {
+                bubbles: true, cancelable: true,
+                clientX, clientY, button: 0
+              });
+              const mouseUpEvent = new MouseEvent('mouseup', {
+                bubbles: true, cancelable: true,
+                clientX, clientY, button: 0
+              });
+              spotifyRange.dispatchEvent(mouseDownEvent);
+              spotifyRange.dispatchEvent(mouseUpEvent);
+            }
+
+            DEBUG.debug('Seekbar', `✓ Seeked via range input to ${safeMs}ms`);
+            return true;
+          }
+        } catch (e) {
+          console.warn('seekTo: Failed to set range input', e);
+        }
+      }
+
+      // --- (b) Emulate pointer events on CSS progress-bar handle (last resort) ---
+      const progressBar = document.querySelector('[data-testid="progress-bar"]');
+      if (progressBar) {
+        try {
+          const barRect = progressBar.getBoundingClientRect();
+          if (barRect.width > 0) {
+            // Determine duration to calculate percentage
+            let durMs = 0;
+
+            // Try range input max
+            const range = findSpotifyRangeInput();
+            if (range && Number(range.max) > 0) {
+              durMs = Number(range.max);
+            }
+
+            // Fallback: visible text
+            if (durMs <= 0) {
+              const durEl = document.querySelector('[data-testid="playback-duration"]');
+              const posEl = document.querySelector('[data-testid="playback-position"]');
+              if (durEl) {
+                const raw = durEl.textContent.trim();
+                if (raw.startsWith('-')) {
+                  const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
+                  const remainMs = timeStringToMs(raw);
+                  durMs = posMs + remainMs;
+                } else {
+                  durMs = timeStringToMs(raw);
+                }
+              }
+            }
+
+            // Fallback: track info
+            if (durMs <= 0) {
+              const trackInfo = getCurrentTrackInfo();
+              if (trackInfo && trackInfo.duration > 0) {
+                durMs = trackInfo.duration;
+              }
+            }
+
+            if (durMs > 0) {
+              const safeMs = applySeekEndBuffer(ms, durMs, SEEK_END_BUFFER_MS);
+              const percentage = clamp(safeMs, 0, durMs) / durMs;
+              const clientX = barRect.left + barRect.width * percentage;
+              const clientY = barRect.top + barRect.height / 2;
+
+              // Try the handle first, then the progress bar
+              const handle = progressBar.querySelector('[data-testid="progress-bar-handle"]');
+              const target = handle || progressBar;
+
+              // Try pointer events first (without 'view' property to avoid Firefox extension issues)
+              try {
+                const downEvent = new PointerEvent('pointerdown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0, buttons: 1,
+                  pointerType: 'mouse'
+                });
+                const moveEvent = new PointerEvent('pointermove', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0, buttons: 1,
+                  pointerType: 'mouse'
+                });
+                const upEvent = new PointerEvent('pointerup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0, buttons: 0,
+                  pointerType: 'mouse'
+                });
+
+                target.dispatchEvent(downEvent);
+                target.dispatchEvent(moveEvent);
+                target.dispatchEvent(upEvent);
+              } catch (pointerErr) {
+                // Pointer events failed, continue to mouse events
+              }
+
+               // Also try mouse events as fallback
+              const mouseDownEvent = new MouseEvent('mousedown', {
+                bubbles: true, cancelable: true,
+                clientX, clientY, button: 0
+              });
+              const mouseUpEvent = new MouseEvent('mouseup', {
+                bubbles: true, cancelable: true,
+                clientX, clientY, button: 0
+              });
+              const clickEvent = new MouseEvent('click', {
+                bubbles: true, cancelable: true,
+                clientX, clientY, button: 0
+              });
+
+              progressBar.dispatchEvent(mouseDownEvent);
+              progressBar.dispatchEvent(mouseUpEvent);
+              progressBar.dispatchEvent(clickEvent);
+
+              DEBUG.debug('Seekbar', `✓ Seeked via progress-bar pointer events to ${safeMs}ms`);
+              return true;
+            }
+          }
+        } catch (e) {
+          console.warn('seekTo: Failed to emulate pointer events on progress bar', e);
+        }
+      }
+
+      return false;
+    } catch (e) {
+      console.warn('seekTo error:', e);
+      return false;
+    }
+  }
+
+  /**
+   * getSpotifyPositionMs()
+   * Best-effort current playback position in milliseconds, for callers (like the PiP
+   * MediaSession seek handlers below) that need a starting point to offset from but
+   * aren't already tracking position themselves.
+   * Fallback order mirrors seekTo()/updateProgressUIFromSpotify(): visible position text,
+   * then the native range input's current value.
+   * @returns {number}
+   */
+  function getSpotifyPositionMs() {
+    try {
+      const posEl = document.querySelector('[data-testid="playback-position"]');
+      if (posEl) {
+        return timeStringToMs(posEl.textContent);
+      }
+      const range = findSpotifyRangeInput();
+      if (range) {
+        const val = Number(range.value);
+        if (!isNaN(val)) return val;
+      }
+      return 0;
+    } catch (e) {
+      console.warn('getSpotifyPositionMs error:', e);
+      return 0;
+    }
+  }
+
   // =============================================
   // Picture-in-Picture (PiP)
   // =============================================
@@ -1977,18 +2261,6 @@ document.head.appendChild(buttonGroupScrollStyle);
   function isSafariBrowser() {
     const ua = navigator.userAgent || '';
     return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox/i.test(ua);
-  }
-
-  /**
-   * Feature-detects the Document Picture-in-Picture API (window.documentPictureInPicture
-   * .requestWindow()). Supported in Chromium since Chrome 116 and in Firefox since
-   * Firefox 151 (May 2026). Not supported in Safari/WebKit or Firefox ESR - those
-   * fall through to the existing requestPictureInPicture()/WebKit/page-PiP chain
-   * in togglePip() unchanged.
-   */
-  function supportsDocumentPip() {
-    return typeof window.documentPictureInPicture !== 'undefined' &&
-           typeof window.documentPictureInPicture.requestWindow === 'function';
   }
 
   function applyHiddenPipVideoStyle() {
@@ -2102,24 +2374,82 @@ document.head.appendChild(buttonGroupScrollStyle);
     }
   }
 
-  function updatePipCanvasSize() {
-    if (!pipCanvas) return;
-    if (isDocPipActive && docPipWindow) {
-      // Document PiP window: no pipVideo bounding box involved at all - size
-      // directly off the floating window's own (user-resizable) dimensions.
-      const side = Math.max(
-        PIP_CANVAS_MIN_SIZE,
-        Math.min(PIP_CANVAS_MAX_SIZE, Math.round(Math.max(
-          docPipWindow.innerWidth || 0, docPipWindow.innerHeight || 0, PIP_CANVAS_DEFAULT_SIZE
-        )))
-      );
-      if (pipCanvas.width !== side || pipCanvas.height !== side) {
-        pipCanvas.width = side;
-        pipCanvas.height = side;
-      }
-      return;
-    }
+  // =============================================
+  // PiP MediaSession action handlers (Chromium seek buttons)
+  // =============================================
+  // Chromium's native video-PiP overlay draws its play/pause/seek buttons based on
+  // registered navigator.mediaSession action handlers, independent of whether pipVideo
+  // itself (a MediaStream via canvas.captureStream()) is actually seekable. Registering
+  // 'play'/'pause' here also guarantees those buttons show up at all - by default Chromium
+  // may hide them for a MediaStream-backed <video>. Firefox's native PiP overlay does not
+  // consult MediaSession for its buttons (see pip-seek-controls-analysis.md), so this is a
+  // Chromium-only enhancement; it's simply inert elsewhere, not harmful.
+
+  const PIP_MEDIA_SESSION_SEEK_STEP_SEC = 10;
+
+  function handleMediaSessionPlay() {
     if (!pipVideo) return;
+    pipVideo.play().catch(() => {});
+  }
+
+  function handleMediaSessionPause() {
+    if (!pipVideo) return;
+    pipVideo.pause();
+  }
+
+  function handleMediaSessionSeekBackward(details) {
+    const offsetMs = ((details && details.seekOffset) || PIP_MEDIA_SESSION_SEEK_STEP_SEC) * 1000;
+    const target = Math.max(0, getSpotifyPositionMs() - offsetMs);
+    seekTo(target);
+  }
+
+  function handleMediaSessionSeekForward(details) {
+    const offsetMs = ((details && details.seekOffset) || PIP_MEDIA_SESSION_SEEK_STEP_SEC) * 1000;
+    const trackInfo = getCurrentTrackInfo();
+    const duration = (trackInfo && trackInfo.duration > 0) ? trackInfo.duration : Infinity;
+    const target = Math.min(duration, getSpotifyPositionMs() + offsetMs);
+    seekTo(target);
+  }
+
+  /**
+   * setupPipMediaSessionHandlers()
+   * Registers the action handlers that make Chromium's PiP overlay show play/pause/seek
+   * buttons and wire them to Spotify's real controls. Called when the PiP window actually
+   * opens (native enterpictureinpicture), not at script load, so we're not silently
+   * hijacking OS/hardware media-key behavior for the rest of the page while PiP is closed.
+   */
+  function setupPipMediaSessionHandlers() {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.setActionHandler('play', handleMediaSessionPlay);
+      navigator.mediaSession.setActionHandler('pause', handleMediaSessionPause);
+      navigator.mediaSession.setActionHandler('seekbackward', handleMediaSessionSeekBackward);
+      navigator.mediaSession.setActionHandler('seekforward', handleMediaSessionSeekForward);
+    } catch (e) {
+      console.warn('📺 [Lyrics+ PiP] Failed to register MediaSession action handlers:', e);
+    }
+  }
+
+  /**
+   * teardownPipMediaSessionHandlers()
+   * Clears the action handlers above when the PiP window closes (leavepictureinpicture).
+   * Some browsers throw when unsetting a handler for an action they don't support at all;
+   * each call is wrapped individually so one unsupported action doesn't stop the rest from
+   * being cleared.
+   */
+  function teardownPipMediaSessionHandlers() {
+    if (!('mediaSession' in navigator)) return;
+    ['play', 'pause', 'seekbackward', 'seekforward'].forEach((action) => {
+      try {
+        navigator.mediaSession.setActionHandler(action, null);
+      } catch (e) {
+        // Unsupported action on this browser; nothing to clear.
+      }
+    });
+  }
+
+  function updatePipCanvasSize() {
+    if (!pipCanvas || !pipVideo) return;
     const rect = pipVideo.getBoundingClientRect();
     const side = Math.max(
       PIP_CANVAS_MIN_SIZE,
@@ -2404,6 +2734,7 @@ document.head.appendChild(buttonGroupScrollStyle);
       enterPipInLyricsContainer();
       syncPipMediaStateFromSpotify();
       startPipRenderLoop();
+      setupPipMediaSessionHandlers();
       console.info('📺 [Lyrics+ PiP] Picture-in-Picture window opened (isPipActive=%s isPagePipActive=%s)', isPipActive, isPagePipActive);
     });
 
@@ -2413,6 +2744,7 @@ document.head.appendChild(buttonGroupScrollStyle);
       updatePipButtonState(false);
       stopPipRenderLoop();
       exitPipFromLyricsContainer();
+      teardownPipMediaSessionHandlers();
       console.info('📺 [Lyrics+ PiP] Picture-in-Picture window closed (isPipActive=%s isPagePipActive=%s)', isPipActive, isPagePipActive);
     });
 
@@ -2747,12 +3079,6 @@ document.head.appendChild(buttonGroupScrollStyle);
 
   async function closePip() {
     if (!isPipActive && !isPagePipActive) return;
-    if (isDocPipActive && docPipWindow) {
-      // The pagehide listener set up in openDocumentPip() does all the state
-      // cleanup (isPipActive/isDocPipActive, render loop, notice, canvas detach).
-      docPipWindow.close();
-      return;
-    }
     if (pipVideo && document.pictureInPictureElement === pipVideo &&
         typeof document.exitPictureInPicture === 'function') {
       try { await document.exitPictureInPicture(); } catch {}
@@ -2792,20 +3118,6 @@ document.head.appendChild(buttonGroupScrollStyle);
     }
 
     console.info('📺 [Lyrics+ PiP] togglePip: opening (state flags say inactive)');
-
-    // Document PiP first (Chrome 116+, Firefox 151+): real HTML window, so
-    // seek/prev/next buttons actually work. Falls through to the existing
-    // requestPictureInPicture()/WebKit/page-PiP chain unchanged wherever it
-    // isn't supported (Safari, pre-151 Firefox, Firefox ESR, older Chromium).
-    if (supportsDocumentPip()) {
-      try {
-        await openDocumentPip();
-        return;
-      } catch (err) {
-        console.info('📺 [Lyrics+ PiP] Document PiP failed (%s) - falling back to video-PiP', err && err.name);
-      }
-    }
-
     await initPipElements();
 
     // Each entry point below gets its OWN try/catch. Previously the whole native +
@@ -2868,197 +3180,6 @@ document.head.appendChild(buttonGroupScrollStyle);
     updatePipButtonState(true);
     enterPipInLyricsContainer();
     console.info('📺 [Lyrics+ PiP] No working PiP mechanism found - showing unsupported fallback notice (isPipActive=%s isPagePipActive=%s)', isPipActive, isPagePipActive);
-  }
-
-  // ------------------------
-  // Document Picture-in-Picture control bar
-  // ------------------------
-  // Small, hand-drawn glyphs (currentColor fill) - no external assets, matches
-  // the existing header buttons' style (white icon, transparent circular hit area).
-  const DOC_PIP_ICONS = {
-    play: '<path d="M3 2.5v11l10-5.5z"></path>',
-    pause: '<path d="M3 2h3v12H3zM10 2h3v12h-3z"></path>',
-    prev: '<path d="M3 2h1.5v12H3zM13 3.5 6 8l7 4.5z"></path>',
-    next: '<path d="M11.5 2H13v12h-1.5zM3 3.5 10 8l-7 4.5z"></path>',
-    seekBack: '<path d="M7.5 3.5 2 8l5.5 4.5v-3.2C10.6 9.5 13 11.6 13 14c0-3.3-2.7-6-6-6z"></path>',
-    seekFwd: '<path d="M8.5 3.5 14 8l-5.5 4.5v-3.2C5.4 9.5 3 11.6 3 14c0-3.3 2.7-6 6-6z"></path>',
-    volume: '<path d="M9 2 4.5 5.5H2v5h2.5L9 14z"></path><path d="M11.5 5.2a4 4 0 0 1 0 5.6" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"></path>',
-    muted: '<path d="M9 2 4.5 5.5H2v5h2.5L9 14z"></path><path d="M11 6.5 14 9.5M14 6.5 11 9.5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"></path>',
-  };
-
-  function docPipSvgIcon(pathsHtml, size = 18) {
-    return `<svg viewBox="0 0 16 16" width="${size}" height="${size}" fill="currentColor" style="display:block">${pathsHtml}</svg>`;
-  }
-
-  /**
-   * Relative seek helper for the Document PiP bar. Reuses the exact same
-   * position source drawPipFrame() already reads (Spotify's displayed mm:ss
-   * text) and the existing seekTo(ms) - no new Spotify-interaction code.
-   */
-  function docPipSeekBy(deltaMs) {
-    const posEl = document.querySelector('[data-testid="playback-position"]');
-    const curMs = posEl ? timeStringToMs(posEl.textContent) : 0;
-    seekTo(Math.max(0, curMs + deltaMs));
-  }
-
-  function docPipToggleMute() {
-    const level = getSpotifyVolumeLevel();
-    if (level === null) return;
-    if (level > 0.001) {
-      pipUserVolumeBeforeMute = level;
-      setSpotifyVolumeLevel(0);
-    } else {
-      setSpotifyVolumeLevel(pipUserVolumeBeforeMute && pipUserVolumeBeforeMute > 0.001 ? pipUserVolumeBeforeMute : 0.5);
-    }
-  }
-
-  /** Reflects real Spotify state (not pipVideo's) onto the play/pause and mute icons. */
-  function syncDocPipControlIcons(refs) {
-    if (!refs) return;
-    const playing = isSpotifyPlaying();
-    refs.playPauseBtn.innerHTML = docPipSvgIcon(DOC_PIP_ICONS[playing ? 'pause' : 'play']);
-    refs.playPauseBtn.title = playing ? 'Pause' : 'Play';
-    refs.playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
-    const level = getSpotifyVolumeLevel();
-    const muted = level === null ? false : level <= 0.001;
-    refs.muteBtn.innerHTML = docPipSvgIcon(DOC_PIP_ICONS[muted ? 'muted' : 'volume']);
-    refs.muteBtn.title = muted ? 'Unmute' : 'Mute';
-    refs.muteBtn.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
-  }
-
-  /**
-   * Builds the hover-to-reveal control bar inside the Document PiP window's own
-   * document. All button actions reuse existing Spotify-control helpers
-   * (findSpotifyPreviousButton/findSpotifyNextButton/findSpotifyPlayPauseButton/
-   * seekTo/setSpotifyVolumeLevel) - nothing here talks to Spotify directly.
-   */
-  function createDocPipControlBar(doc) {
-    const bar = doc.createElement('div');
-    bar.id = 'lyrics-plus-docpip-bar';
-    Object.assign(bar.style, {
-      position: 'absolute', left: '0', right: '0', bottom: '0',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      gap: '4px', padding: '10px 0',
-      background: 'linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0))',
-      opacity: '0', transition: 'opacity 0.15s ease',
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    });
-
-    function makeBtn(id, iconKey, label) {
-      const b = doc.createElement('button');
-      b.id = id;
-      b.title = label;
-      b.setAttribute('aria-label', label);
-      b.innerHTML = docPipSvgIcon(DOC_PIP_ICONS[iconKey]);
-      Object.assign(b.style, {
-        background: 'transparent', border: 'none', cursor: 'pointer', color: 'white',
-        padding: '0', borderRadius: '50%', display: 'inline-flex', alignItems: 'center',
-        justifyContent: 'center', width: '32px', height: '32px', flexShrink: '0',
-      });
-      b.addEventListener('mouseenter', () => { b.style.color = 'rgba(255,255,255,0.7)'; });
-      b.addEventListener('mouseleave', () => { b.style.color = 'white'; });
-      bar.appendChild(b);
-      return b;
-    }
-
-    const prevBtn = makeBtn('lyrics-plus-docpip-prev', 'prev', 'Previous track');
-    const seekBackBtn = makeBtn('lyrics-plus-docpip-seekback', 'seekBack', 'Seek back 10s');
-    const playPauseBtn = makeBtn('lyrics-plus-docpip-playpause', 'play', 'Play');
-    const seekFwdBtn = makeBtn('lyrics-plus-docpip-seekfwd', 'seekFwd', 'Seek forward 10s');
-    const nextBtn = makeBtn('lyrics-plus-docpip-next', 'next', 'Next track');
-    const muteBtn = makeBtn('lyrics-plus-docpip-mute', 'volume', 'Mute');
-
-    prevBtn.addEventListener('click', () => { findSpotifyPreviousButton()?.click(); });
-    nextBtn.addEventListener('click', () => { findSpotifyNextButton()?.click(); });
-    playPauseBtn.addEventListener('click', () => { findSpotifyPlayPauseButton()?.click(); });
-    seekBackBtn.addEventListener('click', () => docPipSeekBy(-10000));
-    seekFwdBtn.addEventListener('click', () => docPipSeekBy(10000));
-    muteBtn.addEventListener('click', () => docPipToggleMute());
-
-    return { bar, playPauseBtn, muteBtn };
-  }
-
-  /**
-   * Opens a Document Picture-in-Picture window and moves the existing, already-
-   * drawn pipCanvas into it (adopted across documents by appendChild - the same
-   * canvas node, same 2D context, same drawPipFrame()/render loop, no re-render
-   * logic duplicated). A hover-reveal HTML control bar is layered on top for
-   * play/pause, prev/next, seek ±10s, and mute - all wired to the script's
-   * existing Spotify-control helpers.
-   *
-   * Called from togglePip() before the requestPictureInPicture()/WebKit/page-PiP
-   * chain, only when supportsDocumentPip() is true. isPipActive is set true (not
-   * a separate flag) so every existing isPipActive-gated code path - render loop
-   * start/stop, enter/exitPipFromLyricsContainer(), the notice text, etc. - keeps
-   * working unchanged; isDocPipActive only distinguishes *how* to close it.
-   */
-  async function openDocumentPip() {
-    // requestWindow() requires transient activation from the click that
-    // triggered togglePip() - it must be called before any other await.
-    // initPipElements() has its own internal awaits (pipVideo.play(),
-    // waitForPipVideoReady()'s up-to-1000ms safety timeout), and calling it
-    // first burns through the click's activation window before
-    // requestWindow() ever runs, which is what was producing a window that
-    // opens but never gets real content attached to it.
-    docPipWindow = await window.documentPictureInPicture.requestWindow({
-      width: PIP_CANVAS_DEFAULT_SIZE,
-      height: PIP_CANVAS_DEFAULT_SIZE,
-    });
-
-    await initPipElements(); // unchanged - also (harmlessly) preps the hidden video-PiP fallback path
-
-    const doc = docPipWindow.document;
-    const style = doc.createElement('style');
-    style.textContent = `
-      html, body { margin:0; padding:0; width:100%; height:100%; background:#121212; overflow:hidden; }
-      #lyrics-plus-docpip-wrapper { position:relative; width:100%; height:100%; }
-      #lyrics-plus-docpip-wrapper canvas { display:block; width:100%; height:100%; }
-      #lyrics-plus-docpip-wrapper:hover #lyrics-plus-docpip-bar,
-      #lyrics-plus-docpip-bar:focus-within { opacity:1 !important; }
-    `;
-    doc.head.appendChild(style);
-
-    const wrapper = doc.createElement('div');
-    wrapper.id = 'lyrics-plus-docpip-wrapper';
-    doc.body.appendChild(wrapper);
-    wrapper.appendChild(pipCanvas); // moves (adopts) the existing canvas node - no clone
-
-    const { bar, playPauseBtn, muteBtn } = createDocPipControlBar(doc);
-    wrapper.appendChild(bar);
-    const iconRefs = { playPauseBtn, muteBtn };
-
-    isPipActive = true;
-    isDocPipActive = true;
-    updatePipButtonState(true);
-    enterPipInLyricsContainer();
-    syncPipMediaStateFromSpotify();
-    startPipRenderLoop();
-    syncDocPipControlIcons(iconRefs);
-    docPipSyncInterval = setInterval(() => syncDocPipControlIcons(iconRefs), 500);
-
-    const onResize = () => updatePipCanvasSize();
-    docPipWindow.addEventListener('resize', onResize);
-
-    const onClose = () => {
-      docPipWindow.removeEventListener('resize', onResize);
-      if (docPipSyncInterval) { clearInterval(docPipSyncInterval); docPipSyncInterval = null; }
-      isPipActive = false;
-      isDocPipActive = false;
-      updatePipButtonState(false);
-      stopPipRenderLoop();
-      exitPipFromLyricsContainer();
-      // Detach the canvas so it's back to the free-floating, undisplayed state
-      // it was in before this function moved it - ready for the next Document
-      // PiP session, or for the video-PiP fallback path to use untouched.
-      if (pipCanvas && pipCanvas.parentNode) pipCanvas.parentNode.removeChild(pipCanvas);
-      docPipWindow = null;
-      console.info('📺 [Lyrics+ PiP] Document Picture-in-Picture window closed');
-    };
-    // Fired by the browser when the PiP window is closed (native close button,
-    // the browser-supplied "Return to tab" control, or docPipWindow.close()).
-    docPipWindow.addEventListener('pagehide', onClose, { once: true });
-
-    console.info('📺 [Lyrics+ PiP] Document Picture-in-Picture window opened');
   }
 
   /**
@@ -8249,59 +8370,6 @@ popup._headerWheelHandler = onHeaderWheel;
     // If Spotify's DOM updates slowly, we show what Spotify shows. This avoids
     // any jumps or sync issues from our own interpolation logic.
 
-    /**
-     * findSpotifyRangeInput()
-     * Attempts to find Spotify's native range input for playback progress.
-     * Fallback order:
-     *   1. Hidden numeric input[type=range] with max > 0 (preferred - most accurate)
-     *   2. Visible range inputs with max > 0
-     *   3. Any range input with numeric max/min/step
-     * @returns {HTMLInputElement|null}
-     */
-    function findSpotifyRangeInput() {
-      try {
-        // Collect all range inputs in the document
-        const allRanges = Array.from(document.querySelectorAll('input[type="range"]'));
-
-        // Filter for hidden ranges with max > 0 (preferred - Spotify often uses hidden inputs)
-        const hiddenRanges = allRanges.filter(inp => {
-          const max = Number(inp.max);
-          // Check if hidden: not visible in DOM (hidden-visually class, or offsetParent null)
-          // Use specific class matching to avoid false positives like 'unhidden'
-          const isHidden = inp.offsetParent === null ||
-                           inp.closest('label.hidden-visually') !== null ||
-                           inp.closest('.hidden-visually') !== null ||
-                           inp.closest('[class~="hidden"]') !== null;
-          return isHidden && max > 0;
-        });
-        if (hiddenRanges.length > 0) {
-          // Prefer the one with the largest max value (likely the playback progress)
-          hiddenRanges.sort((a, b) => Number(b.max) - Number(a.max));
-          return hiddenRanges[0];
-        }
-
-        // Fallback: visible range inputs with max > 0
-        const visibleRanges = allRanges.filter(inp => {
-          const max = Number(inp.max);
-          return inp.offsetParent !== null && max > 0;
-        });
-        if (visibleRanges.length > 0) {
-          visibleRanges.sort((a, b) => Number(b.max) - Number(a.max));
-          return visibleRanges[0];
-        }
-
-        // Last resort: any range with valid numeric attributes
-        const anyValid = allRanges.find(inp =>
-          inp.max && !isNaN(Number(inp.max)) && Number(inp.max) > 0 &&
-          inp.step && !isNaN(Number(inp.step))
-        );
-        return anyValid || null;
-      } catch (e) {
-        console.warn('findSpotifyRangeInput error:', e);
-        return null;
-      }
-    }
-
      /**
      * readSpotifyProgressBarPercent()
      * Parses the --progress-bar-transform CSS variable from [data-testid="progress-bar"]
@@ -8349,20 +8417,6 @@ popup._headerWheelHandler = onHeaderWheel;
         console.warn('readSpotifyProgressBarPercent error:', e);
         return null;
       }
-    }
-
-    /**
-     * formatMs(ms)
-     * Converts milliseconds to a human-readable time string (m:ss).
-     * @param {number} ms - Milliseconds
-     * @returns {string} Formatted time string
-     */
-    function formatMs(ms) {
-      if (!ms || isNaN(ms)) return "0:00";
-      const s = Math.floor(ms / 1000);
-      const m = Math.floor(s / 60);
-      const sec = s % 60;
-      return `${m}:${String(sec).padStart(2, '0')}`;
     }
 
     /**
@@ -8495,201 +8549,6 @@ popup._headerWheelHandler = onHeaderWheel;
 
       } catch (e) {
         console.warn('updateProgressUIFromSpotify error:', e);
-      }
-    }
-
-    /**
-     * applySeekEndBuffer(ms, durationMs, bufferMs)
-     * Prevents seeking to exact track end by applying a buffer.
-     * This avoids the audio "ended" state that conflicts with repeat functionality.
-     * @param {number} ms - Target seek position in milliseconds
-     * @param {number} durationMs - Track duration in milliseconds
-     * @param {number} bufferMs - Buffer size in milliseconds (default 200ms)
-     * @returns {number} Safe seek position
-     */
-    function applySeekEndBuffer(ms, durationMs, bufferMs = 200) {
-      if (ms >= durationMs - bufferMs) {
-        DEBUG.debug('Seekbar', `Applied end buffer: ${ms}ms → ${durationMs - bufferMs}ms to prevent "ended" state`);
-        return durationMs - bufferMs;
-      }
-      return ms;
-    }
-
-     /**
-     * seekTo(ms)
-     * Attempts to seek Spotify's playback to the specified position in milliseconds.
-     * Fallback order:
-     *   (a) Hidden/native range input value + dispatch input/change + pointer events
-     *   (b) Emulate pointer/mouse events on CSS progress-bar handle (last resort)
-     * @param {number} ms - Target position in milliseconds
-     * @returns {boolean} Whether seeking was attempted
-     */
-    function seekTo(ms) {
-      try {
-        const SEEK_END_BUFFER_MS = 200;
-
-        DEBUG.debug('Seekbar', `Seeking to ${ms}ms (${formatMs(ms)})`);
-
-        // --- (a) Try hidden/native range input ---
-        const spotifyRange = findSpotifyRangeInput();
-        if (spotifyRange) {
-          try {
-            const max = Number(spotifyRange.max) || 0;
-            if (max > 0) {
-              const safeMs = applySeekEndBuffer(ms, max, SEEK_END_BUFFER_MS);
-              // Set the value
-              spotifyRange.value = String(clamp(safeMs, 0, max));
-
-              // Dispatch input and change events
-              spotifyRange.dispatchEvent(new Event('input', { bubbles: true }));
-              spotifyRange.dispatchEvent(new Event('change', { bubbles: true }));
-
-              // Also try pointer events for better compatibility
-              // Note: We omit 'view' property as it can cause errors in Firefox extensions
-              const rangeRect = spotifyRange.getBoundingClientRect();
-              const percentage = clamp(safeMs, 0, max) / max;
-              const clientX = rangeRect.left + rangeRect.width * percentage;
-              const clientY = rangeRect.top + rangeRect.height / 2;
-
-              try {
-                const pointerDownEvent = new PointerEvent('pointerdown', {
-                  bubbles: true, cancelable: true,
-                  clientX, clientY, button: 0, buttons: 1
-                });
-                const pointerUpEvent = new PointerEvent('pointerup', {
-                  bubbles: true, cancelable: true,
-                  clientX, clientY, button: 0
-                });
-
-                spotifyRange.dispatchEvent(pointerDownEvent);
-                spotifyRange.dispatchEvent(pointerUpEvent);
-              } catch (pointerErr) {
-                // Pointer events failed, try mouse events instead
-                const mouseDownEvent = new MouseEvent('mousedown', {
-                  bubbles: true, cancelable: true,
-                  clientX, clientY, button: 0
-                });
-                const mouseUpEvent = new MouseEvent('mouseup', {
-                  bubbles: true, cancelable: true,
-                  clientX, clientY, button: 0
-                });
-                spotifyRange.dispatchEvent(mouseDownEvent);
-                spotifyRange.dispatchEvent(mouseUpEvent);
-              }
-
-              DEBUG.debug('Seekbar', `✓ Seeked via range input to ${safeMs}ms`);
-              return true;
-            }
-          } catch (e) {
-            console.warn('seekTo: Failed to set range input', e);
-          }
-        }
-
-        // --- (b) Emulate pointer events on CSS progress-bar handle (last resort) ---
-        const progressBar = document.querySelector('[data-testid="progress-bar"]');
-        if (progressBar) {
-          try {
-            const barRect = progressBar.getBoundingClientRect();
-            if (barRect.width > 0) {
-              // Determine duration to calculate percentage
-              let durMs = 0;
-
-              // Try range input max
-              const range = findSpotifyRangeInput();
-              if (range && Number(range.max) > 0) {
-                durMs = Number(range.max);
-              }
-
-              // Fallback: visible text
-              if (durMs <= 0) {
-                const durEl = document.querySelector('[data-testid="playback-duration"]');
-                const posEl = document.querySelector('[data-testid="playback-position"]');
-                if (durEl) {
-                  const raw = durEl.textContent.trim();
-                  if (raw.startsWith('-')) {
-                    const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
-                    const remainMs = timeStringToMs(raw);
-                    durMs = posMs + remainMs;
-                  } else {
-                    durMs = timeStringToMs(raw);
-                  }
-                }
-              }
-
-              // Fallback: track info
-              if (durMs <= 0) {
-                const trackInfo = getCurrentTrackInfo();
-                if (trackInfo && trackInfo.duration > 0) {
-                  durMs = trackInfo.duration;
-                }
-              }
-
-              if (durMs > 0) {
-                const safeMs = applySeekEndBuffer(ms, durMs, SEEK_END_BUFFER_MS);
-                const percentage = clamp(safeMs, 0, durMs) / durMs;
-                const clientX = barRect.left + barRect.width * percentage;
-                const clientY = barRect.top + barRect.height / 2;
-
-                // Try the handle first, then the progress bar
-                const handle = progressBar.querySelector('[data-testid="progress-bar-handle"]');
-                const target = handle || progressBar;
-
-                // Try pointer events first (without 'view' property to avoid Firefox extension issues)
-                try {
-                  const downEvent = new PointerEvent('pointerdown', {
-                    bubbles: true, cancelable: true,
-                    clientX, clientY, button: 0, buttons: 1,
-                    pointerType: 'mouse'
-                  });
-                  const moveEvent = new PointerEvent('pointermove', {
-                    bubbles: true, cancelable: true,
-                    clientX, clientY, button: 0, buttons: 1,
-                    pointerType: 'mouse'
-                  });
-                  const upEvent = new PointerEvent('pointerup', {
-                    bubbles: true, cancelable: true,
-                    clientX, clientY, button: 0, buttons: 0,
-                    pointerType: 'mouse'
-                  });
-
-                  target.dispatchEvent(downEvent);
-                  target.dispatchEvent(moveEvent);
-                  target.dispatchEvent(upEvent);
-                } catch (pointerErr) {
-                  // Pointer events failed, continue to mouse events
-                }
-
-                 // Also try mouse events as fallback
-                const mouseDownEvent = new MouseEvent('mousedown', {
-                  bubbles: true, cancelable: true,
-                  clientX, clientY, button: 0
-                });
-                const mouseUpEvent = new MouseEvent('mouseup', {
-                  bubbles: true, cancelable: true,
-                  clientX, clientY, button: 0
-                });
-                const clickEvent = new MouseEvent('click', {
-                  bubbles: true, cancelable: true,
-                  clientX, clientY, button: 0
-                });
-
-                progressBar.dispatchEvent(mouseDownEvent);
-                progressBar.dispatchEvent(mouseUpEvent);
-                progressBar.dispatchEvent(clickEvent);
-
-                DEBUG.debug('Seekbar', `✓ Seeked via progress-bar pointer events to ${safeMs}ms`);
-                return true;
-              }
-            }
-          } catch (e) {
-            console.warn('seekTo: Failed to emulate pointer events on progress bar', e);
-          }
-        }
-
-        return false;
-      } catch (e) {
-        console.warn('seekTo error:', e);
-        return false;
       }
     }
 
