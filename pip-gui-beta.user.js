@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Beta
+// @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.48.beta
+// @version      17.49
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -12,11 +12,37 @@
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.48.beta): PLAY/PAUSE IN NATIVE PIP NO LONGER CLOSES THE PIP WINDOW; ADDED PREV/NEXT TRACK BUTTONS
+// RESOLVED (17.49): PLAY FROM PIP NO LONGER SILENTLY NO-OPS; PIP NOW REFLECTS SPOTIFY'S OWN CONTROLS TOO
+// FINDING #1 (play from PiP doing nothing): handlePipVideoPlay()/handlePipVideoPause() (added in
+// 17.48) only clicked Spotify's real play/pause button, then watpaited the full
+// PIP_MEDIA_SYNC_GRACE_MS (1200ms) before syncPipMediaStateFromSpotify() ever updated pipVideo's
+// own paused state or navigator.mediaSession.playbackState. For that whole window, Chromium's
+// native PiP UI is watching an element that still reports itself as paused right after a play
+// request. The likely result: Chromium treats the action as ignored/stale and reverts, which can
+// round-trip into handlePipVideoPause() - since Spotify had in fact started playing by then, its
+// own guard doesn't block it, so it clicks the button again and silently re-pauses Spotify right
+// after the original click resumed it. Net effect from the user's side: pressing Play in PiP did
+// nothing.
+// FIX: handlePipVideoPlay()/handlePipVideoPause() now call pipVideo.play()/pipVideo.pause() and
+// set navigator.mediaSession.playbackState synchronously, right alongside the click - not only
+// after the grace-period timeout. The timeout's call to syncPipMediaStateFromSpotify() is kept as
+// a corrective re-sync in case Spotify's real state ends up different (e.g. an ad blocked
+// playback), but it's no longer the only place state ever gets set.
+// FINDING #2 (PiP not reflecting Spotify's own controls): syncPipMediaStateFromSpotify() was only
+// ever called on PiP-open (enterpictureinpicture/webkitpresentationmodechanged) or after a
+// self-triggered PiP click's grace timer - nothing reacted to play/pause changes that originated
+// from Spotify's own on-page controls, keyboard media keys, or a track ending naturally while PiP
+// stayed open.
+// FIX: drawPipFrame() - already ticking continuously the entire time PiP is open, worker-driven so
+// it survives tab backgrounding - now does one cheap isSpotifyPlaying() comparison against
+// pipLastKnownSpotifyPlaying per tick, calling syncPipMediaStateFromSpotify() only on an actual
+// change. No new timer/observer added; this rides the render loop that was already running.
+
+// RESOLVED (17.48): PLAY/PAUSE IN NATIVE PIP NO LONGER CLOSES THE PIP WINDOW; ADDED PREV/NEXT TRACK BUTTONS
 // FINDING: pipVideo's source is pipCanvas.captureStream(30), a MediaStream, so pipVideo.duration
 // reports Infinity - Chromium classifies that as a "live" source, same bucket as a webcam feed.
 // For live-classified sources, Chromium's native PiP window only draws a real play/pause toggle
@@ -958,6 +984,10 @@
   let pipResizeObserver = null;
   let pipResizeRafPending = false;
   let pipIgnoreMediaControlEvent = false;
+  // Last isSpotifyPlaying() value observed by drawPipFrame()'s per-tick check
+  // below. null until the first tick so we never fire a spurious sync before
+  // we actually have a baseline to compare against.
+  let pipLastKnownSpotifyPlaying = null;
   let pipLastFrameAt = 0;
   let pipWindowResizeFallbackActive = false;
   let pipFallbackTimer = null;
@@ -2024,9 +2054,20 @@ document.head.appendChild(buttonGroupScrollStyle);
     if (!btn) return;
     pipIgnoreMediaControlEvent = true;
     btn.click();
+    // Reflect the requested state on pipVideo/MediaSession immediately rather
+    // than waiting for the grace-period timeout below. Chromium's native PiP
+    // window watches pipVideo's own paused state; if it stays "paused" for
+    // the full grace window after a play request, Chromium can treat the
+    // action as ignored/failed and revert - which then round-trips into
+    // handlePipVideoPause() re-pausing Spotify right after we just started
+    // it. Setting state here closes that window.
+    pipVideo.play().catch(() => {});
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing';
+    }
     setTimeout(() => {
       pipIgnoreMediaControlEvent = false;
-      syncPipMediaStateFromSpotify();
+      syncPipMediaStateFromSpotify(); // corrective re-sync in case Spotify's real state ended up different (e.g. blocked by an ad)
     }, PIP_MEDIA_SYNC_GRACE_MS);
   }
 
@@ -2037,9 +2078,13 @@ document.head.appendChild(buttonGroupScrollStyle);
     if (!btn) return;
     pipIgnoreMediaControlEvent = true;
     btn.click();
+    pipVideo.pause();
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
     setTimeout(() => {
       pipIgnoreMediaControlEvent = false;
-      syncPipMediaStateFromSpotify();
+      syncPipMediaStateFromSpotify(); // corrective re-sync, mirrors handlePipVideoPlay()
     }, PIP_MEDIA_SYNC_GRACE_MS);
   }
 
@@ -2404,6 +2449,21 @@ document.head.appendChild(buttonGroupScrollStyle);
         console.warn('📺 [Lyrics+ PiP] drawPipFrame: bailing out, missing pipCtx/pipCanvas/pipVideo', { pipCtx: !!pipCtx, pipCanvas: !!pipCanvas, pipVideo: !!pipVideo });
         return;
       }
+
+      // Catches Spotify play/pause changes that didn't originate from the PiP
+      // window itself (its own on-page controls, keyboard media keys, a track
+      // ending, etc.) - syncPipMediaStateFromSpotify() previously only ran on
+      // PiP-open or after a self-triggered click, so external changes never
+      // reached pipVideo/mediaSession. No new timer: this rides the render
+      // loop that's already ticking the entire time PiP is open.
+      if (!pipIgnoreMediaControlEvent) {
+        const nowPlaying = isSpotifyPlaying();
+        if (pipLastKnownSpotifyPlaying !== null && nowPlaying !== pipLastKnownSpotifyPlaying) {
+          syncPipMediaStateFromSpotify();
+        }
+        pipLastKnownSpotifyPlaying = nowPlaying;
+      }
+
       updatePipCanvasSize();
 
       const w = pipCanvas.width;
