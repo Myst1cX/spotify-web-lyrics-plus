@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Beta
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.49.beta
+// @version      17.50.beta
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,42 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-beta.user.js
 // ==/UserScript==
+
+// RESOLVED (17.50.beta): PIP/NEXT/PREVIOUS FROM WITHIN PIP NO LONGER CLOSES THE PIP WINDOW; PLAY/PAUSE SYNC TIGHTENED
+// FINDING #1 (PiP closing on track change, most visible via PiP's own prev/next buttons):
+// isSpotifyPlaying() used to fall back to document.querySelector('[aria-label]') - literally the
+// first element anywhere on the page carrying any aria-label - whenever the real play/pause button
+// wasn't found. Spotify briefly unmounts/re-renders its transport controls during a track change
+// (previoustrack/nexttrack, added in 17.48, forward straight to clicking Spotify's real buttons),
+// so for that window the fallback would grab some unrelated element, fail to match
+// labelMeansPause/labelMeansPlay, and fall through to "assume not playing" - a false "paused"
+// reading generated purely by DOM churn, not anything the user did. drawPipFrame()'s per-tick check
+// (added in 17.49) would see that as a real change from the previous tick and call
+// syncPipMediaStateFromSpotify(), which pauses pipVideo. pipVideo's source is
+// pipCanvas.captureStream(), duration=Infinity, classified as "live" - and Chromium can treat a
+// paused live source as ended, closing the native PiP window right in the middle of a track change.
+// FIX: isSpotifyPlaying() no longer has the generic fallback - if the real button can't be read
+// right now it reports the last *confirmed* reading (lastConfirmedSpotifyPlaying) instead of
+// guessing "not playing". drawPipFrame()'s comparison also now requires a state flip to be observed
+// on PIP_PLAYING_CONFIRM_TICKS (2) consecutive ticks before acting on it, so a one-tick glitch can't
+// trigger a spurious pause on its own even if something else manages to produce one.
+//
+// FINDING #2 (PiP's play/pause not in sync with Spotify's own button): handlePipVideoPlay()/
+// handlePipVideoPause() (since 17.49) flip pipVideo's state optimistically the instant PiP's own
+// control is pressed - required, otherwise Chromium can treat the action as ignored and revert (see
+// 17.49 notes below). The only correction after that was PIP_MEDIA_SYNC_GRACE_MS (1200ms) later, or
+// whatever drawPipFrame()'s per-tick poll (added in 17.49) next noticed - so PiP's own icon could
+// sit ahead of/behind Spotify's real button for up to that whole window.
+// FIX: new startPipPlayPauseObserver()/stopPipPlayPauseObserver() watch Spotify's real play/pause
+// button (a MutationObserver on document.body, subtree + attributeFilter: ['aria-label'], filtered
+// to only act when the mutated element is the playpause button - scoped to a stable ancestor rather
+// than the button itself since Spotify does swap that node out, e.g. around track changes) and call
+// syncPipMediaStateFromSpotify() the instant Spotify's own aria-label actually confirms a change,
+// instead of waiting on the fixed grace-period timeout or the next render tick. Started on
+// enterpictureinpicture/webkitpresentationmodechanged-active alongside startPipRenderLoop(), stopped
+// on leavepictureinpicture/the inactive branch alongside stopPipRenderLoop(). The optimistic
+// immediate flip on click is unchanged (still needed for Chromium); this just shortens the window
+// where that guess and Spotify's confirmed state can disagree.
 
 // RESOLVED (17.49.beta): PLAY FROM PIP NO LONGER SILENTLY NO-OPS; PIP NOW REFLECTS SPOTIFY'S OWN CONTROLS TOO
 // FINDING #1 (play from PiP doing nothing): handlePipVideoPlay()/handlePipVideoPause() (added in
@@ -988,6 +1024,20 @@
   // below. null until the first tick so we never fire a spurious sync before
   // we actually have a baseline to compare against.
   let pipLastKnownSpotifyPlaying = null;
+  // How many consecutive drawPipFrame() ticks the current isSpotifyPlaying()
+  // reading has to agree with itself before it's treated as a real change
+  // (see pipPendingPlayingState/pipPendingPlayingStreak below). Guards
+  // against a single-tick misread - e.g. Spotify's play/pause button
+  // briefly missing from the DOM mid track-change - being acted on as if it
+  // were a genuine pause.
+  const PIP_PLAYING_CONFIRM_TICKS = 2;
+  let pipPendingPlayingState = null;
+  let pipPendingPlayingStreak = 0;
+  // Last *confirmed* isSpotifyPlaying() reading (real button found, label
+  // recognized). isSpotifyPlaying() falls back to this instead of guessing
+  // "not playing" when the button can't be read for a moment - see the
+  // comment inside isSpotifyPlaying() for why that guess was dangerous.
+  let lastConfirmedSpotifyPlaying = false;
   let pipLastFrameAt = 0;
   let pipWindowResizeFallbackActive = false;
   let pipFallbackTimer = null;
@@ -1938,10 +1988,18 @@ document.head.appendChild(buttonGroupScrollStyle);
   }
 
   function isSpotifyPlaying() {
-    // Try using Spotify's play/pause button aria-label (robust, language-universal)
-    let playPauseBtn =
-      document.querySelector('[data-testid="control-button-playpause"]') ||
-      document.querySelector('[aria-label]');
+    // Try using Spotify's play/pause button aria-label (robust, language-universal).
+    // NOTE: this used to fall back to document.querySelector('[aria-label]') - i.e.
+    // literally the first element *anywhere on the page* carrying any aria-label -
+    // whenever the real button wasn't found. That's not a hypothetical: Spotify
+    // briefly unmounts/re-renders the transport controls during a track change
+    // (most visibly when a seek pushes past a track boundary into the
+    // previous/next song), and for that window the fallback would grab some
+    // unrelated element (nav/search/sidebar button, etc.) whose label matches
+    // neither labelMeansPause/labelMeansPlay, so this fell through to "assume
+    // not playing" below - a false "paused" reading generated purely by DOM
+    // churn, not anything the user did.
+    const playPauseBtn = document.querySelector('[data-testid="control-button-playpause"]');
 
     function isVisible(el) {
       if (!el) return false;
@@ -1951,12 +2009,20 @@ document.head.appendChild(buttonGroupScrollStyle);
 
     if (playPauseBtn && isVisible(playPauseBtn)) {
       const label = (playPauseBtn.getAttribute('aria-label') || '').toLowerCase();
-      if (labelMeansPause(label)) return true; // "Pause" means music is playing
-      if (labelMeansPlay(label)) return false; // "Play" means music is paused/stopped
+      if (labelMeansPause(label)) { lastConfirmedSpotifyPlaying = true; return true; } // "Pause" means music is playing
+      if (labelMeansPlay(label)) { lastConfirmedSpotifyPlaying = false; return false; } // "Play" means music is paused/stopped
     }
 
-    // Default: assume not playing
-    return false;
+    // Couldn't get a real reading right now (button missing/hidden, or an
+    // aria-label we didn't recognize) - report the last confirmed state
+    // instead of guessing "not playing". This is almost always a brief,
+    // self-correcting gap (mid track-change is the common case); guessing
+    // "paused" here used to get acted on by drawPipFrame()'s sync check,
+    // which pauses pipVideo - and Chromium can treat a paused
+    // duration=Infinity ("live") source as ended, closing the native PiP
+    // window. See PIP_PLAYING_CONFIRM_TICKS in drawPipFrame() for the
+    // second layer of protection against this.
+    return lastConfirmedSpotifyPlaying;
   }
 
   // =============================================
@@ -2094,6 +2160,48 @@ document.head.appendChild(buttonGroupScrollStyle);
       setSpotifyVolumeLevel(0);
     } else {
       setSpotifyVolumeLevel(pipVideo.volume);
+    }
+  }
+
+  // Watches Spotify's real play/pause button and re-syncs pipVideo/mediaSession
+  // the instant Spotify's own aria-label actually confirms a state change,
+  // instead of waiting on PIP_MEDIA_SYNC_GRACE_MS's fixed timeout or the next
+  // drawPipFrame() tick. handlePipVideoPlay()/handlePipVideoPause() still flip
+  // pipVideo's state optimistically the moment PiP's own control is pressed
+  // (Chromium needs that immediately, see the 17.49 notes above) - this just
+  // shortens the window where that optimistic guess and Spotify's confirmed
+  // state can disagree, which is what showed up as PiP's play/pause feeling
+  // "too quick"/out of step with Spotify's own button.
+  //
+  // Scoped to the button itself would break the moment Spotify swaps the node
+  // out (it does, e.g. around ads/track changes), so this observes a stable
+  // ancestor with subtree:true and only acts when the mutated element is
+  // actually the playpause button - same pattern spotifuck-mobile uses for
+  // its own attribute-driven state watching.
+  let pipPlayPauseObserver = null;
+  function startPipPlayPauseObserver() {
+    if (pipPlayPauseObserver || typeof MutationObserver !== 'function') return;
+    pipPlayPauseObserver = new MutationObserver((mutations) => {
+      if (pipIgnoreMediaControlEvent) return;
+      for (const mutation of mutations) {
+        const target = mutation.target;
+        if (target instanceof HTMLElement && target.matches?.('[data-testid="control-button-playpause"]')) {
+          syncPipMediaStateFromSpotify();
+          break;
+        }
+      }
+    });
+    pipPlayPauseObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['aria-label'],
+      subtree: true,
+    });
+  }
+
+  function stopPipPlayPauseObserver() {
+    if (pipPlayPauseObserver) {
+      try { pipPlayPauseObserver.disconnect(); } catch {}
+      pipPlayPauseObserver = null;
     }
   }
 
@@ -2383,6 +2491,7 @@ document.head.appendChild(buttonGroupScrollStyle);
       enterPipInLyricsContainer();
       syncPipMediaStateFromSpotify();
       startPipRenderLoop();
+      startPipPlayPauseObserver();
       console.info('📺 [Lyrics+ PiP] Picture-in-Picture window opened (isPipActive=%s isPagePipActive=%s)', isPipActive, isPagePipActive);
     });
 
@@ -2391,6 +2500,7 @@ document.head.appendChild(buttonGroupScrollStyle);
       isPagePipActive = false;
       updatePipButtonState(false);
       stopPipRenderLoop();
+      stopPipPlayPauseObserver();
       exitPipFromLyricsContainer();
       console.info('📺 [Lyrics+ PiP] Picture-in-Picture window closed (isPipActive=%s isPagePipActive=%s)', isPipActive, isPagePipActive);
     });
@@ -2406,10 +2516,12 @@ document.head.appendChild(buttonGroupScrollStyle);
         enterPipInLyricsContainer();
         syncPipMediaStateFromSpotify();
         startPipRenderLoop();
+        startPipPlayPauseObserver();
       } else if (!active && isPipActive) {
         isPipActive = false;
         updatePipButtonState(false);
         stopPipRenderLoop();
+        stopPipPlayPauseObserver();
         exitPipFromLyricsContainer();
       }
     });
@@ -2458,10 +2570,23 @@ document.head.appendChild(buttonGroupScrollStyle);
       // loop that's already ticking the entire time PiP is open.
       if (!pipIgnoreMediaControlEvent) {
         const nowPlaying = isSpotifyPlaying();
-        if (pipLastKnownSpotifyPlaying !== null && nowPlaying !== pipLastKnownSpotifyPlaying) {
-          syncPipMediaStateFromSpotify();
+        if (nowPlaying === pipPendingPlayingState) {
+          pipPendingPlayingStreak++;
+        } else {
+          pipPendingPlayingState = nowPlaying;
+          pipPendingPlayingStreak = 1;
         }
-        pipLastKnownSpotifyPlaying = nowPlaying;
+        if (pipLastKnownSpotifyPlaying === null) {
+          // No baseline yet - accept the very first reading immediately,
+          // nothing to compare it against.
+          pipLastKnownSpotifyPlaying = nowPlaying;
+        } else if (
+          pipPendingPlayingStreak >= PIP_PLAYING_CONFIRM_TICKS &&
+          nowPlaying !== pipLastKnownSpotifyPlaying
+        ) {
+          syncPipMediaStateFromSpotify();
+          pipLastKnownSpotifyPlaying = nowPlaying;
+        }
       }
 
       updatePipCanvasSize();
