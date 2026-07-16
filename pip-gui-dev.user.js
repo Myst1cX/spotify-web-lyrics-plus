@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.49.dev (don't install)
+// @version      17.50.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,7 +16,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
 
-// NEW (17.49.dev): PIP NOW USES DOCUMENT PICTURE-IN-PICTURE WHEN AVAILABLE, ADDING REAL
+// NEW (17.50.dev): PIP NOW USES DOCUMENT PICTURE-IN-PICTURE WHEN AVAILABLE, ADDING REAL
 // SEEK/PREV/NEXT/MUTE BUTTONS (CHROME 116+, FIREFOX 151+)
 // The old PiP path (canvas -> canvas.captureStream() -> hidden <video> ->
 // video.requestPictureInPicture()) can only ever offer play/pause/mute, because
@@ -2993,12 +2993,19 @@ document.head.appendChild(buttonGroupScrollStyle);
    * working unchanged; isDocPipActive only distinguishes *how* to close it.
    */
   async function openDocumentPip() {
-    await initPipElements(); // unchanged - also (harmlessly) preps the hidden video-PiP fallback path
-
+    // requestWindow() requires transient activation from the click that
+    // triggered togglePip() - it must be called before any other await.
+    // initPipElements() has its own internal awaits (pipVideo.play(),
+    // waitForPipVideoReady()'s up-to-1000ms safety timeout), and calling it
+    // first burns through the click's activation window before
+    // requestWindow() ever runs, which is what was producing a window that
+    // opens but never gets real content attached to it.
     docPipWindow = await window.documentPictureInPicture.requestWindow({
       width: PIP_CANVAS_DEFAULT_SIZE,
       height: PIP_CANVAS_DEFAULT_SIZE,
     });
+
+    await initPipElements(); // unchanged - also (harmlessly) preps the hidden video-PiP fallback path
 
     const doc = docPipWindow.document;
     const style = doc.createElement('style');
