@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Dev
+// @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.48.dev
+// @version      17.48
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -12,9 +12,21 @@
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.48): POPUP NOW STOPS SHORT OF SPOTIFUCK'S BOTTOM NAV/PLAYER STRIP ON MOBILE
+// Spotifuck's mobile nav+player sits fixed at the bottom of the screen, but this script had
+// no idea that strip existed, so the popup could be dragged, resized, or restored into a
+// saved position that overlapped or hid underneath it.
+// Fix: added getReservedBottomHeight(), which reads window.__spReservedInsets.bottom (kept
+// live by Spotifuck via its own ResizeObserver, 0 if Spotifuck isn't running) and is now
+// subtracted everywhere the popup's usable vertical space is calculated - the drag clamp,
+// the resize clamp, both fallback default-position spots, and the saved-position restore.
+// Also listens for Spotifuck's new sp-reserved-insets-change event (via ResourceManager) to
+// re-clamp the popup's current position/size immediately if the reserved height changes
+// while it's just sitting there, not being dragged or resized.
 
 // RESOLVED (17.47): REMOVED THE PERMANENT NOWPLAYINGVIEW-HIDING CSS (CONFLICTED WITH SPOTIFUCK)
 // This script used to inject a permanent style rule collapsing the
@@ -1723,9 +1735,12 @@
     return Math.max(min, Math.min(max, val));
   }
 
-  // v17.48: space reserved at the bottom of the viewport by Spotifuck's nav/player
-  // (window.__spReservedInsets, published by spotifuck-mobile v7.10+). No Spotifuck,
-  // no reserved space to account for - falls straight back to 0, i.e. pre-fix behavior.
+  // Spotifuck's mobile bottom nav + player strip is fixed to the bottom of
+  // the screen and isn't part of document flow, so nothing here would
+  // otherwise know it's there. Spotifuck exposes how tall that reserved
+  // strip currently is via window.__spReservedInsets.bottom (kept live via
+  // its own ResizeObserver). If Spotifuck isn't running, there's no
+  // reserved space to avoid - just 0, no DOM scanning.
   function getReservedBottomHeight() {
     return window.__spReservedInsets?.bottom ?? 0;
   }
@@ -5716,7 +5731,7 @@ const Providers = {
         // fallback
         Object.assign(popup.style, {
           position: "fixed",
-          bottom: "87px",
+          bottom: (87 + getReservedBottomHeight()) + "px",
           right: "0px",
           left: "auto",
           top: "auto",
@@ -5818,7 +5833,7 @@ const Providers = {
       } else {
         Object.assign(popup.style, {
           position: "fixed",
-          bottom: "87px",
+          bottom: (87 + getReservedBottomHeight()) + "px",
           right: "0px",
           left: "auto",
           top: "auto",
@@ -7890,7 +7905,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360;
         const minHeight = 240;
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = window.innerHeight - el.offsetTop;
+        const maxHeight = (window.innerHeight - getReservedBottomHeight()) - el.offsetTop;
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -9558,10 +9573,17 @@ popup._headerWheelHandler = onHeaderWheel;
     if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
       return;
     }
+    const height = window.innerHeight * window.lastProportion.h;
+    let top = window.innerHeight * window.lastProportion.y;
+    // Saved proportions predate (or were saved without) the reserved bottom
+    // nav/player strip - clamp so the restored popup never ends up with its
+    // bottom edge under it.
+    const maxTop = (window.innerHeight - getReservedBottomHeight()) - height;
+    top = Math.min(top, maxTop);
     popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
-    popup.style.height = (window.innerHeight * window.lastProportion.h) + "px";
+    popup.style.height = height + "px";
     popup.style.left = (window.innerWidth * window.lastProportion.x) + "px";
-    popup.style.top = (window.innerHeight * window.lastProportion.y) + "px";
+    popup.style.top = top + "px";
     popup.style.right = "auto";
     popup.style.bottom = "auto";
     popup.style.position = "fixed";
@@ -9625,6 +9647,24 @@ popup._headerWheelHandler = onHeaderWheel;
     }
   };
   ResourceManager.registerWindowListener("resize", windowResizeHandler, 'Popup proportion on window resize');
+
+  // Spotifuck's reserved bottom nav/player strip can change height on its
+  // own (e.g. the player growing/shrinking) with no window resize and while
+  // this popup isn't being touched at all. Re-clamp right then instead of
+  // waiting for the user's next drag/resize/reload to notice the overlap.
+  const reservedInsetsChangeHandler = () => {
+    const popup = document.getElementById("lyrics-plus-popup");
+    if (!popup) return;
+    if (window.lyricsPlusPopupIsDragging || window.lyricsPlusPopupIsResizing) return;
+    const rect = popup.getBoundingClientRect();
+    const maxBottom = window.innerHeight - getReservedBottomHeight();
+    if (rect.top + rect.height > maxBottom) {
+      popup.style.top = Math.max(0, maxBottom - rect.height) + "px";
+      popup.style.bottom = "auto";
+      popup.style.position = "fixed";
+    }
+  };
+  ResourceManager.registerWindowListener("sp-reserved-insets-change", reservedInsetsChangeHandler, 'Popup re-clamp on Spotifuck reserved-inset change');
 
   // Register menu commands for debug functions
   GM_registerMenuCommand('Debug: Clear Cache', () => {
