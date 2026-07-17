@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.50.dev
+// @version      17.51.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,57 +16,103 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
 
-// ADDED (17.49): CHROMIUM PIP SEEK/PLAY/PAUSE BUTTONS VIA MEDIASESSION
-// Chromium's native video-PiP overlay draws play/pause/seek buttons from registered
-// navigator.mediaSession action handlers, not from whether pipVideo is actually seekable -
-// pipVideo is a MediaStream via canvas.captureStream(), which has no real seekable ranges
-// and (per Chromium's docs) can also cause the play/pause button to be hidden unless
-// mediaSession 'play'/'pause' handlers are registered explicitly.
-// Added setupPipMediaSessionHandlers()/teardownPipMediaSessionHandlers(), registering
-// 'play', 'pause', 'seekbackward', 'seekforward' on native enterpictureinpicture and
-// clearing them on leavepictureinpicture, so we're not silently hijacking OS/hardware
-// media-key behavior while PiP is closed. The seek handlers offset from a best-effort
-// current position (new getSpotifyPositionMs()) by details.seekOffset (falling back to
-// a 10s default) and call the existing seekTo(), clamped to [0, track duration].
-// seekTo() and its helpers (findSpotifyRangeInput, applySeekEndBuffer, formatMs) used to
-// be declared inside createPopup(), so they were only reachable while the lyrics popup
-// happened to exist - not usable by these PiP handlers, which can fire independently of
-// the popup. Hoisted all four to top-level scope (same fix pattern as 17.43's
-// showTransliterationInPopupFor); createPopup()'s own callers (updateProgressUIFromSpotify,
-// the progress bar's manual seek) are unaffected and now just resolve the same functions
-// via closure over the outer scope.
-// Firefox's native PiP overlay does not consult MediaSession for its own seek buttons (see
-// pip-seek-controls-analysis.md) - this remains a Chromium-only enhancement and is simply
-// inert, not harmful, elsewhere. Document Picture-in-Picture (the fuller cross-browser fix)
-// is a separate, larger change and intentionally not part of this one.
+// RESOLVED (17.51.dev): THIRD, UNCLAMPED POPUP-PLACEMENT PATH WAS THE REMAINING CAUSE OF OPENING/RESIZING PAST THE NAV BAR
+// 17.49.dev clamped the two proportion-based placement paths (createPopup()'s
+// saved-proportion branch and applyProportionToPopup()), but missed a third
+// one: createPopup()'s "no valid saved proportion" fallback. When
+// localStorage doesn't have a usable lyricsPlusPopupProportion (fresh
+// install, cleared storage, or any load where the saved-proportion branch
+// didn't apply), it positioned the popup from raw, unclamped values -
+// .main-view-container's getBoundingClientRect() if available, or a static
+// bottom:87px/height:79.5vh guess otherwise - then immediately called
+// savePopupState() on that unclamped position, writing it straight back to
+// localStorage. That poisoned proportion then got reloaded (and reclamped
+// only in terms of shrinking, not repositioning enough) on every future
+// open, and because the popup's *top* itself was already positioned too low
+// on screen, the live resize handlers' height cap alone couldn't fully fix
+// it - the box was too low, not just too tall - so dragging the resize
+// handle down still bottomed out with part of the popup behind the bar.
+// Fix: both fallback branches (container-rect and static-guess) now run
+// their top/height through clampPopupToSafeArea() before applying them and
+// before savePopupState() persists them, same as the other two paths. The
+// static-guess branch was also converted from bottom/vh anchoring to an
+// explicit top/height in px so it can be clamped the same way.
 
-// RESOLVED (17.48): POPUP COULDN'T BE DRAGGED/RESIZED OVER SPOTIFUCK'S BOTTOM NAV BAR
-// The popup could be dragged/resized over almost anything on the page except Spotifuck's
-// bottom nav bar (#sp-bottom-nav) - the popup itself kept extending normally into that
-// area, but rendered underneath the nav bar instead of on top of it, like the nav bar
-// had a permanent higher priority no matter what. Cause: createPopup() was attaching the
-// popup inside Spotify's own `.main-view-container` element instead of directly under
-// `document.body` (the root element the whole page hangs off of). Spotify applies a CSS
-// property called "containment" (`contain: layout`) to that container for its own scroll
-// performance, and a side effect of that property is that it creates what's called a new
-// "stacking context" - basically a separate layering group. Once an element is inside one
-// of these groups, its z-index (which controls what renders on top of what) only gets
-// compared against other things inside that same group - it's blind to anything outside
-// it. The popup's z-index (100000) is already far above the nav bar's (9999), but that
-// comparison never happened, because the popup was sealed inside `.main-view-container`'s
-// layering group while the nav bar sits outside it entirely, in a different container
-// (`.Root__main-view`). Whatever layering position `.main-view-container` as a whole
-// happened to have relative to the nav bar, the popup inherited - regardless of its own,
-// much higher z-index.
-// Fix: the popup is now always attached directly under `document.body` instead of
-// `.main-view-container`, so it's no longer sealed inside that layering group and its
-// z-index (100000) gets compared directly against the nav bar's (9999), like it should
-// have been the whole time.
-// This doesn't affect where the popup appears by default or where it's remembered
-// to reopen - both are calculated from the browser window's own width/height
-// (window.innerWidth/innerHeight) or read straight off an element's on-screen
-// position via getBoundingClientRect(), neither of which cares what the popup's
-// parent element is. Only the layering problem is fixed.
+// RESOLVED (17.50.dev): FINGER-DRAG RESIZE COULD GET STUCK "ON" AFTER AN INTERRUPTED TOUCH, HIJACKING LATER TOUCHES
+// makeResizable only listened for touchend to finish a touch resize. On
+// mobile, a touch can end via touchcancel instead - an OS edge-swipe
+// gesture, an incoming call/notification, a second finger landing mid-drag,
+// etc. - and nothing was listening for that. When it fired, isResizing and
+// window.lyricsPlusPopupIsResizing stayed stuck true forever after the
+// finger lifted.
+// With that flag stuck true, any later touchmove anywhere on screen (e.g.
+// just scrolling the lyrics) was still read by onResizeTouchMove as a
+// continuation of the old resize drag, computed against the original
+// (frozen) startX/startY - so an unrelated touch could suddenly yank the
+// popup to a smaller/larger size, which is what looked like the resize
+// "forcing your hand down." It also permanently blocked
+// applyProportionToPopup()'s safe-area clamp from 17.49.dev, since that
+// function bails out early whenever lyricsPlusPopupIsResizing is true.
+// This is the same class of bug already fixed elsewhere in this file for
+// the header scroll-drag and header arrow-repeat handlers - resize was just
+// missed.
+// Fix: added a touchcancel listener (onResizeTouchCancel, reusing
+// onResizeTouchEnd's logic) alongside the existing touchend listener, and
+// included it in el._resizeHandlers so it's also removed during the
+// existing resize-handler cleanup path. Mouse-based resizing (mouseup
+// always fires reliably) was never affected by this.
+
+// RESOLVED (17.49.dev): 17.48.dev ONLY CAPPED THE LIVE DRAG - POPUP COULD STILL OPEN/SNAP BACK UNDER THE NAV BAR
+// 17.48.dev added the bottom-nav cap only inside makeResizable's live
+// mousemove/touchmove handlers. Two other code paths size/position the
+// popup purely from window.innerHeight and were never touched, so the
+// symptom persisted:
+// • createPopup() converts the saved width/height/x/y proportions (stored
+//   as ratios of window size) back to pixels on every popup open - with no
+//   cap, so a proportion saved before this fix (or one that now maps to a
+//   different-sized nav bar) opens the popup already overlapping the bar.
+// • applyProportionToPopup() reapplies that same uncapped math on basically
+//   every DOM mutation (via a body-wide MutationObserver) and on every
+//   window resize. It correctly skips itself while a resize/drag is
+//   actively in progress, but the instant the drag ends it's free to fire
+//   again - so even a resize that 17.48 had legally capped could get
+//   reasserted back to the old, larger, uncapped size on the very next
+//   Spotify DOM update.
+// Combined effect: the popup could load already swallowed behind the bar,
+// and starting a resize drag would immediately snap the already-oversized
+// height down to the new legal max the moment you touched the handle -
+// which is what read as the drag "forcing your hand down" instead of
+// following it.
+// Fix: hoisted getBottomObstructionHeight() out of makeResizable to module
+// scope and added clampPopupToSafeArea(top, height) next to it, which pins
+// top/height so the popup never extends below window.innerHeight minus the
+// nav bar's height (falling back to the popup's existing 240px minHeight if
+// the saved position leaves no room). Both createPopup()'s initial pos
+// calculation and applyProportionToPopup() now run their numbers through
+// clampPopupToSafeArea() before applying them, so the popup is capped above
+// the bar the moment it opens, after every DOM mutation, and after window
+// resizes - not only during an active resize drag. The live resize handlers
+// in makeResizable are unchanged aside from now calling the shared,
+// module-scope getBottomObstructionHeight() instead of a local copy.
+
+// RESOLVED (17.48.dev): DRAG-TO-EXPAND NO LONGER LETS THE POPUP GROW UNDER SPOTIFUCK'S BOTTOM NAV BAR
+// makeResizable's onResizeMouseMove/onResizeTouchMove computed maxHeight as
+// window.innerHeight - el.offsetTop, with no idea that Spotifuck's UI mod
+// adds a fixed #sp-bottom-nav bar pinned to the bottom of the viewport.
+// Since that bar isn't part of normal document flow, it wasn't accounted
+// for, so dragging the resize handle down could grow the popup right past
+// the bar - the overflowing part just rendered behind it instead of stopping
+// above it.
+// Fix: added getBottomObstructionHeight(), a small helper inside the
+// makeResizable IIFE that looks up #sp-bottom-nav via getElementById and, if
+// it's present and has a nonzero height, returns how much of it overlaps the
+// bottom of the viewport (via getBoundingClientRect()). Both maxHeight
+// calculations now subtract that value, so the popup's resize is capped
+// right above the nav bar.
+// This only runs while a resize drag is actively in progress (isResizing is
+// true) - there's no polling or observer added, so it's a no-op with zero
+// overhead for anyone not running Spotifuck (getElementById just returns
+// null and the helper returns 0, matching the old behavior exactly).
 
 // RESOLVED (17.47): REMOVED THE PERMANENT NOWPLAYINGVIEW-HIDING CSS (CONFLICTED WITH SPOTIFUCK)
 // This script used to inject a permanent style rule collapsing the
@@ -1958,302 +2004,6 @@ document.head.appendChild(buttonGroupScrollStyle);
     return false;
   }
 
-  /**
-   * findSpotifyRangeInput()
-   * Attempts to find Spotify's native range input for playback progress.
-   * Fallback order:
-   *   1. Hidden numeric input[type=range] with max > 0 (preferred - most accurate)
-   *   2. Visible range inputs with max > 0
-   *   3. Any range input with numeric max/min/step
-   * @returns {HTMLInputElement|null}
-   */
-  function findSpotifyRangeInput() {
-    try {
-      // Collect all range inputs in the document
-      const allRanges = Array.from(document.querySelectorAll('input[type="range"]'));
-
-      // Filter for hidden ranges with max > 0 (preferred - Spotify often uses hidden inputs)
-      const hiddenRanges = allRanges.filter(inp => {
-        const max = Number(inp.max);
-        // Check if hidden: not visible in DOM (hidden-visually class, or offsetParent null)
-        // Use specific class matching to avoid false positives like 'unhidden'
-        const isHidden = inp.offsetParent === null ||
-                         inp.closest('label.hidden-visually') !== null ||
-                         inp.closest('.hidden-visually') !== null ||
-                         inp.closest('[class~="hidden"]') !== null;
-        return isHidden && max > 0;
-      });
-      if (hiddenRanges.length > 0) {
-        // Prefer the one with the largest max value (likely the playback progress)
-        hiddenRanges.sort((a, b) => Number(b.max) - Number(a.max));
-        return hiddenRanges[0];
-      }
-
-      // Fallback: visible range inputs with max > 0
-      const visibleRanges = allRanges.filter(inp => {
-        const max = Number(inp.max);
-        return inp.offsetParent !== null && max > 0;
-      });
-      if (visibleRanges.length > 0) {
-        visibleRanges.sort((a, b) => Number(b.max) - Number(a.max));
-        return visibleRanges[0];
-      }
-
-      // Last resort: any range with valid numeric attributes
-      const anyValid = allRanges.find(inp =>
-        inp.max && !isNaN(Number(inp.max)) && Number(inp.max) > 0 &&
-        inp.step && !isNaN(Number(inp.step))
-      );
-      return anyValid || null;
-    } catch (e) {
-      console.warn('findSpotifyRangeInput error:', e);
-      return null;
-    }
-  }
-
-  /**
-   * formatMs(ms)
-   * Converts milliseconds to a human-readable time string (m:ss).
-   * @param {number} ms - Milliseconds
-   * @returns {string} Formatted time string
-   */
-  function formatMs(ms) {
-    if (!ms || isNaN(ms)) return "0:00";
-    const s = Math.floor(ms / 1000);
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${String(sec).padStart(2, '0')}`;
-  }
-
-  /**
-   * applySeekEndBuffer(ms, durationMs, bufferMs)
-   * Prevents seeking to exact track end by applying a buffer.
-   * This avoids the audio "ended" state that conflicts with repeat functionality.
-   * @param {number} ms - Target seek position in milliseconds
-   * @param {number} durationMs - Track duration in milliseconds
-   * @param {number} bufferMs - Buffer size in milliseconds (default 200ms)
-   * @returns {number} Safe seek position
-   */
-  function applySeekEndBuffer(ms, durationMs, bufferMs = 200) {
-    if (ms >= durationMs - bufferMs) {
-      DEBUG.debug('Seekbar', `Applied end buffer: ${ms}ms → ${durationMs - bufferMs}ms to prevent "ended" state`);
-      return durationMs - bufferMs;
-    }
-    return ms;
-  }
-
-  /**
-   * seekTo(ms)
-   * Attempts to seek Spotify's playback to the specified position in milliseconds.
-   * Fallback order:
-   *   (a) Hidden/native range input value + dispatch input/change + pointer events
-   *   (b) Emulate pointer/mouse events on CSS progress-bar handle (last resort)
-   * @param {number} ms - Target position in milliseconds
-   * @returns {boolean} Whether seeking was attempted
-   *
-   * NOTE (17.49): hoisted here from inside createPopup() (was private to that function's
-   * scope) so PiP's MediaSession seekbackward/seekforward handlers - which can fire while
-   * the lyrics popup isn't even open - can call the same real seek logic instead of
-   * duplicating it. createPopup()'s own callers are unaffected: with the nested declarations
-   * removed, they now resolve seekTo/findSpotifyRangeInput/formatMs/applySeekEndBuffer via
-   * closure over this outer scope instead, same as before.
-   */
-  function seekTo(ms) {
-    try {
-      const SEEK_END_BUFFER_MS = 200;
-
-      DEBUG.debug('Seekbar', `Seeking to ${ms}ms (${formatMs(ms)})`);
-
-      // --- (a) Try hidden/native range input ---
-      const spotifyRange = findSpotifyRangeInput();
-      if (spotifyRange) {
-        try {
-          const max = Number(spotifyRange.max) || 0;
-          if (max > 0) {
-            const safeMs = applySeekEndBuffer(ms, max, SEEK_END_BUFFER_MS);
-            // Set the value
-            spotifyRange.value = String(clamp(safeMs, 0, max));
-
-            // Dispatch input and change events
-            spotifyRange.dispatchEvent(new Event('input', { bubbles: true }));
-            spotifyRange.dispatchEvent(new Event('change', { bubbles: true }));
-
-            // Also try pointer events for better compatibility
-            // Note: We omit 'view' property as it can cause errors in Firefox extensions
-            const rangeRect = spotifyRange.getBoundingClientRect();
-            const percentage = clamp(safeMs, 0, max) / max;
-            const clientX = rangeRect.left + rangeRect.width * percentage;
-            const clientY = rangeRect.top + rangeRect.height / 2;
-
-            try {
-              const pointerDownEvent = new PointerEvent('pointerdown', {
-                bubbles: true, cancelable: true,
-                clientX, clientY, button: 0, buttons: 1
-              });
-              const pointerUpEvent = new PointerEvent('pointerup', {
-                bubbles: true, cancelable: true,
-                clientX, clientY, button: 0
-              });
-
-              spotifyRange.dispatchEvent(pointerDownEvent);
-              spotifyRange.dispatchEvent(pointerUpEvent);
-            } catch (pointerErr) {
-              // Pointer events failed, try mouse events instead
-              const mouseDownEvent = new MouseEvent('mousedown', {
-                bubbles: true, cancelable: true,
-                clientX, clientY, button: 0
-              });
-              const mouseUpEvent = new MouseEvent('mouseup', {
-                bubbles: true, cancelable: true,
-                clientX, clientY, button: 0
-              });
-              spotifyRange.dispatchEvent(mouseDownEvent);
-              spotifyRange.dispatchEvent(mouseUpEvent);
-            }
-
-            DEBUG.debug('Seekbar', `✓ Seeked via range input to ${safeMs}ms`);
-            return true;
-          }
-        } catch (e) {
-          console.warn('seekTo: Failed to set range input', e);
-        }
-      }
-
-      // --- (b) Emulate pointer events on CSS progress-bar handle (last resort) ---
-      const progressBar = document.querySelector('[data-testid="progress-bar"]');
-      if (progressBar) {
-        try {
-          const barRect = progressBar.getBoundingClientRect();
-          if (barRect.width > 0) {
-            // Determine duration to calculate percentage
-            let durMs = 0;
-
-            // Try range input max
-            const range = findSpotifyRangeInput();
-            if (range && Number(range.max) > 0) {
-              durMs = Number(range.max);
-            }
-
-            // Fallback: visible text
-            if (durMs <= 0) {
-              const durEl = document.querySelector('[data-testid="playback-duration"]');
-              const posEl = document.querySelector('[data-testid="playback-position"]');
-              if (durEl) {
-                const raw = durEl.textContent.trim();
-                if (raw.startsWith('-')) {
-                  const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
-                  const remainMs = timeStringToMs(raw);
-                  durMs = posMs + remainMs;
-                } else {
-                  durMs = timeStringToMs(raw);
-                }
-              }
-            }
-
-            // Fallback: track info
-            if (durMs <= 0) {
-              const trackInfo = getCurrentTrackInfo();
-              if (trackInfo && trackInfo.duration > 0) {
-                durMs = trackInfo.duration;
-              }
-            }
-
-            if (durMs > 0) {
-              const safeMs = applySeekEndBuffer(ms, durMs, SEEK_END_BUFFER_MS);
-              const percentage = clamp(safeMs, 0, durMs) / durMs;
-              const clientX = barRect.left + barRect.width * percentage;
-              const clientY = barRect.top + barRect.height / 2;
-
-              // Try the handle first, then the progress bar
-              const handle = progressBar.querySelector('[data-testid="progress-bar-handle"]');
-              const target = handle || progressBar;
-
-              // Try pointer events first (without 'view' property to avoid Firefox extension issues)
-              try {
-                const downEvent = new PointerEvent('pointerdown', {
-                  bubbles: true, cancelable: true,
-                  clientX, clientY, button: 0, buttons: 1,
-                  pointerType: 'mouse'
-                });
-                const moveEvent = new PointerEvent('pointermove', {
-                  bubbles: true, cancelable: true,
-                  clientX, clientY, button: 0, buttons: 1,
-                  pointerType: 'mouse'
-                });
-                const upEvent = new PointerEvent('pointerup', {
-                  bubbles: true, cancelable: true,
-                  clientX, clientY, button: 0, buttons: 0,
-                  pointerType: 'mouse'
-                });
-
-                target.dispatchEvent(downEvent);
-                target.dispatchEvent(moveEvent);
-                target.dispatchEvent(upEvent);
-              } catch (pointerErr) {
-                // Pointer events failed, continue to mouse events
-              }
-
-               // Also try mouse events as fallback
-              const mouseDownEvent = new MouseEvent('mousedown', {
-                bubbles: true, cancelable: true,
-                clientX, clientY, button: 0
-              });
-              const mouseUpEvent = new MouseEvent('mouseup', {
-                bubbles: true, cancelable: true,
-                clientX, clientY, button: 0
-              });
-              const clickEvent = new MouseEvent('click', {
-                bubbles: true, cancelable: true,
-                clientX, clientY, button: 0
-              });
-
-              progressBar.dispatchEvent(mouseDownEvent);
-              progressBar.dispatchEvent(mouseUpEvent);
-              progressBar.dispatchEvent(clickEvent);
-
-              DEBUG.debug('Seekbar', `✓ Seeked via progress-bar pointer events to ${safeMs}ms`);
-              return true;
-            }
-          }
-        } catch (e) {
-          console.warn('seekTo: Failed to emulate pointer events on progress bar', e);
-        }
-      }
-
-      return false;
-    } catch (e) {
-      console.warn('seekTo error:', e);
-      return false;
-    }
-  }
-
-  /**
-   * getSpotifyPositionMs()
-   * Best-effort current playback position in milliseconds, for callers (like the PiP
-   * MediaSession seek handlers below) that need a starting point to offset from but
-   * aren't already tracking position themselves.
-   * Fallback order mirrors seekTo()/updateProgressUIFromSpotify(): visible position text,
-   * then the native range input's current value.
-   * @returns {number}
-   */
-  function getSpotifyPositionMs() {
-    try {
-      const posEl = document.querySelector('[data-testid="playback-position"]');
-      if (posEl) {
-        return timeStringToMs(posEl.textContent);
-      }
-      const range = findSpotifyRangeInput();
-      if (range) {
-        const val = Number(range.value);
-        if (!isNaN(val)) return val;
-      }
-      return 0;
-    } catch (e) {
-      console.warn('getSpotifyPositionMs error:', e);
-      return 0;
-    }
-  }
-
   // =============================================
   // Picture-in-Picture (PiP)
   // =============================================
@@ -2372,80 +2122,6 @@ document.head.appendChild(buttonGroupScrollStyle);
     } else {
       setSpotifyVolumeLevel(pipVideo.volume);
     }
-  }
-
-  // =============================================
-  // PiP MediaSession action handlers (Chromium seek buttons)
-  // =============================================
-  // Chromium's native video-PiP overlay draws its play/pause/seek buttons based on
-  // registered navigator.mediaSession action handlers, independent of whether pipVideo
-  // itself (a MediaStream via canvas.captureStream()) is actually seekable. Registering
-  // 'play'/'pause' here also guarantees those buttons show up at all - by default Chromium
-  // may hide them for a MediaStream-backed <video>. Firefox's native PiP overlay does not
-  // consult MediaSession for its buttons (see pip-seek-controls-analysis.md), so this is a
-  // Chromium-only enhancement; it's simply inert elsewhere, not harmful.
-
-  const PIP_MEDIA_SESSION_SEEK_STEP_SEC = 10;
-
-  function handleMediaSessionPlay() {
-    if (!pipVideo) return;
-    pipVideo.play().catch(() => {});
-  }
-
-  function handleMediaSessionPause() {
-    if (!pipVideo) return;
-    pipVideo.pause();
-  }
-
-  function handleMediaSessionSeekBackward(details) {
-    const offsetMs = ((details && details.seekOffset) || PIP_MEDIA_SESSION_SEEK_STEP_SEC) * 1000;
-    const target = Math.max(0, getSpotifyPositionMs() - offsetMs);
-    seekTo(target);
-  }
-
-  function handleMediaSessionSeekForward(details) {
-    const offsetMs = ((details && details.seekOffset) || PIP_MEDIA_SESSION_SEEK_STEP_SEC) * 1000;
-    const trackInfo = getCurrentTrackInfo();
-    const duration = (trackInfo && trackInfo.duration > 0) ? trackInfo.duration : Infinity;
-    const target = Math.min(duration, getSpotifyPositionMs() + offsetMs);
-    seekTo(target);
-  }
-
-  /**
-   * setupPipMediaSessionHandlers()
-   * Registers the action handlers that make Chromium's PiP overlay show play/pause/seek
-   * buttons and wire them to Spotify's real controls. Called when the PiP window actually
-   * opens (native enterpictureinpicture), not at script load, so we're not silently
-   * hijacking OS/hardware media-key behavior for the rest of the page while PiP is closed.
-   */
-  function setupPipMediaSessionHandlers() {
-    if (!('mediaSession' in navigator)) return;
-    try {
-      navigator.mediaSession.setActionHandler('play', handleMediaSessionPlay);
-      navigator.mediaSession.setActionHandler('pause', handleMediaSessionPause);
-      navigator.mediaSession.setActionHandler('seekbackward', handleMediaSessionSeekBackward);
-      navigator.mediaSession.setActionHandler('seekforward', handleMediaSessionSeekForward);
-    } catch (e) {
-      console.warn('📺 [Lyrics+ PiP] Failed to register MediaSession action handlers:', e);
-    }
-  }
-
-  /**
-   * teardownPipMediaSessionHandlers()
-   * Clears the action handlers above when the PiP window closes (leavepictureinpicture).
-   * Some browsers throw when unsetting a handler for an action they don't support at all;
-   * each call is wrapped individually so one unsupported action doesn't stop the rest from
-   * being cleared.
-   */
-  function teardownPipMediaSessionHandlers() {
-    if (!('mediaSession' in navigator)) return;
-    ['play', 'pause', 'seekbackward', 'seekforward'].forEach((action) => {
-      try {
-        navigator.mediaSession.setActionHandler(action, null);
-      } catch (e) {
-        // Unsupported action on this browser; nothing to clear.
-      }
-    });
   }
 
   function updatePipCanvasSize() {
@@ -2734,7 +2410,6 @@ document.head.appendChild(buttonGroupScrollStyle);
       enterPipInLyricsContainer();
       syncPipMediaStateFromSpotify();
       startPipRenderLoop();
-      setupPipMediaSessionHandlers();
       console.info('📺 [Lyrics+ PiP] Picture-in-Picture window opened (isPipActive=%s isPagePipActive=%s)', isPipActive, isPagePipActive);
     });
 
@@ -2744,7 +2419,6 @@ document.head.appendChild(buttonGroupScrollStyle);
       updatePipButtonState(false);
       stopPipRenderLoop();
       exitPipFromLyricsContainer();
-      teardownPipMediaSessionHandlers();
       console.info('📺 [Lyrics+ PiP] Picture-in-Picture window closed (isPipActive=%s isPagePipActive=%s)', isPipActive, isPagePipActive);
     });
 
@@ -2784,19 +2458,6 @@ document.head.appendChild(buttonGroupScrollStyle);
         return;
       }
       updatePipCanvasSize();
-
-      // Previously syncPipMediaStateFromSpotify() only ran once at PiP-open time
-      // (enterpictureinpicture) and again right after the user clicked the PiP
-      // button itself (handlePipVideoPlay/Pause). That kept clicking the PiP
-      // button working, but the icon itself never got refreshed after a state
-      // change that didn't originate from that click - e.g. pausing via a
-      // keyboard media key, another device on the same Spotify Connect session,
-      // or a track ending - so the overlay's play/pause icon could silently
-      // drift out of sync with Spotify's actual state. drawPipFrame() already
-      // runs on an ongoing, throttled loop for as long as PiP is active (see
-      // startPipRenderLoop/PIP_FRAME_THROTTLE_MS), so it's a natural place to
-      // keep re-checking and correcting pipVideo's paused state to match.
-      syncPipMediaStateFromSpotify();
 
       const w = pipCanvas.width;
       const h = pipCanvas.height;
@@ -5951,11 +5612,12 @@ const Providers = {
 
       // Remove resize window event listeners
       if (existing._resizeHandlers) {
-        const { onResizeMouseMove, onResizeTouchMove, onResizeMouseUp, onResizeTouchEnd } = existing._resizeHandlers;
+        const { onResizeMouseMove, onResizeTouchMove, onResizeMouseUp, onResizeTouchEnd, onResizeTouchCancel } = existing._resizeHandlers;
         window.removeEventListener("mousemove", onResizeMouseMove);
         window.removeEventListener("touchmove", onResizeTouchMove);
         window.removeEventListener("mouseup", onResizeMouseUp);
         window.removeEventListener("touchend", onResizeTouchEnd);
+        if (onResizeTouchCancel) window.removeEventListener("touchcancel", onResizeTouchCancel);
         existing._resizeHandlers = null;
         DEBUG.debug('Cleanup', 'Removed resize window event listeners');
       }
@@ -6049,6 +5711,33 @@ const Providers = {
     popup._playPauseObserver = ResourceManager.registerObserver(observer, 'Play/pause button state');
   }
 
+  // Spotifuck's fixed bottom nav bar (#sp-bottom-nav) sits on top of the page
+  // and isn't reflected in window.innerHeight, so anything that sizes the
+  // popup purely off window.innerHeight can place/grow it underneath the bar.
+  // Shared by createPopup() (initial placement), applyProportionToPopup()
+  // (reapplied on ~every DOM mutation and on window resize), and the live
+  // resize-drag handlers below, so the popup is capped above the bar
+  // everywhere it gets positioned/sized, not just while actively dragging.
+  function getBottomObstructionHeight() {
+    const nav = document.getElementById('sp-bottom-nav');
+    if (!nav) return 0;
+    const rect = nav.getBoundingClientRect();
+    if (rect.height === 0) return 0; // hidden/collapsed
+    return Math.max(0, window.innerHeight - rect.top);
+  }
+
+  function clampPopupToSafeArea(top, height) {
+    const minHeight = 240; // match the popup's minHeight style / resize minHeight
+    const safeBottom = window.innerHeight - getBottomObstructionHeight();
+    if (top > safeBottom - minHeight) {
+      top = Math.max(0, safeBottom - minHeight);
+    }
+    if (top + height > safeBottom) {
+      height = Math.max(minHeight, safeBottom - top);
+    }
+    return { top, height };
+  }
+
   function createPopup() {
     DEBUG.ui.popupCreated();
     removePopup();
@@ -6065,11 +5754,14 @@ const Providers = {
         const proportion = JSON.parse(savedProportion);
         // Convert proportions to absolute pixel values for initial positioning
         if (proportion.w !== undefined && proportion.h !== undefined && proportion.x !== undefined && proportion.y !== undefined) {
+          let top = window.innerHeight * proportion.y;
+          let height = window.innerHeight * proportion.h;
+          ({ top, height } = clampPopupToSafeArea(top, height));
           pos = {
             left: window.innerWidth * proportion.x,
-            top: window.innerHeight * proportion.y,
+            top,
             width: window.innerWidth * proportion.w,
-            height: window.innerHeight * proportion.h
+            height
           };
           DEBUG.debug('UI', 'Loaded saved popup proportion and converted to pixels', pos);
         }
@@ -6120,12 +5812,18 @@ const Providers = {
       shouldSaveDefaultPosition = true;
       let rect = getSpotifyLyricsContainerRect();
       if (rect) {
+        // This branch was never run through clampPopupToSafeArea, so a
+        // fresh install (or any load where the saved-proportion branch
+        // above didn't apply) could open already overlapping Spotifuck's
+        // bottom nav - and then immediately re-save that unclamped rect via
+        // savePopupState() below, poisoning every future open too.
+        const clamped = clampPopupToSafeArea(rect.top, rect.height);
         Object.assign(popup.style, {
           position: "fixed",
           left: rect.left + "px",
-          top: rect.top + "px",
+          top: clamped.top + "px",
           width: rect.width + "px",
-          height: rect.height + "px",
+          height: clamped.height + "px",
           minWidth: "360px",
           minHeight: "240px",
           backgroundColor: "#121212",
@@ -6143,15 +5841,21 @@ const Providers = {
           bottom: "auto"
         });
       } else {
-        // fallback
+        // fallback - previously anchored via bottom:"87px" + height:"79.5vh",
+        // a static guess with no idea Spotifuck's bottom nav exists. Convert
+        // to an explicit top/height (in the same visual spot when there's no
+        // obstruction) and run it through the same clamp as the other paths.
+        const desiredHeight = window.innerHeight * 0.795;
+        const desiredTop = window.innerHeight - 87 - desiredHeight;
+        const clamped = clampPopupToSafeArea(desiredTop, desiredHeight);
         Object.assign(popup.style, {
           position: "fixed",
-          bottom: "87px",
+          top: clamped.top + "px",
           right: "0px",
           left: "auto",
-          top: "auto",
+          bottom: "auto",
           width: "360px",
-          height: "79.5vh",
+          height: clamped.height + "px",
           minWidth: "360px",
           minHeight: "240px",
           backgroundColor: "#121212",
@@ -8120,17 +7824,12 @@ popup._headerWheelHandler = onHeaderWheel;
     popup.appendChild(controlsBar);
     popup.appendChild(progressWrapper);
 
-    // NOTE: Always append to document.body (top-level), NOT '.main-view-container'.
-    // Spotify's .main-view-container establishes CSS containment (contain: layout/paint)
-    // for its own virtualized scroll area, which makes it the containing block for any
-    // position:fixed descendant - clipping it to that box regardless of z-index. That's
-    // why the popup could be dragged/resized over most of the UI but never over
-    // #sp-bottom-nav (z-index 9999): the navbar lives outside that containment box, in
-    // .Root__main-view, so it always painted on top no matter how high popup's own
-    // z-index (100000) was set. All drag/resize math below already uses
-    // window.innerWidth/innerHeight, not container-relative values, so nothing depends
-    // on the popup living inside .main-view-container.
-    document.body.appendChild(popup);
+    const container = document.querySelector('.main-view-container');
+    if (container) {
+      container.appendChild(popup);
+    } else {
+      document.body.appendChild(popup);
+    }
 
     // Save initial state if using default position (not restored from saved state)
     if (shouldSaveDefaultPosition) {
@@ -8306,7 +8005,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360; // match the minWidth style
         const minHeight = 240; // match the minHeight style
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = window.innerHeight - el.offsetTop;
+        const maxHeight = window.innerHeight - el.offsetTop - getBottomObstructionHeight();
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -8325,7 +8024,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360;
         const minHeight = 240;
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = window.innerHeight - el.offsetTop;
+        const maxHeight = window.innerHeight - el.offsetTop - getBottomObstructionHeight();
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -8353,13 +8052,24 @@ popup._headerWheelHandler = onHeaderWheel;
         }
       };
 
+      // An interrupted touch (OS edge-swipe gesture, incoming call/notification,
+      // a second finger landing mid-drag, etc.) fires touchcancel instead of
+      // touchend. Without handling it, isResizing / lyricsPlusPopupIsResizing
+      // stayed stuck true, so any later finger touch anywhere on screen was
+      // misread as a continuation of the resize drag (startX/startY frozen at
+      // the old drag's start), yanking the popup to whatever size that stray
+      // touch implied - and permanently blocking applyProportionToPopup's
+      // safe-area clamp, since it's gated on this same flag.
+      const onResizeTouchCancel = onResizeTouchEnd;
+
       window.addEventListener("mousemove", onResizeMouseMove);
       window.addEventListener("touchmove", onResizeTouchMove, { passive: false });
       window.addEventListener("mouseup", onResizeMouseUp);
       window.addEventListener("touchend", onResizeTouchEnd);
+      window.addEventListener("touchcancel", onResizeTouchCancel);
 
       // Store handlers on the element so they can be removed when the popup is destroyed
-      el._resizeHandlers = { onResizeMouseMove, onResizeTouchMove, onResizeMouseUp, onResizeTouchEnd };
+      el._resizeHandlers = { onResizeMouseMove, onResizeTouchMove, onResizeMouseUp, onResizeTouchEnd, onResizeTouchCancel };
     })(popup, resizer);
 
     observeSpotifyPlayPause(popup);
@@ -8382,6 +8092,59 @@ popup._headerWheelHandler = onHeaderWheel;
     // No interpolation - we just read directly from Spotify's DOM every 100ms.
     // If Spotify's DOM updates slowly, we show what Spotify shows. This avoids
     // any jumps or sync issues from our own interpolation logic.
+
+    /**
+     * findSpotifyRangeInput()
+     * Attempts to find Spotify's native range input for playback progress.
+     * Fallback order:
+     *   1. Hidden numeric input[type=range] with max > 0 (preferred - most accurate)
+     *   2. Visible range inputs with max > 0
+     *   3. Any range input with numeric max/min/step
+     * @returns {HTMLInputElement|null}
+     */
+    function findSpotifyRangeInput() {
+      try {
+        // Collect all range inputs in the document
+        const allRanges = Array.from(document.querySelectorAll('input[type="range"]'));
+
+        // Filter for hidden ranges with max > 0 (preferred - Spotify often uses hidden inputs)
+        const hiddenRanges = allRanges.filter(inp => {
+          const max = Number(inp.max);
+          // Check if hidden: not visible in DOM (hidden-visually class, or offsetParent null)
+          // Use specific class matching to avoid false positives like 'unhidden'
+          const isHidden = inp.offsetParent === null ||
+                           inp.closest('label.hidden-visually') !== null ||
+                           inp.closest('.hidden-visually') !== null ||
+                           inp.closest('[class~="hidden"]') !== null;
+          return isHidden && max > 0;
+        });
+        if (hiddenRanges.length > 0) {
+          // Prefer the one with the largest max value (likely the playback progress)
+          hiddenRanges.sort((a, b) => Number(b.max) - Number(a.max));
+          return hiddenRanges[0];
+        }
+
+        // Fallback: visible range inputs with max > 0
+        const visibleRanges = allRanges.filter(inp => {
+          const max = Number(inp.max);
+          return inp.offsetParent !== null && max > 0;
+        });
+        if (visibleRanges.length > 0) {
+          visibleRanges.sort((a, b) => Number(b.max) - Number(a.max));
+          return visibleRanges[0];
+        }
+
+        // Last resort: any range with valid numeric attributes
+        const anyValid = allRanges.find(inp =>
+          inp.max && !isNaN(Number(inp.max)) && Number(inp.max) > 0 &&
+          inp.step && !isNaN(Number(inp.step))
+        );
+        return anyValid || null;
+      } catch (e) {
+        console.warn('findSpotifyRangeInput error:', e);
+        return null;
+      }
+    }
 
      /**
      * readSpotifyProgressBarPercent()
@@ -8430,6 +8193,20 @@ popup._headerWheelHandler = onHeaderWheel;
         console.warn('readSpotifyProgressBarPercent error:', e);
         return null;
       }
+    }
+
+    /**
+     * formatMs(ms)
+     * Converts milliseconds to a human-readable time string (m:ss).
+     * @param {number} ms - Milliseconds
+     * @returns {string} Formatted time string
+     */
+    function formatMs(ms) {
+      if (!ms || isNaN(ms)) return "0:00";
+      const s = Math.floor(ms / 1000);
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${m}:${String(sec).padStart(2, '0')}`;
     }
 
     /**
@@ -8562,6 +8339,201 @@ popup._headerWheelHandler = onHeaderWheel;
 
       } catch (e) {
         console.warn('updateProgressUIFromSpotify error:', e);
+      }
+    }
+
+    /**
+     * applySeekEndBuffer(ms, durationMs, bufferMs)
+     * Prevents seeking to exact track end by applying a buffer.
+     * This avoids the audio "ended" state that conflicts with repeat functionality.
+     * @param {number} ms - Target seek position in milliseconds
+     * @param {number} durationMs - Track duration in milliseconds
+     * @param {number} bufferMs - Buffer size in milliseconds (default 200ms)
+     * @returns {number} Safe seek position
+     */
+    function applySeekEndBuffer(ms, durationMs, bufferMs = 200) {
+      if (ms >= durationMs - bufferMs) {
+        DEBUG.debug('Seekbar', `Applied end buffer: ${ms}ms → ${durationMs - bufferMs}ms to prevent "ended" state`);
+        return durationMs - bufferMs;
+      }
+      return ms;
+    }
+
+     /**
+     * seekTo(ms)
+     * Attempts to seek Spotify's playback to the specified position in milliseconds.
+     * Fallback order:
+     *   (a) Hidden/native range input value + dispatch input/change + pointer events
+     *   (b) Emulate pointer/mouse events on CSS progress-bar handle (last resort)
+     * @param {number} ms - Target position in milliseconds
+     * @returns {boolean} Whether seeking was attempted
+     */
+    function seekTo(ms) {
+      try {
+        const SEEK_END_BUFFER_MS = 200;
+
+        DEBUG.debug('Seekbar', `Seeking to ${ms}ms (${formatMs(ms)})`);
+
+        // --- (a) Try hidden/native range input ---
+        const spotifyRange = findSpotifyRangeInput();
+        if (spotifyRange) {
+          try {
+            const max = Number(spotifyRange.max) || 0;
+            if (max > 0) {
+              const safeMs = applySeekEndBuffer(ms, max, SEEK_END_BUFFER_MS);
+              // Set the value
+              spotifyRange.value = String(clamp(safeMs, 0, max));
+
+              // Dispatch input and change events
+              spotifyRange.dispatchEvent(new Event('input', { bubbles: true }));
+              spotifyRange.dispatchEvent(new Event('change', { bubbles: true }));
+
+              // Also try pointer events for better compatibility
+              // Note: We omit 'view' property as it can cause errors in Firefox extensions
+              const rangeRect = spotifyRange.getBoundingClientRect();
+              const percentage = clamp(safeMs, 0, max) / max;
+              const clientX = rangeRect.left + rangeRect.width * percentage;
+              const clientY = rangeRect.top + rangeRect.height / 2;
+
+              try {
+                const pointerDownEvent = new PointerEvent('pointerdown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0, buttons: 1
+                });
+                const pointerUpEvent = new PointerEvent('pointerup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+
+                spotifyRange.dispatchEvent(pointerDownEvent);
+                spotifyRange.dispatchEvent(pointerUpEvent);
+              } catch (pointerErr) {
+                // Pointer events failed, try mouse events instead
+                const mouseDownEvent = new MouseEvent('mousedown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const mouseUpEvent = new MouseEvent('mouseup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                spotifyRange.dispatchEvent(mouseDownEvent);
+                spotifyRange.dispatchEvent(mouseUpEvent);
+              }
+
+              DEBUG.debug('Seekbar', `✓ Seeked via range input to ${safeMs}ms`);
+              return true;
+            }
+          } catch (e) {
+            console.warn('seekTo: Failed to set range input', e);
+          }
+        }
+
+        // --- (b) Emulate pointer events on CSS progress-bar handle (last resort) ---
+        const progressBar = document.querySelector('[data-testid="progress-bar"]');
+        if (progressBar) {
+          try {
+            const barRect = progressBar.getBoundingClientRect();
+            if (barRect.width > 0) {
+              // Determine duration to calculate percentage
+              let durMs = 0;
+
+              // Try range input max
+              const range = findSpotifyRangeInput();
+              if (range && Number(range.max) > 0) {
+                durMs = Number(range.max);
+              }
+
+              // Fallback: visible text
+              if (durMs <= 0) {
+                const durEl = document.querySelector('[data-testid="playback-duration"]');
+                const posEl = document.querySelector('[data-testid="playback-position"]');
+                if (durEl) {
+                  const raw = durEl.textContent.trim();
+                  if (raw.startsWith('-')) {
+                    const posMs = posEl ? timeStringToMs(posEl.textContent) : 0;
+                    const remainMs = timeStringToMs(raw);
+                    durMs = posMs + remainMs;
+                  } else {
+                    durMs = timeStringToMs(raw);
+                  }
+                }
+              }
+
+              // Fallback: track info
+              if (durMs <= 0) {
+                const trackInfo = getCurrentTrackInfo();
+                if (trackInfo && trackInfo.duration > 0) {
+                  durMs = trackInfo.duration;
+                }
+              }
+
+              if (durMs > 0) {
+                const safeMs = applySeekEndBuffer(ms, durMs, SEEK_END_BUFFER_MS);
+                const percentage = clamp(safeMs, 0, durMs) / durMs;
+                const clientX = barRect.left + barRect.width * percentage;
+                const clientY = barRect.top + barRect.height / 2;
+
+                // Try the handle first, then the progress bar
+                const handle = progressBar.querySelector('[data-testid="progress-bar-handle"]');
+                const target = handle || progressBar;
+
+                // Try pointer events first (without 'view' property to avoid Firefox extension issues)
+                try {
+                  const downEvent = new PointerEvent('pointerdown', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 1,
+                    pointerType: 'mouse'
+                  });
+                  const moveEvent = new PointerEvent('pointermove', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 1,
+                    pointerType: 'mouse'
+                  });
+                  const upEvent = new PointerEvent('pointerup', {
+                    bubbles: true, cancelable: true,
+                    clientX, clientY, button: 0, buttons: 0,
+                    pointerType: 'mouse'
+                  });
+
+                  target.dispatchEvent(downEvent);
+                  target.dispatchEvent(moveEvent);
+                  target.dispatchEvent(upEvent);
+                } catch (pointerErr) {
+                  // Pointer events failed, continue to mouse events
+                }
+
+                 // Also try mouse events as fallback
+                const mouseDownEvent = new MouseEvent('mousedown', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const mouseUpEvent = new MouseEvent('mouseup', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+                const clickEvent = new MouseEvent('click', {
+                  bubbles: true, cancelable: true,
+                  clientX, clientY, button: 0
+                });
+
+                progressBar.dispatchEvent(mouseDownEvent);
+                progressBar.dispatchEvent(mouseUpEvent);
+                progressBar.dispatchEvent(clickEvent);
+
+                DEBUG.debug('Seekbar', `✓ Seeked via progress-bar pointer events to ${safeMs}ms`);
+                return true;
+              }
+            }
+          } catch (e) {
+            console.warn('seekTo: Failed to emulate pointer events on progress bar', e);
+          }
+        }
+
+        return false;
+      } catch (e) {
+        console.warn('seekTo error:', e);
+        return false;
       }
     }
 
@@ -9731,10 +9703,13 @@ popup._headerWheelHandler = onHeaderWheel;
     if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
       return;
     }
+    let top = window.innerHeight * window.lastProportion.y;
+    let height = window.innerHeight * window.lastProportion.h;
+    ({ top, height } = clampPopupToSafeArea(top, height));
     popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
-    popup.style.height = (window.innerHeight * window.lastProportion.h) + "px";
+    popup.style.height = height + "px";
     popup.style.left = (window.innerWidth * window.lastProportion.x) + "px";
-    popup.style.top = (window.innerHeight * window.lastProportion.y) + "px";
+    popup.style.top = top + "px";
     popup.style.right = "auto";
     popup.style.bottom = "auto";
     popup.style.position = "fixed";
@@ -9779,33 +9754,12 @@ popup._headerWheelHandler = onHeaderWheel;
     DEBUG.debug('PopupResize', 'Resize handlers attached');
   }
 
-  // Listen for popup creation to hook the resizer.
-  // IMPORTANT: this used to run on *every* childList mutation anywhere in
-  // document.body's subtree - which in a React SPA like Spotify (plus our own
-  // frequent icon/lyrics DOM updates) fires continuously, many times a second.
-  // Each firing unconditionally called applyProportionToPopup(), re-forcing the
-  // popup back to window.lastProportion's saved size/position. The isResizing/
-  // isDragging guards only cover the exact moment of an active drag, so the very
-  // next unrelated mutation right after you let go of a manual resize (or right
-  // after clicking restore) would snap the popup back to whatever proportion was
-  // saved *before* that action - looking exactly like "it auto-resizes back."
-  // Fix: only reapply the proportion when the popup element itself is actually
-  // being inserted into the DOM (real creation/recreation), not on unrelated
-  // page churn.
-  const popupResizeObserver = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type !== 'childList') continue;
-      for (const node of mutation.addedNodes) {
-        if (node.nodeType !== Node.ELEMENT_NODE) continue;
-        const inserted = node.id === 'lyrics-plus-popup'
-          ? node
-          : (node.querySelector && node.querySelector('#lyrics-plus-popup'));
-        if (inserted) {
-          applyProportionToPopup(inserted);
-          observePopupResize();
-          return;
-        }
-      }
+  // Listen for popup creation to hook the resizer
+  const popupResizeObserver = new MutationObserver(() => {
+    const popup = document.getElementById("lyrics-plus-popup");
+    if (popup) {
+      applyProportionToPopup(popup);
+      observePopupResize();
     }
   });
   ResourceManager.registerObserver(popupResizeObserver, 'Popup resize observer');
