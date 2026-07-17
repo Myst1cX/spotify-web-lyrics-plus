@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.49
+// @version      17.47
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,58 +15,6 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
-
-// RESOLVED (17.49): 17.48 ONLY CAPPED THE LIVE DRAG - POPUP COULD STILL OPEN/SNAP BACK UNDER THE NAV BAR
-// 17.48 added the bottom-nav cap only inside makeResizable's live
-// mousemove/touchmove handlers. Two other code paths size/position the
-// popup purely from window.innerHeight and were never touched, so the
-// symptom persisted:
-// • createPopup() converts the saved width/height/x/y proportions (stored
-//   as ratios of window size) back to pixels on every popup open - with no
-//   cap, so a proportion saved before this fix (or one that now maps to a
-//   different-sized nav bar) opens the popup already overlapping the bar.
-// • applyProportionToPopup() reapplies that same uncapped math on basically
-//   every DOM mutation (via a body-wide MutationObserver) and on every
-//   window resize. It correctly skips itself while a resize/drag is
-//   actively in progress, but the instant the drag ends it's free to fire
-//   again - so even a resize that 17.48 had legally capped could get
-//   reasserted back to the old, larger, uncapped size on the very next
-//   Spotify DOM update.
-// Combined effect: the popup could load already swallowed behind the bar,
-// and starting a resize drag would immediately snap the already-oversized
-// height down to the new legal max the moment you touched the handle -
-// which is what read as the drag "forcing your hand down" instead of
-// following it.
-// Fix: hoisted getBottomObstructionHeight() out of makeResizable to module
-// scope and added clampPopupToSafeArea(top, height) next to it, which pins
-// top/height so the popup never extends below window.innerHeight minus the
-// nav bar's height (falling back to the popup's existing 240px minHeight if
-// the saved position leaves no room). Both createPopup()'s initial pos
-// calculation and applyProportionToPopup() now run their numbers through
-// clampPopupToSafeArea() before applying them, so the popup is capped above
-// the bar the moment it opens, after every DOM mutation, and after window
-// resizes - not only during an active resize drag. The live resize handlers
-// in makeResizable are unchanged aside from now calling the shared,
-// module-scope getBottomObstructionHeight() instead of a local copy.
-
-// RESOLVED (17.48): DRAG-TO-EXPAND NO LONGER LETS THE POPUP GROW UNDER SPOTIFUCK'S BOTTOM NAV BAR
-// makeResizable's onResizeMouseMove/onResizeTouchMove computed maxHeight as
-// window.innerHeight - el.offsetTop, with no idea that Spotifuck's UI mod
-// adds a fixed #sp-bottom-nav bar pinned to the bottom of the viewport.
-// Since that bar isn't part of normal document flow, it wasn't accounted
-// for, so dragging the resize handle down could grow the popup right past
-// the bar - the overflowing part just rendered behind it instead of stopping
-// above it.
-// Fix: added getBottomObstructionHeight(), a small helper inside the
-// makeResizable IIFE that looks up #sp-bottom-nav via getElementById and, if
-// it's present and has a nonzero height, returns how much of it overlaps the
-// bottom of the viewport (via getBoundingClientRect()). Both maxHeight
-// calculations now subtract that value, so the popup's resize is capped
-// right above the nav bar.
-// This only runs while a resize drag is actively in progress (isResizing is
-// true) - there's no polling or observer added, so it's a no-op with zero
-// overhead for anyone not running Spotifuck (getElementById just returns
-// null and the helper returns 0, matching the old behavior exactly).
 
 // RESOLVED (17.47): REMOVED THE PERMANENT NOWPLAYINGVIEW-HIDING CSS (CONFLICTED WITH SPOTIFUCK)
 // This script used to inject a permanent style rule collapsing the
@@ -5664,33 +5612,6 @@ const Providers = {
     popup._playPauseObserver = ResourceManager.registerObserver(observer, 'Play/pause button state');
   }
 
-  // Spotifuck's fixed bottom nav bar (#sp-bottom-nav) sits on top of the page
-  // and isn't reflected in window.innerHeight, so anything that sizes the
-  // popup purely off window.innerHeight can place/grow it underneath the bar.
-  // Shared by createPopup() (initial placement), applyProportionToPopup()
-  // (reapplied on ~every DOM mutation and on window resize), and the live
-  // resize-drag handlers below, so the popup is capped above the bar
-  // everywhere it gets positioned/sized, not just while actively dragging.
-  function getBottomObstructionHeight() {
-    const nav = document.getElementById('sp-bottom-nav');
-    if (!nav) return 0;
-    const rect = nav.getBoundingClientRect();
-    if (rect.height === 0) return 0; // hidden/collapsed
-    return Math.max(0, window.innerHeight - rect.top);
-  }
-
-  function clampPopupToSafeArea(top, height) {
-    const minHeight = 240; // match the popup's minHeight style / resize minHeight
-    const safeBottom = window.innerHeight - getBottomObstructionHeight();
-    if (top > safeBottom - minHeight) {
-      top = Math.max(0, safeBottom - minHeight);
-    }
-    if (top + height > safeBottom) {
-      height = Math.max(minHeight, safeBottom - top);
-    }
-    return { top, height };
-  }
-
   function createPopup() {
     DEBUG.ui.popupCreated();
     removePopup();
@@ -5707,14 +5628,11 @@ const Providers = {
         const proportion = JSON.parse(savedProportion);
         // Convert proportions to absolute pixel values for initial positioning
         if (proportion.w !== undefined && proportion.h !== undefined && proportion.x !== undefined && proportion.y !== undefined) {
-          let top = window.innerHeight * proportion.y;
-          let height = window.innerHeight * proportion.h;
-          ({ top, height } = clampPopupToSafeArea(top, height));
           pos = {
             left: window.innerWidth * proportion.x,
-            top,
+            top: window.innerHeight * proportion.y,
             width: window.innerWidth * proportion.w,
-            height
+            height: window.innerHeight * proportion.h
           };
           DEBUG.debug('UI', 'Loaded saved popup proportion and converted to pixels', pos);
         }
@@ -7946,7 +7864,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360; // match the minWidth style
         const minHeight = 240; // match the minHeight style
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = window.innerHeight - el.offsetTop - getBottomObstructionHeight();
+        const maxHeight = window.innerHeight - el.offsetTop;
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -7965,7 +7883,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360;
         const minHeight = 240;
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = window.innerHeight - el.offsetTop - getBottomObstructionHeight();
+        const maxHeight = window.innerHeight - el.offsetTop;
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -9633,13 +9551,10 @@ popup._headerWheelHandler = onHeaderWheel;
     if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
       return;
     }
-    let top = window.innerHeight * window.lastProportion.y;
-    let height = window.innerHeight * window.lastProportion.h;
-    ({ top, height } = clampPopupToSafeArea(top, height));
     popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
-    popup.style.height = height + "px";
+    popup.style.height = (window.innerHeight * window.lastProportion.h) + "px";
     popup.style.left = (window.innerWidth * window.lastProportion.x) + "px";
-    popup.style.top = top + "px";
+    popup.style.top = (window.innerHeight * window.lastProportion.y) + "px";
     popup.style.right = "auto";
     popup.style.bottom = "auto";
     popup.style.position = "fixed";
