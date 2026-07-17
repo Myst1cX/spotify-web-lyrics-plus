@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.50
+// @version      17.48.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,42 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
+
+// RESOLVED (17.48.dev): POPUP CAN NO LONGER BE DRAGGED/RESIZED UNDERNEATH SPOTIFUCK'S MOBILE BOTTOM NAV, AND FIXED A RESIZE SNAP-BACK
+// Two related fixes, both about the popup's on-screen bounds when Spotifuck's
+// UI mod's mobile bottom nav bar (#sp-bottom-nav, a fixed-position element
+// this script has no control over) is present:
+//
+// 1. UNAWARE OF THE NAV BAR: every place that computed how far the popup
+// could drag or resize used window.innerHeight as the bottom bound - correct
+// on desktop, but on Spotifuck's mobile layout that bound sits 56px too low,
+// so the bottom of the popup (and the resize handle itself) could end up
+// rendered underneath the nav bar, invisible and unreachable, with no way to
+// pull it back up short of a manual reload of the state. Fix: added
+// getSpBottomNavHeight() (reads #sp-bottom-nav's live rendered height, 0 if
+// it doesn't exist or isn't visible - so this script degrades to its old
+// desktop-only behavior whenever Spotifuck isn't running) and subtracted it
+// from every vertical bound: makeDraggable's maxY (both mouse and touch),
+// makeResizable's maxHeight (both mouse and touch), the saved-proportion and
+// .main-view-container-derived initial placements in createPopup(), the
+// bottom:87px last-resort fallback (now navHeight+8 when the bar exists),
+// and applyProportionToPopup's restore path.
+//
+// 2. RESIZING THEN SNAPPING BACK: independent of the above, resizing had a
+// long-standing gap that dragging didn't - onDragMouseUp/onDragTouchEnd
+// stamp window.lyricsPlusPopupLastDragged, which applyProportionToPopup
+// checks to stay quiet for TIMING.DRAG_DEBOUNCE_MS (1500ms) after a drag
+// ends. Resizing set window.lyricsPlusPopupIsResizing = false on
+// mouseup/touchend but never stamped any equivalent timestamp, so the very
+// next DOM mutation - and Spotify's own UI mutates constantly (lyric
+// highlighting, progress ticks, etc.), so this was never a rare edge case -
+// let applyProportionToPopup fire with zero grace period and re-apply
+// whatever proportion happened to be saved, visibly snapping the popup back
+// right after the user let go of the resize handle. Fix: added
+// window.lyricsPlusPopupLastResized, stamped in both onResizeMouseUp and
+// onResizeTouchEnd, plus a matching TIMING.RESIZE_DEBOUNCE_MS (1500ms) that
+// applyProportionToPopup now also honors - giving resize the same
+// just-finished-interacting grace period drag already had.
 
 // RESOLVED (17.47): REMOVED THE PERMANENT NOWPLAYINGVIEW-HIDING CSS (CONFLICTED WITH SPOTIFUCK)
 // This script used to inject a permanent style rule collapsing the
@@ -959,6 +995,7 @@
     OPENCC_RETRY_DELAY_MS: 100,       // Initial delay for OpenCC initialization retries
     BUTTON_ADD_RETRY_MS: 1000,        // Delay between button injection attempts
     DRAG_DEBOUNCE_MS: 1500,           // Debounce time after dragging before auto-resize
+    RESIZE_DEBOUNCE_MS: 1500,         // Debounce time after resizing before auto-resize (same protection dragging already had - resizing never got its own timestamp, so proportion reapply could snap it back the instant a DOM mutation fired post-resize)
     PROGRESS_WATCH_DEBOUNCE_MS: 300,  // Debounce for progress bar watcher
   };
 
@@ -1383,6 +1420,7 @@
   window.lastProportion = { w: null, h: null };
   window.lyricsPlusPopupIsDragging = false;
   window.lyricsPlusPopupIsResizing = false;
+  window.lyricsPlusPopupLastResized = 0;
 
   // ------------------------
   // Resource Management & Cleanup System
@@ -7927,6 +7965,7 @@ popup._headerWheelHandler = onHeaderWheel;
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
+          window.lyricsPlusPopupLastResized = Date.now();
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
@@ -7936,6 +7975,7 @@ popup._headerWheelHandler = onHeaderWheel;
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
+          window.lyricsPlusPopupLastResized = Date.now();
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
@@ -9574,8 +9614,11 @@ popup._headerWheelHandler = onHeaderWheel;
     if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion || window.lyricsPlusPopupIsDragging) {
       return;
     }
-    // Skip applying proportion if user has dragged the popup recently
+    // Skip applying proportion if user has dragged or resized the popup recently
     if (window.lyricsPlusPopupLastDragged && (Date.now() - window.lyricsPlusPopupLastDragged) < TIMING.DRAG_DEBOUNCE_MS) {
+      return;
+    }
+    if (window.lyricsPlusPopupLastResized && (Date.now() - window.lyricsPlusPopupLastResized) < TIMING.RESIZE_DEBOUNCE_MS) {
       return;
     }
     if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
