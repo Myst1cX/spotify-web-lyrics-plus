@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.50.dev (prob not working)
+// @version      17.51.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,25 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
+
+// RESOLVED (17.51.dev): POPUP NO LONGER GETS DRAGGED BACK BY ITS OWN PARENT ON MOBILE
+// All prior fixes below were correct but incomplete - they only ever
+// touched the drag/resize math (makeDraggable, makeResizable,
+// applyProportionToPopup), all of which assume the popup's position:fixed
+// is fixed relative to the viewport. That assumption breaks if the popup
+// has an ancestor with a CSS transform (or filter/will-change:transform/
+// contain), which makes THAT ancestor the containing block instead - the
+// "fixed" element then moves with that ancestor rather than staying put on
+// screen. createPopup() appended the popup into .main-view-container -
+// Spotify's own scrollable app content pane - whenever it existed, only
+// falling back to document.body if it didn't. Mobile scroll panes commonly
+// use a transform for their scrolling/virtualization, and if
+// .main-view-container does here, any transform it applies (e.g. settling
+// after a touch interaction, or just Spotify re-rendering) would drag the
+// popup along with it, completely independent of anything in this script's
+// own drag/resize code - explaining why the revert survived every fix to
+// that code, hit both drag and resize equally, and only showed up on
+// mobile. Fix: the popup is now always appended directly to document.body.
 
 // RESOLVED (17.50.dev): POPUP NO LONGER REVERTS ON MOBILE AFTER TOUCH RESIZE OR DRAG
 // Two separate mobile-only bugs left over after 17.48.dev-17.49.dev below:
@@ -7796,12 +7815,17 @@ popup._headerWheelHandler = onHeaderWheel;
     popup.appendChild(controlsBar);
     popup.appendChild(progressWrapper);
 
-    const container = document.querySelector('.main-view-container');
-    if (container) {
-      container.appendChild(popup);
-    } else {
-      document.body.appendChild(popup);
-    }
+    // Always append to document.body, never into .main-view-container.
+    // Spotify's own app content pane (especially on mobile) can have a CSS
+    // transform on it or an ancestor - very common for scroll containers -
+    // which makes IT the containing block for any position:fixed descendant
+    // instead of the viewport. If the popup lives inside that pane, it stops
+    // being reliably "fixed" and instead moves with that pane's transform -
+    // so when the pane's transform settles/re-renders right after a touch
+    // gesture ends, the popup visibly snaps along with it, independent of
+    // anything makeDraggable/makeResizable/applyProportionToPopup do. Living
+    // directly under document.body removes this possibility entirely.
+    document.body.appendChild(popup);
 
     // Save initial state if using default position (not restored from saved state)
     if (shouldSaveDefaultPosition) {
