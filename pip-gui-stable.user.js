@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.48
+// @version      17.49
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,33 +16,27 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.48): POPUP COULDN'T BE DRAGGED/RESIZED OVER SPOTIFUCK'S BOTTOM NAV BAR
-// The popup could be dragged/resized over almost anything on the page except Spotifuck's
-// bottom nav bar (#sp-bottom-nav) - the popup itself kept extending normally into that
-// area, but rendered underneath the nav bar instead of on top of it, like the nav bar
-// had a permanent higher priority no matter what. Cause: createPopup() was attaching the
-// popup inside Spotify's own `.main-view-container` element instead of directly under
-// `document.body` (the root element the whole page hangs off of). Spotify applies a CSS
-// property called "containment" (`contain: layout`) to that container for its own scroll
-// performance, and a side effect of that property is that it creates what's called a new
-// "stacking context" - basically a separate layering group. Once an element is inside one
-// of these groups, its z-index (which controls what renders on top of what) only gets
-// compared against other things inside that same group - it's blind to anything outside
-// it. The popup's z-index (100000) is already far above the nav bar's (9999), but that
-// comparison never happened, because the popup was sealed inside `.main-view-container`'s
-// layering group while the nav bar sits outside it entirely, in a different container
-// (`.Root__main-view`). Whatever layering position `.main-view-container` as a whole
-// happened to have relative to the nav bar, the popup inherited - regardless of its own,
-// much higher z-index.
-// Fix: the popup is now always attached directly under `document.body` instead of
-// `.main-view-container`, so it's no longer sealed inside that layering group and its
-// z-index (100000) gets compared directly against the nav bar's (9999), like it should
-// have been the whole time.
-// This doesn't affect where the popup appears by default or where it's remembered
-// to reopen - both are calculated from the browser window's own width/height
-// (window.innerWidth/innerHeight) or read straight off an element's on-screen
-// position via getBoundingClientRect(), neither of which cares what the popup's
-// parent element is. Only the layering problem is fixed.
+// RESOLVED (17.49): DRAG-TO-EXPAND NO LONGER LETS THE POPUP GROW UNDER SPOTIFUCK'S BOTTOM NAV BAR
+// makeResizable's onResizeMouseMove/onResizeTouchMove computed maxHeight as
+// window.innerHeight - el.offsetTop, with no idea that Spotifuck's UI mod
+// adds a fixed #sp-bottom-nav bar pinned to the bottom of the viewport.
+// Since that bar isn't part of normal document flow, it wasn't accounted
+// for, so dragging the resize handle down could grow the popup right past
+// the bar - the overflowing part just rendered behind it instead of stopping
+// above it.
+// Fix: added getBottomObstructionHeight(), a small helper inside the
+// makeResizable IIFE that looks up #sp-bottom-nav via getElementById and, if
+// it's present and has a nonzero height, returns how much of it overlaps the
+// bottom of the viewport (via getBoundingClientRect()). Both maxHeight
+// calculations now subtract that value, so the popup's resize is capped
+// right above the nav bar.
+// This only runs while a resize drag is actively in progress (isResizing is
+// true) - there's no polling or observer added, so it's a no-op with zero
+// overhead for anyone not running Spotifuck (getElementById just returns
+// null and the helper returns 0, matching the old behavior exactly).
+
+// RESOLVED (17.48): A fix attempt that didn't pan out. Released it too quickly. 
+// Version 17.49, however, suceeded.
 
 // RESOLVED (17.47): REMOVED THE PERMANENT NOWPLAYINGVIEW-HIDING CSS (CONFLICTED WITH SPOTIFUCK)
 // This script used to inject a permanent style rule collapsing the
@@ -7711,17 +7705,12 @@ popup._headerWheelHandler = onHeaderWheel;
     popup.appendChild(controlsBar);
     popup.appendChild(progressWrapper);
 
-    // NOTE: Always append to document.body (top-level), NOT '.main-view-container'.
-    // Spotify's .main-view-container establishes CSS containment (contain: layout/paint)
-    // for its own virtualized scroll area, which makes it the containing block for any
-    // position:fixed descendant - clipping it to that box regardless of z-index. That's
-    // why the popup could be dragged/resized over most of the UI but never over
-    // #sp-bottom-nav (z-index 9999): the navbar lives outside that containment box, in
-    // .Root__main-view, so it always painted on top no matter how high popup's own
-    // z-index (100000) was set. All drag/resize math below already uses
-    // window.innerWidth/innerHeight, not container-relative values, so nothing depends
-    // on the popup living inside .main-view-container.
-    document.body.appendChild(popup);
+    const container = document.querySelector('.main-view-container');
+    if (container) {
+      container.appendChild(popup);
+    } else {
+      document.body.appendChild(popup);
+    }
 
     // Save initial state if using default position (not restored from saved state)
     if (shouldSaveDefaultPosition) {
@@ -7864,6 +7853,18 @@ popup._headerWheelHandler = onHeaderWheel;
       let startX, startY;
       let startWidth, startHeight;
 
+      // Spotifuck's fixed bottom nav bar (#sp-bottom-nav) sits on top of the
+      // page and isn't reflected in window.innerHeight, so the popup could
+      // previously be expanded underneath it. Subtract its height (if
+      // present/visible) so the popup is capped above it instead.
+      function getBottomObstructionHeight() {
+        const nav = document.getElementById('sp-bottom-nav');
+        if (!nav) return 0;
+        const rect = nav.getBoundingClientRect();
+        if (rect.height === 0) return 0; // hidden/collapsed
+        return Math.max(0, window.innerHeight - rect.top);
+      }
+
       function startResize(e) {
         e.preventDefault();
         isResizing = true;
@@ -7897,7 +7898,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360; // match the minWidth style
         const minHeight = 240; // match the minHeight style
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = window.innerHeight - el.offsetTop;
+        const maxHeight = window.innerHeight - el.offsetTop - getBottomObstructionHeight();
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -7916,7 +7917,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360;
         const minHeight = 240;
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = window.innerHeight - el.offsetTop;
+        const maxHeight = window.innerHeight - el.offsetTop - getBottomObstructionHeight();
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
