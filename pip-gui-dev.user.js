@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.49.dev
+// @version      17.50.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,27 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
+
+// RESOLVED (17.49.dev, addendum): POPUP NO LONGER SNAPS BACK ON MOBILE SPECIFICALLY AFTER TOUCH RESIZE/DRAG
+// 17.49.dev below fixed the constant re-snap on both mouse and touch by
+// removing applyProportionToPopup's call from the MutationObserver, leaving
+// windowResizeHandler (the real window "resize" event) as the only thing
+// that can still reapply the saved proportion post-gesture. That exposed a
+// second, mobile-only bug in applyProportionToPopup's own nav-bar clamp:
+// it moved `newTop` upward whenever the saved y-proportion sat close to the
+// nav bar, but live makeResizable/makeDraggable NEVER move `top` while
+// resizing (dragging the corner only ever changes width/height) - the exact
+// restore-vs-live asymmetry flagged in the 17.48.dev ADDENDUM below, just
+// not fully eliminated there. On desktop this was invisible: no nav bar
+// means the clamp almost never triggers, and desktop rarely fires a window
+// "resize" event right after a mouse gesture anyway. On mobile, both
+// conditions flip - Spotifuck's bottom nav is present, and mobile browsers
+// fire "resize" constantly right as a touch ends (address bar / viewport
+// chrome hiding or reappearing) - so the very next one of those events
+// would yank `top` back up, reading as "it reverts the instant I let go".
+// Fix: the clamp now only ever shrinks `newHeight` to stay clear of the nav
+// bar; it no longer touches `newTop` at all, matching what a live
+// resize/drag actually does.
 
 // RESOLVED (17.49.dev): POPUP NO LONGER SNAPS BACK TO ITS SAVED SIZE/POSITION AFTER EVERY DRAG/RESIZE
 // 17.48 added a resize debounce to match drag's, but the reset kept
@@ -9674,12 +9695,16 @@ popup._headerWheelHandler = onHeaderWheel;
     let newLeft = window.innerWidth * window.lastProportion.x;
     let newTop = window.innerHeight * window.lastProportion.y;
 
-    // Keep the popup's top on-screen above the nav bar first, then shrink
-    // height (never below minHeight) so top+height never lands underneath
-    // the nav bar. Same bound makeResizable/makeDraggable enforce live, so
-    // reapplying the saved proportion here can never snap the popup back to
-    // a taller/lower geometry than what the user just resized/dragged it to.
-    newTop = Math.min(newTop, Math.max(0, availableBottom - minHeight));
+    // Shrink height (never below minHeight) so top+height never lands
+    // underneath the nav bar - but, unlike the old clamp, never move `top`
+    // itself. Live makeResizable/makeDraggable never reposition `top` during
+    // a resize (dragging the corner only ever changes width/height; the
+    // top-left anchor stays put), so this restore path must not either, or
+    // it can disagree with the rect the user's own gesture just produced and
+    // visibly snap the popup on the very next window "resize" event -
+    // exactly what mobile fires constantly (address bar / viewport-chrome
+    // changes) right after a touch drag/resize ends, even though desktop
+    // rarely fires "resize" at all post-gesture.
     if (newTop + newHeight > availableBottom) {
       newHeight = Math.max(minHeight, availableBottom - newTop);
     }
