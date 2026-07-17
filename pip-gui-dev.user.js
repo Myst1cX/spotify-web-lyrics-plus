@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.49.dev
+// @version      17.50
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,8 +15,6 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
-
-// 17.47.dev + 17.48.dev + 17.49.dev - some fixees
 
 // RESOLVED (17.47): REMOVED THE PERMANENT NOWPLAYINGVIEW-HIDING CSS (CONFLICTED WITH SPOTIFUCK)
 // This script used to inject a permanent style rule collapsing the
@@ -1725,37 +1723,19 @@
     return Math.max(min, Math.min(max, val));
   }
 
-  // spotifuck-mobile's #sp-bottom-nav is a fixed 56px bar pinned to the
-  // bottom of the viewport (see its CSS: position:fixed, bottom:0,
-  // height:56px). It never resizes or moves once created, so instead of
-  // re-measuring it on every mousemove/touchmove (which was cheap on its
-  // own, but meant drag/resize used a different "bottom of the world" than
-  // the proportion save/restore code below - THAT mismatch, not the
-  // measurement itself, was the actual source of the flash-back-on-release
-  // bug), we measure it once, cache it, and reuse the same number
-  // everywhere the popup's usable height is needed.
-  let cachedBottomNavHeight = null;
-  function getBottomNavHeight() {
-    if (cachedBottomNavHeight !== null) return cachedBottomNavHeight;
+  // Height (in px) currently occupied by Spotifuck's mobile bottom nav bar
+  // (#sp-bottom-nav), or 0 if it doesn't exist / isn't actually visible.
+  // Used everywhere we compute how far the popup is allowed to drag/resize/
+  // restore-to, so the popup never ends up with content hidden underneath
+  // the nav bar. Read live (not cached) since the nav bar can be added,
+  // removed, or change size independently of the popup's own lifecycle.
+  function getSpBottomNavHeight() {
     const nav = document.getElementById('sp-bottom-nav');
-    if (nav) {
-      const rect = nav.getBoundingClientRect();
-      if (rect.height > 0 && rect.width > 0) {
-        cachedBottomNavHeight = rect.height;
-        return cachedBottomNavHeight;
-      }
-    }
-    return 0; // not created/visible yet - treat as no obstruction, don't cache
-  }
-
-  // The single source of truth for "how much vertical viewport can the
-  // popup actually use". Every place that positions or sizes the popup
-  // (drag, resize, save-proportion, restore-proportion, window-resize
-  // restore) must go through this - never window.innerHeight directly -
-  // so they can never disagree with each other about where the bottom of
-  // the usable area is.
-  function getUsableInnerHeight() {
-    return window.innerHeight - getBottomNavHeight();
+    if (!nav) return 0;
+    const style = window.getComputedStyle(nav);
+    if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0) return 0;
+    const rect = nav.getBoundingClientRect();
+    return rect.height > 0 ? rect.height : 0;
   }
 
   function makeSafeFilename(str) {
@@ -5663,13 +5643,20 @@ const Providers = {
         const proportion = JSON.parse(savedProportion);
         // Convert proportions to absolute pixel values for initial positioning
         if (proportion.w !== undefined && proportion.h !== undefined && proportion.x !== undefined && proportion.y !== undefined) {
-          const usableHeight = getUsableInnerHeight();
           pos = {
             left: window.innerWidth * proportion.x,
-            top: usableHeight * proportion.y,
+            top: window.innerHeight * proportion.y,
             width: window.innerWidth * proportion.w,
-            height: usableHeight * proportion.h
+            height: window.innerHeight * proportion.h
           };
+          // Clamp against the bottom nav bar (may not have existed, or been
+          // a different height, when this proportion was last saved).
+          const navHeightAtLoad = getSpBottomNavHeight();
+          const availableBottomAtLoad = window.innerHeight - navHeightAtLoad;
+          pos.top = Math.min(pos.top, Math.max(0, availableBottomAtLoad - 240));
+          if (pos.top + pos.height > availableBottomAtLoad) {
+            pos.height = Math.max(240, availableBottomAtLoad - pos.top);
+          }
           DEBUG.debug('UI', 'Loaded saved popup proportion and converted to pixels', pos);
         }
       } catch {
@@ -5719,12 +5706,17 @@ const Providers = {
       shouldSaveDefaultPosition = true;
       let rect = getSpotifyLyricsContainerRect();
       if (rect) {
+        const navHeightForRect = getSpBottomNavHeight();
+        const availableBottomForRect = window.innerHeight - navHeightForRect;
+        const rectHeight = (rect.top + rect.height > availableBottomForRect)
+          ? Math.max(240, availableBottomForRect - rect.top)
+          : rect.height;
         Object.assign(popup.style, {
           position: "fixed",
           left: rect.left + "px",
           top: rect.top + "px",
           width: rect.width + "px",
-          height: rect.height + "px",
+          height: rectHeight + "px",
           minWidth: "360px",
           minHeight: "240px",
           backgroundColor: "#121212",
@@ -5743,9 +5735,11 @@ const Providers = {
         });
       } else {
         // fallback
+        const navHeightForDefault = getSpBottomNavHeight();
+        const defaultBottom = navHeightForDefault > 0 ? (navHeightForDefault + 8) : 87;
         Object.assign(popup.style, {
           position: "fixed",
-          bottom: "87px",
+          bottom: defaultBottom + "px",
           right: "0px",
           left: "auto",
           top: "auto",
@@ -7768,7 +7762,7 @@ popup._headerWheelHandler = onHeaderWheel;
         let newX = origX + dx;
         let newY = origY + dy;
         const maxX = window.innerWidth - el.offsetWidth;
-        const maxY = getUsableInnerHeight() - el.offsetHeight;
+        const maxY = window.innerHeight - getSpBottomNavHeight() - el.offsetHeight;
         newX = Math.min(Math.max(0, newX), maxX);
         newY = Math.min(Math.max(0, newY), maxY);
         el.style.left = `${newX}px`;
@@ -7785,7 +7779,7 @@ popup._headerWheelHandler = onHeaderWheel;
         let newX = origX + dx;
         let newY = origY + dy;
         const maxX = window.innerWidth - el.offsetWidth;
-        const maxY = getUsableInnerHeight() - el.offsetHeight;
+        const maxY = window.innerHeight - getSpBottomNavHeight() - el.offsetHeight;
         newX = Math.min(Math.max(0, newX), maxX);
         newY = Math.min(Math.max(0, newY), maxY);
         el.style.left = `${newX}px`;
@@ -7900,7 +7894,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360; // match the minWidth style
         const minHeight = 240; // match the minHeight style
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = getUsableInnerHeight() - el.offsetTop;
+        const maxHeight = window.innerHeight - getSpBottomNavHeight() - el.offsetTop;
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -7919,7 +7913,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360;
         const minHeight = 240;
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = getUsableInnerHeight() - el.offsetTop;
+        const maxHeight = window.innerHeight - getSpBottomNavHeight() - el.offsetTop;
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -7933,11 +7927,8 @@ popup._headerWheelHandler = onHeaderWheel;
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
-          window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
-          setTimeout(() => {
-            window.lyricsPlusPopupIsResizing = false;
-          }, 200);
+          window.lyricsPlusPopupIsResizing = false;
         }
       };
 
@@ -7945,11 +7936,8 @@ popup._headerWheelHandler = onHeaderWheel;
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
-          window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
-          setTimeout(() => {
-            window.lyricsPlusPopupIsResizing = false;
-          }, 200);
+          window.lyricsPlusPopupIsResizing = false;
         }
       };
 
@@ -9593,11 +9581,30 @@ popup._headerWheelHandler = onHeaderWheel;
     if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
       return;
     }
-    const usableHeight = getUsableInnerHeight();
-    popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
-    popup.style.height = (usableHeight * window.lastProportion.h) + "px";
-    popup.style.left = (window.innerWidth * window.lastProportion.x) + "px";
-    popup.style.top = (usableHeight * window.lastProportion.y) + "px";
+
+    const minHeight = 240; // match the minHeight style / makeResizable's minHeight
+    const navHeight = getSpBottomNavHeight();
+    const availableBottom = window.innerHeight - navHeight;
+
+    let newWidth = window.innerWidth * window.lastProportion.w;
+    let newHeight = window.innerHeight * window.lastProportion.h;
+    let newLeft = window.innerWidth * window.lastProportion.x;
+    let newTop = window.innerHeight * window.lastProportion.y;
+
+    // Keep the popup's top on-screen above the nav bar first, then shrink
+    // height (never below minHeight) so top+height never lands underneath
+    // the nav bar. Same bound makeResizable/makeDraggable enforce live, so
+    // reapplying the saved proportion here can never snap the popup back to
+    // a taller/lower geometry than what the user just resized/dragged it to.
+    newTop = Math.min(newTop, Math.max(0, availableBottom - minHeight));
+    if (newTop + newHeight > availableBottom) {
+      newHeight = Math.max(minHeight, availableBottom - newTop);
+    }
+
+    popup.style.width = newWidth + "px";
+    popup.style.height = newHeight + "px";
+    popup.style.left = newLeft + "px";
+    popup.style.top = newTop + "px";
     popup.style.right = "auto";
     popup.style.bottom = "auto";
     popup.style.position = "fixed";
@@ -9605,12 +9612,11 @@ popup._headerWheelHandler = onHeaderWheel;
 
   function savePopupState(el) {
     const rect = el.getBoundingClientRect();
-    const usableHeight = getUsableInnerHeight();
     window.lastProportion = {
       w: rect.width / window.innerWidth,
-      h: rect.height / usableHeight,
+      h: rect.height / window.innerHeight,
       x: rect.left / window.innerWidth,
-      y: rect.top / usableHeight
+      y: rect.top / window.innerHeight
     };
     localStorage.setItem('lyricsPlusPopupProportion', JSON.stringify(window.lastProportion));
   }
