@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.49.dev
+// @version      17.50.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,7 +16,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
 
-// ADDED (17.49.dev): CHROMIUM PIP SEEK/PLAY/PAUSE BUTTONS VIA MEDIASESSION
+// ADDED (17.49): CHROMIUM PIP SEEK/PLAY/PAUSE BUTTONS VIA MEDIASESSION
 // Chromium's native video-PiP overlay draws play/pause/seek buttons from registered
 // navigator.mediaSession action handlers, not from whether pipVideo is actually seekable -
 // pipVideo is a MediaStream via canvas.captureStream(), which has no real seekable ranges
@@ -2784,6 +2784,19 @@ document.head.appendChild(buttonGroupScrollStyle);
         return;
       }
       updatePipCanvasSize();
+
+      // Previously syncPipMediaStateFromSpotify() only ran once at PiP-open time
+      // (enterpictureinpicture) and again right after the user clicked the PiP
+      // button itself (handlePipVideoPlay/Pause). That kept clicking the PiP
+      // button working, but the icon itself never got refreshed after a state
+      // change that didn't originate from that click - e.g. pausing via a
+      // keyboard media key, another device on the same Spotify Connect session,
+      // or a track ending - so the overlay's play/pause icon could silently
+      // drift out of sync with Spotify's actual state. drawPipFrame() already
+      // runs on an ongoing, throttled loop for as long as PiP is active (see
+      // startPipRenderLoop/PIP_FRAME_THROTTLE_MS), so it's a natural place to
+      // keep re-checking and correcting pipVideo's paused state to match.
+      syncPipMediaStateFromSpotify();
 
       const w = pipCanvas.width;
       const h = pipCanvas.height;
@@ -9766,12 +9779,33 @@ popup._headerWheelHandler = onHeaderWheel;
     DEBUG.debug('PopupResize', 'Resize handlers attached');
   }
 
-  // Listen for popup creation to hook the resizer
-  const popupResizeObserver = new MutationObserver(() => {
-    const popup = document.getElementById("lyrics-plus-popup");
-    if (popup) {
-      applyProportionToPopup(popup);
-      observePopupResize();
+  // Listen for popup creation to hook the resizer.
+  // IMPORTANT: this used to run on *every* childList mutation anywhere in
+  // document.body's subtree - which in a React SPA like Spotify (plus our own
+  // frequent icon/lyrics DOM updates) fires continuously, many times a second.
+  // Each firing unconditionally called applyProportionToPopup(), re-forcing the
+  // popup back to window.lastProportion's saved size/position. The isResizing/
+  // isDragging guards only cover the exact moment of an active drag, so the very
+  // next unrelated mutation right after you let go of a manual resize (or right
+  // after clicking restore) would snap the popup back to whatever proportion was
+  // saved *before* that action - looking exactly like "it auto-resizes back."
+  // Fix: only reapply the proportion when the popup element itself is actually
+  // being inserted into the DOM (real creation/recreation), not on unrelated
+  // page churn.
+  const popupResizeObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type !== 'childList') continue;
+      for (const node of mutation.addedNodes) {
+        if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        const inserted = node.id === 'lyrics-plus-popup'
+          ? node
+          : (node.querySelector && node.querySelector('#lyrics-plus-popup'));
+        if (inserted) {
+          applyProportionToPopup(inserted);
+          observePopupResize();
+          return;
+        }
+      }
     }
   });
   ResourceManager.registerObserver(popupResizeObserver, 'Popup resize observer');
