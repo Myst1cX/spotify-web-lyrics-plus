@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.51.dev
+// @version      17.48.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,105 +15,6 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
-
-// RESOLVED (17.51.dev): POPUP NO LONGER GETS DRAGGED BACK BY ITS OWN PARENT ON MOBILE
-// All prior fixes below were correct but incomplete - they only ever
-// touched the drag/resize math (makeDraggable, makeResizable,
-// applyProportionToPopup), all of which assume the popup's position:fixed
-// is fixed relative to the viewport. That assumption breaks if the popup
-// has an ancestor with a CSS transform (or filter/will-change:transform/
-// contain), which makes THAT ancestor the containing block instead - the
-// "fixed" element then moves with that ancestor rather than staying put on
-// screen. createPopup() appended the popup into .main-view-container -
-// Spotify's own scrollable app content pane - whenever it existed, only
-// falling back to document.body if it didn't. Mobile scroll panes commonly
-// use a transform for their scrolling/virtualization, and if
-// .main-view-container does here, any transform it applies (e.g. settling
-// after a touch interaction, or just Spotify re-rendering) would drag the
-// popup along with it, completely independent of anything in this script's
-// own drag/resize code - explaining why the revert survived every fix to
-// that code, hit both drag and resize equally, and only showed up on
-// mobile. Fix: the popup is now always appended directly to document.body.
-
-// RESOLVED (17.50.dev): POPUP NO LONGER REVERTS ON MOBILE AFTER TOUCH RESIZE OR DRAG
-// Two separate mobile-only bugs left over after 17.48.dev-17.49.dev below:
-//
-// 1. RESIZE: applyProportionToPopup's nav-bar clamp could shift `newTop`
-// upward, but live makeResizable never moves `top` during a resize (only
-// width/height change). After a resize, `top` is whatever it was before the
-// resize - possibly still the original default placement - so it could trip
-// this clamp in a way a live resize never would. Live drag can't trip it
-// (its own maxY bound already keeps top <= availableBottom - minHeight), so
-// this only ever surfaced after a resize. On desktop it was invisible (no
-// nav bar, and desktop rarely fires a window "resize" event after a mouse
-// gesture); on mobile both conditions flip - Spotifuck's nav bar exists, and
-// mobile browsers fire "resize" constantly right as a touch ends
-// (address-bar/viewport-chrome changes) - so the very next one yanked `top`
-// back, reading as an instant revert. Fix: the clamp now only ever shrinks
-// `newHeight`; it no longer touches `newTop`.
-//
-// 2. DRAG: makeResizable's startResize already called e.preventDefault() on
-// touchstart and set touchAction:"none" on its hit area, but makeDraggable's
-// touchstart handler and its handle (headerWrapper) did neither. Without
-// those, mobile browsers can interpret a drag as a native scroll/pan
-// underneath the popup, and can also replay a synthetic mouse event sequence
-// after touchend - both are typical causes of a drag visually tracking the
-// finger correctly, then snapping back the instant it's released. Fix:
-// headerWrapper now gets touchAction:"none", and its touchstart handler now
-// calls e.preventDefault(), matching what resize already did.
-
-// RESOLVED (17.48.dev-17.49.dev, combined): POPUP NAV-BAR AWARENESS + RESIZE/DRAG SNAP-BACK
-// Three related fixes to the popup's saved-position/size handling, all still
-// accurate as of this version:
-//
-// 1. UNAWARE OF THE NAV BAR: every place that computed how far the popup
-// could drag or resize used window.innerHeight as the bottom bound - correct
-// on desktop, but on Spotifuck's mobile UI mod (#sp-bottom-nav, a
-// fixed-position element this script has no control over) that bound sits
-// 56px too low, so the bottom of the popup (and the resize handle itself)
-// could end up rendered underneath the nav bar, invisible and unreachable.
-// Fix: added getSpBottomNavHeight() (reads #sp-bottom-nav's live rendered
-// height, 0 if it doesn't exist or isn't visible - so this script degrades
-// to its old desktop-only behavior whenever Spotifuck isn't running) and
-// subtracted it from every vertical bound: makeDraggable's maxY (both mouse
-// and touch), makeResizable's maxHeight (both mouse and touch), the
-// saved-proportion and .main-view-container-derived initial placements in
-// createPopup(), the bottom:87px last-resort fallback (now navHeight+8 when
-// the bar exists), and applyProportionToPopup's restore path.
-//
-// 2. RESIZE HAD NO DEBOUNCE: dragging already stamped
-// window.lyricsPlusPopupLastDragged on mouseup/touchend, which
-// applyProportionToPopup checks to stay quiet for TIMING.DRAG_DEBOUNCE_MS
-// (1500ms) after a drag ends. Resizing set window.lyricsPlusPopupIsResizing
-// = false on mouseup/touchend but never stamped any equivalent timestamp, so
-// the very next DOM mutation - and Spotify's own UI mutates constantly
-// (lyric highlighting, progress ticks, etc.) - let applyProportionToPopup
-// fire with zero grace period and re-apply whatever proportion happened to
-// be saved. Fix: added window.lyricsPlusPopupLastResized, stamped in both
-// onResizeMouseUp and onResizeTouchEnd, plus a matching
-// TIMING.RESIZE_DEBOUNCE_MS (1500ms) that applyProportionToPopup now also
-// honors - giving resize the same just-finished-interacting grace period
-// drag already had.
-//
-// 3. THE OBSERVER FIRED CONSTANTLY: a MutationObserver watching
-// document.body with childList+subtree used to call applyProportionToPopup
-// on every fire - which is essentially any DOM change anywhere on the page
-// (Spotify re-renders constantly: lyric highlighting, track changes,
-// unrelated UI). With #2's debounce in place this only mattered past the
-// 1500ms window, but past that window every fire force-wrote a rect that
-// could differ from what the user just set. Fix: removed the
-// applyProportionToPopup(popup) call from this observer entirely.
-// windowResizeHandler (bound to the real window "resize" event) already
-// covers the observer's one legitimate purpose - keeping proportion
-// consistent when the browser window actually resizes - so nothing outside
-// an actual drag, an actual resize, or an actual window resize touches the
-// popup's geometry now.
-//
-// NOTE: a fourth issue in this same area - applyProportionToPopup's
-// nav-bar clamp shifting `top` in a way live resize never does - was
-// diagnosed here but not actually fixed at the time; see 17.50.dev below
-// for that fix, which is what finally stopped the revert on mobile resize
-// specifically.
 
 // RESOLVED (17.47): REMOVED THE PERMANENT NOWPLAYINGVIEW-HIDING CSS (CONFLICTED WITH SPOTIFUCK)
 // This script used to inject a permanent style rule collapsing the
@@ -1058,7 +959,6 @@
     OPENCC_RETRY_DELAY_MS: 100,       // Initial delay for OpenCC initialization retries
     BUTTON_ADD_RETRY_MS: 1000,        // Delay between button injection attempts
     DRAG_DEBOUNCE_MS: 1500,           // Debounce time after dragging before auto-resize
-    RESIZE_DEBOUNCE_MS: 1500,         // Debounce time after resizing before auto-resize (same protection dragging already had - resizing never got its own timestamp, so proportion reapply could snap it back the instant a DOM mutation fired post-resize)
     PROGRESS_WATCH_DEBOUNCE_MS: 300,  // Debounce for progress bar watcher
   };
 
@@ -1483,7 +1383,6 @@
   window.lastProportion = { w: null, h: null };
   window.lyricsPlusPopupIsDragging = false;
   window.lyricsPlusPopupIsResizing = false;
-  window.lyricsPlusPopupLastResized = 0;
 
   // ------------------------
   // Resource Management & Cleanup System
@@ -1824,19 +1723,11 @@
     return Math.max(min, Math.min(max, val));
   }
 
-  // Height (in px) currently occupied by Spotifuck's mobile bottom nav bar
-  // (#sp-bottom-nav), or 0 if it doesn't exist / isn't actually visible.
-  // Used everywhere we compute how far the popup is allowed to drag/resize/
-  // restore-to, so the popup never ends up with content hidden underneath
-  // the nav bar. Read live (not cached) since the nav bar can be added,
-  // removed, or change size independently of the popup's own lifecycle.
-  function getSpBottomNavHeight() {
-    const nav = document.getElementById('sp-bottom-nav');
-    if (!nav) return 0;
-    const style = window.getComputedStyle(nav);
-    if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0) return 0;
-    const rect = nav.getBoundingClientRect();
-    return rect.height > 0 ? rect.height : 0;
+  // v17.48: space reserved at the bottom of the viewport by Spotifuck's nav/player
+  // (window.__spReservedInsets, published by spotifuck-mobile v7.10+). No Spotifuck,
+  // no reserved space to account for - falls straight back to 0, i.e. pre-fix behavior.
+  function getReservedBottomHeight() {
+    return window.__spReservedInsets?.bottom ?? 0;
   }
 
   function makeSafeFilename(str) {
@@ -5750,14 +5641,6 @@ const Providers = {
             width: window.innerWidth * proportion.w,
             height: window.innerHeight * proportion.h
           };
-          // Clamp against the bottom nav bar (may not have existed, or been
-          // a different height, when this proportion was last saved).
-          const navHeightAtLoad = getSpBottomNavHeight();
-          const availableBottomAtLoad = window.innerHeight - navHeightAtLoad;
-          pos.top = Math.min(pos.top, Math.max(0, availableBottomAtLoad - 240));
-          if (pos.top + pos.height > availableBottomAtLoad) {
-            pos.height = Math.max(240, availableBottomAtLoad - pos.top);
-          }
           DEBUG.debug('UI', 'Loaded saved popup proportion and converted to pixels', pos);
         }
       } catch {
@@ -5807,17 +5690,12 @@ const Providers = {
       shouldSaveDefaultPosition = true;
       let rect = getSpotifyLyricsContainerRect();
       if (rect) {
-        const navHeightForRect = getSpBottomNavHeight();
-        const availableBottomForRect = window.innerHeight - navHeightForRect;
-        const rectHeight = (rect.top + rect.height > availableBottomForRect)
-          ? Math.max(240, availableBottomForRect - rect.top)
-          : rect.height;
         Object.assign(popup.style, {
           position: "fixed",
           left: rect.left + "px",
           top: rect.top + "px",
           width: rect.width + "px",
-          height: rectHeight + "px",
+          height: rect.height + "px",
           minWidth: "360px",
           minHeight: "240px",
           backgroundColor: "#121212",
@@ -5836,11 +5714,9 @@ const Providers = {
         });
       } else {
         // fallback
-        const navHeightForDefault = getSpBottomNavHeight();
-        const defaultBottom = navHeightForDefault > 0 ? (navHeightForDefault + 8) : 87;
         Object.assign(popup.style, {
           position: "fixed",
-          bottom: defaultBottom + "px",
+          bottom: "87px",
           right: "0px",
           left: "auto",
           top: "auto",
@@ -5873,7 +5749,6 @@ const Providers = {
       zIndex: 10,
       cursor: "move",
       userSelect: "none",
-      touchAction: "none",
     });
 
     const header = document.createElement("div");
@@ -7815,17 +7690,12 @@ popup._headerWheelHandler = onHeaderWheel;
     popup.appendChild(controlsBar);
     popup.appendChild(progressWrapper);
 
-    // Always append to document.body, never into .main-view-container.
-    // Spotify's own app content pane (especially on mobile) can have a CSS
-    // transform on it or an ancestor - very common for scroll containers -
-    // which makes IT the containing block for any position:fixed descendant
-    // instead of the viewport. If the popup lives inside that pane, it stops
-    // being reliably "fixed" and instead moves with that pane's transform -
-    // so when the pane's transform settles/re-renders right after a touch
-    // gesture ends, the popup visibly snaps along with it, independent of
-    // anything makeDraggable/makeResizable/applyProportionToPopup do. Living
-    // directly under document.body removes this possibility entirely.
-    document.body.appendChild(popup);
+    const container = document.querySelector('.main-view-container');
+    if (container) {
+      container.appendChild(popup);
+    } else {
+      document.body.appendChild(popup);
+    }
 
     // Save initial state if using default position (not restored from saved state)
     if (shouldSaveDefaultPosition) {
@@ -7852,7 +7722,6 @@ popup._headerWheelHandler = onHeaderWheel;
       // Touch events
       handle.addEventListener("touchstart", (e) => {
         if (e.touches.length !== 1) return;
-        e.preventDefault();
         isDragging = true;
         window.lyricsPlusPopupIsDragging = true;
         startX = e.touches[0].clientX;
@@ -7870,7 +7739,7 @@ popup._headerWheelHandler = onHeaderWheel;
         let newX = origX + dx;
         let newY = origY + dy;
         const maxX = window.innerWidth - el.offsetWidth;
-        const maxY = window.innerHeight - getSpBottomNavHeight() - el.offsetHeight;
+        const maxY = (window.innerHeight - getReservedBottomHeight()) - el.offsetHeight;
         newX = Math.min(Math.max(0, newX), maxX);
         newY = Math.min(Math.max(0, newY), maxY);
         el.style.left = `${newX}px`;
@@ -7887,7 +7756,7 @@ popup._headerWheelHandler = onHeaderWheel;
         let newX = origX + dx;
         let newY = origY + dy;
         const maxX = window.innerWidth - el.offsetWidth;
-        const maxY = window.innerHeight - getSpBottomNavHeight() - el.offsetHeight;
+        const maxY = (window.innerHeight - getReservedBottomHeight()) - el.offsetHeight;
         newX = Math.min(Math.max(0, newX), maxX);
         newY = Math.min(Math.max(0, newY), maxY);
         el.style.left = `${newX}px`;
@@ -8002,7 +7871,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360; // match the minWidth style
         const minHeight = 240; // match the minHeight style
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = window.innerHeight - getSpBottomNavHeight() - el.offsetTop;
+        const maxHeight = (window.innerHeight - getReservedBottomHeight()) - el.offsetTop;
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -8021,7 +7890,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360;
         const minHeight = 240;
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = window.innerHeight - getSpBottomNavHeight() - el.offsetTop;
+        const maxHeight = window.innerHeight - el.offsetTop;
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -8035,7 +7904,6 @@ popup._headerWheelHandler = onHeaderWheel;
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
-          window.lyricsPlusPopupLastResized = Date.now();
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
@@ -8045,7 +7913,6 @@ popup._headerWheelHandler = onHeaderWheel;
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
-          window.lyricsPlusPopupLastResized = Date.now();
           savePopupState(el);
           window.lyricsPlusPopupIsResizing = false;
         }
@@ -9684,44 +9551,17 @@ popup._headerWheelHandler = onHeaderWheel;
     if (window.lyricsPlusPopupIsResizing || window.lyricsPlusPopupIgnoreProportion || window.lyricsPlusPopupIsDragging) {
       return;
     }
-    // Skip applying proportion if user has dragged or resized the popup recently
+    // Skip applying proportion if user has dragged the popup recently
     if (window.lyricsPlusPopupLastDragged && (Date.now() - window.lyricsPlusPopupLastDragged) < TIMING.DRAG_DEBOUNCE_MS) {
-      return;
-    }
-    if (window.lyricsPlusPopupLastResized && (Date.now() - window.lyricsPlusPopupLastResized) < TIMING.RESIZE_DEBOUNCE_MS) {
       return;
     }
     if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
       return;
     }
-
-    const minHeight = 240; // match the minHeight style / makeResizable's minHeight
-    const navHeight = getSpBottomNavHeight();
-    const availableBottom = window.innerHeight - navHeight;
-
-    let newWidth = window.innerWidth * window.lastProportion.w;
-    let newHeight = window.innerHeight * window.lastProportion.h;
-    let newLeft = window.innerWidth * window.lastProportion.x;
-    let newTop = window.innerHeight * window.lastProportion.y;
-
-    // Shrink height (never below minHeight) so top+height never lands
-    // underneath the nav bar - without moving `top` itself, since live
-    // makeResizable never moves `top` during a resize (only makeDraggable
-    // does). Moving `top` here used to disagree with a resize-only gesture
-    // that left `top` untouched, which is what caused the resize (but not
-    // drag) revert on mobile: after a resize, `top` is whatever it was
-    // before the resize - possibly still the default/initial placement -
-    // and could trip this clamp in a way a live resize handler never would.
-    // Drag can't trip it: live makeDraggable's own maxY bound already keeps
-    // top <= availableBottom - height <= availableBottom - minHeight.
-    if (newTop + newHeight > availableBottom) {
-      newHeight = Math.max(minHeight, availableBottom - newTop);
-    }
-
-    popup.style.width = newWidth + "px";
-    popup.style.height = newHeight + "px";
-    popup.style.left = newLeft + "px";
-    popup.style.top = newTop + "px";
+    popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
+    popup.style.height = (window.innerHeight * window.lastProportion.h) + "px";
+    popup.style.left = (window.innerWidth * window.lastProportion.x) + "px";
+    popup.style.top = (window.innerHeight * window.lastProportion.y) + "px";
     popup.style.right = "auto";
     popup.style.bottom = "auto";
     popup.style.position = "fixed";
@@ -9766,25 +9606,11 @@ popup._headerWheelHandler = onHeaderWheel;
     DEBUG.debug('PopupResize', 'Resize handlers attached');
   }
 
-  // Listen for popup creation to hook the (legacy) resizer mouseup tracking.
-  // IMPORTANT: this used to also call applyProportionToPopup(popup) here on
-  // every fire - but this observer watches document.body with
-  // childList+subtree, which fires on essentially *any* DOM change anywhere
-  // on the page (Spotify re-renders constantly: lyric highlighting, track
-  // changes, unrelated UI). Reapplying the saved proportion on every one of
-  // those, with only the short DRAG_DEBOUNCE_MS/RESIZE_DEBOUNCE_MS window
-  // protecting a just-finished gesture, meant the popup would snap back to
-  // window.lastProportion the moment the user paused for longer than that
-  // debounce - which reads as "it keeps resetting to the first-open size"
-  // since window.lastProportion is whatever was saved, not something tied to
-  // the current gesture. applyProportionToPopup's only real job is keeping
-  // proportion consistent when the actual browser window resizes -
-  // windowResizeHandler below already covers that correctly. Removed the
-  // call here entirely so nothing outside an actual window resize event can
-  // ever touch the popup's geometry again.
+  // Listen for popup creation to hook the resizer
   const popupResizeObserver = new MutationObserver(() => {
     const popup = document.getElementById("lyrics-plus-popup");
     if (popup) {
+      applyProportionToPopup(popup);
       observePopupResize();
     }
   });
