@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.48.dev
+// @version      17.49.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,7 +16,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
 
-// 17.47.dev + 17.48.dev - some fixees
+// 17.47.dev + 17.48.dev + 17.49.dev - some fixees
 
 // RESOLVED (17.47): REMOVED THE PERMANENT NOWPLAYINGVIEW-HIDING CSS (CONFLICTED WITH SPOTIFUCK)
 // This script used to inject a permanent style rule collapsing the
@@ -1725,22 +1725,37 @@
     return Math.max(min, Math.min(max, val));
   }
 
-  // Returns the lowest Y coordinate (viewport-relative) the popup is allowed
-  // to occupy - i.e. window.innerHeight, unless spotifuck-mobile's fixed
-  // #sp-bottom-nav bar is present and visible, in which case we stop at its
-  // top edge. Used by both the drag (move) and resize handlers, for mouse
-  // AND touch, so the popup can never end up rendered underneath/behind the
-  // bottom nav bar - which is what was leaving the resize handle visually
-  // "stuck" there after a single fast expand toward the bar.
-  function getPopupBottomBoundary() {
+  // spotifuck-mobile's #sp-bottom-nav is a fixed 56px bar pinned to the
+  // bottom of the viewport (see its CSS: position:fixed, bottom:0,
+  // height:56px). It never resizes or moves once created, so instead of
+  // re-measuring it on every mousemove/touchmove (which was cheap on its
+  // own, but meant drag/resize used a different "bottom of the world" than
+  // the proportion save/restore code below - THAT mismatch, not the
+  // measurement itself, was the actual source of the flash-back-on-release
+  // bug), we measure it once, cache it, and reuse the same number
+  // everywhere the popup's usable height is needed.
+  let cachedBottomNavHeight = null;
+  function getBottomNavHeight() {
+    if (cachedBottomNavHeight !== null) return cachedBottomNavHeight;
     const nav = document.getElementById('sp-bottom-nav');
     if (nav) {
       const rect = nav.getBoundingClientRect();
       if (rect.height > 0 && rect.width > 0) {
-        return rect.top;
+        cachedBottomNavHeight = rect.height;
+        return cachedBottomNavHeight;
       }
     }
-    return window.innerHeight;
+    return 0; // not created/visible yet - treat as no obstruction, don't cache
+  }
+
+  // The single source of truth for "how much vertical viewport can the
+  // popup actually use". Every place that positions or sizes the popup
+  // (drag, resize, save-proportion, restore-proportion, window-resize
+  // restore) must go through this - never window.innerHeight directly -
+  // so they can never disagree with each other about where the bottom of
+  // the usable area is.
+  function getUsableInnerHeight() {
+    return window.innerHeight - getBottomNavHeight();
   }
 
   function makeSafeFilename(str) {
@@ -5648,11 +5663,12 @@ const Providers = {
         const proportion = JSON.parse(savedProportion);
         // Convert proportions to absolute pixel values for initial positioning
         if (proportion.w !== undefined && proportion.h !== undefined && proportion.x !== undefined && proportion.y !== undefined) {
+          const usableHeight = getUsableInnerHeight();
           pos = {
             left: window.innerWidth * proportion.x,
-            top: window.innerHeight * proportion.y,
+            top: usableHeight * proportion.y,
             width: window.innerWidth * proportion.w,
-            height: window.innerHeight * proportion.h
+            height: usableHeight * proportion.h
           };
           DEBUG.debug('UI', 'Loaded saved popup proportion and converted to pixels', pos);
         }
@@ -7752,7 +7768,7 @@ popup._headerWheelHandler = onHeaderWheel;
         let newX = origX + dx;
         let newY = origY + dy;
         const maxX = window.innerWidth - el.offsetWidth;
-        const maxY = getPopupBottomBoundary() - el.offsetHeight;
+        const maxY = getUsableInnerHeight() - el.offsetHeight;
         newX = Math.min(Math.max(0, newX), maxX);
         newY = Math.min(Math.max(0, newY), maxY);
         el.style.left = `${newX}px`;
@@ -7769,7 +7785,7 @@ popup._headerWheelHandler = onHeaderWheel;
         let newX = origX + dx;
         let newY = origY + dy;
         const maxX = window.innerWidth - el.offsetWidth;
-        const maxY = getPopupBottomBoundary() - el.offsetHeight;
+        const maxY = getUsableInnerHeight() - el.offsetHeight;
         newX = Math.min(Math.max(0, newX), maxX);
         newY = Math.min(Math.max(0, newY), maxY);
         el.style.left = `${newX}px`;
@@ -7884,7 +7900,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360; // match the minWidth style
         const minHeight = 240; // match the minHeight style
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = getPopupBottomBoundary() - el.offsetTop;
+        const maxHeight = getUsableInnerHeight() - el.offsetTop;
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -7903,7 +7919,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const minWidth = 360;
         const minHeight = 240;
         const maxWidth = window.innerWidth - el.offsetLeft;
-        const maxHeight = getPopupBottomBoundary() - el.offsetTop;
+        const maxHeight = getUsableInnerHeight() - el.offsetTop;
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -9577,10 +9593,11 @@ popup._headerWheelHandler = onHeaderWheel;
     if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
       return;
     }
+    const usableHeight = getUsableInnerHeight();
     popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
-    popup.style.height = (window.innerHeight * window.lastProportion.h) + "px";
+    popup.style.height = (usableHeight * window.lastProportion.h) + "px";
     popup.style.left = (window.innerWidth * window.lastProportion.x) + "px";
-    popup.style.top = (window.innerHeight * window.lastProportion.y) + "px";
+    popup.style.top = (usableHeight * window.lastProportion.y) + "px";
     popup.style.right = "auto";
     popup.style.bottom = "auto";
     popup.style.position = "fixed";
@@ -9588,11 +9605,12 @@ popup._headerWheelHandler = onHeaderWheel;
 
   function savePopupState(el) {
     const rect = el.getBoundingClientRect();
+    const usableHeight = getUsableInnerHeight();
     window.lastProportion = {
       w: rect.width / window.innerWidth,
-      h: rect.height / window.innerHeight,
+      h: rect.height / usableHeight,
       x: rect.left / window.innerWidth,
-      y: rect.top / window.innerHeight
+      y: rect.top / usableHeight
     };
     localStorage.setItem('lyricsPlusPopupProportion', JSON.stringify(window.lastProportion));
   }
