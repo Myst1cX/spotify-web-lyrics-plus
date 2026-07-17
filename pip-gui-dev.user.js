@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Stable
+// @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.48
+// @version      17.48.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -12,11 +12,11 @@
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
 
-// RESOLVED (17.48): POPUP NOW STOPS SHORT OF SPOTIFUCK'S BOTTOM NAV/PLAYER STRIP ON MOBILE
+// RESOLVED (17.48.dev): POPUP NOW STOPS SHORT OF SPOTIFUCK'S BOTTOM NAV/PLAYER STRIP ON MOBILE
 // Spotifuck's mobile nav+player sits fixed at the bottom of the screen, but this script had
 // no idea that strip existed, so the popup could be dragged, resized, or restored into a
 // saved position that overlapped or hid underneath it.
