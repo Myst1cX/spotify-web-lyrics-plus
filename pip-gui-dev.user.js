@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.48.dev
+// @version      17.49.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,30 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
+
+// RESOLVED (17.49.dev): POPUP NO LONGER SNAPS BACK TO ITS SAVED SIZE/POSITION AFTER EVERY DRAG/RESIZE
+// 17.48 added a resize debounce to match drag's, but the reset kept
+// happening on both mouse and touch regardless. Root cause: this
+// MutationObserver + applyProportionToPopup pairing already existed
+// unchanged before 17.48 and fired just as constantly, but was harmless -
+// reapplying a just-saved proportion is a no-op round trip (pixels ->
+// proportion -> pixels gives the same pixels back) as long as nothing else
+// changes. 17.48's nav-bar clamp broke that round trip (see the ADDENDUM on
+// 17.48 above) by letting the restore path reposition `top` in a way the
+// live resize/drag handlers never do, so the two paths could disagree on
+// where the popup should be for the same saved proportion. Once reapplying
+// stopped being a no-op, this observer's constant firing - and Spotify's own
+// UI re-renders constantly (lyric highlighting every HIGHLIGHT_INTERVAL_MS,
+// track changes, unrelated UI elsewhere on the page) - started actually
+// mattering: every fire past the DRAG_DEBOUNCE_MS/RESIZE_DEBOUNCE_MS window
+// force-wrote a rect that could differ from what the user just set, reading
+// as "it keeps resetting to the first size it opened at". Fix: removed the applyProportionToPopup(popup) call
+// from this observer entirely. Its only legitimate purpose is keeping the
+// popup's proportion consistent when the actual browser window resizes -
+// windowResizeHandler (bound to the real window "resize" event) already
+// does exactly that. Now nothing touches the popup's geometry outside of an
+// actual drag, an actual resize, or an actual window resize - a real DOM
+// mutation elsewhere on the page can no longer touch it at all.
 
 // RESOLVED (17.48.dev): POPUP CAN NO LONGER BE DRAGGED/RESIZED UNDERNEATH SPOTIFUCK'S MOBILE BOTTOM NAV, AND FIXED A RESIZE SNAP-BACK
 // Two related fixes, both about the popup's on-screen bounds when Spotifuck's
@@ -35,6 +59,22 @@
 // .main-view-container-derived initial placements in createPopup(), the
 // bottom:87px last-resort fallback (now navHeight+8 when the bar exists),
 // and applyProportionToPopup's restore path.
+//
+// ADDENDUM (added in 17.49, kept here since it's about this fix specifically):
+// the clamp added to applyProportionToPopup's restore path above didn't just
+// cap height - it could also shift `top` upward (`newTop = Math.min(newTop,
+// availableBottom - minHeight)`) to keep the popup clear of the nav bar. The
+// live drag/resize handlers never move `top` during a resize (dragging the
+// bottom-right corner only ever changes width/height; the top-left anchor
+// stays put) - so this clamp path and the live-resize path could disagree on
+// the popup's rect for the exact same saved proportion. That asymmetry is
+// what turned applyProportionToPopup's re-invocation (see 17.49) from a
+// harmless no-op into a real visible snap. WATCH FOR THIS: any future clamp
+// added to applyProportionToPopup/createPopup's restore paths needs to
+// derive the *same* rect the live drag/resize handlers would have produced -
+// if a "restore" path can reposition an axis a "live interaction" path never
+// touches, the two will eventually disagree and the popup will visibly jump
+// the next time anything reapplies the saved proportion.
 //
 // 2. RESIZING THEN SNAPPING BACK: independent of the above, resizing had a
 // long-standing gap that dragging didn't - onDragMouseUp/onDragTouchEnd
@@ -9692,11 +9732,25 @@ popup._headerWheelHandler = onHeaderWheel;
     DEBUG.debug('PopupResize', 'Resize handlers attached');
   }
 
-  // Listen for popup creation to hook the resizer
+  // Listen for popup creation to hook the (legacy) resizer mouseup tracking.
+  // IMPORTANT: this used to also call applyProportionToPopup(popup) here on
+  // every fire - but this observer watches document.body with
+  // childList+subtree, which fires on essentially *any* DOM change anywhere
+  // on the page (Spotify re-renders constantly: lyric highlighting, track
+  // changes, unrelated UI). Reapplying the saved proportion on every one of
+  // those, with only the short DRAG_DEBOUNCE_MS/RESIZE_DEBOUNCE_MS window
+  // protecting a just-finished gesture, meant the popup would snap back to
+  // window.lastProportion the moment the user paused for longer than that
+  // debounce - which reads as "it keeps resetting to the first-open size"
+  // since window.lastProportion is whatever was saved, not something tied to
+  // the current gesture. applyProportionToPopup's only real job is keeping
+  // proportion consistent when the actual browser window resizes -
+  // windowResizeHandler below already covers that correctly. Removed the
+  // call here entirely so nothing outside an actual window resize event can
+  // ever touch the popup's geometry again.
   const popupResizeObserver = new MutationObserver(() => {
     const popup = document.getElementById("lyrics-plus-popup");
     if (popup) {
-      applyProportionToPopup(popup);
       observePopupResize();
     }
   });
