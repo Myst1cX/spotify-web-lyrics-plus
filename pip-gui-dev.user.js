@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Dev
+// @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.47.dev
+// @version      17.48.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -12,11 +12,11 @@
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// 17.47.dev - some fixin
+// 17.47.dev + 17.48.dev - some fixees
 
 // RESOLVED (17.47): REMOVED THE PERMANENT NOWPLAYINGVIEW-HIDING CSS (CONFLICTED WITH SPOTIFUCK)
 // This script used to inject a permanent style rule collapsing the
@@ -7917,8 +7917,11 @@ popup._headerWheelHandler = onHeaderWheel;
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
+          window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
-          window.lyricsPlusPopupIsResizing = false;
+          setTimeout(() => {
+            window.lyricsPlusPopupIsResizing = false;
+          }, 200);
         }
       };
 
@@ -7926,8 +7929,11 @@ popup._headerWheelHandler = onHeaderWheel;
         if (isResizing) {
           isResizing = false;
           document.body.style.userSelect = "";
+          window.lyricsPlusPopupLastDragged = Date.now();
           savePopupState(el);
-          window.lyricsPlusPopupIsResizing = false;
+          setTimeout(() => {
+            window.lyricsPlusPopupIsResizing = false;
+          }, 200);
         }
       };
 
