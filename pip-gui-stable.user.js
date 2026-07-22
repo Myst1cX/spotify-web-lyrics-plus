@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.49.revert
+// @version      17.50
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,6 +16,23 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (17.50): CORNER RESIZE HANDLE COULD STILL DRAG THE POPUP SLIGHTLY UNDER THE RESERVED STRIP
+// Bug: dragging the popup's corner resize arrow could shrink it a few pixels too far
+// and let its bottom edge poke under Spotifuck's bottom nav/player strip.
+// Why: the resize code has two rules - "never shrink below 240px tall" and "never go
+// past the reserved strip." Normally these don't conflict. But if the popup was
+// already sitting low on screen, there could be LESS than 240px of room left above
+// the strip. When that happened, the code picked the wrong rule: it forced the popup
+// to be 240px tall anyway, even though that meant poking under the strip.
+// Fix: the 240px minimum is now smart about how much room is actually available.
+// It only enforces 240px when there's at least 240px of space. If there's less room
+// than that, it just uses whatever space is actually there instead of forcing 240px
+// regardless. Changed in both onResizeMouseMove and onResizeTouchMove (mouse and
+// touch resizing).
+// Scope: only touches the two resize handlers. The shared clamp() helper used
+// elsewhere in the file (scroll fractions, playback position, horizontal scroll) is
+// completely untouched, so this can't affect anything outside of resizing the popup.
+//
 // RESOLVED (17.49): FRESH POPUP OPEN / RESTORE DEFAULT COULD STILL LAND UNDER THE RESERVED STRIP AFTER 17.48
 // 17.48 added getReservedBottomHeight() clamping to the drag clamp, resize clamp, both
 // fallback default-position spots, and applyProportionToPopup() (window resize / live
@@ -7920,9 +7937,16 @@ popup._headerWheelHandler = onHeaderWheel;
         let newHeight = startHeight + dy;
 
         const minWidth = 360; // match the minWidth style
-        const minHeight = 240; // match the minHeight style
         const maxWidth = window.innerWidth - el.offsetLeft;
         const maxHeight = (window.innerHeight - getReservedBottomHeight()) - el.offsetTop;
+        // Cap minHeight to whatever room is actually left above the reserved
+        // strip. Normally 240 (matches the minHeight style), but if the popup's
+        // top position leaves less than that, maxHeight < 240 - and clamp()
+        // assumes min <= max, so feeding it 240 here would make it silently
+        // snap back up past maxHeight and push the bottom edge under the strip.
+        // Capping the bound itself (not clamp()) keeps clamp()'s behavior
+        // untouched for every other call site.
+        const minHeight = Math.max(0, Math.min(240, maxHeight));
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
@@ -7939,9 +7963,11 @@ popup._headerWheelHandler = onHeaderWheel;
         let newHeight = startHeight + dy;
 
         const minWidth = 360;
-        const minHeight = 240;
         const maxWidth = window.innerWidth - el.offsetLeft;
         const maxHeight = (window.innerHeight - getReservedBottomHeight()) - el.offsetTop;
+        // Same fix as onResizeMouseMove above - cap minHeight to maxHeight
+        // instead of touching clamp() itself.
+        const minHeight = Math.max(0, Math.min(240, maxHeight));
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
