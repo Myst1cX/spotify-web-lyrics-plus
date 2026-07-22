@@ -1,125 +1,102 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Dev
+// @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.54.dev
+// @version      17.51
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
 // @match        *://open.spotify.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
+// @grant        GM_setValue
+// @grant        GM_getValue
 // @connect      genius.com
+// @connect      raw.githubusercontent.com
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.54.dev): "RESTORE DEFAULT POSITION" COULD LAND WITH THE POPUP'S BOTTOM
-// EDGE COVERING THE PLAYER (most visible on /search, but the same gap exists on any
-// route where .main-view-container's rect runs deep enough)
-// 17.53 switched getReservedBottomHeight() to bottomNav-only (56px) for every clamp site,
-// including createPopup()'s container-rect fallback branch and the "Restore Default
-// Position and Size" button - both of which clamp .main-view-container's own rect. That
-// rect isn't bounded by Spotifuck's clip CSS, so on routes where it runs deep (confirmed
-// on /search; home page's rect happens to be shallower, which is why restore looked fine
-// there) clamping against only 56px still let the popup's bottom edge land on top of the
-// player instead of stopping above it.
-// Fix: kept drag, resize, and reservedInsetsChangeHandler on the nav-only figure - that
-// part of 17.53 was correct, manually dragging/resizing over the player is intentional.
-// Added getReservedBottomHeightForRestore(), which reads the combined nav+player `bottom`
-// figure instead, and pointed only the two container-rect restore sites (createPopup()'s
-// fallback branch, the reset button) at it, so restoring to default never lands on the
-// player on any route - matching how restore always behaved before 17.53.
+// RESOLVED (17.51): ADDED AN UPDATE-AVAILABLE BANNER FOR USERS WHO NEVER UPDATE MANUALLY
+// Users without auto-update enabled in Tampermonkey/Violentmonkey could sit on old
+// versions indefinitely with no prompt to update.
+// Fix: new self-contained updateChecker() IIFE runs once per page load (throttled to
+// once every 6h via GM_setValue/GM_getValue) and fetches the raw @updateURL file from
+// GitHub, comparing its @version against GM_info.script.version. If a newer version is
+// found, a dismissible green banner appears at the top of the page with an "Update now"
+// link that opens the raw .user.js URL in a new tab - Tampermonkey/Violentmonkey
+// recognize the URL and open their own install/update confirmation dialog automatically.
+// Dismissing the banner remembers that version (GM_setValue) so it won't reappear until
+// a newer one ships. Required two new grants (GM_setValue, GM_getValue - previously
+// unused in this script) and one new @connect entry for raw.githubusercontent.com.
 
-// RESOLVED (17.53.dev): DRAG/RESIZE/RESTORE CLAMP RESERVED THE PLAYER'S HEIGHT TOO, NOT
-// JUST THE BOTTOM NAV BAR - POPUP COULDN'T BE DRAGGED OR RESIZED PAST THE TOP OF THE PLAYER
-// getReservedBottomHeight() read window.__spReservedInsets.bottom, which Spotifuck computed
-// as the bottom nav bar's fixed 56px PLUS the now-playing player's own height. Clamping
-// against that combined figure meant the popup could never cover the player at all - drag,
-// resize, and restore all stopped dead at the player's top edge, even though only the bottom
-// nav bar underneath it actually needs to stay clear.
-// Fix: Spotifuck v7.13 now also publishes bottomNav (just the fixed 56px nav bar, player
-// excluded) alongside the existing combined bottom. getReservedBottomHeight() now reads
-// bottomNav first and only falls back to the old combined bottom if bottomNav isn't present
-// (talking to a pre-7.13 Spotifuck), so nothing breaks for anyone who hasn't updated both
-// scripts together. Every clamp site in this script (drag, resize, both createPopup()
-// branches, the reset button, applyProportionToPopup(), reservedInsetsChangeHandler) reads
-// through this one function, so this single change is enough - the popup can now be dragged,
-// resized, or restored right over the player; only the bottom nav bar itself stays off-limits.
-// Companion fix required on Spotifuck's side (its own changelog, v7.13) - both ends of the
-// handshake have to agree on which figure is being reserved.
+// RESOLVED (17.50): INACTIVE/CONTEXT LYRIC LINES LOOKED NOTICEABLY BLURRIER ON MOBILE THAN ON PC
+// Dimmed inactive lines (both the non-active context lines in synced view and unsynced
+// lyrics, which share the same styling path) were meant to get only a light blur, but on
+// phones they came out visibly blurrier than the same code produced on desktop.
+// Not a platform-specific bug - the styling code is identical on both, there was no
+// isMobile branch or media query anywhere. The cause: the blur was a fixed
+// `blur(0.7px)`, and that "0.7px" is a CSS pixel, not a physical screen pixel. Phones
+// commonly render at devicePixelRatio 2-3, while most desktop monitors sit at ~1, so the
+// same nominal 0.7px blur radius covered roughly 2-3x more actual device pixels on a
+// phone than on a desktop - a much bigger fraction of each thin, high-DPI glyph stroke,
+// which read as noticeably stronger blur.
+// Fix: added a single shared INACTIVE_LINE_BLUR constant, computed once as
+// `blur(${(0.7 / devicePixelRatio).toFixed(2)}px)`, so the blur radius scales back down
+// on high-DPR screens instead of silently growing on them. Replaces all 6 places that
+// previously hardcoded "blur(0.7px)" directly: the two sub-line (transliteration/
+// translation) filters in updateSubLines(), the two main synced-line filters in
+// highlightSyncedLyrics() (the "no active line" branch and the per-line inactive
+// branch), and the two unsynced-lyrics line-construction sites. All 6 now stay in sync
+// automatically since they read from one constant instead of six separate literals.
 
-// RESOLVED (17.52.dev): SYNCED LYRICS COULD VISIBLY JITTER/BOUNCE LINE-TO-LINE WHILE PLAYING
-// highlightSyncedLyrics()'s setInterval ticks every 50ms (TIMING.HIGHLIGHT_INTERVAL_MS), but
-// it was reassigning every <p>'s color/fontWeight/scale/filter/opacity AND calling
-// activeP.scrollIntoView({behavior:"smooth", block:"center"}) on every single tick, even
-// when the active line hadn't changed since the last one. Two effects compounded: (1) each
-// scrollIntoView call restarted a fresh smooth-scroll animation on top of the one from 50ms
-// earlier that hadn't finished yet, and (2) reassigning fontWeight/transform on the active
-// line every tick caused a small reflow that nudged where "center" actually was by a pixel
-// or two each time. The popup ended up chasing a slightly different scroll target 20 times a
-// second instead of settling once, which is what looked like lines bouncing up/down.
-// Fix: added lastActiveIndex tracking so the style pass and the scrollIntoView call only run
-// when activeIndex has actually changed since the previous tick - once per line, not once
-// per 50ms.
-
-// RESOLVED (17.51.dev): COMPACT -> FULL PLAYER CYCLE COULD PUSH THE POPUP (AND ITS
-// HEADER/RESTORE BUTTON) OFF THE TOP OF THE SCREEN
-// Repro: open the lyrics popup, switch Spotifuck's player to compact, then back to full.
-// applyProportionToPopup() recomputes both height and top from the saved
-// window.lastProportion every time it re-clamps (on window resize and on
-// sp-reserved-insets-change), but it only clamped top DOWNWARD against maxTop - it never
-// clamped height itself, and never floored top at 0. When the reserved bottom strip grew
-// back to its full size (player full again) after the proportion was saved against a
-// smaller/zero reserved height (player compact), maxTop went negative and top followed it
-// negative too, shifting the whole popup - header included - above the visible viewport.
-// The popup wasn't actually "expanding"; it was being shoved upward off-screen, taking the
-// Restore Default Position and Size button with it, so there was no way to click back to a
-// sane position.
-// Fix: applyProportionToPopup() now clamps height to the currently available space
-// (window.innerHeight - getReservedBottomHeight()) before computing maxTop from it, and
-// floors the resulting top at 0. Matches the clamping already done in the drag/resize
-// clamps, the reset button, and reservedInsetsChangeHandler - this was the one clamp site
-// that hadn't caught up.
-
-// RESOLVED (17.50.dev): SPOTIFUCK'S __spReservedInsets NEVER ACTUALLY REACHED THIS SCRIPT
-// Root cause: this script and Spotifuck both use @grant, which puts each userscript in its
-// own sandboxed JS context under Tampermonkey/Violentmonkey. Plain `window` is a per-script
-// object in that sandbox, not the real shared page global - so Spotifuck assigning
-// window.__spReservedInsets in its sandbox never showed up on this script's window.
-// Confirmed via diagnostic logging: getReservedBottomHeight() read 0 and
-// window.__spReservedInsets was undefined on every single resize, meaning all the existing
-// 17.49 clamp logic was already correct - it just never had a real reserved value to clamp
-// against, so the popup always thought it had the full window height available.
-// Fix: getReservedBottomHeight() and the sp-reserved-insets-change listener now go through
-// unsafeWindow (the actual page global both sandboxes wrap) instead of window, falling back
-// to window if unsafeWindow isn't exposed. registerWindowListener() gained an optional
-// target parameter so this one listener can attach to unsafeWindow while every other
-// listener (resize, etc.) stays on the sandboxed window as before. Nothing else changed -
-// same clamp math, same drag/resize/restore behavior as 17.49, just with a real reserved
-// value feeding into it. Companion fix required on Spotifuck's side (its own changelog,
-// v7.12) - both ends of the handshake have to agree on which window they're using.
-
-// RESOLVED (17.49.dev): FRESH POPUP OPEN / RESTORE DEFAULT COULD STILL LAND UNDER THE RESERVED STRIP AFTER 17.48
-// 17.48 added getReservedBottomHeight() clamping to the drag clamp, resize clamp, both
-// fallback default-position spots, and applyProportionToPopup() (window resize / live
-// sp-reserved-insets-change re-clamp) - but missed two spots that both position the popup
-// straight off .main-view-container's own getBoundingClientRect() with no clamp at all:
-// createPopup()'s container-rect branch (used on first-ever open, before any proportion has
-// been saved) and the "Restore Default Position and Size" button's identical container-rect
-// branch. .main-view-container isn't the element Spotifuck's clip CSS actually resizes, so
-// its rect can still extend under the reserved strip. Restore appeared fine in prior testing,
-// but only because that testing wasn't on a fresh install - same code path, same gap.
-// Fix: both branches now clamp top the same way the saved-proportion branch does.
-// Also fixed: createPopup()'s saved-proportion restore path (used every open after the first)
-// recomputed top/height from the saved proportion independently instead of going through
-// applyProportionToPopup(), so it skipped that function's clamp too - if the reserved bottom
-// height grew (e.g. Spotifuck's player expanded) after the proportion was last saved but
-// before the Lyrics+ button was next clicked, the popup could open already parked under the
-// strip, with nothing to reclamp it until the next drag/resize/reserved-insets-change.
-// createPopup()'s saved-proportion branch now clamps pos.top the same way too.
+// RESOLVED (17.49):
+// • POPUP CLAMPING OVERHAULED TO RESPECT SPOTIFUCK'S RESERVED SCREEN SPACE PROPERLY -
+//   PLAYER, BOTTOM NAV, AND SEARCH HEADER ALL HANDLED CORRECTLY, ON EVERY OPEN/DRAG/
+//   RESIZE/RESTORE PATH
+//   17.48 introduced getReservedBottomHeight() to keep the popup off Spotifuck's fixed
+//   mobile bottom strip, but it only reached window.__spReservedInsets - a value that
+//   never actually arrives, since @grant sandboxes each userscript into its own JS
+//   context and plain `window` isn't the real shared page global. It also read a single
+//   combined nav+player figure everywhere, which meant the popup could never be dragged
+//   or resized over the player at all, and it wasn't applied to every site that
+//   positions the popup - createPopup()'s first-open/container-rect branch, its
+//   saved-proportion restore branch, and the "Restore Default Position and Size" button
+//   could all still land the popup under the reserved strip.
+//   Fix: getReservedBottomHeight() and the sp-reserved-insets-change listener now read
+//   through unsafeWindow (falling back to window if it isn't exposed), which is the
+//   actual page global both sandboxes wrap - registerWindowListener() gained an optional
+//   target parameter so this one listener can attach there while every other listener
+//   stays on the sandboxed window. Spotifuck now publishes bottomNav (just the fixed
+//   56px nav bar) separately from the old combined bottom (nav+player); every
+//   drag/resize/proportion-reclamp site reads bottomNav first so the popup can be
+//   manually parked over the player, falling back to the combined figure for any older
+//   Spotifuck that hasn't updated. The two restore-to-default sites (createPopup()'s
+//   container-rect fallback, the reset button) intentionally use a separate
+//   getReservedBottomHeightForRestore(), which prefers the combined nav+player figure, so
+//   restoring to default never lands on top of the player even though manual drag/resize
+//   is allowed to. A new getReservedTopHeight() reads Spotifuck's #global-nav-bar element
+//   directly (0 when it isn't shown) so those same two restore sites also stay clear of
+//   the search header on /search. Every clamp site - drag, resize, both createPopup()
+//   branches, the reset button, applyProportionToPopup() (window resize and live
+//   sp-reserved-insets-change re-clamps), and reservedInsetsChangeHandler - now clamps
+//   height to the actual available space between whichever top/bottom reserves apply
+//   before deriving top from that already-shrunk height, so the popup shrinks to fit
+//   instead of being pushed off-screen or over the header/player when reserved space
+//   changes (e.g. the player cycling between compact and full). Requires Spotifuck
+//   v7.12+ to publish bottomNav; older Spotifuck versions still work, just more
+//   conservative about how close the popup can get to the player.
+// • SYNCED LYRICS NO LONGER JITTER/BOUNCE LINE-TO-LINE WHILE PLAYING
+//   highlightSyncedLyrics()'s setInterval tick (every 50ms) reassigned every line's
+//   color/fontWeight/scale/filter/opacity and called
+//   activeP.scrollIntoView({behavior:"smooth", block:"center"}) on every tick, even when
+//   the active line hadn't changed since the last one - restarting the smooth-scroll
+//   animation and nudging layout 20 times a second instead of settling once, which read
+//   as the lyrics bouncing up/down.
+//   Fix: added lastActiveIndex tracking so the style pass and scrollIntoView only run
+//   once, when the active line actually changes.
 
 // RESOLVED (17.48): POPUP NOW STOPS SHORT OF SPOTIFUCK'S BOTTOM NAV/PLAYER STRIP ON MOBILE
 // Spotifuck's mobile nav+player sits fixed at the bottom of the screen, but this script had
@@ -997,6 +974,78 @@
 // deezer.js with api link > https://github.com/bertigert/Deezer-Lyrics-Sync/blob/main/lyrics_sync.user.js
 // Fix and uncomment Netease provider; api implementation example: https://github.com/Natoune/SpotifyMobileLyricsAPI/blob/main/src%2Ffetchers.ts
 
+// ============================================================
+// UPDATE CHECKER
+// Polls the raw GitHub file for a newer @version than the one
+// currently installed. If found, shows a dismissible banner with
+// a one-click link that opens Tampermonkey's install/update page.
+// Throttled via GM_setValue so it only hits GitHub once per
+// CHECK_INTERVAL_MS, not on every page load.
+// ============================================================
+(function updateChecker() {
+  'use strict';
+
+  const RAW_URL = 'https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js';
+  const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // don't spam GitHub - check at most every 6h
+  const STORE_PREFIX = 'updChk_' + GM_info.script.name.replace(/\s+/g, '_') + '_';
+
+  const now = Date.now();
+  const lastCheck = GM_getValue(STORE_PREFIX + 'lastCheck', 0);
+  if (now - lastCheck < CHECK_INTERVAL_MS) return;
+  GM_setValue(STORE_PREFIX + 'lastCheck', now);
+
+  function cmpVersions(a, b) {
+    const pa = a.split('.').map(Number);
+    const pb = b.split('.').map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const na = pa[i] || 0, nb = pb[i] || 0;
+      if (na !== nb) return na - nb;
+    }
+    return 0;
+  }
+
+  function showBanner(remoteVersion) {
+    if (document.getElementById('updchk-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'updchk-banner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;' +
+      'background:#1db954;color:#000;font:600 13px/1.4 -apple-system,Helvetica,Arial,sans-serif;' +
+      'padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:14px;' +
+      'box-shadow:0 2px 10px rgba(0,0,0,.5);';
+    banner.innerHTML =
+      '<span>' + GM_info.script.name + ' update available (v' + remoteVersion + ') - ' +
+      '<a href="#" id="updchk-go" style="color:#000;text-decoration:underline;font-weight:800;">Update now</a></span>' +
+      '<span id="updchk-dismiss" style="cursor:pointer;opacity:.65;font-weight:800;padding:0 4px;">✕</span>';
+    (document.body || document.documentElement).appendChild(banner);
+
+    banner.querySelector('#updchk-go').addEventListener('click', function (e) {
+      e.preventDefault();
+      window.open(RAW_URL, '_blank'); // Tampermonkey/Violentmonkey intercepts .user.js URLs and opens the install/update dialog
+      banner.remove();
+    });
+    banner.querySelector('#updchk-dismiss').addEventListener('click', function () {
+      GM_setValue(STORE_PREFIX + 'dismissed', remoteVersion);
+      banner.remove();
+    });
+  }
+
+  GM_xmlhttpRequest({
+    method: 'GET',
+    url: RAW_URL + '?_=' + now, // cache-bust the raw.githubusercontent.com CDN
+    onload: function (res) {
+      const m = res.responseText.match(/@version\s+([\d.]+)/);
+      if (!m) return;
+      const remoteVersion = m[1];
+      const currentVersion = GM_info.script.version;
+      if (cmpVersions(remoteVersion, currentVersion) <= 0) return;
+      if (GM_getValue(STORE_PREFIX + 'dismissed', '') === remoteVersion) return;
+      // wait for body if this ran at document-start
+      if (document.body) showBanner(remoteVersion);
+      else document.addEventListener('DOMContentLoaded', function () { showBanner(remoteVersion); }, { once: true });
+    }
+  });
+})();
+
 (function () {
   'use strict';
 
@@ -1015,6 +1064,18 @@
   // the lyric, less saturated/opaque than the translation - since transliteration
   // ranks just below the lyric itself but above translation in importance.
   const TRANSLITERATION_ACTIVE_COLOR = 'rgba(45, 205, 100, 0.85)';
+
+  // Inactive/context lyric line blur, single source of truth for both the main-line
+  // styling and the sub-line (transliteration/translation) styling below.
+  // blur(Npx) is a CSS-pixel value, but phones commonly render at devicePixelRatio
+  // 2-3 while most desktop monitors sit at ~1, so a fixed CSS px blur radius ends up
+  // covering roughly dpr-times more *device* pixels on a phone than on a desktop -
+  // same nominal number, visibly stronger blur on mobile. Dividing the base radius by
+  // devicePixelRatio keeps the blur's actual on-screen strength consistent across
+  // screen densities instead of it silently scaling up on higher-dpr (mostly mobile)
+  // screens. Computed once here rather than per line/per highlight tick.
+  const INACTIVE_LINE_BLUR_PX = (0.7 / Math.max(1, window.devicePixelRatio || 1)).toFixed(2);
+  const INACTIVE_LINE_BLUR = `blur(${INACTIVE_LINE_BLUR_PX}px)`;
 
   // ------------------------
   // State Variables
@@ -1879,31 +1940,37 @@
     return insets.bottomNav ?? insets.bottom ?? 0;
   }
 
-  // RESOLVED (17.54.dev): "RESTORE DEFAULT POSITION" COULD LAND WITH THE POPUP'S BOTTOM
-  // EDGE COVERING THE PLAYER (most visible on /search, but the same gap exists on any
-  // route where .main-view-container's rect runs deep enough)
-  // getReservedBottomHeight() switched to bottomNav-only (56px) in 17.53 so drag/resize/
-  // reservedInsetsChangeHandler could intentionally park the popup over the player - that
-  // part is correct and unchanged. But createPopup()'s container-rect fallback branch and
-  // the "Restore Default Position and Size" button both reused that same nav-only figure
-  // to clamp .main-view-container's rect, even though those two sites are restore-to-
-  // default actions, not manual placement - a default restore landing on top of the player
-  // was never the intent, only manual drag/resize reaching there was. Since
-  // .main-view-container isn't the element Spotifuck's clip CSS resizes, its rect can run
-  // deep enough that clamping against only 56px still leaves the popup's bottom edge
-  // sitting inside the player's own height on some routes.
-  // Fix: added getReservedBottomHeightForRestore(), which reads the combined nav+player
-  // `bottom` figure directly (falling back to bottomNav, then 0, if Spotifuck hasn't
-  // published `bottom` at all). Only the two container-rect restore sites (createPopup()'s
-  // fallback branch and the reset button) now clamp against this instead of
-  // getReservedBottomHeight() - drag, resize, and reservedInsetsChangeHandler are untouched
-  // and still reserve only the nav bar, so manually parking the popup over the player still
-  // works exactly as it did in 17.53. This matches how restore behaved before 17.53 ever
-  // introduced the nav-only figure.
+  // Separate from getReservedBottomHeight() on purpose: that function reserves only the
+  // nav bar so drag/resize/reservedInsetsChangeHandler can intentionally park the popup
+  // over the player. But createPopup()'s container-rect fallback branch and the "Restore
+  // Default Position and Size" button are restore-to-default actions, not manual
+  // placement - landing on top of the player there was never the intent. Since
+  // .main-view-container (the rect those two sites clamp) isn't itself bounded by
+  // Spotifuck's clip CSS, its rect can run deep enough that clamping against only the nav
+  // bar would still leave the popup's bottom edge sitting inside the player's own height
+  // on some routes. This reads the combined nav+player `bottom` figure instead (falling
+  // back to bottomNav, then 0, if Spotifuck hasn't published `bottom`), so restoring to
+  // default never lands on the player while manual drag/resize over it still works fine.
   function getReservedBottomHeightForRestore() {
     const insets = SP_SHARED_WINDOW.__spReservedInsets;
     if (!insets) return 0;
     return insets.bottom ?? insets.bottomNav ?? 0;
+  }
+
+  // On /search, Spotifuck shows its own search header (home button, search input,
+  // profile/notification icons) fixed at the top of the screen. Spotifuck's
+  // __spReservedInsets only ever publishes bottom-side figures (bottom, bottomNav) -
+  // there's no top inset to read - so without this, a restored popup's top edge (and its
+  // own header/title bar) could land directly behind that search header. Rather than
+  // requiring another cross-script handshake for a top inset, this reads Spotifuck's own
+  // #global-nav-bar element directly - a real DOM node any userscript can measure without
+  // coordination. It's only actually shown (via body.sp-search) on /search; everywhere
+  // else this returns 0. Only the two container-rect restore sites use this - drag,
+  // resize, and reservedInsetsChangeHandler are untouched.
+  function getReservedTopHeight() {
+    const navBar = document.querySelector('#global-nav-bar');
+    if (!navBar || getComputedStyle(navBar).display === 'none') return 0;
+    return navBar.offsetHeight;
   }
 
   function makeSafeFilename(str) {
@@ -3035,7 +3102,7 @@ document.head.appendChild(buttonGroupScrollStyle);
             // exactly like the lyric line: solid green, bold, when active.
             el.style.color = active ? TRANSLITERATION_ACTIVE_COLOR : "#9a9a9a";
             el.style.fontWeight = active ? "700" : "400";
-            el.style.filter = active ? "none" : "blur(0.7px)";
+            el.style.filter = active ? "none" : INACTIVE_LINE_BLUR;
             el.style.opacity = active ? "1" : "0.8";
           } else if (el.getAttribute('data-translated') === 'true') {
             // Translation is separate content, not the lyric itself - keep it subdued so it
@@ -3043,7 +3110,7 @@ document.head.appendChild(buttonGroupScrollStyle);
             // brighten it while active so it visibly tracks the current line.
             el.style.color = active ? TRANSLATION_ACTIVE_COLOR : "gray";
             el.style.fontWeight = "400";
-            el.style.filter = active ? "none" : "blur(0.7px)";
+            el.style.filter = active ? "none" : INACTIVE_LINE_BLUR;
             el.style.opacity = active ? "1" : "0.8";
           } else {
             break;
@@ -3061,7 +3128,7 @@ document.head.appendChild(buttonGroupScrollStyle);
         pElements.forEach(p => {
           p.style.color = "white";
           p.style.fontWeight = "400";
-          p.style.filter = "blur(0.7px)";
+          p.style.filter = INACTIVE_LINE_BLUR;
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -3083,7 +3150,7 @@ document.head.appendChild(buttonGroupScrollStyle);
         } else {
           p.style.color = "white";
           p.style.fontWeight = "400";
-          p.style.filter = "blur(0.7px)";
+          p.style.filter = INACTIVE_LINE_BLUR;
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -5888,20 +5955,35 @@ const Providers = {
       let rect = getSpotifyLyricsContainerRect();
       if (rect) {
         // .main-view-container isn't itself the element Spotifuck's clip CSS
-        // resizes (see the sp-reserved-insets-change comment above) - clamp
-        // its rect so a fresh install / first-ever open doesn't land under the
-        // reserved strip. This is a restore-to-default site, not manual
-        // placement, so it clamps against the combined nav+player height
-        // (getReservedBottomHeightForRestore()), not the nav-only figure drag/
-        // resize use - see the 17.54.dev note above getReservedBottomHeight().
-        const maxTop = (window.innerHeight - getReservedBottomHeightForRestore()) - rect.height;
-        const top = Math.min(rect.top, maxTop);
+        // resizes (see the sp-reserved-insets-change comment above), so its rect
+        // can still extend under the reserved strip or Spotifuck's search header -
+        // clamp it so a fresh install / first-ever open doesn't land there. This is
+        // a restore-to-default site, not manual placement, so it clamps against the
+        // combined nav+player height (getReservedBottomHeightForRestore()), not the
+        // nav-only figure drag/resize use.
+        // Height is clamped to the actual space available between the top and
+        // bottom reserves first, and top is then derived from that already-shrunk
+        // height and floored at reservedTop - clamping only top (leaving height
+        // uncapped) would instead push a tall rect's top upward to keep its
+        // unchanged height off the bottom strip, sliding the whole popup up over
+        // the search header. Clamping height against the bottom reserve alone,
+        // without also subtracting reservedTop, would let a tall rect's computed
+        // maxTop come out below reservedTop, so flooring top at reservedTop would
+        // then push top + height back past the bottom line. Working out both
+        // reserves together avoids all of that: the popup always shrinks to fit
+        // the actual gap between header and player instead of overlapping either.
+        const reservedTop = getReservedTopHeight();
+        const reservedBottom = getReservedBottomHeightForRestore();
+        const availableHeight = window.innerHeight - reservedTop - reservedBottom;
+        const height = Math.min(rect.height, availableHeight);
+        const maxTop = (window.innerHeight - reservedBottom) - height;
+        const top = Math.max(reservedTop, Math.min(rect.top, maxTop));
         Object.assign(popup.style, {
           position: "fixed",
           left: rect.left + "px",
           top: top + "px",
           width: rect.width + "px",
-          height: rect.height + "px",
+          height: height + "px",
           minWidth: "360px",
           minHeight: "240px",
           backgroundColor: "#121212",
@@ -6011,18 +6093,26 @@ const Providers = {
       if (rect) {
         // Same fix as createPopup()'s container-rect branch - .main-view-container's
         // own rect isn't bounded by Spotifuck's clip, so clamp against the current
-        // reserved bottom inset before applying it. Restore site, so this uses the
-        // combined nav+player height (getReservedBottomHeightForRestore()), not the
-        // nav-only figure drag/resize use - see the 17.54.dev note above
-        // getReservedBottomHeight().
-        const maxTop = (window.innerHeight - getReservedBottomHeightForRestore()) - rect.height;
-        const top = Math.min(rect.top, maxTop);
+        // reserved insets before applying it. Restore site, so this uses the combined
+        // nav+player height (getReservedBottomHeightForRestore()), not the nav-only
+        // figure drag/resize use. Height is clamped to the actual space available
+        // between the top and bottom reserves first, then top is derived from that
+        // already-shrunk height and floored at reservedTop, so the popup shrinks to
+        // fit the gap between Spotifuck's search header and the player instead of
+        // overlapping either. See the matching comment in createPopup() above for why
+        // both reserves have to be worked out together.
+        const reservedTop = getReservedTopHeight();
+        const reservedBottom = getReservedBottomHeightForRestore();
+        const availableHeight = window.innerHeight - reservedTop - reservedBottom;
+        const height = Math.min(rect.height, availableHeight);
+        const maxTop = (window.innerHeight - reservedBottom) - height;
+        const top = Math.max(reservedTop, Math.min(rect.top, maxTop));
         Object.assign(popup.style, {
           position: "fixed",
           left: rect.left + "px",
           top: top + "px",
           width: rect.width + "px",
-          height: rect.height + "px",
+          height: height + "px",
           right: "auto",
           bottom: "auto",
           zIndex: 100000
@@ -8966,7 +9056,7 @@ popup._headerWheelHandler = onHeaderWheel;
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         p.style.color = "white";
         p.style.fontWeight = "400";
-        p.style.filter = "blur(0.7px)";
+        p.style.filter = INACTIVE_LINE_BLUR;
         p.style.opacity = "0.8";
         if (transliteration) {
           p.setAttribute('data-transliteration-text', transliteration);
@@ -9202,7 +9292,7 @@ popup._headerWheelHandler = onHeaderWheel;
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         p.style.color = "white";
         p.style.fontWeight = "400";
-        p.style.filter = "blur(0.7px)";
+        p.style.filter = INACTIVE_LINE_BLUR;
         p.style.opacity = "0.8";
         if (transliteration) {
           p.setAttribute('data-transliteration-text', transliteration);
