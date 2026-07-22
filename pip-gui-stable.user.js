@@ -19,19 +19,27 @@
 // RESOLVED (17.50): CORNER RESIZE HANDLE COULD STILL DRAG THE POPUP SLIGHTLY UNDER THE RESERVED STRIP
 // Bug: dragging the popup's corner resize arrow could shrink it a few pixels too far
 // and let its bottom edge poke under Spotifuck's bottom nav/player strip.
-// Why: the resize code has two rules - "never shrink below 240px tall" and "never go
-// past the reserved strip." Normally these don't conflict. But if the popup was
-// already sitting low on screen, there could be LESS than 240px of room left above
-// the strip. When that happened, the code picked the wrong rule: it forced the popup
-// to be 240px tall anyway, even though that meant poking under the strip.
-// Fix: the 240px minimum is now smart about how much room is actually available.
-// It only enforces 240px when there's at least 240px of space. If there's less room
-// than that, it just uses whatever space is actually there instead of forcing 240px
-// regardless. Changed in both onResizeMouseMove and onResizeTouchMove (mouse and
-// touch resizing).
-// Scope: only touches the two resize handlers. The shared clamp() helper used
-// elsewhere in the file (scroll fractions, playback position, horizontal scroll) is
-// completely untouched, so this can't affect anything outside of resizing the popup.
+// Why (two layers to this):
+// 1. The resize code had two rules - "never shrink below 240px tall" and "never go
+//    past the reserved strip." Normally these don't conflict. But if the popup was
+//    already sitting low on screen, there could be LESS than 240px of room left
+//    above the strip. When that happened, the JS math picked the wrong rule: it
+//    computed a height of 240px anyway, even though that meant poking under the strip.
+// 2. Fixing the JS math alone wasn't enough. The popup also has a real CSS
+//    min-height:240px set as an inline style back when it's first created, and that
+//    inline style is never touched again after that. The browser enforces that CSS
+//    property independently of whatever height value the JS sets - so even after
+//    computing the correct smaller height, the popup kept rendering at 240px tall
+//    regardless, because the CSS floor was still 240px.
+// Fix: onResizeMouseMove and onResizeTouchMove now compute a dynamic minHeight -
+// 240px normally, but capped down to however much room is actually available if
+// there's less than that - and apply it in two places every time the popup is
+// resized: as the JS bound used in the height math, AND as the actual
+// el.style.minHeight CSS property, so the browser's own enforcement can't
+// override the computed height anymore either.
+// Scope: only touches the two resize handlers (mouse + touch). The shared clamp()
+// helper used elsewhere in the file (scroll fractions, playback position,
+// horizontal scroll) is completely untouched.
 //
 // RESOLVED (17.49): FRESH POPUP OPEN / RESTORE DEFAULT COULD STILL LAND UNDER THE RESERVED STRIP AFTER 17.48
 // 17.48 added getReservedBottomHeight() clamping to the drag clamp, resize clamp, both
@@ -7953,6 +7961,13 @@ popup._headerWheelHandler = onHeaderWheel;
 
         el.style.width = newWidth + "px";
         el.style.height = newHeight + "px";
+        // The popup has a real CSS min-height:240px set at creation time, which
+        // the browser enforces regardless of what height we set above. Without
+        // updating it here too, the box still renders at 240px and pokes under
+        // the strip even though newHeight/el.style.height are correct. Keep the
+        // CSS floor in sync with the JS one every move so the browser can't
+        // silently override the computed height.
+        el.style.minHeight = minHeight + "px";
       };
 
       const onResizeTouchMove = (e) => {
@@ -7974,6 +7989,10 @@ popup._headerWheelHandler = onHeaderWheel;
 
         el.style.width = newWidth + "px";
         el.style.height = newHeight + "px";
+        // Same reason as onResizeMouseMove above - keep the actual CSS
+        // min-height in sync, since the browser enforces it independently of
+        // whatever height value we set.
+        el.style.minHeight = minHeight + "px";
         e.preventDefault();
       };
 
