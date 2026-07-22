@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.50
+// @version      17.49.revert
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,24 +15,6 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
-
-// RESOLVED (17.50): CORNER RESIZE HANDLE COULD STILL DRAG THE POPUP SLIGHTLY UNDER THE RESERVED STRIP
-// 17.48/17.49 covered every way the popup gets positioned, but resizing it via the
-// bottom-right handle (mouse or touch) had one more gap.
-// The maxHeight it resizes against already correctly subtracts the reserved strip's
-// height. The problem is downstream: that value gets run through the shared clamp()
-// helper along with the popup's normal 240px minimum height. If there's less than
-// 240px of room above the strip, maxHeight ends up smaller than minHeight - and
-// clamp() was written assuming that never happens, so in that situation it quietly
-// snaps back up to the 240px minimum instead of respecting the smaller max, letting
-// the popup's bottom edge sit under the strip.
-// Fix: onResizeMouseMove and onResizeTouchMove now clamp height inline
-// (Math.min(maxHeight, Math.max(minHeight, newHeight))) instead of calling clamp(),
-// so the available space always wins over the nominal minimum. Left the shared
-// clamp() function itself alone on purpose - it's used in a few other places (e.g.
-// the horizontal scroll clamp) that also assume min <= max, and reordering it
-// globally risked quietly changing behavior there too instead of just where this
-// bug actually lived.
 
 // RESOLVED (17.49): FRESH POPUP OPEN / RESTORE DEFAULT COULD STILL LAND UNDER THE RESERVED STRIP AFTER 17.48
 // 17.48 added getReservedBottomHeight() clamping to the drag clamp, resize clamp, both
@@ -7943,12 +7925,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const maxHeight = (window.innerHeight - getReservedBottomHeight()) - el.offsetTop;
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
-        // Not clamp() - maxHeight can drop below the nominal 240px minHeight
-        // when there's little room above Spotifuck's reserved bottom strip,
-        // and clamp()'s Math.max(min, Math.min(max, val)) would snap back up
-        // to minHeight in that case, pushing the popup under the strip just
-        // to satisfy the nominal minimum. Prioritize maxHeight instead.
-        newHeight = Math.min(maxHeight, Math.max(minHeight, newHeight));
+        newHeight = clamp(newHeight, minHeight, maxHeight);
 
         el.style.width = newWidth + "px";
         el.style.height = newHeight + "px";
@@ -7967,8 +7944,7 @@ popup._headerWheelHandler = onHeaderWheel;
         const maxHeight = (window.innerHeight - getReservedBottomHeight()) - el.offsetTop;
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
-        // Not clamp() - see identical comment in onResizeMouseMove above.
-        newHeight = Math.min(maxHeight, Math.max(minHeight, newHeight));
+        newHeight = clamp(newHeight, minHeight, maxHeight);
 
         el.style.width = newWidth + "px";
         el.style.height = newHeight + "px";
