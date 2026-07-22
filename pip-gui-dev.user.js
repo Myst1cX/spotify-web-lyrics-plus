@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Spotify Lyrics+ Stable
+// @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.50.in.progress.dev
+// @version      17.50.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,47 +16,25 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
 
-// RESOLVED (17.50): CORNER RESIZE COULD STILL POKE UNDER THE RESERVED STRIP, AND
-// DRAG/RESIZE/RESTORE-DEFAULT COULD GET SILENTLY YANKED BACK RIGHT AFTER
-// Bug 1 - corner resize handle could still shrink the popup a few pixels too far,
-// letting its bottom edge sit under Spotifuck's bottom nav/player strip.
-// Why: two things stacked here.
-//   a) The resize code enforces "never shrink below 240px tall" and "never go past
-//      the reserved strip." If the popup was already sitting low on screen, there
-//      could be LESS than 240px of room left above the strip - and the JS math
-//      picked the wrong rule, computing 240px anyway even though that meant poking
-//      under the strip.
-//   b) Fixing the JS math alone wasn't enough, because the popup also has a real
-//      CSS min-height:240px set as an inline style at creation time, never touched
-//      again after that. The browser enforces that independently of whatever
-//      height value JS sets, so the popup kept rendering at 240px regardless.
-// Fix: onResizeMouseMove/onResizeTouchMove now compute a dynamic minHeight - 240px
-// normally, capped down to however much room is actually available if there's less
-// - and apply it both in the height math AND as the real el.style.minHeight
-// property, so neither the math nor the browser's own CSS enforcement can push the
-// popup under the strip anymore. Scoped to just these two handlers; the shared
-// clamp() helper used elsewhere (scroll fractions, playback position, horizontal
-// scroll) is untouched.
-// Bug 2 - right after dragging, resizing, or clicking restore-default, the popup
-// would jump back down to sit flush against the bottom bar - happened on the very
-// first action after a fresh reload, not just near the edge.
-// Why: the MutationObserver that watches for the popup being created was calling
-// applyProportionToPopup() (reapplies the last-saved position/size) on EVERY DOM
-// mutation anywhere on the page, for as long as the popup existed - not just once
-// at creation, despite its own comment saying that's all it was for. Ordinary page
-// activity (lyrics updating, highlighting, etc.) mutates the DOM constantly, so
-// this fired very often - right after any drag/resize/restore, the next one of
-// those unrelated mutations would silently reapply the OLD saved position on top
-// of what the user just did. Drag had a 1.5s debounce against this; resize and
-// restore-default had none, so they got overridden almost immediately.
-// Fix: the observer now only calls applyProportionToPopup() once per popup
-// instance (guarded by popup._proportionAppliedOnCreate), right when that popup
-// element is first created - matching what the comment already claimed it did.
-// Legitimate re-clamp triggers (window resize, Spotifuck's reserved-strip height
-// actually changing) are untouched and still work; only the over-broad "on every
-// mutation, forever" firing is gone.
+// RESOLVED (17.50.dev): SPOTIFUCK'S __spReservedInsets NEVER ACTUALLY REACHED THIS SCRIPT
+// Root cause: this script and Spotifuck both use @grant, which puts each userscript in its
+// own sandboxed JS context under Tampermonkey/Violentmonkey. Plain `window` is a per-script
+// object in that sandbox, not the real shared page global - so Spotifuck assigning
+// window.__spReservedInsets in its sandbox never showed up on this script's window.
+// Confirmed via diagnostic logging: getReservedBottomHeight() read 0 and
+// window.__spReservedInsets was undefined on every single resize, meaning all the existing
+// 17.49 clamp logic was already correct - it just never had a real reserved value to clamp
+// against, so the popup always thought it had the full window height available.
+// Fix: getReservedBottomHeight() and the sp-reserved-insets-change listener now go through
+// unsafeWindow (the actual page global both sandboxes wrap) instead of window, falling back
+// to window if unsafeWindow isn't exposed. registerWindowListener() gained an optional
+// target parameter so this one listener can attach to unsafeWindow while every other
+// listener (resize, etc.) stays on the sandboxed window as before. Nothing else changed -
+// same clamp math, same drag/resize/restore behavior as 17.49, just with a real reserved
+// value feeding into it. Companion fix required on Spotifuck's side (its own changelog,
+// v7.12) - both ends of the handshake have to agree on which window they're using.
 
-// RESOLVED (17.49): FRESH POPUP OPEN / RESTORE DEFAULT COULD STILL LAND UNDER THE RESERVED STRIP AFTER 17.48
+// RESOLVED (17.49.dev): FRESH POPUP OPEN / RESTORE DEFAULT COULD STILL LAND UNDER THE RESERVED STRIP AFTER 17.48
 // 17.48 added getReservedBottomHeight() clamping to the drag clamp, resize clamp, both
 // fallback default-position spots, and applyProportionToPopup() (window resize / live
 // sp-reserved-insets-change re-clamp) - but missed two spots that both position the popup
@@ -95,15 +73,15 @@
 // flex-basis:0; overflow:hidden; }`), plus a rule hiding Spotify's own
 // "Show Now Playing view" button (`.wJiY1vDfuci2a4db { display:none; }`).
 // That was fine on its own, but breaks when this script is run alongside
-// the new version of Spotifuck/SpotiKit desktop ++ (those are two separate 
-// userscripts many users, myself included, run together with this one for 
+// the new version of Spotifuck/SpotiKit desktop ++ (those are two separate
+// userscripts many users, myself included, run together with this one for
 // the rest of its UI/playback changes):
 // Spotifuck/SpotiKit desktop ++ now have their own dedicated Now Playing view button and guard, which
 // opens/closes NPV by toggling the real panel's aria-hidden state. We had to delete the CSS above since it
-// ran independently and could force the panel to zero-width regardless, so even a legitimate open through 
-// Spotifuck's own button could render completely invisible. 
+// ran independently and could force the panel to zero-width regardless, so even a legitimate open through
+// Spotifuck's own button could render completely invisible.
 // Fix: removed the style injection entirely. NowPlayingView's visibility is
-// no longer touched by this script at all. 
+// no longer touched by this script at all.
 
 // RESOLVED (17.46): TRANSLATION NOW PARTICIPATES IN THE ACTIVE-LINE HIGHLIGHT TOO
 // highlightSyncedLyrics() now walks every sub-line after a lyric via updateSubLines(p, active),
@@ -118,10 +96,10 @@
 // In the main popup, highlightSyncedLyrics() makes the current line's transliteration
 // both green AND bold (fontWeight 700) to match the highlighted lyric above it. PiP's
 // canvas renderer only copied the green color, not the bold (oversight on my part).
-// flattenPipBlockRows() drew every sub-line (translation and transliteration alike) 
+// flattenPipBlockRows() drew every sub-line (translation and transliteration alike)
 // in the same regular-weight font.
 // Now it prepends "bold" to that line's font specifically when it's transliteration on
-// the active line, so PiP's highlight matches the popup exactly. 
+// the active line, so PiP's highlight matches the popup exactly.
 
 // RESOLVED (17.44): TRANSLATION TEXT ONLY SHRINKS WHEN TRANSLITERATION IS ALSO ON-SCREEN
 // Refines 17.42: with just original lyric + translation, translation stays full size again.
@@ -154,7 +132,7 @@
 // in place of the 🔡 emoji, matching the style of the other header buttons
 // (currentColor fill, full 0-24 viewBox, no extra padding wrapper - same
 // convention as translationToggleBtn). The 拼 character is sourced from Noto
-// Sans CJK SC Bold via fonttools for an accurate glyph outline. 
+// Sans CJK SC Bold via fonttools for an accurate glyph outline.
 
 // RESOLVED (17.40): KPOE 5-ATTEMPT NORMALIZATION NO LONGER GUARANTEES A 400 ON NON-LATIN-SCRIPT SONGS
 // FINDING: Utils.normalize() keeps only ASCII word characters plus a small punctuation
@@ -1470,10 +1448,14 @@
       return observer;
     },
 
-    // Register a window event listener
-    registerWindowListener(eventType, handler, description) {
-      this.windowListeners.push({ eventType, handler, description });
-      window.addEventListener(eventType, handler);
+    // Register a window event listener. `target` defaults to the sandboxed
+    // window (fine for real DOM events like resize); pass SP_SHARED_WINDOW
+    // explicitly for cross-userscript custom events like
+    // sp-reserved-insets-change, since sandboxed scripts don't share a
+    // plain `window`.
+    registerWindowListener(eventType, handler, description, target = window) {
+      this.windowListeners.push({ eventType, handler, description, target });
+      target.addEventListener(eventType, handler);
       DEBUG.debug('ResourceManager', `Registered window listener: ${eventType} (${description})`);
     },
 
@@ -1493,9 +1475,9 @@
       this.observers = [];
 
       // Remove all window listeners
-      this.windowListeners.forEach(({ eventType, handler, description }) => {
+      this.windowListeners.forEach(({ eventType, handler, description, target }) => {
         try {
-          window.removeEventListener(eventType, handler);
+          (target || window).removeEventListener(eventType, handler);
           DEBUG.debug('ResourceManager', `Removed window listener: ${eventType} (${description})`);
         } catch (e) {
           DEBUG.error('ResourceManager', `Failed to remove listener ${description}:`, e);
@@ -1800,8 +1782,22 @@
   // strip currently is via window.__spReservedInsets.bottom (kept live via
   // its own ResizeObserver). If Spotifuck isn't running, there's no
   // reserved space to avoid - just 0, no DOM scanning.
+  //
+  // FIX: this script and Spotifuck both use @grant, which puts each
+  // userscript in its own sandboxed JS context under Tampermonkey/
+  // Violentmonkey - plain `window` is a per-script object there, not the
+  // real shared page global. Spotifuck assigning window.__spReservedInsets
+  // in its sandbox never showed up on this script's window, so
+  // getReservedBottomHeight() silently returned 0 forever (confirmed via
+  // diagnostic logging: reserved was always 0, __spReservedInsets was
+  // always undefined, even mid-resize). unsafeWindow is the actual shared
+  // page global both scripts' sandboxes wrap, so read/write the handshake
+  // through that instead. Falls back to window for managers/configs where
+  // unsafeWindow isn't exposed (e.g. @grant none, where window already IS
+  // the real page window).
+  const SP_SHARED_WINDOW = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
   function getReservedBottomHeight() {
-    return window.__spReservedInsets?.bottom ?? 0;
+    return SP_SHARED_WINDOW.__spReservedInsets?.bottom ?? 0;
   }
 
   function makeSafeFilename(str) {
@@ -7960,29 +7956,15 @@ popup._headerWheelHandler = onHeaderWheel;
         let newHeight = startHeight + dy;
 
         const minWidth = 360; // match the minWidth style
+        const minHeight = 240; // match the minHeight style
         const maxWidth = window.innerWidth - el.offsetLeft;
         const maxHeight = (window.innerHeight - getReservedBottomHeight()) - el.offsetTop;
-        // Cap minHeight to whatever room is actually left above the reserved
-        // strip. Normally 240 (matches the minHeight style), but if the popup's
-        // top position leaves less than that, maxHeight < 240 - and clamp()
-        // assumes min <= max, so feeding it 240 here would make it silently
-        // snap back up past maxHeight and push the bottom edge under the strip.
-        // Capping the bound itself (not clamp()) keeps clamp()'s behavior
-        // untouched for every other call site.
-        const minHeight = Math.max(0, Math.min(240, maxHeight));
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
 
         el.style.width = newWidth + "px";
         el.style.height = newHeight + "px";
-        // The popup has a real CSS min-height:240px set at creation time, which
-        // the browser enforces regardless of what height we set above. Without
-        // updating it here too, the box still renders at 240px and pokes under
-        // the strip even though newHeight/el.style.height are correct. Keep the
-        // CSS floor in sync with the JS one every move so the browser can't
-        // silently override the computed height.
-        el.style.minHeight = minHeight + "px";
       };
 
       const onResizeTouchMove = (e) => {
@@ -7993,21 +7975,15 @@ popup._headerWheelHandler = onHeaderWheel;
         let newHeight = startHeight + dy;
 
         const minWidth = 360;
+        const minHeight = 240;
         const maxWidth = window.innerWidth - el.offsetLeft;
         const maxHeight = (window.innerHeight - getReservedBottomHeight()) - el.offsetTop;
-        // Same fix as onResizeMouseMove above - cap minHeight to maxHeight
-        // instead of touching clamp() itself.
-        const minHeight = Math.max(0, Math.min(240, maxHeight));
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
 
         el.style.width = newWidth + "px";
         el.style.height = newHeight + "px";
-        // Same reason as onResizeMouseMove above - keep the actual CSS
-        // min-height in sync, since the browser enforces it independently of
-        // whatever height value we set.
-        el.style.minHeight = minHeight + "px";
         e.preventDefault();
       };
 
@@ -9727,16 +9703,7 @@ popup._headerWheelHandler = onHeaderWheel;
   // Listen for popup creation to hook the resizer
   const popupResizeObserver = new MutationObserver(() => {
     const popup = document.getElementById("lyrics-plus-popup");
-    // Guard: only reapply the saved proportion once per popup instance (right
-    // when it's first created), not on every single DOM mutation anywhere on
-    // the page for the popup's whole lifetime. Without this guard, any
-    // unrelated DOM change (lyrics updating, highlighting, etc.) re-fires
-    // applyProportionToPopup() and silently overrides whatever the user just
-    // did with drag/resize/restore-default a moment earlier - resize and
-    // restore have no debounce against this at all, so it could yank the
-    // popup back to the last saved position right after almost any action.
-    if (popup && !popup._proportionAppliedOnCreate) {
-      popup._proportionAppliedOnCreate = true;
+    if (popup) {
       applyProportionToPopup(popup);
       observePopupResize();
     }
@@ -9769,7 +9736,7 @@ popup._headerWheelHandler = onHeaderWheel;
       popup.style.position = "fixed";
     }
   };
-  ResourceManager.registerWindowListener("sp-reserved-insets-change", reservedInsetsChangeHandler, 'Popup re-clamp on Spotifuck reserved-inset change');
+  ResourceManager.registerWindowListener("sp-reserved-insets-change", reservedInsetsChangeHandler, 'Popup re-clamp on Spotifuck reserved-inset change', SP_SHARED_WINDOW);
 
   // Register menu commands for debug functions
   GM_registerMenuCommand('Debug: Clear Cache', () => {
