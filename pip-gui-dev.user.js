@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.50.dev
+// @version      17.51.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,25 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
+
+// RESOLVED (17.51.dev): COMPACT -> FULL PLAYER CYCLE COULD PUSH THE POPUP (AND ITS
+// HEADER/RESTORE BUTTON) OFF THE TOP OF THE SCREEN
+// Repro: open the lyrics popup, switch Spotifuck's player to compact, then back to full.
+// applyProportionToPopup() recomputes both height and top from the saved
+// window.lastProportion every time it re-clamps (on window resize and on
+// sp-reserved-insets-change), but it only clamped top DOWNWARD against maxTop - it never
+// clamped height itself, and never floored top at 0. When the reserved bottom strip grew
+// back to its full size (player full again) after the proportion was saved against a
+// smaller/zero reserved height (player compact), maxTop went negative and top followed it
+// negative too, shifting the whole popup - header included - above the visible viewport.
+// The popup wasn't actually "expanding"; it was being shoved upward off-screen, taking the
+// Restore Default Position and Size button with it, so there was no way to click back to a
+// sane position.
+// Fix: applyProportionToPopup() now clamps height to the currently available space
+// (window.innerHeight - getReservedBottomHeight()) before computing maxTop from it, and
+// floors the resulting top at 0. Matches the clamping already done in the drag/resize
+// clamps, the reset button, and reservedInsetsChangeHandler - this was the one clamp site
+// that hadn't caught up.
 
 // RESOLVED (17.50.dev): SPOTIFUCK'S __spReservedInsets NEVER ACTUALLY REACHED THIS SCRIPT
 // Root cause: this script and Spotifuck both use @grant, which puts each userscript in its
@@ -9645,13 +9664,25 @@ popup._headerWheelHandler = onHeaderWheel;
     if (!popup || !window.lastProportion.w || !window.lastProportion.h || window.lastProportion.x === undefined || window.lastProportion.y === undefined) {
       return;
     }
-    const height = window.innerHeight * window.lastProportion.h;
+    const availableHeight = window.innerHeight - getReservedBottomHeight();
+    // Clamp height itself first - if the reserved strip grew since this
+    // proportion was saved (e.g. player went compact -> full again), the
+    // saved height may no longer fit at all. Without this, maxTop below can
+    // go negative and push the popup (and its header/restore button) off
+    // the top of the screen instead of just sitting flush against the strip.
+    let height = window.innerHeight * window.lastProportion.h;
+    height = Math.min(height, availableHeight);
     let top = window.innerHeight * window.lastProportion.y;
     // Saved proportions predate (or were saved without) the reserved bottom
     // nav/player strip - clamp so the restored popup never ends up with its
     // bottom edge under it.
-    const maxTop = (window.innerHeight - getReservedBottomHeight()) - height;
+    const maxTop = availableHeight - height;
     top = Math.min(top, maxTop);
+    // Floor at 0 too - maxTop can still be negative in edge cases (e.g. the
+    // reserved strip alone exceeds window height), and without this floor
+    // the popup gets pushed above the visible screen instead of just
+    // clamping flush to the top.
+    top = Math.max(top, 0);
     popup.style.width = (window.innerWidth * window.lastProportion.w) + "px";
     popup.style.height = height + "px";
     popup.style.left = (window.innerWidth * window.lastProportion.x) + "px";
