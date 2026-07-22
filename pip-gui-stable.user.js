@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.50
+// @version      17.48.restored
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,65 +15,6 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
-
-// RESOLVED (17.50): CORNER RESIZE COULD STILL POKE UNDER THE RESERVED STRIP, AND
-// DRAG/RESIZE/RESTORE-DEFAULT COULD GET SILENTLY YANKED BACK RIGHT AFTER
-// Bug 1 - corner resize handle could still shrink the popup a few pixels too far,
-// letting its bottom edge sit under Spotifuck's bottom nav/player strip.
-// Why: two things stacked here.
-//   a) The resize code enforces "never shrink below 240px tall" and "never go past
-//      the reserved strip." If the popup was already sitting low on screen, there
-//      could be LESS than 240px of room left above the strip - and the JS math
-//      picked the wrong rule, computing 240px anyway even though that meant poking
-//      under the strip.
-//   b) Fixing the JS math alone wasn't enough, because the popup also has a real
-//      CSS min-height:240px set as an inline style at creation time, never touched
-//      again after that. The browser enforces that independently of whatever
-//      height value JS sets, so the popup kept rendering at 240px regardless.
-// Fix: onResizeMouseMove/onResizeTouchMove now compute a dynamic minHeight - 240px
-// normally, capped down to however much room is actually available if there's less
-// - and apply it both in the height math AND as the real el.style.minHeight
-// property, so neither the math nor the browser's own CSS enforcement can push the
-// popup under the strip anymore. Scoped to just these two handlers; the shared
-// clamp() helper used elsewhere (scroll fractions, playback position, horizontal
-// scroll) is untouched.
-// Bug 2 - right after dragging, resizing, or clicking restore-default, the popup
-// would jump back down to sit flush against the bottom bar - happened on the very
-// first action after a fresh reload, not just near the edge.
-// Why: the MutationObserver that watches for the popup being created was calling
-// applyProportionToPopup() (reapplies the last-saved position/size) on EVERY DOM
-// mutation anywhere on the page, for as long as the popup existed - not just once
-// at creation, despite its own comment saying that's all it was for. Ordinary page
-// activity (lyrics updating, highlighting, etc.) mutates the DOM constantly, so
-// this fired very often - right after any drag/resize/restore, the next one of
-// those unrelated mutations would silently reapply the OLD saved position on top
-// of what the user just did. Drag had a 1.5s debounce against this; resize and
-// restore-default had none, so they got overridden almost immediately.
-// Fix: the observer now only calls applyProportionToPopup() once per popup
-// instance (guarded by popup._proportionAppliedOnCreate), right when that popup
-// element is first created - matching what the comment already claimed it did.
-// Legitimate re-clamp triggers (window resize, Spotifuck's reserved-strip height
-// actually changing) are untouched and still work; only the over-broad "on every
-// mutation, forever" firing is gone.
-
-// RESOLVED (17.49): FRESH POPUP OPEN / RESTORE DEFAULT COULD STILL LAND UNDER THE RESERVED STRIP AFTER 17.48
-// 17.48 added getReservedBottomHeight() clamping to the drag clamp, resize clamp, both
-// fallback default-position spots, and applyProportionToPopup() (window resize / live
-// sp-reserved-insets-change re-clamp) - but missed two spots that both position the popup
-// straight off .main-view-container's own getBoundingClientRect() with no clamp at all:
-// createPopup()'s container-rect branch (used on first-ever open, before any proportion has
-// been saved) and the "Restore Default Position and Size" button's identical container-rect
-// branch. .main-view-container isn't the element Spotifuck's clip CSS actually resizes, so
-// its rect can still extend under the reserved strip. Restore appeared fine in prior testing,
-// but only because that testing wasn't on a fresh install - same code path, same gap.
-// Fix: both branches now clamp top the same way the saved-proportion branch does.
-// Also fixed: createPopup()'s saved-proportion restore path (used every open after the first)
-// recomputed top/height from the saved proportion independently instead of going through
-// applyProportionToPopup(), so it skipped that function's clamp too - if the reserved bottom
-// height grew (e.g. Spotifuck's player expanded) after the proportion was last saved but
-// before the Lyrics+ button was next clicked, the popup could open already parked under the
-// strip, with nothing to reclamp it until the next drag/resize/reserved-insets-change.
-// createPopup()'s saved-proportion branch now clamps pos.top the same way too.
 
 // RESOLVED (17.48): POPUP NOW STOPS SHORT OF SPOTIFUCK'S BOTTOM NAV/PLAYER STRIP ON MOBILE
 // Spotifuck's mobile nav+player sits fixed at the bottom of the screen, but this script had
@@ -5715,12 +5656,6 @@ const Providers = {
             width: window.innerWidth * proportion.w,
             height: window.innerHeight * proportion.h
           };
-          // Saved proportion may predate the current reserved bottom nav/player
-          // strip height (e.g. player was collapsed when it was saved, expanded
-          // since) - clamp so the restored popup never opens with its bottom
-          // edge under it. Same math as applyProportionToPopup().
-          const maxTop = (window.innerHeight - getReservedBottomHeight()) - pos.height;
-          pos.top = Math.min(pos.top, maxTop);
           DEBUG.debug('UI', 'Loaded saved popup proportion and converted to pixels', pos);
         }
       } catch {
@@ -5770,16 +5705,10 @@ const Providers = {
       shouldSaveDefaultPosition = true;
       let rect = getSpotifyLyricsContainerRect();
       if (rect) {
-        // .main-view-container isn't itself the element Spotifuck's clip CSS
-        // resizes (see the sp-reserved-insets-change comment above) - clamp
-        // its rect the same way the saved-proportion branch above does, so a
-        // fresh install / first-ever open doesn't land under the reserved strip.
-        const maxTop = (window.innerHeight - getReservedBottomHeight()) - rect.height;
-        const top = Math.min(rect.top, maxTop);
         Object.assign(popup.style, {
           position: "fixed",
           left: rect.left + "px",
-          top: top + "px",
+          top: rect.top + "px",
           width: rect.width + "px",
           height: rect.height + "px",
           minWidth: "360px",
@@ -5889,15 +5818,10 @@ const Providers = {
       console.info("🔄 [Lyrics+ UI] Restore default position button clicked");
       const rect = getSpotifyLyricsContainerRect();
       if (rect) {
-        // Same fix as createPopup()'s container-rect branch - .main-view-container's
-        // own rect isn't bounded by Spotifuck's clip, so clamp against the current
-        // reserved bottom inset before applying it.
-        const maxTop = (window.innerHeight - getReservedBottomHeight()) - rect.height;
-        const top = Math.min(rect.top, maxTop);
         Object.assign(popup.style, {
           position: "fixed",
           left: rect.left + "px",
-          top: top + "px",
+          top: rect.top + "px",
           width: rect.width + "px",
           height: rect.height + "px",
           right: "auto",
@@ -7960,29 +7884,15 @@ popup._headerWheelHandler = onHeaderWheel;
         let newHeight = startHeight + dy;
 
         const minWidth = 360; // match the minWidth style
+        const minHeight = 240; // match the minHeight style
         const maxWidth = window.innerWidth - el.offsetLeft;
         const maxHeight = (window.innerHeight - getReservedBottomHeight()) - el.offsetTop;
-        // Cap minHeight to whatever room is actually left above the reserved
-        // strip. Normally 240 (matches the minHeight style), but if the popup's
-        // top position leaves less than that, maxHeight < 240 - and clamp()
-        // assumes min <= max, so feeding it 240 here would make it silently
-        // snap back up past maxHeight and push the bottom edge under the strip.
-        // Capping the bound itself (not clamp()) keeps clamp()'s behavior
-        // untouched for every other call site.
-        const minHeight = Math.max(0, Math.min(240, maxHeight));
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
 
         el.style.width = newWidth + "px";
         el.style.height = newHeight + "px";
-        // The popup has a real CSS min-height:240px set at creation time, which
-        // the browser enforces regardless of what height we set above. Without
-        // updating it here too, the box still renders at 240px and pokes under
-        // the strip even though newHeight/el.style.height are correct. Keep the
-        // CSS floor in sync with the JS one every move so the browser can't
-        // silently override the computed height.
-        el.style.minHeight = minHeight + "px";
       };
 
       const onResizeTouchMove = (e) => {
@@ -7993,21 +7903,15 @@ popup._headerWheelHandler = onHeaderWheel;
         let newHeight = startHeight + dy;
 
         const minWidth = 360;
+        const minHeight = 240;
         const maxWidth = window.innerWidth - el.offsetLeft;
         const maxHeight = (window.innerHeight - getReservedBottomHeight()) - el.offsetTop;
-        // Same fix as onResizeMouseMove above - cap minHeight to maxHeight
-        // instead of touching clamp() itself.
-        const minHeight = Math.max(0, Math.min(240, maxHeight));
 
         newWidth = clamp(newWidth, minWidth, maxWidth);
         newHeight = clamp(newHeight, minHeight, maxHeight);
 
         el.style.width = newWidth + "px";
         el.style.height = newHeight + "px";
-        // Same reason as onResizeMouseMove above - keep the actual CSS
-        // min-height in sync, since the browser enforces it independently of
-        // whatever height value we set.
-        el.style.minHeight = minHeight + "px";
         e.preventDefault();
       };
 
@@ -9727,16 +9631,7 @@ popup._headerWheelHandler = onHeaderWheel;
   // Listen for popup creation to hook the resizer
   const popupResizeObserver = new MutationObserver(() => {
     const popup = document.getElementById("lyrics-plus-popup");
-    // Guard: only reapply the saved proportion once per popup instance (right
-    // when it's first created), not on every single DOM mutation anywhere on
-    // the page for the popup's whole lifetime. Without this guard, any
-    // unrelated DOM change (lyrics updating, highlighting, etc.) re-fires
-    // applyProportionToPopup() and silently overrides whatever the user just
-    // did with drag/resize/restore-default a moment earlier - resize and
-    // restore have no debounce against this at all, so it could yank the
-    // popup back to the last saved position right after almost any action.
-    if (popup && !popup._proportionAppliedOnCreate) {
-      popup._proportionAppliedOnCreate = true;
+    if (popup) {
       applyProportionToPopup(popup);
       observePopupResize();
     }
