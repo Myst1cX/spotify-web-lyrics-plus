@@ -50,7 +50,7 @@
 //   before deriving top from that already-shrunk height, so the popup shrinks to fit
 //   instead of being pushed off-screen or over the header/player when reserved space
 //   changes (e.g. the player cycling between compact and full). Requires Spotifuck
-//   v7.13+ to publish bottomNav; older Spotifuck versions still work, just more
+//   v7.12+ to publish bottomNav; older Spotifuck versions still work, just more
 //   conservative about how close the popup can get to the player.
 // • SYNCED LYRICS NO LONGER JITTER/BOUNCE LINE-TO-LINE WHILE PLAYING
 //   highlightSyncedLyrics()'s setInterval tick (every 50ms) reassigned every line's
