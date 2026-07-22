@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.48
+// @version      17.49
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,19 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.49): FRESH POPUP OPEN COULD STILL LAND UNDER THE RESERVED STRIP AFTER 17.48
+// 17.48 added getReservedBottomHeight() clamping to the drag clamp, resize clamp, both
+// fallback default-position spots, and applyProportionToPopup() (window resize / live
+// sp-reserved-insets-change re-clamp) - but missed createPopup()'s own saved-proportion
+// restore path, which recomputes top/height from the saved proportion independently
+// instead of going through applyProportionToPopup(). If the reserved bottom height grew
+// (e.g. Spotifuck's player expanded) after the proportion was last saved but before the
+// Lyrics+ button was next clicked, the popup could open already parked under the strip -
+// nothing reclamps it until the next drag/resize/reserved-insets-change, since
+// reservedInsetsChangeHandler only fires for a popup that already exists.
+// Fix: createPopup()'s saved-proportion branch now clamps pos.top the same way
+// applyProportionToPopup() does, right after computing it from the proportion.
 
 // RESOLVED (17.48): POPUP NOW STOPS SHORT OF SPOTIFUCK'S BOTTOM NAV/PLAYER STRIP ON MOBILE
 // Spotifuck's mobile nav+player sits fixed at the bottom of the screen, but this script had
@@ -5656,6 +5669,12 @@ const Providers = {
             width: window.innerWidth * proportion.w,
             height: window.innerHeight * proportion.h
           };
+          // Saved proportion may predate the current reserved bottom nav/player
+          // strip height (e.g. player was collapsed when it was saved, expanded
+          // since) - clamp so the restored popup never opens with its bottom
+          // edge under it. Same math as applyProportionToPopup().
+          const maxTop = (window.innerHeight - getReservedBottomHeight()) - pos.height;
+          pos.top = Math.min(pos.top, maxTop);
           DEBUG.debug('UI', 'Loaded saved popup proportion and converted to pixels', pos);
         }
       } catch {
