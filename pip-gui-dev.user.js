@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.52.dev
+// @version      17.54.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,41 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
+
+// RESOLVED (17.54.dev): "RESTORE DEFAULT POSITION" COULD LAND WITH THE POPUP'S BOTTOM
+// EDGE COVERING THE PLAYER (most visible on /search, but the same gap exists on any
+// route where .main-view-container's rect runs deep enough)
+// 17.53 switched getReservedBottomHeight() to bottomNav-only (56px) for every clamp site,
+// including createPopup()'s container-rect fallback branch and the "Restore Default
+// Position and Size" button - both of which clamp .main-view-container's own rect. That
+// rect isn't bounded by Spotifuck's clip CSS, so on routes where it runs deep (confirmed
+// on /search; home page's rect happens to be shallower, which is why restore looked fine
+// there) clamping against only 56px still let the popup's bottom edge land on top of the
+// player instead of stopping above it.
+// Fix: kept drag, resize, and reservedInsetsChangeHandler on the nav-only figure - that
+// part of 17.53 was correct, manually dragging/resizing over the player is intentional.
+// Added getReservedBottomHeightForRestore(), which reads the combined nav+player `bottom`
+// figure instead, and pointed only the two container-rect restore sites (createPopup()'s
+// fallback branch, the reset button) at it, so restoring to default never lands on the
+// player on any route - matching how restore always behaved before 17.53.
+
+// RESOLVED (17.53.dev): DRAG/RESIZE/RESTORE CLAMP RESERVED THE PLAYER'S HEIGHT TOO, NOT
+// JUST THE BOTTOM NAV BAR - POPUP COULDN'T BE DRAGGED OR RESIZED PAST THE TOP OF THE PLAYER
+// getReservedBottomHeight() read window.__spReservedInsets.bottom, which Spotifuck computed
+// as the bottom nav bar's fixed 56px PLUS the now-playing player's own height. Clamping
+// against that combined figure meant the popup could never cover the player at all - drag,
+// resize, and restore all stopped dead at the player's top edge, even though only the bottom
+// nav bar underneath it actually needs to stay clear.
+// Fix: Spotifuck v7.13 now also publishes bottomNav (just the fixed 56px nav bar, player
+// excluded) alongside the existing combined bottom. getReservedBottomHeight() now reads
+// bottomNav first and only falls back to the old combined bottom if bottomNav isn't present
+// (talking to a pre-7.13 Spotifuck), so nothing breaks for anyone who hasn't updated both
+// scripts together. Every clamp site in this script (drag, resize, both createPopup()
+// branches, the reset button, applyProportionToPopup(), reservedInsetsChangeHandler) reads
+// through this one function, so this single change is enough - the popup can now be dragged,
+// resized, or restored right over the player; only the bottom nav bar itself stays off-limits.
+// Companion fix required on Spotifuck's side (its own changelog, v7.13) - both ends of the
+// handshake have to agree on which figure is being reserved.
 
 // RESOLVED (17.52.dev): SYNCED LYRICS COULD VISIBLY JITTER/BOUNCE LINE-TO-LINE WHILE PLAYING
 // highlightSyncedLyrics()'s setInterval ticks every 50ms (TIMING.HIGHLIGHT_INTERVAL_MS), but
@@ -1829,8 +1864,46 @@
   // unsafeWindow isn't exposed (e.g. @grant none, where window already IS
   // the real page window).
   const SP_SHARED_WINDOW = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+  // Spotifuck v7.13+ also publishes bottomNav - just the fixed bottom nav bar,
+  // with the player's own height excluded - alongside the older combined
+  // `bottom` (nav+player). Reading `bottom` reserved the player's height too,
+  // which meant this popup could never be dragged, resized, or restored over
+  // the player at all - only bottomNav needs to stay permanently off-limits,
+  // the player itself is fair game to cover. Falls back to the old combined
+  // `bottom` when talking to a pre-7.13 Spotifuck (or any script exposing
+  // only that field), so nothing breaks for anyone who hasn't updated both
+  // scripts together - it's just more conservative than necessary until they do.
   function getReservedBottomHeight() {
-    return SP_SHARED_WINDOW.__spReservedInsets?.bottom ?? 0;
+    const insets = SP_SHARED_WINDOW.__spReservedInsets;
+    if (!insets) return 0;
+    return insets.bottomNav ?? insets.bottom ?? 0;
+  }
+
+  // RESOLVED (17.54.dev): "RESTORE DEFAULT POSITION" COULD LAND WITH THE POPUP'S BOTTOM
+  // EDGE COVERING THE PLAYER (most visible on /search, but the same gap exists on any
+  // route where .main-view-container's rect runs deep enough)
+  // getReservedBottomHeight() switched to bottomNav-only (56px) in 17.53 so drag/resize/
+  // reservedInsetsChangeHandler could intentionally park the popup over the player - that
+  // part is correct and unchanged. But createPopup()'s container-rect fallback branch and
+  // the "Restore Default Position and Size" button both reused that same nav-only figure
+  // to clamp .main-view-container's rect, even though those two sites are restore-to-
+  // default actions, not manual placement - a default restore landing on top of the player
+  // was never the intent, only manual drag/resize reaching there was. Since
+  // .main-view-container isn't the element Spotifuck's clip CSS resizes, its rect can run
+  // deep enough that clamping against only 56px still leaves the popup's bottom edge
+  // sitting inside the player's own height on some routes.
+  // Fix: added getReservedBottomHeightForRestore(), which reads the combined nav+player
+  // `bottom` figure directly (falling back to bottomNav, then 0, if Spotifuck hasn't
+  // published `bottom` at all). Only the two container-rect restore sites (createPopup()'s
+  // fallback branch and the reset button) now clamp against this instead of
+  // getReservedBottomHeight() - drag, resize, and reservedInsetsChangeHandler are untouched
+  // and still reserve only the nav bar, so manually parking the popup over the player still
+  // works exactly as it did in 17.53. This matches how restore behaved before 17.53 ever
+  // introduced the nav-only figure.
+  function getReservedBottomHeightForRestore() {
+    const insets = SP_SHARED_WINDOW.__spReservedInsets;
+    if (!insets) return 0;
+    return insets.bottom ?? insets.bottomNav ?? 0;
   }
 
   function makeSafeFilename(str) {
@@ -5816,9 +5889,12 @@ const Providers = {
       if (rect) {
         // .main-view-container isn't itself the element Spotifuck's clip CSS
         // resizes (see the sp-reserved-insets-change comment above) - clamp
-        // its rect the same way the saved-proportion branch above does, so a
-        // fresh install / first-ever open doesn't land under the reserved strip.
-        const maxTop = (window.innerHeight - getReservedBottomHeight()) - rect.height;
+        // its rect so a fresh install / first-ever open doesn't land under the
+        // reserved strip. This is a restore-to-default site, not manual
+        // placement, so it clamps against the combined nav+player height
+        // (getReservedBottomHeightForRestore()), not the nav-only figure drag/
+        // resize use - see the 17.54.dev note above getReservedBottomHeight().
+        const maxTop = (window.innerHeight - getReservedBottomHeightForRestore()) - rect.height;
         const top = Math.min(rect.top, maxTop);
         Object.assign(popup.style, {
           position: "fixed",
@@ -5935,8 +6011,11 @@ const Providers = {
       if (rect) {
         // Same fix as createPopup()'s container-rect branch - .main-view-container's
         // own rect isn't bounded by Spotifuck's clip, so clamp against the current
-        // reserved bottom inset before applying it.
-        const maxTop = (window.innerHeight - getReservedBottomHeight()) - rect.height;
+        // reserved bottom inset before applying it. Restore site, so this uses the
+        // combined nav+player height (getReservedBottomHeightForRestore()), not the
+        // nav-only figure drag/resize use - see the 17.54.dev note above
+        // getReservedBottomHeight().
+        const maxTop = (window.innerHeight - getReservedBottomHeightForRestore()) - rect.height;
         const top = Math.min(rect.top, maxTop);
         Object.assign(popup.style, {
           position: "fixed",
