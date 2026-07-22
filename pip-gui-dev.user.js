@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Dev
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.51.dev
+// @version      17.52.dev
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,20 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-dev.user.js
 // ==/UserScript==
+
+// RESOLVED (17.52.dev): SYNCED LYRICS COULD VISIBLY JITTER/BOUNCE LINE-TO-LINE WHILE PLAYING
+// highlightSyncedLyrics()'s setInterval ticks every 50ms (TIMING.HIGHLIGHT_INTERVAL_MS), but
+// it was reassigning every <p>'s color/fontWeight/scale/filter/opacity AND calling
+// activeP.scrollIntoView({behavior:"smooth", block:"center"}) on every single tick, even
+// when the active line hadn't changed since the last one. Two effects compounded: (1) each
+// scrollIntoView call restarted a fresh smooth-scroll animation on top of the one from 50ms
+// earlier that hadn't finished yet, and (2) reassigning fontWeight/transform on the active
+// line every tick caused a small reflow that nudged where "center" actually was by a pixel
+// or two each time. The popup ended up chasing a slightly different scroll target 20 times a
+// second instead of settling once, which is what looked like lines bouncing up/down.
+// Fix: added lastActiveIndex tracking so the style pass and the scrollIntoView call only run
+// when activeIndex has actually changed since the previous tick - once per line, not once
+// per 50ms.
 
 // RESOLVED (17.51.dev): COMPACT -> FULL PLAYER CYCLE COULD PUSH THE POPUP (AND ITS
 // HEADER/RESTORE BUTTON) OFF THE TOP OF THE SCREEN
@@ -2888,6 +2902,14 @@ document.head.appendChild(buttonGroupScrollStyle);
       highlightTimer = null;
     }
     ensureLyricsBottomSpacer(container);
+    // Tracks which line index we last styled/scrolled to. Re-applying the same
+    // active-line styles and re-triggering scrollIntoView every 50ms tick (even
+    // when the active line hasn't changed) causes visible jitter: each call
+    // restarts scrollIntoView's smooth animation over the last one before it
+    // finished, and the font-weight/scale reflow on the active <p> nudges the
+    // "center" target by a pixel or two each time, so the popup keeps chasing a
+    // slightly different position every tick instead of settling.
+    let lastActiveIndex = -2; // -2 (not -1) so the very first tick always applies styles
     highlightTimer = setInterval(() => {
       // Skip all style/size changes while popup is being resized
       if (window.lyricsPlusPopupIsResizing) return;
@@ -2957,6 +2979,11 @@ document.head.appendChild(buttonGroupScrollStyle);
         }
       }
 
+      // Only touch styles/scroll when the active line has actually changed since
+      // the last tick - see comment above lastActiveIndex's declaration for why.
+      if (activeIndex === lastActiveIndex) return;
+      lastActiveIndex = activeIndex;
+
       if (activeIndex === -1) {
         pElements.forEach(p => {
           p.style.color = "white";
@@ -2992,7 +3019,9 @@ document.head.appendChild(buttonGroupScrollStyle);
         }
       });
 
-      // Always auto-center while playing (do NOT auto-center when stopped)
+      // Auto-center on the new active line while playing (do NOT auto-center
+      // when stopped). This now only fires once per line change instead of
+      // every tick.
       const activeP = pElements[activeIndex];
       if (activeP && isPlaying) {
         activeP.scrollIntoView({ behavior: "smooth", block: "center" });
