@@ -16,18 +16,24 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.49): FRESH POPUP OPEN COULD STILL LAND UNDER THE RESERVED STRIP AFTER 17.48
+// RESOLVED (17.49): FRESH POPUP OPEN / RESTORE DEFAULT COULD STILL LAND UNDER THE RESERVED STRIP AFTER 17.48
 // 17.48 added getReservedBottomHeight() clamping to the drag clamp, resize clamp, both
 // fallback default-position spots, and applyProportionToPopup() (window resize / live
-// sp-reserved-insets-change re-clamp) - but missed createPopup()'s own saved-proportion
-// restore path, which recomputes top/height from the saved proportion independently
-// instead of going through applyProportionToPopup(). If the reserved bottom height grew
-// (e.g. Spotifuck's player expanded) after the proportion was last saved but before the
-// Lyrics+ button was next clicked, the popup could open already parked under the strip -
-// nothing reclamps it until the next drag/resize/reserved-insets-change, since
-// reservedInsetsChangeHandler only fires for a popup that already exists.
-// Fix: createPopup()'s saved-proportion branch now clamps pos.top the same way
-// applyProportionToPopup() does, right after computing it from the proportion.
+// sp-reserved-insets-change re-clamp) - but missed two spots that both position the popup
+// straight off .main-view-container's own getBoundingClientRect() with no clamp at all:
+// createPopup()'s container-rect branch (used on first-ever open, before any proportion has
+// been saved) and the "Restore Default Position and Size" button's identical container-rect
+// branch. .main-view-container isn't the element Spotifuck's clip CSS actually resizes, so
+// its rect can still extend under the reserved strip. Restore appeared fine in prior testing,
+// but only because that testing wasn't on a fresh install - same code path, same gap.
+// Fix: both branches now clamp top the same way the saved-proportion branch does.
+// Also fixed: createPopup()'s saved-proportion restore path (used every open after the first)
+// recomputed top/height from the saved proportion independently instead of going through
+// applyProportionToPopup(), so it skipped that function's clamp too - if the reserved bottom
+// height grew (e.g. Spotifuck's player expanded) after the proportion was last saved but
+// before the Lyrics+ button was next clicked, the popup could open already parked under the
+// strip, with nothing to reclamp it until the next drag/resize/reserved-insets-change.
+// createPopup()'s saved-proportion branch now clamps pos.top the same way too.
 
 // RESOLVED (17.48): POPUP NOW STOPS SHORT OF SPOTIFUCK'S BOTTOM NAV/PLAYER STRIP ON MOBILE
 // Spotifuck's mobile nav+player sits fixed at the bottom of the screen, but this script had
@@ -5724,10 +5730,16 @@ const Providers = {
       shouldSaveDefaultPosition = true;
       let rect = getSpotifyLyricsContainerRect();
       if (rect) {
+        // .main-view-container isn't itself the element Spotifuck's clip CSS
+        // resizes (see the sp-reserved-insets-change comment above) - clamp
+        // its rect the same way the saved-proportion branch above does, so a
+        // fresh install / first-ever open doesn't land under the reserved strip.
+        const maxTop = (window.innerHeight - getReservedBottomHeight()) - rect.height;
+        const top = Math.min(rect.top, maxTop);
         Object.assign(popup.style, {
           position: "fixed",
           left: rect.left + "px",
-          top: rect.top + "px",
+          top: top + "px",
           width: rect.width + "px",
           height: rect.height + "px",
           minWidth: "360px",
@@ -5837,10 +5849,15 @@ const Providers = {
       console.info("🔄 [Lyrics+ UI] Restore default position button clicked");
       const rect = getSpotifyLyricsContainerRect();
       if (rect) {
+        // Same fix as createPopup()'s container-rect branch - .main-view-container's
+        // own rect isn't bounded by Spotifuck's clip, so clamp against the current
+        // reserved bottom inset before applying it.
+        const maxTop = (window.innerHeight - getReservedBottomHeight()) - rect.height;
+        const top = Math.min(rect.top, maxTop);
         Object.assign(popup.style, {
           position: "fixed",
           left: rect.left + "px",
-          top: rect.top + "px",
+          top: top + "px",
           width: rect.width + "px",
           height: rect.height + "px",
           right: "auto",
