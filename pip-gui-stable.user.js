@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.49
+// @version      17.50
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,26 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.50): INACTIVE/CONTEXT LYRIC LINES LOOKED NOTICEABLY BLURRIER ON MOBILE THAN ON PC
+// Dimmed inactive lines (both the non-active context lines in synced view and unsynced
+// lyrics, which share the same styling path) were meant to get only a light blur, but on
+// phones they came out visibly blurrier than the same code produced on desktop.
+// Not a platform-specific bug - the styling code is identical on both, there was no
+// isMobile branch or media query anywhere. The cause: the blur was a fixed
+// `blur(0.7px)`, and that "0.7px" is a CSS pixel, not a physical screen pixel. Phones
+// commonly render at devicePixelRatio 2-3, while most desktop monitors sit at ~1, so the
+// same nominal 0.7px blur radius covered roughly 2-3x more actual device pixels on a
+// phone than on a desktop - a much bigger fraction of each thin, high-DPI glyph stroke,
+// which read as noticeably stronger blur.
+// Fix: added a single shared INACTIVE_LINE_BLUR constant, computed once as
+// `blur(${(0.7 / devicePixelRatio).toFixed(2)}px)`, so the blur radius scales back down
+// on high-DPR screens instead of silently growing on them. Replaces all 6 places that
+// previously hardcoded "blur(0.7px)" directly: the two sub-line (transliteration/
+// translation) filters in updateSubLines(), the two main synced-line filters in
+// highlightSyncedLyrics() (the "no active line" branch and the per-line inactive
+// branch), and the two unsynced-lyrics line-construction sites. All 6 now stay in sync
+// automatically since they read from one constant instead of six separate literals.
 
 // RESOLVED (17.49):
 // • POPUP CLAMPING OVERHAULED TO RESPECT SPOTIFUCK'S RESERVED SCREEN SPACE PROPERLY -
@@ -956,6 +976,18 @@
   // the lyric, less saturated/opaque than the translation - since transliteration
   // ranks just below the lyric itself but above translation in importance.
   const TRANSLITERATION_ACTIVE_COLOR = 'rgba(45, 205, 100, 0.85)';
+
+  // Inactive/context lyric line blur, single source of truth for both the main-line
+  // styling and the sub-line (transliteration/translation) styling below.
+  // blur(Npx) is a CSS-pixel value, but phones commonly render at devicePixelRatio
+  // 2-3 while most desktop monitors sit at ~1, so a fixed CSS px blur radius ends up
+  // covering roughly dpr-times more *device* pixels on a phone than on a desktop -
+  // same nominal number, visibly stronger blur on mobile. Dividing the base radius by
+  // devicePixelRatio keeps the blur's actual on-screen strength consistent across
+  // screen densities instead of it silently scaling up on higher-dpr (mostly mobile)
+  // screens. Computed once here rather than per line/per highlight tick.
+  const INACTIVE_LINE_BLUR_PX = (0.7 / Math.max(1, window.devicePixelRatio || 1)).toFixed(2);
+  const INACTIVE_LINE_BLUR = `blur(${INACTIVE_LINE_BLUR_PX}px)`;
 
   // ------------------------
   // State Variables
@@ -2982,7 +3014,7 @@ document.head.appendChild(buttonGroupScrollStyle);
             // exactly like the lyric line: solid green, bold, when active.
             el.style.color = active ? TRANSLITERATION_ACTIVE_COLOR : "#9a9a9a";
             el.style.fontWeight = active ? "700" : "400";
-            el.style.filter = active ? "none" : "blur(0.7px)";
+            el.style.filter = active ? "none" : INACTIVE_LINE_BLUR;
             el.style.opacity = active ? "1" : "0.8";
           } else if (el.getAttribute('data-translated') === 'true') {
             // Translation is separate content, not the lyric itself - keep it subdued so it
@@ -2990,7 +3022,7 @@ document.head.appendChild(buttonGroupScrollStyle);
             // brighten it while active so it visibly tracks the current line.
             el.style.color = active ? TRANSLATION_ACTIVE_COLOR : "gray";
             el.style.fontWeight = "400";
-            el.style.filter = active ? "none" : "blur(0.7px)";
+            el.style.filter = active ? "none" : INACTIVE_LINE_BLUR;
             el.style.opacity = active ? "1" : "0.8";
           } else {
             break;
@@ -3008,7 +3040,7 @@ document.head.appendChild(buttonGroupScrollStyle);
         pElements.forEach(p => {
           p.style.color = "white";
           p.style.fontWeight = "400";
-          p.style.filter = "blur(0.7px)";
+          p.style.filter = INACTIVE_LINE_BLUR;
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -3030,7 +3062,7 @@ document.head.appendChild(buttonGroupScrollStyle);
         } else {
           p.style.color = "white";
           p.style.fontWeight = "400";
-          p.style.filter = "blur(0.7px)";
+          p.style.filter = INACTIVE_LINE_BLUR;
           p.style.opacity = "0.8";
           p.style.transform = "scale(1.0)";
           p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
@@ -8936,7 +8968,7 @@ popup._headerWheelHandler = onHeaderWheel;
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         p.style.color = "white";
         p.style.fontWeight = "400";
-        p.style.filter = "blur(0.7px)";
+        p.style.filter = INACTIVE_LINE_BLUR;
         p.style.opacity = "0.8";
         if (transliteration) {
           p.setAttribute('data-transliteration-text', transliteration);
@@ -9172,7 +9204,7 @@ popup._headerWheelHandler = onHeaderWheel;
         p.style.transition = "transform 0.18s, color 0.15s, filter 0.13s, opacity 0.13s";
         p.style.color = "white";
         p.style.fontWeight = "400";
-        p.style.filter = "blur(0.7px)";
+        p.style.filter = INACTIVE_LINE_BLUR;
         p.style.opacity = "0.8";
         if (transliteration) {
           p.setAttribute('data-transliteration-text', transliteration);
