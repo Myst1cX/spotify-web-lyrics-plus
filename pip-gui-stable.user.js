@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.51
+// @version      17.50
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,30 +16,6 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// NEW (17.51): NATIVE-APP PICTURE-IN-PICTURE PATH (SPOTIFY WEB WRAPPER APP)
-// Adds a second PiP entry point used only when running inside the Spotify Web wrapper
-// app (see pip-plan.md), detected via window.AndBridge.enterNativePip. That app can
-// shrink its whole Activity into real system Picture-in-Picture, which - unlike the
-// requestPictureInPicture()/WebKit/page-fallback chain below, all still untouched and
-// still what runs in real browsers - mirrors whatever is actually on screen at the
-// moment it's triggered, not just a single <video>/<canvas> element.
-// togglePip() now branches into enterNativeAppPip()/exitNativeAppPip() before any of
-// the existing chain when window.AndBridge.enterNativePip exists. enterNativeAppPip()
-// uses the real #lyrics-plus-content element directly - it already stays live-updated
-// via the normal highlighting code, so there's no separate canvas/render loop for this
-// path - styled to fill the viewport (position:fixed;inset:0) on top of a solid
-// backdrop, so nothing else on the page (popup chrome, bottom nav, etc.) can bleed
-// through around its edges. The container's on-screen aspect ratio is captured before
-// those styles are applied and passed to AndBridge.enterNativePip(width, height),
-// clamped to Android's supported PiP aspect-ratio range, so the system PiP window is
-// shaped after the lyrics view instead of whatever Android would otherwise default to.
-// Since there's no JS callback for the Activity's PiP-mode-changed event without more
-// native wiring, exit is detected with a resize heuristic: the viewport is recorded
-// right before entering, and once window.innerWidth/innerHeight comes back close to
-// that recorded size, it's treated as "native PiP just closed" and cleaned up
-// automatically. Also wired into the popup-teardown closePip() call site, since that
-// only knew about the requestPictureInPicture()/WebKit/page-fallback state.
-//
 // RESOLVED (17.50): INACTIVE/CONTEXT LYRIC LINES LOOKED NOTICEABLY BLURRIER ON MOBILE THAN ON PC
 // Dimmed inactive lines (both the non-active context lines in synced view and unsynced
 // lyrics, which share the same styling path) were meant to get only a light blur, but on
@@ -1053,18 +1029,6 @@
   let pipWindowResizeFallbackActive = false;
   let pipFallbackTimer = null;
   let pipWorker = null;
-  // Native-app PiP state (see pip-plan.md) - separate from isPipActive/
-  // isPagePipActive above, which are shaped around real Web-PiP/canvas-hidden
-  // semantics and don't fit this path (no <video>/canvas involved at all).
-  let isNativeAppPipActive = false;
-  // Snapshot of lyricsContainer's inline styles taken right before
-  // enterNativeAppPip() overrides them, so exitNativeAppPip() can restore
-  // exactly what was there rather than guessing at "default" values.
-  let nativePipSavedStyle = null;
-  // window.innerWidth/innerHeight recorded right before triggering native
-  // PiP - see armNativePipResizeWatcher() for why.
-  let nativePipNormalViewport = null;
-  let nativePipResizeListener = null;
   // Match TIMING.HIGHLIGHT_INTERVAL_MS so the PiP canvas redraws at the exact
   // same cadence as the main container's highlightSyncedLyrics(), instead of
   // the old 500ms fallback which was 10x coarser than main, independent of
@@ -1115,19 +1079,6 @@
   const PIP_SAFARI_SHOW_LETTER_STYLE = 'position:absolute;left:calc(100% - 1px);bottom:calc(100% - 1px)';
   const PIP_NOTICE_ID = 'lyrics-plus-pip-notice';
   const LYRICS_BOTTOM_SPACER_ID = 'lyrics-plus-bottom-spacer';
-  // ------------------------
-  // Native-app PiP configuration (see pip-plan.md)
-  // ------------------------
-  const NATIVE_PIP_BACKDROP_ID = 'lyrics-plus-native-pip-backdrop';
-  // Android's PictureInPictureParams.Builder.setAspectRatio() throws
-  // IllegalArgumentException outside roughly 1:2.39-2.39:1 - clamp to this
-  // range before ever sending width/height to AndBridge.enterNativePip().
-  const NATIVE_PIP_MIN_ASPECT = 1 / 2.39;
-  const NATIVE_PIP_MAX_ASPECT = 2.39;
-  // Once the viewport is back to at least this fraction of its pre-PiP size
-  // in both dimensions, armNativePipResizeWatcher() treats native PiP as
-  // closed. See that function for why this heuristic is needed at all.
-  const NATIVE_PIP_RESIZE_RESTORE_FRACTION = 0.9;
   // Shown while a real PiP window (native or WebKit) is open.
   const PIP_ACTIVE_NOTICE_TEXT = 'This video is playing in Picture-in-Picture mode';
   // Shown instead of the above when isPagePipActive is true, i.e. there is no
@@ -2888,167 +2839,6 @@ document.head.appendChild(buttonGroupScrollStyle);
   }
 
   /**
-   * Clamps a width/height pair to the aspect-ratio range Android's PiP API
-   * actually accepts (roughly 1:2.39 to 2.39:1 - see NATIVE_PIP_MIN_ASPECT/
-   * NATIVE_PIP_MAX_ASPECT above). Keeps the larger dimension and shrinks the
-   * other one down to the nearest allowed ratio, rather than distorting
-   * both. Returns [0, 0] for a degenerate input (0 or negative width/
-   * height), which callers treat as "let Android use its own default".
-   */
-  function clampNativePipAspect(width, height) {
-    let w = Math.round(width);
-    let h = Math.round(height);
-    if (!(w > 0) || !(h > 0)) return [0, 0];
-    const ratio = w / h;
-    if (ratio < NATIVE_PIP_MIN_ASPECT) {
-      h = Math.round(w / NATIVE_PIP_MIN_ASPECT);
-    } else if (ratio > NATIVE_PIP_MAX_ASPECT) {
-      w = Math.round(h * NATIVE_PIP_MAX_ASPECT);
-    }
-    return [w, h];
-  }
-
-  /**
-   * Heuristic exit-detection for native-app PiP (see pip-plan.md item 3).
-   * There's no JS callback for Activity.onPictureInPictureModeChanged()
-   * without more native wiring, and once genuinely shrunk into system PiP
-   * this script's own button likely isn't reliably tappable - Android's PiP
-   * chrome usually owns touch input on the floating window until the user
-   * expands it back. So instead: entering/exiting system PiP resizes the
-   * Activity's window, which resizes the WebView's viewport, so
-   * window.innerWidth/innerHeight really do change. Once the viewport is
-   * back close to the size recorded right before triggering PiP, treat that
-   * as "PiP just closed" and auto-run exitNativeAppPip(). Not a guaranteed
-   * OS signal, but a known, workable technique.
-   */
-  function armNativePipResizeWatcher() {
-    disarmNativePipResizeWatcher();
-    nativePipResizeListener = () => {
-      if (!isNativeAppPipActive || !nativePipNormalViewport) return;
-      const backToNormalWidth = window.innerWidth >= nativePipNormalViewport.width * NATIVE_PIP_RESIZE_RESTORE_FRACTION;
-      const backToNormalHeight = window.innerHeight >= nativePipNormalViewport.height * NATIVE_PIP_RESIZE_RESTORE_FRACTION;
-      if (backToNormalWidth && backToNormalHeight) {
-        console.info('📺 [Lyrics+ PiP] native PiP viewport back to ~normal size - treating as closed');
-        exitNativeAppPip();
-      }
-    };
-    window.addEventListener('resize', nativePipResizeListener);
-  }
-
-  function disarmNativePipResizeWatcher() {
-    if (nativePipResizeListener) {
-      window.removeEventListener('resize', nativePipResizeListener);
-      nativePipResizeListener = null;
-    }
-  }
-
-  /**
-   * Native-app PiP entry point - used instead of the requestPictureInPicture()/
-   * canvas chain below when running inside the Spotify Web wrapper app (see
-   * pip-plan.md). Uses the *real* lyrics-plus-content element directly rather
-   * than a separate canvas: it already stays live-updated via the normal
-   * highlighting code, so there's no separate render loop to run for this
-   * path. A solid backdrop sits behind it so nothing else on the page (popup
-   * chrome, Spotifuck's bottom nav, etc.) can bleed through around its
-   * edges, and the container's on-screen aspect ratio (captured *before* it
-   * gets forced fullscreen below) is sent to AndBridge.enterNativePip() so
-   * the system PiP window is shaped after the lyrics view instead of
-   * whatever Android would otherwise default to.
-   */
-  function enterNativeAppPip() {
-    if (isNativeAppPipActive) return;
-    const lyricsContainer = document.getElementById('lyrics-plus-content');
-    if (!lyricsContainer) {
-      console.warn('📺 [Lyrics+ PiP] enterNativeAppPip: #lyrics-plus-content not found, aborting');
-      return;
-    }
-
-    // Must be read before any style changes below - once lyricsContainer is
-    // forced to fill the viewport, its bounding rect would just report the
-    // viewport's own aspect ratio instead of the container's natural shape.
-    const rect = lyricsContainer.getBoundingClientRect();
-    const [pipWidth, pipHeight] = clampNativePipAspect(rect.width, rect.height);
-
-    nativePipSavedStyle = {
-      position: lyricsContainer.style.position,
-      inset: lyricsContainer.style.inset,
-      top: lyricsContainer.style.top,
-      left: lyricsContainer.style.left,
-      right: lyricsContainer.style.right,
-      bottom: lyricsContainer.style.bottom,
-      width: lyricsContainer.style.width,
-      height: lyricsContainer.style.height,
-      zIndex: lyricsContainer.style.zIndex,
-      background: lyricsContainer.style.background,
-    };
-
-    let backdrop = document.getElementById(NATIVE_PIP_BACKDROP_ID);
-    if (!backdrop) {
-      backdrop = document.createElement('div');
-      backdrop.id = NATIVE_PIP_BACKDROP_ID;
-      document.body.appendChild(backdrop);
-    }
-    Object.assign(backdrop.style, {
-      position: 'fixed',
-      inset: '0',
-      top: '0',
-      left: '0',
-      right: '0',
-      bottom: '0',
-      width: '100%',
-      height: '100%',
-      background: '#000',
-      zIndex: '2147483646',
-    });
-
-    Object.assign(lyricsContainer.style, {
-      position: 'fixed',
-      inset: '0',
-      top: '0',
-      left: '0',
-      right: '0',
-      bottom: '0',
-      width: '100%',
-      height: '100%',
-      zIndex: '2147483647',
-      background: '#000',
-    });
-
-    nativePipNormalViewport = { width: window.innerWidth, height: window.innerHeight };
-    isNativeAppPipActive = true;
-    updatePipButtonState(true);
-    armNativePipResizeWatcher();
-
-    try {
-      window.AndBridge.enterNativePip(pipWidth, pipHeight);
-    } catch (err) {
-      console.error('📺 [Lyrics+ PiP] AndBridge.enterNativePip failed', err);
-    }
-    console.info('📺 [Lyrics+ PiP] enterNativeAppPip: requested (aspect w=%s h=%s, 0 means "let Android default")', pipWidth, pipHeight);
-  }
-
-  /**
-   * Counterpart to enterNativeAppPip(): restores lyricsContainer's saved
-   * inline styles, removes the backdrop, stops the resize watcher, and
-   * resets state. Safe to call when native-app PiP isn't active (no-op).
-   */
-  function exitNativeAppPip() {
-    if (!isNativeAppPipActive) return;
-    const lyricsContainer = document.getElementById('lyrics-plus-content');
-    if (lyricsContainer && nativePipSavedStyle) {
-      Object.assign(lyricsContainer.style, nativePipSavedStyle);
-    }
-    nativePipSavedStyle = null;
-    const backdrop = document.getElementById(NATIVE_PIP_BACKDROP_ID);
-    if (backdrop) backdrop.remove();
-    disarmNativePipResizeWatcher();
-    nativePipNormalViewport = null;
-    isNativeAppPipActive = false;
-    updatePipButtonState(false);
-    console.info('📺 [Lyrics+ PiP] exitNativeAppPip: restored normal layout');
-  }
-
-  /**
    * Toggles Picture-in-Picture mode. Creates video/canvas elements on first call.
    * Browser priority: native requestPictureInPicture → WebKit PiP → page PiP fallback.
    *
@@ -3057,23 +2847,6 @@ document.head.appendChild(buttonGroupScrollStyle);
    * "Video readyState is HAVE_NOTHING" error on the very first toggle.
    */
   async function togglePip() {
-    // Native-app PiP path: running inside the Spotify Web wrapper app (see
-    // pip-plan.md), which exposes an AndBridge.enterNativePip() JS bridge
-    // that can shrink the whole Activity into system Picture-in-Picture.
-    // Branch entirely into that flow when present, before touching any of
-    // the requestPictureInPicture()/WebKit/page-fallback chain below - that
-    // chain is still correct for real Chromium/WebKit browsers, where this
-    // userscript also runs and window.AndBridge does not exist.
-    if (window.AndBridge && typeof window.AndBridge.enterNativePip === 'function') {
-      console.info('📺 [Lyrics+ PiP] togglePip: native-app PiP path (isNativeAppPipActive=%s)', isNativeAppPipActive);
-      if (isNativeAppPipActive) {
-        exitNativeAppPip();
-      } else {
-        enterNativeAppPip();
-      }
-      return;
-    }
-
     console.info('📺 [Lyrics+ PiP] togglePip clicked. isPipActive=%s isPagePipActive=%s pictureInPictureElement===pipVideo=%s',
       isPipActive, isPagePipActive, pipVideo && document.pictureInPictureElement === pipVideo);
     if (isPipActive || isPagePipActive) {
@@ -5948,10 +5721,6 @@ const Providers = {
 
       // Close PiP if active — the popup is required for PiP to function
       closePip();
-      // closePip() only knows about the requestPictureInPicture()/WebKit/
-      // page-fallback chain (isPipActive/isPagePipActive) - native-app PiP
-      // has no video/canvas involved, so it needs its own teardown call here.
-      exitNativeAppPip();
 
       // The download dropdown now lives on document.body (not inside the
       // popup) so it can escape buttonGroup's overflow clipping - it won't
