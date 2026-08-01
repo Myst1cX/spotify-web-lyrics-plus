@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.50
+// @version      17.51
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,49 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.51): SEEKBAR NOW MATCHES SPOTIFY'S NATIVE PROGRESS BAR (COLOR STATES,
+// HOVER PREVIEW, TOOLTIP) - AND STAYS A DROP-IN TARGET FOR NYAN CAT THEMING
+// The popup's seekbar (#lyrics-plus-progress) was a flat, always-two-color range
+// input: solid green for played, gray for unplayed, computed as one static split
+// and painted the same way whether the user was hovering, dragging, or doing
+// nothing. The thumb was permanently visible with a fixed decorative box-shadow
+// ring. Spotify's own bar is more expressive: with no interaction it's white/gray
+// with the thumb hidden entirely; hovering at or behind the playhead turns the
+// played portion green and reveals the thumb; hovering ahead of the playhead adds a
+// white "seek preview" trail between the ball and the mouse, backed by a live
+// timestamp tooltip, so you can see exactly where a click will land before
+// committing.
+// Fix: added renderProgressBarVisual(), which expresses all three states (static /
+// hover-behind-ball / hover-ahead-of-ball) as one linear-gradient with duplicate
+// color-stop positions at each boundary (e.g. "#fff 0%, #fff 40%, gray 40%, gray
+// 100%"), giving every region a hard edge with no bleed - the single-input
+// equivalent of layering separate background-images, since a native <input> only
+// exposes one paintable background surface. getBallPercent() reads value/max
+// straight off the input so the renderer always has the live playhead position.
+// New mouseenter/mousemove/mouseleave listeners on the input maintain
+// isHoveringProgress/hoverPercent; mousemove also drives updateProgressTooltip(),
+// which positions a new #lyrics-plus-progress-tooltip (a small #282828 box) and
+// sets its text from the mouse's percent-of-track via formatMs(). That tooltip is
+// parented to `popup` rather than `progressWrapper`, since the wrapper's own
+// overflow:hidden (used for its collapse animation) would've clipped a tooltip
+// positioned above the bar. The thumb is opacity:0 by default and only opacity:1
+// while a new .lp-progress-hover class (or :active, for drag) is present,
+// replacing the old permanent ring; track height dropped 6px -> 4px with the
+// thumb's margin-top set to -4px ((track - thumb) / 2) so the 12px ball is exactly
+// bisected by the line. All three sites that used to hardcode
+// `background: linear-gradient(...#1db954...#444...)` - the interval-driven sync,
+// the zero-duration fallback, and the drag handler - now call
+// renderProgressBarVisual() instead, so there's one source of truth for the bar's
+// color logic.
+// Because the rebuilt bar is still a plain <input type="range"> at the same
+// #lyrics-plus-progress id with the same value/max semantics, it stayed a stable
+// target for external theming without any coordination code on this side:
+// Spotify-Nyan_bar.user.js's new Lyrics+-seekbar support (see its FEATURE block)
+// overrides this same element's background/thumb with !important and layers a
+// rainbow trail over a star pattern on top of this bar's played percentage, so
+// nyan-cat theming carries over to the popup exactly like it does on Spotify's
+// native bar.
 
 // RESOLVED (17.50): INACTIVE/CONTEXT LYRIC LINES LOOKED NOTICEABLY BLURRIER ON MOBILE THAN ON PC
 // Dimmed inactive lines (both the non-active context lines in synced view and unsynced
@@ -7775,31 +7818,47 @@ popup._headerWheelHandler = onHeaderWheel;
     Object.assign(progressInput.style, {
       flex: "1",
       appearance: "none",
-      height: "6px",
-      borderRadius: "3px",
-      background: "linear-gradient(90deg, #1db954 0%, #1db954 0%, #444 0%)",
+      height: "4px",
+      borderRadius: "2px",
+      background: "linear-gradient(90deg, #ffffff 0%, #ffffff 0%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.3) 100%)",
       outline: "none",
       margin: "0",
     });
 
-    // Simple styling for thumb (dynamic progress bar)
+    // Thumb styling for dynamic progress bar.
+    // Track is 4px tall, thumb is 12px: margin-top = (track - thumb) / 2 = -4px,
+    // which perfectly bisects the ball across the line (see Lyrics+ progress bar spec).
+    // Thumb is invisible by default (opacity 0) and only shown while hovering/dragging.
     const thumbStyle = document.createElement("style");
     thumbStyle.textContent = `
       #lyrics-plus-progress::-webkit-slider-thumb {
         -webkit-appearance: none;
         width: 12px;
         height: 12px;
+        margin-top: -4px;
         border-radius: 50%;
         background: #fff;
-        box-shadow: 0 0 0 4px rgba(29,185,84,0.12);
+        opacity: 0;
+        transition: opacity 0.1s ease;
         cursor: pointer;
+      }
+      #lyrics-plus-progress.lp-progress-hover::-webkit-slider-thumb,
+      #lyrics-plus-progress:active::-webkit-slider-thumb {
+        opacity: 1;
       }
       #lyrics-plus-progress::-moz-range-thumb {
         width: 12px;
         height: 12px;
         border-radius: 50%;
         background: #fff;
+        border: none;
+        opacity: 0;
+        transition: opacity 0.1s ease;
         cursor: pointer;
+      }
+      #lyrics-plus-progress.lp-progress-hover::-moz-range-thumb,
+      #lyrics-plus-progress:active::-moz-range-thumb {
+        opacity: 1;
       }
     `;
     document.head.appendChild(thumbStyle);
@@ -7890,6 +7949,28 @@ popup._headerWheelHandler = onHeaderWheel;
     progressWrapper.appendChild(progressInput);
     progressWrapper.appendChild(timeTotal);
 
+    // Seek-preview tooltip (shows the timestamp under the mouse while hovering
+    // the progress bar). Parented to `popup` rather than `progressWrapper`
+    // because progressWrapper uses `overflow: hidden` for its collapse
+    // animation, which would clip a tooltip positioned above the bar.
+    const progressTooltip = document.createElement("div");
+    progressTooltip.id = "lyrics-plus-progress-tooltip";
+    Object.assign(progressTooltip.style, {
+      position: "absolute",
+      background: "#282828",
+      color: "#fff",
+      fontSize: "11px",
+      fontWeight: "bold",
+      padding: "3px 6px",
+      borderRadius: "4px",
+      pointerEvents: "none",
+      opacity: "0",
+      transition: "opacity 0.1s ease",
+      whiteSpace: "nowrap",
+      transform: "translate(-50%, -100%)",
+      zIndex: "100001",
+    });
+
     console.info("✅ [Lyrics+ Seekbar] Progress bar (seekbar) created with time display");
 
     // Apply initial visibility state for progressWrapper (must be after progressWrapper is created)
@@ -7905,6 +7986,7 @@ popup._headerWheelHandler = onHeaderWheel;
     popup.appendChild(lyricsContainer);
     popup.appendChild(controlsBar);
     popup.appendChild(progressWrapper);
+    popup.appendChild(progressTooltip);
 
     const container = document.querySelector('.main-view-container');
     if (container) {
@@ -8280,6 +8362,93 @@ popup._headerWheelHandler = onHeaderWheel;
       return `${m}:${String(sec).padStart(2, '0')}`;
     }
 
+    // --- Progress bar hover/preview state ---
+    // isHoveringProgress: mouse is currently over the bar (thumb + colored states shown)
+    // hoverPercent: mouse position as a % of the bar's width (used for tooltip + preview)
+    let isHoveringProgress = false;
+    let hoverPercent = 0;
+
+    /**
+     * getBallPercent()
+     * Returns the current playback position as a % of the bar (0-100), i.e. the
+     * "Ball Position" from the spec.
+     */
+    function getBallPercent() {
+      const val = Number(progressInput.value) || 0;
+      const max = Number(progressInput.max) || 1;
+      return clamp((val / max) * 100, 0, 100);
+    }
+
+    /**
+     * renderProgressBarVisual()
+     * Applies the three-state coloring logic from the Lyrics+ progress bar spec:
+     *   - No hover: white fill up to the ball, gray track after, thumb hidden.
+     *   - Hover at/behind the ball: green fill up to the ball, gray after, thumb shown.
+     *   - Hover ahead of the ball: green up to the ball, white "seek preview" from
+     *     ball to mouse, gray from mouse to the end, thumb shown.
+     * Colors are expressed as one linear-gradient with hard color-stop pairs
+     * (duplicate positions) so each region has a crisp boundary with no bleed,
+     * equivalent to the spec's multi-layer background-image approach but as a
+     * single gradient (the input only supports one flat background surface).
+     */
+    function renderProgressBarVisual() {
+      const ballPct = getBallPercent();
+      const GREEN = "#1db954";
+      const WHITE = "#ffffff";
+      const GRAY = "rgba(255, 255, 255, 0.3)";
+      let bg;
+
+      if (!isHoveringProgress) {
+        progressInput.classList.remove("lp-progress-hover");
+        bg = `linear-gradient(90deg, ${WHITE} 0%, ${WHITE} ${ballPct}%, ${GRAY} ${ballPct}%, ${GRAY} 100%)`;
+      } else {
+        progressInput.classList.add("lp-progress-hover");
+        if (hoverPercent <= ballPct) {
+          // Hover behind or on the ball: green covers start-to-mouse and mouse-to-ball alike.
+          bg = `linear-gradient(90deg, ${GREEN} 0%, ${GREEN} ${ballPct}%, ${GRAY} ${ballPct}%, ${GRAY} 100%)`;
+        } else {
+          // Hover ahead of the ball: green (played) + white (seek preview) + gray (remaining).
+          bg = `linear-gradient(90deg, ${GREEN} 0%, ${GREEN} ${ballPct}%, ${WHITE} ${ballPct}%, ${WHITE} ${hoverPercent}%, ${GRAY} ${hoverPercent}%, ${GRAY} 100%)`;
+        }
+      }
+      progressInput.style.background = bg;
+    }
+
+    /**
+     * updateProgressTooltip(clientX)
+     * Positions the seek-preview tooltip above the bar at the mouse's X position
+     * and sets its text to the timestamp that X position corresponds to.
+     * Also updates hoverPercent, which renderProgressBarVisual() reads.
+     */
+    function updateProgressTooltip(clientX) {
+      const inputRect = progressInput.getBoundingClientRect();
+      const popupRect = popup.getBoundingClientRect();
+      const x = clamp(clientX - inputRect.left, 0, inputRect.width);
+      hoverPercent = inputRect.width > 0 ? (x / inputRect.width) * 100 : 0;
+
+      const max = Number(progressInput.max) || 0;
+      const hoverMs = (hoverPercent / 100) * max;
+      progressTooltip.textContent = formatMs(hoverMs);
+
+      progressTooltip.style.left = (inputRect.left - popupRect.left + x) + "px";
+      progressTooltip.style.top = (inputRect.top - popupRect.top) + "px";
+    }
+
+    progressInput.addEventListener('mouseenter', () => {
+      isHoveringProgress = true;
+      progressTooltip.style.opacity = "1";
+      renderProgressBarVisual();
+    });
+    progressInput.addEventListener('mousemove', (e) => {
+      updateProgressTooltip(e.clientX);
+      renderProgressBarVisual();
+    });
+    progressInput.addEventListener('mouseleave', () => {
+      isHoveringProgress = false;
+      progressTooltip.style.opacity = "0";
+      renderProgressBarVisual();
+    });
+
     /**
      * updateProgressUIFromSpotify()
      * Updates the popup's progressInput, timeNow, timeTotal, and background gradient
@@ -8388,7 +8557,7 @@ popup._headerWheelHandler = onHeaderWheel;
         if (spotifyPosMs === null || spotifyDurMs === null || spotifyDurMs <= 0) {
           progressInput.max = "100";
           progressInput.value = "0";
-          progressInput.style.background = `linear-gradient(90deg, #1db954 0%, #444 0%)`;
+          renderProgressBarVisual();
           timeNow.textContent = "0:00";
           timeTotal.textContent = "0:00";
           return;
@@ -8403,8 +8572,7 @@ popup._headerWheelHandler = onHeaderWheel;
         // Update the UI
         progressInput.max = String(spotifyDurMs);
         progressInput.value = String(displayPosMs);
-        const pct = (displayPosMs / spotifyDurMs) * 100;
-        progressInput.style.background = `linear-gradient(90deg, #1db954 ${pct}%, #444 ${pct}%)`;
+        renderProgressBarVisual();
         timeNow.textContent = formatMs(displayPosMs);
         timeTotal.textContent = formatMs(spotifyDurMs);
 
@@ -8696,11 +8864,12 @@ popup._headerWheelHandler = onHeaderWheel;
     let userSeeking = false;
     progressInput.addEventListener('input', (e) => {
       userSeeking = true;
-      // Show immediate feedback while dragging
+      // Show immediate feedback while dragging - dragging counts as "hovering"
+      // (behind/on the ball) so the bar reads green and the thumb stays visible.
+      isHoveringProgress = true;
+      hoverPercent = getBallPercent();
+      renderProgressBarVisual();
       const val = Number(progressInput.value) || 0;
-      const max = Number(progressInput.max) || 1;
-      const pct = (val / max) * 100;
-      progressInput.style.background = `linear-gradient(90deg, #1db954 ${pct}%, #444 ${pct}%)`;
       timeNow.textContent = formatMs(val);
     });
 
