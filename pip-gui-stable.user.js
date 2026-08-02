@@ -48,7 +48,7 @@
 // (100ms) behind Spotify's own update - producing a brief flash near the track's end
 // before self-correcting on the next poll. All existing fallbacks are unchanged and still
 // run in order if data-test-position is missing/unparseable.
-//
+
 // RESOLVED (17.52): SEEKBAR THUMB SAT ABOVE THE TRACK LINE ON SOME MOBILE DEVICES
 // The popup's own seekbar handle (the white ball, or the Nyan Cat sprite when that
 // theme is active) was pushed up above the track instead of bisecting it, on some
