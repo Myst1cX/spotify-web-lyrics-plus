@@ -8523,7 +8523,7 @@ popup._headerWheelHandler = onHeaderWheel;
             const max = Number(spotifyRange.max) || 0;
             const val = Number(spotifyRange.value) || 0;
             if (max > 0) {
-              spotifyPosMs = val;
+              spotifyPosMs = Math.max(0, val - 1000);
               spotifyDurMs = max;
             }
           }
@@ -8565,7 +8565,7 @@ popup._headerWheelHandler = onHeaderWheel;
             }
 
             if (durMs > 0) {
-              spotifyPosMs = (cssPercent / 100) * durMs;
+              spotifyPosMs = Math.max(0, (cssPercent / 100) * durMs - 1000);
               spotifyDurMs = durMs;
             }
           }
@@ -8638,8 +8638,13 @@ popup._headerWheelHandler = onHeaderWheel;
             const max = Number(spotifyRange.max) || 0;
             if (max > 0) {
               const safeMs = applySeekEndBuffer(ms, max, SEEK_END_BUFFER_MS);
+              // Spotify's range .value is a ~1000ms-ahead render target, not the
+              // true position (confirmed via DOM: value vs data-test-position/
+              // playback-position text differ by exactly 1000ms) - so the value we
+              // write has to target that same ahead frame, not the true ms we want.
+              const seekValueMs = clamp(safeMs + 1000, 0, max);
               // Set the value
-              spotifyRange.value = String(clamp(safeMs, 0, max));
+              spotifyRange.value = String(seekValueMs);
 
               // Dispatch input and change events
               spotifyRange.dispatchEvent(new Event('input', { bubbles: true }));
@@ -8648,7 +8653,7 @@ popup._headerWheelHandler = onHeaderWheel;
               // Also try pointer events for better compatibility
               // Note: We omit 'view' property as it can cause errors in Firefox extensions
               const rangeRect = spotifyRange.getBoundingClientRect();
-              const percentage = clamp(safeMs, 0, max) / max;
+              const percentage = seekValueMs / max;
               const clientX = rangeRect.left + rangeRect.width * percentage;
               const clientY = rangeRect.top + rangeRect.height / 2;
 
@@ -8911,6 +8916,14 @@ popup._headerWheelHandler = onHeaderWheel;
       console.info("⏩ [Lyrics+ Seekbar] User seeked to position:", formatMs(val));
       // Just seek - no interpolation state to manage
       seekTo(val);
+      // Release focus: both the MutationObserver and the 100ms interval below
+      // guard on `document.activeElement === progressInput || userSeeking` to
+      // avoid fighting the user mid-drag. userSeeking is cleared above, but a
+      // range input keeps browser focus after mouseup/touchend on its own -
+      // without this blur() that guard stays tripped indefinitely and every
+      // update after a Lyrics+-driven seek gets silently dropped until
+      // something else on the page happens to steal focus.
+      progressInput.blur();
     };
     progressInput.addEventListener('change', commitSeek);
     progressInput.addEventListener('mouseup', commitSeek);
