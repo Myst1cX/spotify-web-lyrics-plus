@@ -58,6 +58,17 @@
 // rainbow trail over a star pattern on top of this bar's played percentage, so
 // nyan-cat theming carries over to the popup exactly like it does on Spotify's
 // native bar.
+// Fix: attachProgressBarWatcher()'s MutationObserver has a second, separate
+// call site for updateProgressUIFromSpotify() (its debounced style-attribute
+// handler) that was missing the userSeeking/document.activeElement guard the
+// 100ms sync interval already had. Since [data-testid="progress-bar"]'s style
+// attribute changes continuously during ordinary playback, this observer kept
+// firing and force-resyncing progressInput.value to the live position even
+// while the user was actively dragging the seekbar - visible as the thumb
+// snapping back mid-drag, and, since getBallPercent() would then read the
+// just-overwritten value while hoverPercent still reflected wherever the user
+// had dragged to, a stray trailing segment between the two. Added the same
+// guard to this call site.
 
 // RESOLVED (17.50): INACTIVE/CONTEXT LYRIC LINES LOOKED NOTICEABLY BLURRIER ON MOBILE THAN ON PC
 // Dimmed inactive lines (both the non-active context lines in synced view and unsynced
@@ -8440,6 +8451,13 @@ popup._headerWheelHandler = onHeaderWheel;
       renderProgressBarVisual();
     });
     progressInput.addEventListener('mousemove', (e) => {
+      // Don't let this override the input handler's drag-pinned hoverPercent
+      // (hoverPercent = getBallPercent(), see 'input' listener below) while a
+      // drag is in progress - a stray/synthetic mousemove firing mid-drag
+      // (observed on some WebView builds during touch-drag, even without an
+      // explicit touchmove listener here) would otherwise briefly render the
+      // raw cursor position as a seek-preview gap ahead of/behind the ball.
+      if (userSeeking) return;
       updateProgressTooltip(e.clientX);
       renderProgressBarVisual();
     });
@@ -8836,6 +8854,13 @@ popup._headerWheelHandler = onHeaderWheel;
             if (!progressBarWatcherTimeout) {
               progressBarWatcherTimeout = setTimeout(() => {
                 progressBarWatcherTimeout = null;
+                // Same guard the 100ms interval uses below - without this,
+                // Spotify's own progress bar animating its style attribute
+                // during ordinary playback keeps firing this observer
+                // regardless of drag state, forcibly resyncing
+                // progressInput.value back to the live position while the
+                // user is still actively dragging/holding it.
+                if (document.activeElement === progressInput || userSeeking) return;
                 try {
                   updateProgressUIFromSpotify();
                 } catch (e) {
