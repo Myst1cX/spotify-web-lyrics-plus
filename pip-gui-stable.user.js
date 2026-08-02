@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.53
+// @version      17.54
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,22 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.54): PROGRESSINPUT RENDERED 6PX WIDER THAN SPOTIFY'S NATIVE PROGRESS BAR
+// #lyrics-plus-progress used `flex: "1"` alone inside progressWrapper (alongside the
+// fixed-width timeNow/timeTotal labels). That shorthand does set flex-basis:0%, but a
+// flex item's default min-width is `auto`, not 0 - so the browser still reserved space
+// for the range input's own intrinsic/min-content size, which stays non-zero even with
+// appearance:none (removing the visual skin doesn't remove the UA sizing floor). That
+// floor won out over the proportional flex-basis calculation, pushing the bar ~6px past
+// its fair share of progressWrapper's width instead of shrinking flush to it - measured
+// as 612px vs. Spotify's native [data-testid="progress-bar"] at 606px in the same
+// window.
+// Fix: added explicit minWidth:"0" on progressInput's style object so flex-grow/
+// flex-basis fully control its size with no content-derived floor, plus
+// boxSizing:"border-box" so padding/border (currently 0, but set for safety) can't
+// reintroduce the same kind of drift later. progressInput now matches native's width
+// exactly.
 
 // RESOLVED (17.53): SEEK-TO-0 / TRACK-RESTART BRIEFLY FLASHED THE POSITION NEAR TRACK END
 // updateProgressUIFromSpotify()'s position read now tries a new source (a) first: the
@@ -7903,6 +7919,8 @@ popup._headerWheelHandler = onHeaderWheel;
     progressInput.value = "0";
     Object.assign(progressInput.style, {
       flex: "1",
+      minWidth: "0",
+      boxSizing: "border-box",
       appearance: "none",
       WebkitAppearance: "none",
       MozAppearance: "none",
