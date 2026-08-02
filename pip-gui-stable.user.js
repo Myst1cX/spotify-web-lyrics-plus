@@ -25,7 +25,11 @@
 // floor won out over the proportional flex-basis calculation, pushing the bar ~6px past
 // its fair share of progressWrapper's width instead of shrinking flush to it - measured
 // as 612px vs. Spotify's native [data-testid="progress-bar"] at 606px in the same
-// window.
+// window. Live page debug test conducted via devtools console:
+//   console.log(
+//     'native:', document.querySelector('[data-testid="progress-bar"]').getBoundingClientRect().width,
+//     'lyrics+:', document.getElementById('lyrics-plus-progress').getBoundingClientRect().width
+//   );
 // Fix: added explicit minWidth:"0" on progressInput's style object so flex-grow/
 // flex-basis fully control its size with no content-derived floor, plus
 // boxSizing:"border-box" so padding/border (currently 0, but set for safety) can't
