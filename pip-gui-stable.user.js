@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.52
+// @version      17.53
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,6 +16,19 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (17.53): SEEK-TO-0 / TRACK-RESTART BRIEFLY FLASHED THE POSITION NEAR TRACK END
+// updateProgressUIFromSpotify()'s position read now tries a new source (a) first: the
+// data-test-position ms attribute Spotify writes on the playback-duration element - a
+// single authoritative integer, the same source the wrapper app's own media-notification
+// bridge (media_bridge script) already reads for this exact reason. The old top source
+// (now (b)) read playback-position/playback-duration as two separately-rendered text
+// nodes that don't necessarily update on the same tick; around a seek-to-0 or a
+// loop/track-end restart that could transiently disagree, and a miss there fell through
+// to the native range input's raw .value (source (c)), which can itself lag ~1 poll tick
+// (100ms) behind Spotify's own update - producing a brief flash near the track's end
+// before self-correcting on the next poll. All existing fallbacks are unchanged and still
+// run in order if data-test-position is missing/unparseable.
+//
 // RESOLVED (17.52): SEEKBAR THUMB SAT ABOVE THE TRACK LINE ON SOME MOBILE DEVICES
 // The popup's own seekbar handle (the white ball, or the Nyan Cat sprite when that
 // theme is active) was pushed up above the track instead of bisecting it, on some
@@ -8563,19 +8576,55 @@ popup._headerWheelHandler = onHeaderWheel;
      * and display that. This avoids any jumps or sync issues.
      *
      * Fallback order for reading position:
-     *   (a) Visible playback-position/playback-duration text (most reliable - matches what user sees)
-     *   (b) Native range input
-     *   (c) CSS-driven progress-bar percent + computed duration from text/trackInfo
+     *   (a) data-test-position attribute on the duration element (most reliable -
+     *       a raw elapsed-ms integer Spotify itself writes on player-state update,
+     *       same source the wrapper app's own media-notification bridge uses, and
+     *       not derived from either displayed text node)
+     *   (b) Visible playback-position/playback-duration text (matches what user sees)
+     *   (c) Native range input
+     *   (d) CSS-driven progress-bar percent + computed duration from text/trackInfo
      */
     function updateProgressUIFromSpotify() {
       try {
         let spotifyPosMs = null;
         let spotifyDurMs = null;
 
-        // --- (a) Try visible playback-position text first (most reliable - matches what user sees) ---
         const posEl = document.querySelector('[data-testid="playback-position"]');
         const durEl = document.querySelector('[data-testid="playback-duration"]');
-        if (posEl) {
+
+        // --- (a) Try the data-test-position ms attribute first ---
+        // posEl and durEl's *text* are two independently-rendered strings that don't
+        // necessarily update on the same tick - right around a seek-to-0 or a
+        // loop/track-end restart, reading them separately (source (b) below) can
+        // transiently disagree, and a miss there falls through to the native range
+        // input's raw .value, which can itself lag ~1 poll tick behind. That's what
+        // produced the "0:00 -> near track end for a moment -> 0:00" glitch. This
+        // attribute is a single authoritative integer, so there's nothing to
+        // transiently disagree with.
+        if (durEl) {
+          const rawAttr = durEl.getAttribute('data-test-position');
+          if (rawAttr !== null && rawAttr !== '' && !isNaN(rawAttr)) {
+            const posMs = parseInt(rawAttr, 10);
+            let durMs = 0;
+
+            if (durEl) {
+              const raw = durEl.textContent.trim();
+              durMs = raw.startsWith('-') ? posMs + timeStringToMs(raw) : timeStringToMs(raw);
+            }
+            if (durMs <= 0) {
+              const trackInfo = getCurrentTrackInfo();
+              if (trackInfo && trackInfo.duration > 0) durMs = trackInfo.duration;
+            }
+
+            if (durMs > 0) {
+              spotifyPosMs = posMs;
+              spotifyDurMs = durMs;
+            }
+          }
+        }
+
+        // --- (b) Try visible playback-position text first (most reliable - matches what user sees) ---
+        if (spotifyPosMs === null && posEl) {
           const posMs = timeStringToMs(posEl.textContent);
           let durMs = 0;
 
