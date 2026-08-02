@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.52
+// @version      17.51
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,35 +15,6 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
-
-// RESOLVED (17.52): SEEKBAR TRACK WAS HALF AS THICK AS SPOTIFY'S REAL BAR, THROWING OFF
-// THE BALL'S CENTERING
-// 17.51 rebuilt this bar's color states but kept its original track height (4px flat,
-// no growth on hover) and the thumb's matching margin-top (-4px). Direct comparison
-// against Spotify's real DOM (data-testid="progress-bar", the actual visible bar - not
-// the hidden accessibility <input> alongside it) showed that bar at 8px resting,
-// growing to 12px on hover - confirmed independently by Spotify-Nyan_bar.user.js, whose
-// own --progress-bar-height override only ever overrides variables Spotify's CSS already
-// reads, never invents new ones, and had already reverse-engineered those exact numbers
-// to match native. So this popup's track was running at half Spotify's real thickness,
-// and the -4px margin-top was centering the thumb against that wrong 4px assumption -
-// both the "seekbar looks smaller than native" and "ball sits slightly high" reports
-// traced back to the same root number.
-// Fix: track height is now 8px at rest, 12px while hovering/dragging (reusing the
-// existing .lp-progress-hover class already used for thumb opacity, extended to also
-// drive height, plus :active for drag - no new interaction-tracking mechanism, same one
-// as before). margin-top recalculated against the corrected heights: -2px at rest
-// ((8-12)/2), 0px at the 12px hover/drag size ((12-12)/2) - same formula, right
-// denominator this time. border-radius scaled alongside (4px -> 6px) so the bar stays a
-// rounded pill as it thickens instead of going squarer. Also explicitly pinned
-// ::-webkit-slider-runnable-track/::-moz-range-track to the same heights at both states,
-// since only the <input>'s own inline height was ever set before, and the runnable-track
-// is a separate anonymous box that doesn't necessarily inherit it - removes any ambiguity
-// about what height the browser actually uses as its internal thumb-position reference.
-// Nyan's own #lyrics-plus-progress override already used the correct 8px/12px with a
-// 21px-thumb-appropriate -6.5px/-4.5px margin-top, so no change was needed on that side
-// for the height/centering fix itself - it picked up the corrected base state
-// automatically since it was already computing against the right numbers.
 
 // RESOLVED (17.51): SEEKBAR NOW MATCHES SPOTIFY'S NATIVE PROGRESS BAR (COLOR STATES,
 // HOVER PREVIEW, TOOLTIP) - AND STAYS A DROP-IN TARGET FOR NYAN CAT THEMING
@@ -7892,67 +7863,33 @@ popup._headerWheelHandler = onHeaderWheel;
     Object.assign(progressInput.style, {
       flex: "1",
       appearance: "none",
-      height: "8px",
-      borderRadius: "4px",
+      height: "4px",
+      borderRadius: "2px",
       background: "linear-gradient(90deg, #ffffff 0%, #ffffff 0%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.3) 100%)",
       outline: "none",
       margin: "0",
     });
 
     // Thumb styling for dynamic progress bar.
-    // Track is 8px tall at rest (12px while hovering/dragging, matching native's own
-    // real default - confirmed via the Nyan script's override, which reverse-engineers
-    // those exact values to match what's already there), thumb is 12px:
-    // margin-top = (track - thumb) / 2 = -2px at rest, 0px at the 12px hover/drag size.
+    // Track is 4px tall, thumb is 12px: margin-top = (track - thumb) / 2 = -4px,
+    // which perfectly bisects the ball across the line (see Lyrics+ progress bar spec).
     // Thumb is invisible by default (opacity 0) and only shown while hovering/dragging.
-    //
-    // The runnable-track pseudo-elements are pinned to the same explicit heights so the
-    // browser's internal thumb-position reference isn't left to an unstyled default -
-    // only the input's own inline height was ever set before, and the runnable-track is
-    // a separate anonymous box that doesn't necessarily inherit it.
     const thumbStyle = document.createElement("style");
     thumbStyle.textContent = `
-      #lyrics-plus-progress {
-        transition: height 0.1s ease, border-radius 0.1s ease;
-      }
-      #lyrics-plus-progress.lp-progress-hover,
-      #lyrics-plus-progress:active {
-        height: 12px !important;
-        border-radius: 6px !important;
-      }
-      #lyrics-plus-progress::-webkit-slider-runnable-track {
-        height: 8px;
-        background: transparent;
-        border: none;
-      }
-      #lyrics-plus-progress.lp-progress-hover::-webkit-slider-runnable-track,
-      #lyrics-plus-progress:active::-webkit-slider-runnable-track {
-        height: 12px;
-      }
-      #lyrics-plus-progress::-moz-range-track {
-        height: 8px;
-        background: transparent;
-        border: none;
-      }
-      #lyrics-plus-progress.lp-progress-hover::-moz-range-track,
-      #lyrics-plus-progress:active::-moz-range-track {
-        height: 12px;
-      }
       #lyrics-plus-progress::-webkit-slider-thumb {
         -webkit-appearance: none;
         width: 12px;
         height: 12px;
-        margin-top: -2px;
+        margin-top: -4px;
         border-radius: 50%;
         background: #fff;
         opacity: 0;
-        transition: opacity 0.1s ease, margin-top 0.1s ease;
+        transition: opacity 0.1s ease;
         cursor: pointer;
       }
       #lyrics-plus-progress.lp-progress-hover::-webkit-slider-thumb,
       #lyrics-plus-progress:active::-webkit-slider-thumb {
         opacity: 1;
-        margin-top: 0px;
       }
       #lyrics-plus-progress::-moz-range-thumb {
         width: 12px;
