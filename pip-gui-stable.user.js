@@ -36,6 +36,14 @@
 // only pin the box the thumb centers against, not its visible color). margin-top
 // on the thumb is unchanged at -4px, since that was already correct once every
 // browser agrees on what "the track" actually measures.
+// Follow-up: pinning the track pseudo-element box wasn't the whole story - the
+// centering also depends on the <input> element's own box having zero native
+// padding/border, since that's what the track box is positioned inside. The input
+// only had the unprefixed `appearance: none`, no vendor-prefixed
+// -webkit-appearance/-moz-appearance, which some mobile browsers need to fully
+// suppress native chrome (including default padding/border) rather than just the
+// track/thumb pseudo-elements. Added -webkit-appearance/-moz-appearance: none plus
+// explicit padding:0/border:none directly on the input itself.
 
 // RESOLVED (17.51): SEEKBAR NOW MATCHES SPOTIFY'S NATIVE PROGRESS BAR (COLOR STATES,
 // HOVER PREVIEW, TOOLTIP) - AND STAYS A DROP-IN TARGET FOR NYAN CAT THEMING
@@ -7883,11 +7891,15 @@ popup._headerWheelHandler = onHeaderWheel;
     Object.assign(progressInput.style, {
       flex: "1",
       appearance: "none",
+      WebkitAppearance: "none",
+      MozAppearance: "none",
       height: "4px",
       borderRadius: "2px",
       background: "linear-gradient(90deg, #ffffff 0%, #ffffff 0%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.3) 100%)",
       outline: "none",
       margin: "0",
+      padding: "0",
+      border: "none",
     });
 
     // Thumb styling for dynamic progress bar.
