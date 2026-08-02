@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.51
+// @version      17.52
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,27 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.52): SEEKBAR THUMB SAT ABOVE THE TRACK LINE ON SOME MOBILE DEVICES
+// The popup's own seekbar handle (the white ball, or the Nyan Cat sprite when that
+// theme is active) was pushed up above the track instead of bisecting it, on some
+// mobile devices - desktop was unaffected. The existing thumb CSS
+// (width/height:12px, margin-top:-4px) is the standard (track - thumb) / 2
+// centering formula for a 4px track, and that math was already correct - but
+// nothing in the CSS ever explicitly sized the actual track pseudo-element
+// (::-webkit-slider-runnable-track / ::-moz-range-track). The visible 4px line was
+// only ever drawn via the <input>'s own background/height, set directly on the
+// element; margin-top on the thumb is computed against the browser's real track
+// pseudo-element box, which, left unstyled, falls back to each browser's own
+// native default sizing - close enough to 4px on desktop Chrome to look right,
+// evidently not on some mobile browsers, which is what was pushing the thumb up
+// specifically there.
+// Fix: added explicit ::-webkit-slider-runnable-track / ::-moz-range-track rules
+// pinning height to the same 4px, background:transparent (the visible white/green
+// line still comes from the existing gradient on the <input> itself - these rules
+// only pin the box the thumb centers against, not its visible color). margin-top
+// on the thumb is unchanged at -4px, since that was already correct once every
+// browser agrees on what "the track" actually measures.
 
 // RESOLVED (17.51): SEEKBAR NOW MATCHES SPOTIFY'S NATIVE PROGRESS BAR (COLOR STATES,
 // HOVER PREVIEW, TOOLTIP) - AND STAYS A DROP-IN TARGET FOR NYAN CAT THEMING
@@ -7872,9 +7893,30 @@ popup._headerWheelHandler = onHeaderWheel;
     // Thumb styling for dynamic progress bar.
     // Track is 4px tall, thumb is 12px: margin-top = (track - thumb) / 2 = -4px,
     // which perfectly bisects the ball across the line (see Lyrics+ progress bar spec).
+    // That math only holds if the browser's actual ::-webkit-slider-runnable-track /
+    // ::-moz-range-track box is genuinely 4px tall - without pinning it explicitly, the
+    // visible 4px line (drawn via this element's own background, set above) can diverge
+    // from the real track pseudo-element's box, which margin-top is computed against.
+    // Some mobile browsers apply their own default native track sizing here, which is
+    // what was pushing the thumb up on mobile while desktop (whose default happened to
+    // already be ~4px) looked fine. Pinning both track pseudo-elements to the same 4px
+    // removes that per-browser variance instead of just patching margin-top around it.
     // Thumb is invisible by default (opacity 0) and only shown while hovering/dragging.
     const thumbStyle = document.createElement("style");
     thumbStyle.textContent = `
+      #lyrics-plus-progress::-webkit-slider-runnable-track {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 4px;
+        background: transparent;
+        border: none;
+      }
+      #lyrics-plus-progress::-moz-range-track {
+        width: 100%;
+        height: 4px;
+        background: transparent;
+        border: none;
+      }
       #lyrics-plus-progress::-webkit-slider-thumb {
         -webkit-appearance: none;
         width: 12px;
