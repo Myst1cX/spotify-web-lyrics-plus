@@ -8440,13 +8440,6 @@ popup._headerWheelHandler = onHeaderWheel;
       renderProgressBarVisual();
     });
     progressInput.addEventListener('mousemove', (e) => {
-      // Don't let this override the input handler's drag-pinned hoverPercent
-      // (hoverPercent = getBallPercent(), see 'input' listener below) while a
-      // drag is in progress - a stray/synthetic mousemove firing mid-drag
-      // (observed on some WebView builds during touch-drag, even without an
-      // explicit touchmove listener here) would otherwise briefly render the
-      // raw cursor position as a seek-preview gap ahead of/behind the ball.
-      if (userSeeking) return;
       updateProgressTooltip(e.clientX);
       renderProgressBarVisual();
     });
