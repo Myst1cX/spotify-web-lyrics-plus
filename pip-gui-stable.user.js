@@ -32,8 +32,6 @@
 // native playback bar, for either the song or podcast player; everything else (popup
 // header buttons, controls bar, translation UI, etc.) lives inside our own popup and isn't
 // affected by this bug.
-//
-// Files touched: pip-gui-stable.user.js only (addButton()).
 
 // RESOLVED (17.54): PROGRESSINPUT RENDERED 6PX WIDER THAN SPOTIFY'S NATIVE PROGRESS BAR
 // #lyrics-plus-progress used `flex: "1"` alone inside progressWrapper (alongside the
