@@ -16,22 +16,19 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.55): LYRICS+ BUTTON STAYED APPENDED TO PODCAST PLAYBACK BAR AFTER A SONG
-// addButton() checked "is #lyrics-plus-btn already in the DOM?" before checking whether
-// the current player even has a micBtn ([data-testid="lyrics-button"]) to anchor next to.
-// So once a song had been played this session and the button got inserted, switching to
-// a podcast episode (whose expanded playback bar has no micBtn) hit the "already there"
-// early return and never re-checked micBtn - the button stayed stuck on the podcast bar.
-// Fresh-login podcast-first playback wasn't affected since the button was never injected
-// in the first place. Moved the micBtn lookup to the top of addButton(): if it's missing,
-// any existing #lyrics-plus-btn is now removed (and lyricsButtonInjected reset) before the
-// early-return path, so the button correctly disappears on song -> podcast and reappears
-// on podcast -> song. Audited every other DOM-insertion site in the file (grep for
-// insertBefore/appendChild/createElement("button")) - #lyrics-plus-btn via
-// controls.insertBefore(btn, micBtn) is the only element this script attaches to Spotify's
-// native playback bar, for either the song or podcast player; everything else (popup
-// header buttons, controls bar, translation UI, etc.) lives inside our own popup and isn't
-// affected by this bug.
+// RESOLVED (17.55): LYRICS+ BUTTON'S PLACEMENT WAS A ONE-SHOT INJECTION, NOT A LIVE STATE
+// addButton() used to run once per song - find micBtn, insert next to it, done - and the
+// observer driving it stopped re-checking once that succeeded. So a podcast switch left the
+// button stuck with no mic button to anchor to, a hidden-not-removed mic button slipped past
+// a plain DOM-presence check, and a later-mounting "Now Playing view" toggle could land on
+// the wrong side of it with nothing to correct it. (Lyrics+ button stayed appended to the
+// podcast playback bar after a song).
+// Reworked addButton() to re-derive the button's presence and position from current player
+// state on every relevant player-bar mutation, instead of only until first injection: no
+// visible mic button removes any leftover button; otherwise it anchors before a visible NPV
+// toggle when present (else the mic button), and repositions itself if it's already there
+// but sitting in the wrong spot. The observer now watches style/class/hidden/aria-hidden
+// attribute changes in addition to childList, so hidden-not-removed elements are caught too.
 
 // RESOLVED (17.54): PROGRESSINPUT RENDERED 6PX WIDER THAN SPOTIFY'S NATIVE PROGRESS BAR
 // #lyrics-plus-progress used `flex: "1"` alone inside progressWrapper (alongside the
@@ -10017,25 +10014,41 @@ popup._headerWheelHandler = onHeaderWheel;
   let lyricsButtonInjected = false;
   let lyricsButtonInjectionInFlight = false;
 
-  function addButton(maxRetries = LIMITS.BUTTON_ADD_MAX_RETRIES) {
-    const micBtn = document.querySelector('[data-testid="lyrics-button"]');
+  function isElementVisible(el) {
+    if (!el) return false;
+    const style = window.getComputedStyle(el);
+    return el.offsetParent !== null && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+  }
 
-    // No mic/lyrics button in the current player (podcast episode, or full
-    // controls not mounted yet). Make sure our button isn't left appended
-    // from a previously-played song's player before bailing - otherwise
-    // switching song -> podcast mid-session leaves it stuck on the bar.
+  function addButton(maxRetries = LIMITS.BUTTON_ADD_MAX_RETRIES) {
+    // Treated as "not present" if hidden via style/class too, not just DOM presence.
+    const micBtnEl = document.querySelector('[data-testid="lyrics-button"]');
+    const micBtn = isElementVisible(micBtnEl) ? micBtnEl : null;
+
+    // No mic button to anchor near (e.g. podcast player) - make sure our button isn't
+    // left over from a previously-played song, then stop.
     if (!micBtn) {
       const stray = document.getElementById("lyrics-plus-btn");
       if (stray) {
         stray.remove();
-        DEBUG.info('Button', 'Lyrics+ button removed - no mic button in current player (podcast?)');
+        DEBUG.info('Button', 'Lyrics+ button removed - no visible mic button in current player (podcast?)');
       }
       lyricsButtonInjected = false;
       return;
     }
 
-    // Already there - nothing to do (cheap check, no logging/spam).
-    if (document.getElementById("lyrics-plus-btn")) {
+    // Anchor before the NPV toggle when it's visible, so we stay leftmost of the two;
+    // fall back to the mic button otherwise.
+    const npvBtnEl = document.querySelector('[aria-label="Now playing view"]');
+    const npvBtn = isElementVisible(npvBtnEl) ? npvBtnEl : null;
+    const anchor = npvBtn || micBtn;
+
+    const existing = document.getElementById("lyrics-plus-btn");
+    if (existing) {
+      // Already injected - just make sure it's still sitting right before the anchor.
+      if (existing.nextElementSibling !== anchor && anchor.parentElement) {
+        anchor.parentElement.insertBefore(existing, anchor);
+      }
       lyricsButtonInjected = true;
       return;
     }
@@ -10047,7 +10060,7 @@ popup._headerWheelHandler = onHeaderWheel;
     lyricsButtonInjectionInFlight = true;
     let attempts = 0;
     const tryAdd = () => {
-      const controls = micBtn?.parentElement;
+      const controls = anchor?.parentElement;
       if (!controls) {
         if (attempts < maxRetries) {
           attempts++;
@@ -10090,24 +10103,27 @@ popup._headerWheelHandler = onHeaderWheel;
         }
         createPopup();
       };
-      controls.insertBefore(btn, micBtn);
+      controls.insertBefore(btn, anchor);
       lyricsButtonInjected = true;
       lyricsButtonInjectionInFlight = false;
     };
     tryAdd();
   }
 
-  // Global observer to inject Lyrics+ button once the full player UI (and its
-  // mic/lyrics button) mounts - which normally only happens once the user
-  // starts playing something. addButton() itself now no-ops immediately if
-  // the button already exists or the mic button isn't mounted yet, so this
-  // firing on unrelated DOM churn is cheap and won't spam retries/console.
+  // Re-derives the Lyrics+ button's presence/position from current player state on every
+  // relevant player-bar change, rather than only until the first successful injection.
   const buttonInjectionObserver = new MutationObserver(() => {
-    if (lyricsButtonInjected) return;
     addButton();
   });
   ResourceManager.registerObserver(buttonInjectionObserver, 'Global button injection (document.body)');
-  buttonInjectionObserver.observe(document.body, { childList: true, subtree: true });
+  buttonInjectionObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+    // Also watch the attributes that drive visibility, since Spotify sometimes hides
+    // elements via style/class instead of removing them.
+    attributes: true,
+    attributeFilter: ['style', 'class', 'hidden', 'aria-hidden'],
+  });
 
   function init() {
     // Apply AMOLED theme if enabled in localStorage
