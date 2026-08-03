@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.54
+// @version      17.55
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,25 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.55): LYRICS+ BUTTON STAYED APPENDED TO PODCAST PLAYBACK BAR AFTER A SONG
+// addButton() checked "is #lyrics-plus-btn already in the DOM?" before checking whether
+// the current player even has a micBtn ([data-testid="lyrics-button"]) to anchor next to.
+// So once a song had been played this session and the button got inserted, switching to
+// a podcast episode (whose expanded playback bar has no micBtn) hit the "already there"
+// early return and never re-checked micBtn - the button stayed stuck on the podcast bar.
+// Fresh-login podcast-first playback wasn't affected since the button was never injected
+// in the first place. Moved the micBtn lookup to the top of addButton(): if it's missing,
+// any existing #lyrics-plus-btn is now removed (and lyricsButtonInjected reset) before the
+// early-return path, so the button correctly disappears on song -> podcast and reappears
+// on podcast -> song. Audited every other DOM-insertion site in the file (grep for
+// insertBefore/appendChild/createElement("button")) - #lyrics-plus-btn via
+// controls.insertBefore(btn, micBtn) is the only element this script attaches to Spotify's
+// native playback bar, for either the song or podcast player; everything else (popup
+// header buttons, controls bar, translation UI, etc.) lives inside our own popup and isn't
+// affected by this bug.
+//
+// Files touched: pip-gui-stable.user.js only (addButton()).
 
 // RESOLVED (17.54): PROGRESSINPUT RENDERED 6PX WIDER THAN SPOTIFY'S NATIVE PROGRESS BAR
 // #lyrics-plus-progress used `flex: "1"` alone inside progressWrapper (alongside the
@@ -10001,6 +10020,22 @@ popup._headerWheelHandler = onHeaderWheel;
   let lyricsButtonInjectionInFlight = false;
 
   function addButton(maxRetries = LIMITS.BUTTON_ADD_MAX_RETRIES) {
+    const micBtn = document.querySelector('[data-testid="lyrics-button"]');
+
+    // No mic/lyrics button in the current player (podcast episode, or full
+    // controls not mounted yet). Make sure our button isn't left appended
+    // from a previously-played song's player before bailing - otherwise
+    // switching song -> podcast mid-session leaves it stuck on the bar.
+    if (!micBtn) {
+      const stray = document.getElementById("lyrics-plus-btn");
+      if (stray) {
+        stray.remove();
+        DEBUG.info('Button', 'Lyrics+ button removed - no mic button in current player (podcast?)');
+      }
+      lyricsButtonInjected = false;
+      return;
+    }
+
     // Already there - nothing to do (cheap check, no logging/spam).
     if (document.getElementById("lyrics-plus-btn")) {
       lyricsButtonInjected = true;
@@ -10010,16 +10045,6 @@ popup._headerWheelHandler = onHeaderWheel;
 
     // Don't start a second overlapping retry chain while one is in flight.
     if (lyricsButtonInjectionInFlight) return;
-
-    const micBtn = document.querySelector('[data-testid="lyrics-button"]');
-
-    // The mic/lyrics button (and the rest of the full player controls) only
-    // mounts once the user actually plays something. Until then, just bail
-    // silently instead of spinning up a retry loop - the observer below will
-    // call addButton() again on the next relevant DOM change.
-    if (!micBtn) {
-      return;
-    }
 
     lyricsButtonInjectionInFlight = true;
     let attempts = 0;
