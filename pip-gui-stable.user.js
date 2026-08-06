@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.55
+// @version      17.56
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,31 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.56): CUSTOM SCRUBBER'S TOTAL-TIME LABEL DIDN'T SUPPORT NATIVE SPOTIFY'S TIMER-COUNTDOWN TOGGLE
+// On stock Spotify, clicking the duration label in the native playback controls
+// ([data-testid="playback-duration"]) toggles it between showing the track's total
+// length ("3:46") and a countdown of time remaining ("-0:42"), and that native
+// element already carries this behavior for free everywhere it's reused (including
+// Spotifuck Mobile/SpotiwebJS, since those just embed Spotify's own
+// web player). timeTotal (#lyrics-plus-time-total), the Lyrics+ popup's own
+// hand-built duration label next to its custom seekbar, is a separate element with
+// no relationship to Spotify's native one, so it never picked up that click-to-toggle
+// behavior - it only ever rendered the total length, with no way to switch it to a
+// countdown.
+// Fix: added a click listener on timeTotal, wired to a new toggleRemainingTimeDisplay()
+// function, that flips a showRemainingTime flag and immediately re-runs
+// updateProgressUIFromSpotify(); that function's existing per-tick label update now
+// builds timeTotal's text via a new formatTimeTotalLabel(spotifyDurMs, displayPosMs)
+// helper (alongside formatMs, in the same self-contained spot), which returns
+// "-" + formatMs(spotifyDurMs - displayPosMs) while the flag is set instead of
+// always formatMs(spotifyDurMs) - so the countdown keeps live-updating every poll
+// tick the same way the total-length label already did, and both new functions
+// stay independent, single-purpose units alongside the seekbar's other helpers
+// (formatMs, renderProgressBarVisual, updateProgressTooltip, etc.) rather than
+// inline logic buried in updateProgressUIFromSpotify. timeTotal also got
+// cursor:pointer/userSelect:none and a title tooltip so it reads as clickable,
+// matching the native label's affordance.
 
 // RESOLVED (17.55): FIXES LYRICS+ BUTTON - IT WOULD STAY APPENDED ON THE PODCAST BAR AFTER SONG END
 // When a song ended and user switched to a podcast, the Lyrics+ button stayed
@@ -8099,6 +8124,12 @@ popup._headerWheelHandler = onHeaderWheel;
     timeTotal.style.fontSize = "12px";
     timeTotal.style.width = "44px";
     timeTotal.style.textAlign = "left";
+    timeTotal.style.cursor = "pointer";
+    timeTotal.style.userSelect = "none";
+    timeTotal.title = "Click to toggle remaining time";
+    // Mirrors native Spotify's own playback-duration label: clicking it toggles
+    // between showing the track's total length and a countdown of time remaining.
+    timeTotal.addEventListener('click', toggleRemainingTimeDisplay);
 
     progressWrapper.appendChild(timeNow);
     progressWrapper.appendChild(progressInput);
@@ -8517,6 +8548,36 @@ popup._headerWheelHandler = onHeaderWheel;
       return `${m}:${String(sec).padStart(2, '0')}`;
     }
 
+    // showRemainingTime: when true, timeTotal displays a "-m:ss" countdown to the
+    // end of the track instead of the total track length. Toggled by clicking
+    // timeTotal, same as native Spotify's own playback-duration label.
+    let showRemainingTime = false;
+
+    /**
+     * toggleRemainingTimeDisplay()
+     * Click handler for timeTotal. Flips showRemainingTime and immediately
+     * refreshes the seekbar UI so the label switches instantly instead of
+     * waiting for the next poll tick.
+     */
+    function toggleRemainingTimeDisplay() {
+      showRemainingTime = !showRemainingTime;
+      updateProgressUIFromSpotify();
+    }
+
+    /**
+     * formatTimeTotalLabel(spotifyDurMs, displayPosMs)
+     * Builds the text shown in timeTotal: either the track's total length, or
+     * (while showRemainingTime is set) a "-m:ss" countdown to the end of the
+     * track, mirroring native Spotify's own duration-label toggle.
+     * @param {number} spotifyDurMs - Track duration in milliseconds
+     * @param {number} displayPosMs - Current playback position in milliseconds
+     * @returns {string} Formatted label text
+     */
+    function formatTimeTotalLabel(spotifyDurMs, displayPosMs) {
+      if (!showRemainingTime) return formatMs(spotifyDurMs);
+      return "-" + formatMs(spotifyDurMs - displayPosMs);
+    }
+
     // --- Progress bar hover/preview state ---
     // isHoveringProgress: mouse is currently over the bar (thumb + colored states shown)
     // hoverPercent: mouse position as a % of the bar's width (used for tooltip + preview)
@@ -8757,7 +8818,7 @@ popup._headerWheelHandler = onHeaderWheel;
           progressInput.value = "0";
           renderProgressBarVisual();
           timeNow.textContent = "0:00";
-          timeTotal.textContent = "0:00";
+          timeTotal.textContent = formatTimeTotalLabel(0, 0);
           return;
         }
 
@@ -8772,7 +8833,7 @@ popup._headerWheelHandler = onHeaderWheel;
         progressInput.value = String(displayPosMs);
         renderProgressBarVisual();
         timeNow.textContent = formatMs(displayPosMs);
-        timeTotal.textContent = formatMs(spotifyDurMs);
+        timeTotal.textContent = formatTimeTotalLabel(spotifyDurMs, displayPosMs);
 
       } catch (e) {
         console.warn('updateProgressUIFromSpotify error:', e);
