@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.58
+// @version      17.59
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,33 +16,33 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// ADDED (17.57): NATIVE PICTURE-IN-PICTURE INSIDE THE SPOTIFUCK MOBILE WRAPPER APP
-// togglePip() previously always went through the browser's Picture-in-Picture API -
-// a canvas.captureStream()-fed <video> element, with WebKit presentation mode and a
-// page-PiP fallback below that. Inside the Spotifuck Mobile wrapper app's WebView,
-// none of that chain ever worked: Android's WebView component doesn't expose
-// HTMLVideoElement.requestPictureInPicture() at all (unlike Chrome-the-app), so every
-// toggle there fell straight through to activatePipUnsupportedFallback() - the "PiP
-// not supported in this browser" message - regardless of device or Android version.
-// Fix: togglePip() now checks for window.AndBridge.enterPip (the wrapper app's native
-// bridge, only ever present inside that WebView) before any of the existing PiP setup
-// runs, and if present, calls AndBridge.enterPip(false, amoled) instead - the
-// wrapper's native Activity-level Picture-in-Picture, entirely separate from the web
-// PiP API this function otherwise uses. amoled is read from the same
-// localStorage.getItem('lyricsPlusTheme') flag applyAmoledTheme() itself reads, so the
-// native side's overlay background matches whichever theme (default #121212 grayish,
-// or AMOLED black) is currently selected - reproducing, natively, the same background
-// a browser's live canvas capture already showed for free. No album art: this button
-// represents the lyrics view itself, not the track, so the floating window shows the
-// popup's theme rather than cover art (Spotify's own native mini-player PiP button,
-// handled entirely on the wrapper's native side and unrelated to this script, shows
-// album art instead).
-// This entire change is additive and gated behind window.AndBridge.enterPip existing -
-// in a normal desktop or mobile browser (no wrapper, no AndBridge), that check is
-// false and togglePip() falls through to run exactly as it always has, completely
-// unchanged.
+// RESOLVED (17.59): NATIVE PIP DIDN'T SHOW THE CURRENT LYRIC LINE ON REOPEN, ONLY FROM THE NEXT LINE CHANGE
+// maybePushNativePipFrame() only pushes a frame to native when it detects a change
+// from the *last pushed* frame, tracked via five module-scope variables
+// (pipLastPushedLyricsRef/pipLastPushedIndex/pipLastPushedUnsyncedLen/
+// pipLastPushedStatusMsg/pipLastPushedTheme) that are only ever written inside that
+// same function, right after a successful push. drawPipFrame() - and therefore
+// pipRenderedLyricsRef/pipRenderedIndex, the "current" side of that comparison - is
+// only ever called from inside the PiP render loop, so it only updates while PiP is
+// actually open. finishClosingPip() (the shared cleanup for both the in-app close
+// button and Android reporting the native window closed) reset isPipActive, stopped
+// the render loop, etc., but never reset the five pipLastPushed* trackers.
+// Net effect: a session's very first-ever PiP open in a fresh page load worked fine
+// (pipRenderedLyricsRef starts null, pipLastPushedLyricsRef starts undefined -
+// different, so the first frame correctly pushed). But close PiP and reopen it while
+// the same lyric line is still current - easy to hit just by testing open/close/
+// reopen in quick succession - and the comparison ran against the *previous*
+// session's leftover values: current line == last-pushed line == "unchanged", so the
+// push got skipped entirely. Native PiP kept showing nothing/stale until the next
+// actual line change. Browser PiP never showed this, since maybePushNativePipFrame()
+// is a no-op there - the real <video>+captureStream() PiP window is just a live view
+// of the canvas itself, not driven by this push/diff mechanism at all.
+// Fix: finishClosingPip() now also resets all five pipLastPushed* variables back to
+// undefined (their pristine, never-pushed state) alongside its existing cleanup.
+// Covers both exit paths uniformly, since closePip()'s synchronous fallback branch
+// and window.onNativePipClosed both route through this same function.
 
-// ADDED (17.58): NATIVE PIP NOW SHOWS THE ACTUAL LYRICS+ CANVAS, NOT JUST A FLAT COLOR
+// RESOLVED (17.58): NATIVE PIP NOW SHOWS THE ACTUAL LYRICS+ CANVAS, NOT JUST A FLAT COLOR
 // 17.57's native PiP path (window.AndBridge.enterPip) only ever showed a plain
 // theme-colored background - togglePip()'s native branch called AndBridge.enterPip()
 // and returned immediately, never calling initPipElements() or starting the render
@@ -84,6 +84,32 @@
 // Browser/WebKit/page-PiP paths: completely unaffected. maybePushNativePipFrame() is
 // a no-op wherever window.AndBridge.updatePipFrame doesn't exist, which is every
 // context except this specific wrapper app.
+
+// RESOLVED (17.57): NATIVE PICTURE-IN-PICTURE INSIDE THE SPOTIFUCK MOBILE WRAPPER APP
+// togglePip() previously always went through the browser's Picture-in-Picture API -
+// a canvas.captureStream()-fed <video> element, with WebKit presentation mode and a
+// page-PiP fallback below that. Inside the Spotifuck Mobile wrapper app's WebView,
+// none of that chain ever worked: Android's WebView component doesn't expose
+// HTMLVideoElement.requestPictureInPicture() at all (unlike Chrome-the-app), so every
+// toggle there fell straight through to activatePipUnsupportedFallback() - the "PiP
+// not supported in this browser" message - regardless of device or Android version.
+// Fix: togglePip() now checks for window.AndBridge.enterPip (the wrapper app's native
+// bridge, only ever present inside that WebView) before any of the existing PiP setup
+// runs, and if present, calls AndBridge.enterPip(false, amoled) instead - the
+// wrapper's native Activity-level Picture-in-Picture, entirely separate from the web
+// PiP API this function otherwise uses. amoled is read from the same
+// localStorage.getItem('lyricsPlusTheme') flag applyAmoledTheme() itself reads, so the
+// native side's overlay background matches whichever theme (default #121212 grayish,
+// or AMOLED black) is currently selected - reproducing, natively, the same background
+// a browser's live canvas capture already showed for free. No album art: this button
+// represents the lyrics view itself, not the track, so the floating window shows the
+// popup's theme rather than cover art (Spotify's own native mini-player PiP button,
+// handled entirely on the wrapper's native side and unrelated to this script, shows
+// album art instead).
+// This entire change is additive and gated behind window.AndBridge.enterPip existing -
+// in a normal desktop or mobile browser (no wrapper, no AndBridge), that check is
+// false and togglePip() falls through to run exactly as it always has, completely
+// unchanged.
 
 // RESOLVED (17.56): CUSTOM SCRUBBER'S TOTAL-TIME LABEL DIDN'T SUPPORT NATIVE SPOTIFY'S TIMER-COUNTDOWN TOGGLE
 // On stock Spotify, clicking the duration label in the native playback controls
@@ -3178,7 +3204,7 @@ document.head.appendChild(buttonGroupScrollStyle);
 
   // The actual state-reset/cleanup sequence, shared between closePip()'s
   // synchronous fallback branch above and onNativePipClosed() below - same
-  // five lines either way, just reached via a different trigger (this file's
+  // lines either way, just reached via a different trigger (this file's
   // own button vs. Android reporting the native window closed).
   function finishClosingPip() {
     isPipActive = false;
@@ -3186,6 +3212,19 @@ document.head.appendChild(buttonGroupScrollStyle);
     updatePipButtonState(false);
     stopPipRenderLoop();
     exitPipFromLyricsContainer();
+    // Reset maybePushNativePipFrame()'s "last pushed" trackers back to their
+    // pristine (never-pushed) state. Without this, reopening PiP while the
+    // same lyric line is still current would compare against this closed
+    // session's last-pushed values, see "no change", and silently skip
+    // pushing the new session's first frame - native PiP would then keep
+    // showing nothing/stale until the next actual line change, even though
+    // pipRenderedLyricsRef/pipRenderedIndex themselves reset correctly (they
+    // just start fresh from drawPipFrame()'s next call regardless).
+    pipLastPushedLyricsRef = undefined;
+    pipLastPushedIndex = undefined;
+    pipLastPushedUnsyncedLen = undefined;
+    pipLastPushedStatusMsg = undefined;
+    pipLastPushedTheme = undefined;
   }
 
   // Native-wrapper counterpart to the 'leavepictureinpicture'/
