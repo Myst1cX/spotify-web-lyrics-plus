@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.57
+// @version      17.58
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -41,6 +41,49 @@
 // in a normal desktop or mobile browser (no wrapper, no AndBridge), that check is
 // false and togglePip() falls through to run exactly as it always has, completely
 // unchanged.
+
+// ADDED (17.58): NATIVE PIP NOW SHOWS THE ACTUAL LYRICS+ CANVAS, NOT JUST A FLAT COLOR
+// 17.57's native PiP path (window.AndBridge.enterPip) only ever showed a plain
+// theme-colored background - togglePip()'s native branch called AndBridge.enterPip()
+// and returned immediately, never calling initPipElements() or starting the render
+// loop, so pipCanvas didn't even exist on that path, let alone get drawn to. Every
+// other PiP mode (real browser PiP, WebKit, page-PiP fallback) already floats
+// whatever drawPipFrame() draws via canvas.captureStream() -> <video> ->
+// requestPictureInPicture(); native Activity-level PiP has no equivalent
+// capture-just-this-element mechanism, so it needs the canvas handed to it a
+// different way: as exported PNG frames over the existing AndBridge, decoded natively
+// into a Bitmap and set on the wrapper's PiP overlay ImageView (the same one Spotify's
+// own album-art PiP button already uses, just fed a different bitmap source).
+// drawPipFrame() itself is completely unchanged - not one line - so this
+// automatically gets everything it already knows how to draw for free: active/context
+// lyric lines, translation, transliteration, the "Unsynced Lyrics" notice, and every
+// status message (loading, no lyrics found, instrumental notice, etc.), all without
+// needing to reimplement any of that natively.
+// New ensurePipCanvas() (just the canvas-creation half of what initPipElements() used
+// to do inline) - called instead of the full initPipElements() on the native path,
+// since that also builds a hidden <video>+captureStream(30)+autoplay pipeline purely
+// for the real browser PiP request, none of which the native path has any use for.
+// togglePip()'s native branch now actually starts the render loop (isPipActive = true
+// before startPipRenderLoop() - the loop's own rafTick guard needs that flag, which
+// nothing on this path set before now), and a new window.onNativePipClosed handler
+// (called from the wrapper's native side once Android reports the PiP window has
+// actually closed, since nothing on this path ever fires the real
+// 'enterpictureinpicture'/'leavepictureinpicture' events) stops it again and resets
+// state the same way closePip() itself already does - both now share one
+// finishClosingPip() helper instead of duplicating that cleanup.
+// New drawPipFrameTick() wraps every existing drawPipFrame() call site (the rAF loop,
+// the Worker tick, the main-thread fallback timer, and the initial synchronous draw)
+// and, only on the native path, pushes a frame to AndBridge.updatePipFrame() - but
+// only when something actually changed since the last push (compared via the same
+// pipRenderedLyricsRef/pipRenderedIndex drawPipFrame() already tracks as a side
+// effect, plus currentUnsyncedLyrics/currentLyricsStatusMessage and the AMOLED theme
+// flag), not on a fixed timer - a fixed low-rate push independent of when the line
+// actually changes would mean the native window could keep showing the previous line
+// for up to that whole interval after the real change, defeating the point of synced
+// lyrics.
+// Browser/WebKit/page-PiP paths: completely unaffected. maybePushNativePipFrame() is
+// a no-op wherever window.AndBridge.updatePipFrame doesn't exist, which is every
+// context except this specific wrapper app.
 
 // RESOLVED (17.56): CUSTOM SCRUBBER'S TOTAL-TIME LABEL DIDN'T SUPPORT NATIVE SPOTIFY'S TIMER-COUNTDOWN TOGGLE
 // On stock Spotify, clicking the duration label in the native playback controls
@@ -2654,13 +2697,23 @@ document.head.appendChild(buttonGroupScrollStyle);
    * throw "Video readyState is HAVE_NOTHING" because captureStream() hadn't delivered a
    * frame yet. On later toggles this resolves instantly since pipVideo already exists.
    */
-  async function initPipElements() {
-    if (pipVideo) return;
-
+  // Canvas-only half of what initPipElements() used to do inline. Split out so
+  // the native-wrapper PiP path (see togglePip()) can get a canvas for
+  // drawPipFrame() to draw on without also paying for the real <video>+
+  // captureStream(30)+autoplay pipeline below, which only the actual browser
+  // requestPictureInPicture() path ever reads from.
+  function ensurePipCanvas() {
+    if (pipCanvas) return;
     pipCanvas = document.createElement('canvas');
     pipCanvas.width = PIP_CANVAS_DEFAULT_SIZE;
     pipCanvas.height = PIP_CANVAS_DEFAULT_SIZE;
     pipCtx = pipCanvas.getContext('2d');
+  }
+
+  async function initPipElements() {
+    if (pipVideo) return;
+
+    ensurePipCanvas();
 
     pipVideo = document.createElement('video');
     pipVideo.muted = true;
@@ -2738,6 +2791,16 @@ document.head.appendChild(buttonGroupScrollStyle);
   // see pipRenderedIndex below).
   let pipRenderedLyricsRef = null;
   let pipRenderedIndex = -1;
+
+  // Last-pushed change-detection state for maybePushNativePipFrame() below.
+  // undefined initially so the very first tick after entering PiP always
+  // counts as "changed" and pushes a first frame.
+  let pipLastPushedLyricsRef;
+  let pipLastPushedIndex;
+  let pipLastPushedUnsyncedLen;
+  let pipLastPushedStatusMsg;
+  let pipLastPushedTheme;
+
   function drawPipFrame() {
       if (!pipCtx || !pipCanvas || !pipVideo) {
         console.warn('📺 [Lyrics+ PiP] drawPipFrame: bailing out, missing pipCtx/pipCanvas/pipVideo', { pipCtx: !!pipCtx, pipCanvas: !!pipCanvas, pipVideo: !!pipVideo });
@@ -2914,6 +2977,63 @@ document.head.appendChild(buttonGroupScrollStyle);
       }
   }
 
+  // Every call site below that used to call drawPipFrame() directly now calls
+  // this instead - drawPipFrame() itself is untouched (see
+  // PLAN_item29_pip_lyrics_canvas.md - it must keep being the single source of
+  // truth for what gets drawn, on both the browser and native paths). This
+  // just runs one thing after it: on the native path only, check whether
+  // anything actually changed since the last pushed frame, and if so export
+  // the canvas and hand it to native. No-op call overhead on the browser path,
+  // where the real <video> PiP window already gets the canvas for free via
+  // captureStream().
+  function drawPipFrameTick() {
+    drawPipFrame();
+    maybePushNativePipFrame();
+  }
+
+  // Pushes pipCanvas to native as a PNG frame, but only when something
+  // drawPipFrame() would actually draw differently has changed since the last
+  // push - not on a fixed clock. A fixed low-rate push independent of when the
+  // line actually changes would mean the native window could keep showing the
+  // previous line for up to that whole interval after the real change, which
+  // defeats the point of synced lyrics. Compares the same values
+  // drawPipFrame() already derives/updates each tick as an outer-scope side
+  // effect (pipRenderedLyricsRef/pipRenderedIndex) plus the two other things
+  // that change what gets drawn (currentUnsyncedLyrics, currentLyricsStatusMessage)
+  // and the AMOLED theme flag - cheap comparisons, no new timers, no re-deriving
+  // anything drawPipFrame() doesn't already track for its own purposes.
+  function maybePushNativePipFrame() {
+    if (!(window.AndBridge && typeof window.AndBridge.updatePipFrame === 'function')) return;
+    if (!pipCanvas) return;
+
+    const theme = localStorage.getItem('lyricsPlusTheme');
+    const unsyncedLen = currentUnsyncedLyrics ? currentUnsyncedLyrics.length : 0;
+    const statusMsg = currentLyricsStatusMessage || '';
+
+    const changed = (
+      pipRenderedLyricsRef !== pipLastPushedLyricsRef ||
+      pipRenderedIndex !== pipLastPushedIndex ||
+      unsyncedLen !== pipLastPushedUnsyncedLen ||
+      statusMsg !== pipLastPushedStatusMsg ||
+      theme !== pipLastPushedTheme
+    );
+    if (!changed) return;
+
+    pipLastPushedLyricsRef = pipRenderedLyricsRef;
+    pipLastPushedIndex = pipRenderedIndex;
+    pipLastPushedUnsyncedLen = unsyncedLen;
+    pipLastPushedStatusMsg = statusMsg;
+    pipLastPushedTheme = theme;
+
+    try {
+      const dataUrl = pipCanvas.toDataURL('image/png');
+      const base64 = dataUrl.substring(dataUrl.indexOf(',') + 1);
+      window.AndBridge.updatePipFrame(base64);
+    } catch (e) {
+      console.warn('📺 [Lyrics+ PiP] native frame push failed', e);
+    }
+  }
+
     /**
    * Lazily creates (or returns the existing) dedicated Worker that drives PiP
    * frame redraws via postMessage ticks instead of a main-thread setInterval.
@@ -2947,7 +3067,7 @@ document.head.appendChild(buttonGroupScrollStyle);
       URL.revokeObjectURL(blobUrl); // only needed to construct the Worker, safe to release immediately
       pipWorker.onmessage = (e) => {
         if (e.data === 'tick' && (isPipActive || isPagePipActive)) {
-          drawPipFrame();
+          drawPipFrameTick();
         }
       };
       pipWorker.onerror = (err) => {
@@ -2974,7 +3094,7 @@ document.head.appendChild(buttonGroupScrollStyle);
         return;
       }
       pipLastFrameAt = performance.now();
-      drawPipFrame();
+      drawPipFrameTick();
     }, PIP_FALLBACK_INTERVAL_MS);
   }
 
@@ -2991,7 +3111,7 @@ document.head.appendChild(buttonGroupScrollStyle);
       const now = performance.now();
       if (now - pipLastFrameAt >= PIP_FRAME_THROTTLE_MS) {
         pipLastFrameAt = now;
-        drawPipFrame();
+        drawPipFrameTick();
       }
       pipAnimationFrame = requestAnimationFrame(rafTick);
     };
@@ -3009,7 +3129,7 @@ document.head.appendChild(buttonGroupScrollStyle);
       armPipFallbackTimer();
     }
 
-    drawPipFrame();
+    drawPipFrameTick();
   }
 
   function stopPipRenderLoop() {
@@ -3053,12 +3173,36 @@ document.head.appendChild(buttonGroupScrollStyle);
       return;
     }
     // Page PiP or any remaining case: clean up synchronously
+    finishClosingPip();
+  }
+
+  // The actual state-reset/cleanup sequence, shared between closePip()'s
+  // synchronous fallback branch above and onNativePipClosed() below - same
+  // five lines either way, just reached via a different trigger (this file's
+  // own button vs. Android reporting the native window closed).
+  function finishClosingPip() {
     isPipActive = false;
     isPagePipActive = false;
     updatePipButtonState(false);
     stopPipRenderLoop();
     exitPipFromLyricsContainer();
   }
+
+  // Native-wrapper counterpart to the 'leavepictureinpicture'/
+  // 'webkitpresentationmodechanged' listeners initPipElements() attaches to
+  // pipVideo for the real browser PiP path - neither of those ever fires here,
+  // since native Activity-level PiP isn't driven through pipVideo at all.
+  // MainActivity.onPictureInPictureModeChanged()'s exit branch calls this via
+  // evaluateJavascript once Android reports the native PiP window has closed
+  // (system swipe-away or tap-to-expand), so this is the only way this path's
+  // isPipActive ever gets reset to false again and the render loop actually
+  // stops. Only wired up for the canvas-fed Lyrics+ path (MainActivity gates the
+  // evaluateJavascript call on its own pipCanvasFed field) - Spotify's own
+  // album-art PiP button never touches this file's render loop at all, so it
+  // has nothing here to reset.
+  window.onNativePipClosed = function() {
+    finishClosingPip();
+  };
 
   /**
    * Toggles Picture-in-Picture mode. Creates video/canvas elements on first call.
@@ -3091,6 +3235,30 @@ document.head.appendChild(buttonGroupScrollStyle);
         var storedTheme = localStorage.getItem('lyricsPlusTheme');
         amoledThemeActive = storedTheme === null ? false : JSON.parse(storedTheme);
       } catch (e) { amoledThemeActive = false; }
+
+      // Native PiP has no real <video>/captureStream() pipeline behind it, so
+      // unlike the browser path below, initPipElements() itself is never called
+      // here - it builds a whole hidden <video>+captureStream(30)+autoplay
+      // pipeline purely for the real browser PiP request, none of which this
+      // path ever uses. ensurePipCanvas() gets exactly what's actually needed:
+      // the canvas drawPipFrame() draws onto. drawPipFrame() itself still checks
+      // for a truthy pipVideo as part of its own pipCtx/pipCanvas/pipVideo
+      // readiness guard (unrelated to this native path, and intentionally left
+      // untouched - see PLAN_item29_pip_lyrics_canvas.md), so a bare, unattached,
+      // source-less stand-in element satisfies that check without any of the
+      // actual video/stream cost the guard was originally written around.
+      ensurePipCanvas();
+      if (!pipVideo) pipVideo = document.createElement('video');
+
+      // Drives startPipRenderLoop()'s own rafTick guard (`if (!isPipActive &&
+      // !isPagePipActive) return;`) - never set true on this path otherwise,
+      // since that normally only happens inside pipVideo's real
+      // 'enterpictureinpicture'/'webkitpresentationmodechanged' listeners, which
+      // never fire here. Reset to false again in onNativePipClosed() below once
+      // Android reports the native window has actually closed.
+      isPipActive = true;
+      startPipRenderLoop();
+
       window.AndBridge.enterPip(false, !!amoledThemeActive);
       return;
     }
