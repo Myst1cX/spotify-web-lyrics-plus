@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.56
+// @version      17.57
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,32 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// ADDED (17.57): NATIVE PICTURE-IN-PICTURE INSIDE THE SPOTIFUCK MOBILE WRAPPER APP
+// togglePip() previously always went through the browser's Picture-in-Picture API -
+// a canvas.captureStream()-fed <video> element, with WebKit presentation mode and a
+// page-PiP fallback below that. Inside the Spotifuck Mobile wrapper app's WebView,
+// none of that chain ever worked: Android's WebView component doesn't expose
+// HTMLVideoElement.requestPictureInPicture() at all (unlike Chrome-the-app), so every
+// toggle there fell straight through to activatePipUnsupportedFallback() - the "PiP
+// not supported in this browser" message - regardless of device or Android version.
+// Fix: togglePip() now checks for window.AndBridge.enterPip (the wrapper app's native
+// bridge, only ever present inside that WebView) before any of the existing PiP setup
+// runs, and if present, calls AndBridge.enterPip(false, amoled) instead - the
+// wrapper's native Activity-level Picture-in-Picture, entirely separate from the web
+// PiP API this function otherwise uses. amoled is read from the same
+// localStorage.getItem('lyricsPlusTheme') flag applyAmoledTheme() itself reads, so the
+// native side's overlay background matches whichever theme (default #121212 grayish,
+// or AMOLED black) is currently selected - reproducing, natively, the same background
+// a browser's live canvas capture already showed for free. No album art: this button
+// represents the lyrics view itself, not the track, so the floating window shows the
+// popup's theme rather than cover art (Spotify's own native mini-player PiP button,
+// handled entirely on the wrapper's native side and unrelated to this script, shows
+// album art instead).
+// This entire change is additive and gated behind window.AndBridge.enterPip existing -
+// in a normal desktop or mobile browser (no wrapper, no AndBridge), that check is
+// false and togglePip() falls through to run exactly as it always has, completely
+// unchanged.
 
 // RESOLVED (17.56): CUSTOM SCRUBBER'S TOTAL-TIME LABEL DIDN'T SUPPORT NATIVE SPOTIFY'S TIMER-COUNTDOWN TOGGLE
 // On stock Spotify, clicking the duration label in the native playback controls
@@ -3043,6 +3069,32 @@ document.head.appendChild(buttonGroupScrollStyle);
    * "Video readyState is HAVE_NOTHING" error on the very first toggle.
    */
   async function togglePip() {
+    // Native-wrapper short-circuit: inside our own WebView wrapper, the standard
+    // web PiP API (requestPictureInPicture) below this point is a dead end -
+    // Android WebView doesn't expose it, which is exactly why this function's
+    // fallback chain ends in activatePipUnsupportedFallback() there. When the
+    // wrapper's native bridge is present, use its native (Activity-level) PiP
+    // instead - AndBridge.enterPip(false, amoled), no album art. In a normal
+    // browser, requestPictureInPicture() below floats a live capture of this
+    // popup's own canvas (background and all), so the floating window's
+    // background is whatever the popup's current theme is. Native Activity PiP
+    // has no equivalent capture-just-this-element mechanism, so the wrapper's
+    // native side reproduces it with a plain overlay instead - same read of the
+    // 'lyricsPlusTheme' localStorage flag the AMOLED toggle itself uses (see
+    // applyAmoledTheme() / the settings panel's theme checkbox above), so the
+    // overlay always matches whatever the user currently has selected. See
+    // CHANGELOG_v1.28_item28.md. In a normal browser (no AndBridge), this check
+    // is false and every line below runs completely unchanged.
+    if (window.AndBridge && typeof window.AndBridge.enterPip === 'function') {
+      var amoledThemeActive = false;
+      try {
+        var storedTheme = localStorage.getItem('lyricsPlusTheme');
+        amoledThemeActive = storedTheme === null ? false : JSON.parse(storedTheme);
+      } catch (e) { amoledThemeActive = false; }
+      window.AndBridge.enterPip(false, !!amoledThemeActive);
+      return;
+    }
+
     console.info('📺 [Lyrics+ PiP] togglePip clicked. isPipActive=%s isPagePipActive=%s pictureInPictureElement===pipVideo=%s',
       isPipActive, isPagePipActive, pipVideo && document.pictureInPictureElement === pipVideo);
     if (isPipActive || isPagePipActive) {
