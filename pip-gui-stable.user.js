@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.59
+// @version      17.60
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,24 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.60): LYRICS DOWNLOAD BUTTONS NOW WORK INSIDE THE APP, NOT ONLY IN A BROWSER
+// Tapping "Download synced lyrics (.lrc)" or "Download unsynced lyrics (.txt)" in the app did
+// nothing at all: no popup, no file, no error. In a normal desktop or mobile browser the same
+// buttons worked fine, which is why this only showed up in the wrapper app.
+// Cause: both download functions built a Blob, pointed a hidden <a download> at
+// URL.createObjectURL(blob) and clicked it. A browser answers that with its own save prompt,
+// but the app's WebView has no download handler, and a blob: link can't be downloaded by the
+// system anyway, so the click was silently ignored.
+// Fix: added saveFileNatively(filename, mime, text). If the app provides
+// window.AndBridge.saveTextFile (new in app 1.58), the script hands it the file name, type and
+// lyrics text, and the app shows its own "save lyrics" popup from the bottom of the screen,
+// where the file can be renamed and the save folder picked (asked once, then remembered).
+// downloadSyncedLyrics() and downloadUnsyncedLyrics() call it right after building the file
+// name and stop there if the app took over. Nothing else changed: the .lrc is still
+// "[mm:ss.xx] line" per line, the .txt is still the plain lines.
+// In a regular browser, or with an older app that has no saveTextFile, saveFileNatively()
+// returns false and the original blob download runs exactly as before.
 
 // RESOLVED (17.59): NATIVE PIP DIDN'T SHOW THE CURRENT LYRIC LINE ON REOPEN, ONLY FROM THE NEXT LINE CHANGE
 // maybePushNativePipFrame() only pushes a frame to native when it detects a change
@@ -2181,6 +2199,23 @@
     return str.replace(/[\/\\:\*\?"<>\|]/g, '').replace(/\s+/g, ' ').trim();
   }
 
+  // --- Native save (Android wrapper app) ---
+  // Inside the app's WebView, <a download> + blob: URLs do nothing (no DownloadListener, and blob: URLs can't be
+  // fetched natively). If the wrapper exposes AndBridge.saveTextFile, hand it the text so it can show its bottom-sheet
+  // save popup (file name + folder). Returns true if handed off; in a normal browser (no AndBridge) returns false and
+  // the caller falls through to the regular blob download below.
+  function saveFileNatively(filename, mime, text) {
+    try {
+      if (window.AndBridge && typeof window.AndBridge.saveTextFile === 'function') {
+        window.AndBridge.saveTextFile(filename, mime, text);
+        return true;
+      }
+    } catch (e) {
+      console.warn('[Lyrics+] native save failed, falling back to browser download:', e);
+    }
+    return false;
+  }
+
   // --- Download Synced Lyrics as LRC ---
   function downloadSyncedLyrics(syncedLyrics, trackInfo, providerName) {
     if (!syncedLyrics || !syncedLyrics.length) return;
@@ -2194,6 +2229,7 @@
     let title = makeSafeFilename(trackInfo?.title || "lyrics");
     let artist = makeSafeFilename(trackInfo?.artist || "unknown");
     let filename = `${artist} - ${title}.lrc`;
+    if (saveFileNatively(filename, "application/octet-stream", lines)) return;
 
     // Try application/octet-stream for better compatibility (helps detect as .lrc in mobile browser)
     let blob = new Blob([lines], { type: "application/octet-stream" });
@@ -2213,6 +2249,7 @@
     let title = makeSafeFilename(trackInfo?.title || "lyrics");
     let artist = makeSafeFilename(trackInfo?.artist || "unknown");
     let filename = `${artist} - ${title}.txt`;
+    if (saveFileNatively(filename, "text/plain", lines)) return;
     let blob = new Blob([lines], { type: "text/plain" });
     let a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
