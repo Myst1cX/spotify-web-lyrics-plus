@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.60
+// @version      17.61
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,18 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.61): IMPROVED KPOE UNSYNCED LYRICS DETECTION (UPDATES 17.17)
+// 17.17 fixed KPoe lyrics that load as "synced" but never move (the last line stays highlighted
+// from the start) by treating type "None" as unsynced. We have since found out that lyrics with
+// every timestamp at 0 also exist that are NOT labeled "None". Example: "1NACHT" by Yung Lenz,
+// Aeticbeats came back as type "Word" with every line at time 0, duration 0 and no syllable
+// data, so the 17.17 check let it through and the same stuck-highlight symptom returned.
+// Fix: ProviderKPoe.getSynced now treats KPoe lyrics as unsynced if the type is "None" (as in
+// 17.17) OR no line has a start time above 0, whatever the type label says. Both fall back to
+// plain unsynced lyrics. Lyrics where at least one line has a real timestamp sync as before.
+// Songs already cached with the broken result keep loading as before until the cache is cleared
+// (userscript menu: "Debug: Clear Cache").
 
 // RESOLVED (17.60): LYRICS DOWNLOAD BUTTONS NOW WORK INSIDE THE APP, NOT ONLY IN A BROWSER
 // Tapping "Download synced lyrics (.lrc)" or "Download unsynced lyrics (.txt)" in the app did
@@ -4720,7 +4732,9 @@ const PLAY_WORDS = [
 
       // "None" type means unsynced lyrics (no timing data from Apple source)
       // Returning null here causes the caller to fall back to getUnsynced()
-      if (body.type === "None") return null;
+      // Also treated as unsynced: lyrics where no line has a start time above 0, because
+      // the server's type label can be wrong (e.g. "Word" with every line at time 0).
+      if (body.type === "None" || !body.data.some(line => line.startTime > 0)) return null;
 
       // Handle both Line-synced and Word-synced lyrics
       const isWordType = body.type === "Word";
