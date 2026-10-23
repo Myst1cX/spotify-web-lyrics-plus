@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.61
+// @version      17.62
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,20 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.62): LYRICS NEVER LOAD - TRACK TITLE AND ARTIST SELECTORS UPDATED FOR SPOTIFY'S NEW PLAYER BAR
+// Spotify rebuilt the player bar's DOM (the widget test id went from now-playing-widget to
+// now-playing-widget-v2 and its insides were flattened). getCurrentTrackInfo() still looked up the
+// title and artist by [data-testid="context-item-info-title"] and
+// [data-testid="context-item-info-subtitles"], which no longer exist, so it returned null, the script
+// saw "no track" and never fetched lyrics.
+// Fix (getCurrentTrackInfo only): the title is read from
+// div[data-testid="now-playing-widget-v2"]>div:nth-child(2)>div:first-child a, the artist from the
+// links in [data-testid="now-playing-widget-v2-byline"] (joined with ", "). If either is missing, both
+// fall back to the widget's aria-label ("Now playing: <title> by <artists>"). The old selectors are not
+// kept. Nothing else was changed: getCurrentTrackId() and every other selector are untouched and
+// not verified against the new DOM.
+// Undo: restore the two old querySelector lines in getCurrentTrackInfo().
 
 // RESOLVED (17.61): IMPROVED KPOE UNSYNCED LYRICS DETECTION (UPDATES 17.17)
 // 17.17 fixed KPoe lyrics that load as "synced" but never move (the last line stays highlighted
@@ -2308,18 +2322,34 @@ document.head.appendChild(buttonGroupScrollStyle);
   }
 
   function getCurrentTrackInfo() {
-    const titleEl = document.querySelector('[data-testid="context-item-info-title"]');
-    const artistEl = document.querySelector('[data-testid="context-item-info-subtitles"]');
+    // 17.62: new player bar DOM (now-playing-widget-v2); the old context-item-info-* ids are gone.
+    const widgetSel = 'div[data-testid="now-playing-widget-v2"]';
+    const titleEl = document.querySelector(widgetSel + '>div:nth-child(2)>div:first-child a');
+    const artistEls = document.querySelectorAll('[data-testid="now-playing-widget-v2-byline"] a');
     const durationEl = document.querySelector('[data-testid="playback-duration"]');
     const positionEl = document.querySelector('[data-testid="playback-position"]');
     const trackId = getCurrentTrackId();
 
-    if (!titleEl || !artistEl) {
-      return null;
+    let title = titleEl ? titleEl.textContent.trim() : '';
+    let artist = Array.from(artistEls).map(a => a.textContent.trim()).filter(Boolean).join(', ');
+
+    // Fallback: the widget aria-label reads "Now playing: <title> by <artists>".
+    if (!title || !artist) {
+      const widget = document.querySelector(widgetSel);
+      const label = (widget && widget.getAttribute('aria-label')) || '';
+      if (label.indexOf('Now playing: ') === 0) {
+        const rest = label.slice(13);
+        const by = rest.lastIndexOf(' by ');
+        if (by > 0) {
+          title = title || rest.slice(0, by).trim();
+          artist = artist || rest.slice(by + 4).trim();
+        }
+      }
     }
 
-    const title = titleEl.textContent.trim();
-    const artist = artistEl.textContent.trim();
+    if (!title || !artist) {
+      return null;
+    }
 
     // Calculate duration properly - playback-duration may show remaining time (prefixed with '-')
     let duration = 0;
