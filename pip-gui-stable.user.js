@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.67.fix3
+// @version      17.67.fix4mid
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,11 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// TEST (17.67.fix4mid): MUSIXMATCH REQUESTS USE app_id=mxm-com-v1.0 (matcher.track.get, track.subtitles.get, track.lyrics.get)
+// The musixmatchUserToken cookie is now {"tokens":{"<app_id>":"<token>",...},"version":1} and has no "web-desktop-app-v1.0" entry any more;
+// the token the app captures after login belongs to mxm-com-v1.0 (what musixmatch.com itself sends). With app_id=web-desktop-app-v1.0 that token
+// got HTTP 404 "track not found" on every song. Host (apic-desktop.musixmatch.com) unchanged. Undo: put app_id=web-desktop-app-v1.0 back in those 3 URLs.
 
 // RESOLVED (17.67): MUSIXMATCH TOKEN IS FETCHED AUTOMATICALLY INSIDE THE ANDROID APP (APP 1.65+)
 // Tapping the Musixmatch link in the token modal used to load musixmatch.com in the main WebView, which unloaded Spotify and
@@ -5144,7 +5149,7 @@ async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
   const trackUrl = `https://apic-desktop.musixmatch.com/ws/1.1/matcher.track.get?` +
       `q_track=${encodeURIComponent(songInfo.title)}&` +
       `q_artist=${encodeURIComponent(songInfo.artist)}&` +
-      `format=json&usertoken=${encodeURIComponent(token)}&app_id=web-desktop-app-v1.0`;
+      `format=json&usertoken=${encodeURIComponent(token)}&app_id=mxm-com-v1.0`;
   console.log("[Musixmatch Debug] Step 1: Fetching track info");
   console.log("[Musixmatch Debug] Track URL:", trackUrl.replace(token, '***TOKEN***'));
 
@@ -5203,7 +5208,7 @@ async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
 
     // Step 2: Fetch synced lyrics via subtitles.get
     const subtitleUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.subtitles.get?` +
-        `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`;
+        `track_id=${track.track_id}&format=json&app_id=mxm-com-v1.0&usertoken=${encodeURIComponent(token)}`;
     console.log("[Musixmatch Debug] Step 2: Fetching synced lyrics (subtitles)");
 
     const subtitleResponse = await fetch(subtitleUrl, {
@@ -5235,7 +5240,7 @@ async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
 
     // Step 3: fallback to unsynced lyrics
     const lyricsUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.lyrics.get?` +
-        `track_id=${track.track_id}&format=json&app_id=web-desktop-app-v1.0&usertoken=${encodeURIComponent(token)}`;
+        `track_id=${track.track_id}&format=json&app_id=mxm-com-v1.0&usertoken=${encodeURIComponent(token)}`;
     console.log("[Musixmatch Debug] Step 3: Fetching unsynced lyrics (fallback)");
 
     const lyricsResponse = await fetch(lyricsUrl, {
