@@ -24,10 +24,10 @@
 // Each request is signed: signature = base64(HMAC-SHA256(key, fullUrl + local YYYYMMDD)), sent as &signature=...&signature_protocol=sha256 plus Referer and x-mxm-app-version.
 // The key is read live from the site: GET /search -> _app-*.js bundle (~3MB) -> string before .split, reversed + base64-decoded. Cached 6h in localStorage (lyricsPlusMxmSigningKey_v1),
 // prefetched 4s after load and right after the token is saved. A 401/403 refreshes the key once and retries; only a second rejection clears the token.
-// Transport: in the app AndBridge.nativeFetch (native HTTP, no CORS/CSP; send the browser User-Agent; the site's edge answers 403 to some requests); desktop userscript manager uses GM_xmlhttpRequest
-// (@connect musixmatch.com, mxmcdn.net). A plain browser without a userscript manager is not supported. No app update needed.
+// Transport: in the app AndBridge.nativeFetch (native HTTP, no CORS/CSP; a browser User-Agent is required or the edge answers 403); desktop userscript manager uses GM_xmlhttpRequest
+// (@connect musixmatch.com, mxmcdn.net). A plain browser without a userscript manager cannot reach the API. No app update needed.
 // Search: no q_duration (hard filter); title/artist/duration scored locally; retries once with first artist + cleaned title.
-// Token windows: Spotify gets the in-app automatic-token lines; Musixmatch in-app step no longer requires the Contribute tab, and the manual step names mxm-com-v1.0 (the cookie has no web-desktop-app-v1.0 entry any more).
+// Token modals: Spotify gets the in-app automatic-token lines; Musixmatch in-app step no longer requires the Contribute tab, and the manual step names mxm-com-v1.0 (the cookie has no web-desktop-app-v1.0 entry any more).
 // Undo: restore fetchMusixmatchLyrics from 17.67.fix4mid (its apic-desktop endpoints no longer exist), remove the mxm* helpers and the two @connect lines.
 
 // RESOLVED (17.67): MUSIXMATCH TOKEN IS FETCHED AUTOMATICALLY INSIDE THE ANDROID APP (APP 1.65+)
@@ -5059,7 +5059,7 @@ const PLAY_WORDS = [
       steps: [
         ...((window.AndBridge && typeof window.AndBridge.openMusixmatchLogin === "function") ? [
           'In the app, tap <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a> and sign in on the screen that opens (your song keeps playing).',
-          'The app reads your token right after you sign in, fills the field below and closes that screen by itself. Nothing to paste. (If nothing happens, press the [Contribute] tab.)',
+          'The app reads your token right after you sign in, fills the field below and closes that screen by itself.',
           'Or get it manually:',
         ] : []),
         'Go to <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a> and click on Login.',
@@ -5073,7 +5073,7 @@ const PLAY_WORDS = [
     });
   }
 
-  // 17.67: called by the app (MusixmatchLoginActivity) with the token it read from the Musixmatch cookie.
+  // 17.67: called by the app (MusixmatchLoginActivity) with the logged-in token it saw in the profile request after sign-in.
   window.__lpSetMusixmatchToken = function (token) {
     localStorage.setItem("lyricsPlusMusixmatchToken", token);
     try { mxmLoadKey(false).catch(() => {}); } catch (e) { /* warm the signing key in the background */ }
@@ -5101,7 +5101,7 @@ const PLAY_WORDS = [
       normalize: (v) => (v.startsWith("Bearer ") ? v.slice(7) : v),
       steps: [
         ...(window.AndBridge ? [
-          'In the app, the token is read from the Spotify page automatically when Spotify lyrics load, and fills the field below. Nothing to paste.',
+          'In the app, the token is read from the Spotify page automatically when Spotify lyrics load, and fills the field below.',
           'If the field is empty, play a song and select the Spotify tab. Or get it manually:',
         ] : []),
         'Go to <a href="https://open.spotify.com/" target="_blank" rel="noopener">Spotify Web Player</a> and log in. Play a song.',
