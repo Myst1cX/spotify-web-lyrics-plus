@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.67.fix4mid
+// @version      17.68
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -9,6 +9,8 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
 // @connect      genius.com
+// @connect      musixmatch.com
+// @connect      mxmcdn.net
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @homepageURL  https://github.com/Myst1cX/spotify-web-lyrics-plus
 // @supportURL   https://github.com/Myst1cX/spotify-web-lyrics-plus/issues
@@ -16,10 +18,16 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// TEST (17.67.fix4mid): MUSIXMATCH REQUESTS USE app_id=mxm-com-v1.0 (matcher.track.get, track.subtitles.get, track.lyrics.get)
-// The musixmatchUserToken cookie is now {"tokens":{"<app_id>":"<token>",...},"version":1} and has no "web-desktop-app-v1.0" entry any more;
-// the token the app captures after login belongs to mxm-com-v1.0 (what musixmatch.com itself sends). With app_id=web-desktop-app-v1.0 that token
-// got HTTP 404 "track not found" on every song. Host (apic-desktop.musixmatch.com) unchanged. Undo: put app_id=web-desktop-app-v1.0 back in those 3 URLs.
+// RESOLVED (17.68): MUSIXMATCH AUTOFETCH WORKS AGAIN (NEW SIGNED WEB API)
+// Musixmatch removed apic-desktop (token.get returns a dummy token, other calls 404 "endpoint not found"). Lookup now uses what musixmatch.com itself uses:
+// https://www.musixmatch.com/ws/1.1/ track.search -> track.subtitles.get (LRC) or track.lyrics.get, app_id=mxm-com-v1.0, with the logged-in token the app already captures (unchanged).
+// Each request is signed: signature = base64(HMAC-SHA256(key, fullUrl + local YYYYMMDD)), sent as &signature=...&signature_protocol=sha256 plus Referer and x-mxm-app-version.
+// The key is read live from the site: GET /search -> _app-*.js bundle (~3MB) -> string before .split, reversed + base64-decoded. Cached 6h in localStorage (lyricsPlusMxmSigningKey_v1),
+// prefetched 4s after load and right after the token is saved. A 401/403 refreshes the key once and retries; only a second rejection clears the token.
+// Transport: in the app AndBridge.nativeFetch (native HTTP, no CORS/CSP; a browser User-Agent is required or the edge answers 403); desktop userscript manager uses GM_xmlhttpRequest
+// (@connect musixmatch.com, mxmcdn.net). A plain browser without a userscript manager cannot reach the API. No app update needed.
+// Search: no q_duration (hard filter); title/artist/duration scored locally; retries once with first artist + cleaned title.
+// Undo: restore fetchMusixmatchLyrics from 17.67.fix4mid (its apic-desktop endpoints no longer exist), remove the mxm* helpers and the two @connect lines.
 
 // RESOLVED (17.67): MUSIXMATCH TOKEN IS FETCHED AUTOMATICALLY INSIDE THE ANDROID APP (APP 1.65+)
 // Tapping the Musixmatch link in the token modal used to load musixmatch.com in the main WebView, which unloaded Spotify and
@@ -5067,6 +5075,7 @@ const PLAY_WORDS = [
   // 17.67: called by the app (MusixmatchLoginActivity) with the token it read from the Musixmatch cookie.
   window.__lpSetMusixmatchToken = function (token) {
     localStorage.setItem("lyricsPlusMusixmatchToken", token);
+    try { mxmLoadKey(false).catch(() => {}); } catch (e) { /* warm the signing key in the background */ }
     // Like the automatic Spotify token: stored in localStorage, and shown in the token field if the window is open.
     const modal = document.getElementById("lyrics-plus-musixmatch-modal");
     const field = modal && modal.querySelector(".lp-token-input");
@@ -5129,150 +5138,275 @@ function parseMusixmatchSyncedLyrics(subtitleBody) {
 }
 
 
-async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`[Musixmatch Debug] Starting lyrics search (synced preferred)`);
-  console.log("[Musixmatch Debug] Input info:", {
-    artist: songInfo.artist,
-    title: songInfo.title
+// ===== Musixmatch signed web API (17.68) =====
+// Flow: GET /search -> find _app-*.js -> extract + decode signing key (cached 6h) -> signed track.search -> track.subtitles.get / track.lyrics.get.
+const MXM_API_BASE = 'https://www.musixmatch.com/ws/1.1/';
+const MXM_APP_ID = 'mxm-com-v1.0';
+const MXM_KEY_STORAGE = 'lyricsPlusMxmSigningKey_v1';
+const MXM_KEY_TTL_MS = 6 * 60 * 60 * 1000;
+let mxmKeyPromise = null;
+
+// Transport. In the Android app: native HttpURLConnection via AndBridge.nativeFetch (no CORS/CSP; needs a browser User-Agent or the
+// site's edge answers 403). Desktop userscript manager: real GM_xmlhttpRequest (needs @connect). Plain browser: unsupported.
+function mxmHttp(url, headers) {
+  return new Promise((resolve) => {
+    const fail = (msg) => resolve({ status: 0, body: '', error: msg });
+    if (window.AndBridge && typeof window.AndBridge.nativeFetch === 'function') {
+      // setTimeout lets the UI paint first: the bridge call is synchronous.
+      setTimeout(() => {
+        try {
+          const r = JSON.parse(window.AndBridge.nativeFetch(url, 'GET', JSON.stringify(headers || {}), null));
+          const status = typeof r.status === 'number' ? r.status : 0;
+          resolve({ status, body: typeof r.body === 'string' ? r.body : '', error: status < 100 ? String(r.body || 'native fetch failed') : null });
+        } catch (e) {
+          fail(String((e && e.message) || e));
+        }
+      }, 0);
+      return;
+    }
+    if (typeof GM_xmlhttpRequest === 'function') {
+      try {
+        GM_xmlhttpRequest({
+          method: 'GET',
+          url,
+          headers: headers || {},
+          anonymous: true,
+          timeout: 20000,
+          onload: (r) => resolve({ status: r.status, body: r.responseText || '' }),
+          onerror: () => fail('request failed'),
+          ontimeout: () => fail('request timed out'),
+        });
+      } catch (e) {
+        fail(String((e && e.message) || e));
+      }
+      return;
+    }
+    fail('Musixmatch needs the Android app or a userscript manager');
   });
+}
+
+function mxmReadCachedKey() {
+  try {
+    const o = JSON.parse(localStorage.getItem(MXM_KEY_STORAGE) || 'null');
+    if (o && typeof o.secret === 'string' && o.secret !== '' && typeof o.savedAt === 'number') return o;
+  } catch (e) { /* storage unavailable or corrupt */ }
+  return null;
+}
+
+// Load (or reuse) the signing key. force=true skips the cache (used after an auth rejection).
+function mxmLoadKey(force) {
+  if (!force) {
+    const cached = mxmReadCachedKey();
+    if (cached && Date.now() - cached.savedAt < MXM_KEY_TTL_MS) return Promise.resolve(cached);
+  }
+  if (mxmKeyPromise) return mxmKeyPromise;
+  mxmKeyPromise = (async () => {
+    try {
+      const ua = { 'user-agent': navigator.userAgent };
+      const page = await mxmHttp('https://www.musixmatch.com/search', ua);
+      if (page.status !== 200 || !page.body) throw new Error('search page HTTP ' + page.status + (page.error ? ' (' + page.error + ')' : ''));
+      const m = [...page.body.matchAll(/src="([^"]*\/_next\/static\/chunks\/pages\/_app-[^"]+\.js)"/g)].at(-1);
+      if (!m) throw new Error('app script not found');
+      const appUrl = /^https?:\/\//.test(m[1]) ? m[1] : 'https://www.musixmatch.com' + (m[1].startsWith('/') ? '' : '/') + m[1];
+      const bundle = await mxmHttp(appUrl, ua);
+      if (bundle.status !== 200 || !bundle.body) throw new Error('app script HTTP ' + bundle.status);
+      const k = /from\(\s*"(.*?)"\s*\.split/.exec(bundle.body);
+      if (!k) throw new Error('signing key not found');
+      const bin = atob([...k[1]].reverse().join(''));
+      const secret = new TextDecoder('utf-8').decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+      if (!secret) throw new Error('signing key empty');
+      const version = (/\/prod\/([\d.]+)\//.exec(appUrl) || [])[1] || '';
+      const obj = { secret, version, savedAt: Date.now() };
+      try { localStorage.setItem(MXM_KEY_STORAGE, JSON.stringify(obj)); } catch (e) { /* ignore */ }
+      DEBUG.info('Provider', 'Musixmatch: signing key loaded (app ' + (version || '?') + ')');
+      return obj;
+    } finally {
+      mxmKeyPromise = null;
+    }
+  })();
+  return mxmKeyPromise;
+}
+
+// HMAC-SHA256 over (url + local YYYYMMDD), base64.
+async function mxmSign(url, secret) {
+  const d = new Date();
+  const ymd = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(url + ymd)));
+  let s = '';
+  for (const b of sig) s += String.fromCharCode(b);
+  return btoa(s);
+}
+
+// Signed GET. On an auth rejection the key is refreshed once and the call retried.
+// Returns { json, apiStatus } | { authRejected: true } | { blocked: true }.
+async function mxmApi(endpoint, params, retried) {
+  const keyObj = await mxmLoadKey(false);
+  const url = MXM_API_BASE + endpoint + '?' + new URLSearchParams(params).toString();
+  const sig = await mxmSign(url, keyObj.secret);
+  const headers = { 'user-agent': navigator.userAgent, 'referer': 'https://www.musixmatch.com/' };
+  if (keyObj.version) headers['x-mxm-app-version'] = keyObj.version;
+  const res = await mxmHttp(url + '&signature=' + encodeURIComponent(sig) + '&signature_protocol=sha256', headers);
+  if (res.error) throw new Error(res.error);
+  let json = null;
+  try { json = JSON.parse(res.body); } catch (e) { /* not JSON */ }
+  if (json === null && (res.status === 401 || res.status === 403)) return { blocked: true };
+  const apiStatus = json && json.message && json.message.header ? json.message.header.status_code : res.status;
+  if (res.status === 401 || res.status === 403 || apiStatus === 401 || apiStatus === 403) {
+    if (retried) return { authRejected: true };
+    await mxmLoadKey(true);
+    return mxmApi(endpoint, params, true);
+  }
+  return { json, apiStatus };
+}
+
+function mxmNorm(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\(.*?\)|\[.*?\]/g, ' ')
+    .replace(/\s+[-\u2013\u2014]\s+(remaster(ed)?|live|mono|stereo|single|radio|edit|version|\d{4}).*$/, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
+function mxmWantedArtists(artist) {
+  return String(artist || '').split(/\s*(?:,|&|;|\band\b|\bfeat\.?|\bft\.?)\s*/i).map(mxmNorm).filter(Boolean);
+}
+
+// Score a search candidate; -1 = reject (title or artist does not match at all). duration is in ms.
+function mxmScoreTrack(t, info) {
+  const wt = mxmNorm(info.title), tt = mxmNorm(t.track_name);
+  let title = 0;
+  if (tt && tt === wt) title = 50;
+  else if (tt && wt && (tt.includes(wt) || wt.includes(tt))) title = 25;
+  const at = mxmNorm(t.artist_name);
+  const wanted = mxmWantedArtists(info.artist);
+  let artist = 0;
+  if (at && wanted.some((w) => w === at)) artist = 30;
+  else if (at && wanted.some((w) => w.includes(at) || at.includes(w))) artist = 15;
+  if (title === 0 || artist === 0) return -1;
+  let score = title + artist;
+  const wantSec = info.duration > 0 ? info.duration / 1000 : 0;
+  if (wantSec && t.track_length > 0) {
+    const diff = Math.abs(wantSec - t.track_length);
+    if (diff <= 2) score += 15;
+    else if (diff <= 5) score += 8;
+    else if (diff <= 10) score += 2;
+    else if (diff > 20) score -= 15;
+  }
+  if (t.has_subtitles) score += 5;
+  return score;
+}
+
+function mxmPickTrack(list, info) {
+  let best = null;
+  let bestScore = -1;
+  for (const item of list || []) {
+    const t = item && item.track;
+    if (!t) continue;
+    const s = mxmScoreTrack(t, info);
+    if (s > bestScore) { best = t; bestScore = s; }
+  }
+  return best;
+}
+
+const MXM_TOKEN_ERROR = 'Double click on the Musixmatch provider to set up your token.';
+
+async function mxmSearch(token, title, artist, info) {
+  // No q_duration: Musixmatch applies it as a hard filter that zeroes out correct results; duration is scored locally.
+  const r = await mxmApi('track.search', {
+    app_id: MXM_APP_ID, format: 'json', usertoken: token,
+    q_track: title, q_artist: artist, f_has_lyrics: 'true',
+    s_track_rating: 'desc', page_size: '10', page: '1',
+  });
+  if (r.blocked || r.authRejected) return r;
+  const list = r.json && r.json.message && r.json.message.body ? r.json.message.body.track_list : null;
+  return { track: mxmPickTrack(list, info), count: Array.isArray(list) ? list.length : 0 };
+}
+
+async function fetchMusixmatchLyrics(songInfo, lyricsType = 'auto') {
+  console.log(`[Musixmatch Debug] Starting lyrics search (synced preferred)`, { artist: songInfo.artist, title: songInfo.title });
 
   const token = localStorage.getItem("lyricsPlusMusixmatchToken");
   if (!token) {
     DEBUG.info('Provider', 'Musixmatch: No token found in localStorage.');
-    console.log("[Musixmatch Debug] ✗ No token found - double click on the provider to  set it up.");
-    return { error: "Double click on the Musixmatch provider to set up your token." };
+    return { error: MXM_TOKEN_ERROR };
   }
-  console.log("[Musixmatch Debug] ✓ Token found (length:", token.length, "characters)");
 
-  // Step 1: Get track info
-  const trackUrl = `https://apic-desktop.musixmatch.com/ws/1.1/matcher.track.get?` +
-      `q_track=${encodeURIComponent(songInfo.title)}&` +
-      `q_artist=${encodeURIComponent(songInfo.artist)}&` +
-      `format=json&usertoken=${encodeURIComponent(token)}&app_id=mxm-com-v1.0`;
-  console.log("[Musixmatch Debug] Step 1: Fetching track info");
-  console.log("[Musixmatch Debug] Track URL:", trackUrl.replace(token, '***TOKEN***'));
+  // Auth failures: only a rejection that survives a key refresh is blamed on the token.
+  const authFailed = () => {
+    localStorage.removeItem("lyricsPlusMusixmatchToken");
+    DEBUG.info('Provider', 'Musixmatch: token rejected after key refresh. Cleared from storage.');
+    return { error: MXM_TOKEN_ERROR };
+  };
 
   try {
-    const trackResponse = await fetch(trackUrl, {
-      headers: {
-        'user-agent': navigator.userAgent,
-        'referer': 'https://www.musixmatch.com/',
-      },
-      cache: 'no-store',
-    });
-
-    console.log(`[Musixmatch Debug] Track response status: ${trackResponse.status}`);
-
-    if (!trackResponse.ok) {
-      if (trackResponse.status === 401) {
-        localStorage.removeItem("lyricsPlusMusixmatchToken");
-        DEBUG.info('Provider', 'Musixmatch 401: Token expired or invalid. Cleared from storage.');
-        console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid. Cleared from storage.");
-        return { error: "Double click on the Musixmatch provider to set up your token." };
-      } else if (trackResponse.status === 404) {
-        console.log("[Musixmatch Debug] ✗ Track not found in Musixmatch database");
-        return { error: "Track not found in Musixmatch database" };
+    // Step 1: search (full artist string first, then first artist + cleaned title).
+    let found = await mxmSearch(token, songInfo.title, songInfo.artist, songInfo);
+    if (found.authRejected) return authFailed();
+    if (found.blocked) return { error: "Musixmatch blocked the request" };
+    if (!found.track) {
+      const firstArtist = String(songInfo.artist || '').split(/\s*(?:,|&|;)\s*/)[0];
+      const cleanTitle = String(songInfo.title || '').replace(/\s*[\(\[].*?[\)\]]/g, '').replace(/\s+[-\u2013\u2014]\s+.*$/, '').trim();
+      if (firstArtist && cleanTitle && (firstArtist !== songInfo.artist || cleanTitle !== songInfo.title)) {
+        found = await mxmSearch(token, cleanTitle, firstArtist, songInfo);
+        if (found.authRejected) return authFailed();
+        if (found.blocked) return { error: "Musixmatch blocked the request" };
       }
-      console.log(`[Musixmatch Debug] ✗ Track request failed: ${trackResponse.status}`);
-      return { error: `Track lookup failed (HTTP ${trackResponse.status})` };
     }
-
-    const trackBody = await trackResponse.json();
-    const bodyStatusCode = trackBody?.message?.header?.status_code;
-    if (bodyStatusCode === 401) {
-      localStorage.removeItem("lyricsPlusMusixmatchToken");
-      DEBUG.info('Provider', 'Musixmatch 401: Token expired or invalid. Cleared from storage.');
-      console.log("[Musixmatch Debug] ✗ Authentication failed - token expired or invalid. Cleared from storage.");
-      return { error: "Double click on the Musixmatch provider to set up your token." };
-    }
-    const track = trackBody?.message?.body?.track;
-
+    const track = found.track;
     if (!track) {
-      console.log("[Musixmatch Debug] ✗ No track data in response");
+      console.log(`[Musixmatch Debug] ✗ No matching track (${found.count} candidates)`);
       return { error: "Track not found in Musixmatch database" };
     }
-
     console.log("[Musixmatch Debug] ✓ Track found:", {
-      trackId: track.track_id,
-      trackName: track.track_name,
-      artistName: track.artist_name,
-      hasLyrics: track.has_lyrics,
-      instrumental: track.instrumental
+      trackId: track.track_id, trackName: track.track_name, artistName: track.artist_name,
+      hasLyrics: track.has_lyrics, hasSubtitles: track.has_subtitles, instrumental: track.instrumental,
     });
+    if (track.instrumental) return { instrumental: true };
 
-    if (track.instrumental) {
-      console.log("[Musixmatch Debug] ⚠ Track marked as instrumental (no lyrics)");
-      return { instrumental: true };
-    }
-
-    // Step 2: Fetch synced lyrics via subtitles.get
-    const subtitleUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.subtitles.get?` +
-        `track_id=${track.track_id}&format=json&app_id=mxm-com-v1.0&usertoken=${encodeURIComponent(token)}`;
-    console.log("[Musixmatch Debug] Step 2: Fetching synced lyrics (subtitles)");
-
-    const subtitleResponse = await fetch(subtitleUrl, {
-      headers: {
-        'user-agent': navigator.userAgent,
-        'referer': 'https://www.musixmatch.com/',
-      },
-      cache: 'no-store',
-    });
-
-    console.log(`[Musixmatch Debug] Subtitle response status: ${subtitleResponse.status}`);
-
-    if (subtitleResponse.ok) {
-      const subtitleBody = await subtitleResponse.json();
-      const subtitleList = subtitleBody?.message?.body?.subtitle_list;
-      if (subtitleList && subtitleList.length > 0) {
-        const subtitleObj = subtitleList[0]?.subtitle;
-        if (subtitleObj?.subtitle_body) {
-          console.log("[Musixmatch Debug] ✓ Synced lyrics found!");
-          const synced = parseMusixmatchSyncedLyrics(subtitleObj.subtitle_body);
-          console.log(`[Musixmatch Debug] Parsed ${synced.length} synced lyric lines`);
-          if (synced.length > 0) return { synced };
-        }
+    // Step 2: synced lyrics (LRC subtitles).
+    if (track.has_subtitles) {
+      const s = await mxmApi('track.subtitles.get', {
+        app_id: MXM_APP_ID, format: 'json', usertoken: token,
+        track_id: String(track.track_id), subtitle_format: 'lrc',
+      });
+      if (s.authRejected) return authFailed();
+      const body = s.json && s.json.message && s.json.message.body ? s.json.message.body.subtitle_list?.[0]?.subtitle?.subtitle_body : null;
+      if (body) {
+        const synced = parseMusixmatchSyncedLyrics(body);
+        console.log(`[Musixmatch Debug] ✓ Synced lyrics: ${synced.length} lines`);
+        if (synced.length > 0) return { synced };
+      } else {
+        DEBUG.info('Provider', 'Musixmatch: subtitles.get returned no body (api ' + s.apiStatus + ')');
       }
-      console.log("[Musixmatch Debug] No synced lyrics in subtitle response");
-    } else {
-      console.log(`[Musixmatch Debug] Subtitle request failed: ${subtitleResponse.status}`);
     }
 
-    // Step 3: fallback to unsynced lyrics
-    const lyricsUrl = `https://apic-desktop.musixmatch.com/ws/1.1/track.lyrics.get?` +
-        `track_id=${track.track_id}&format=json&app_id=mxm-com-v1.0&usertoken=${encodeURIComponent(token)}`;
-    console.log("[Musixmatch Debug] Step 3: Fetching unsynced lyrics (fallback)");
-
-    const lyricsResponse = await fetch(lyricsUrl, {
-      headers: {
-        'user-agent': navigator.userAgent,
-        'referer': 'https://www.musixmatch.com/',
-      },
-      cache: 'no-store',
+    // Step 3: unsynced fallback.
+    const l = await mxmApi('track.lyrics.get', {
+      app_id: MXM_APP_ID, format: 'json', usertoken: token, track_id: String(track.track_id),
     });
-
-    console.log(`[Musixmatch Debug] Lyrics response status: ${lyricsResponse.status}`);
-
-    if (!lyricsResponse.ok) {
-      console.log(`[Musixmatch Debug] ✗ Lyrics request failed: ${lyricsResponse.status}`);
-      return { error: `Lyrics fetch failed (HTTP ${lyricsResponse.status})` };
-    }
-
-    const lyricsBody = await lyricsResponse.json();
-    const unsyncedRaw = lyricsBody?.message?.body?.lyrics?.lyrics_body;
-    if (unsyncedRaw) {
-      const unsynced = unsyncedRaw.split("\n").map(line => ({ text: line }));
-      console.log(`[Musixmatch Debug] ✓ Unsynced lyrics found! (${unsynced.length} lines)`);
+    if (l.authRejected) return authFailed();
+    const raw = l.json && l.json.message && l.json.message.body ? l.json.message.body.lyrics?.lyrics_body : null;
+    if (raw) {
+      const unsynced = raw.split("\n").map(line => ({ text: line }));
+      console.log(`[Musixmatch Debug] ✓ Unsynced lyrics: ${unsynced.length} lines`);
       return { unsynced };
     }
-
-    console.log("[Musixmatch Debug] ✗ No lyrics found in any format");
+    DEBUG.info('Provider', 'Musixmatch: lyrics.get returned no body (api ' + l.apiStatus + ')');
     return { error: "No lyrics available from Musixmatch" };
   } catch (e) {
-    console.error("[Musixmatch Debug] ✗ Fetch error:", e.message || e);
+    console.error("[Musixmatch Debug] ✗ Error:", (e && e.message) || e);
+    DEBUG.info('Provider', 'Musixmatch error: ' + ((e && e.message) || e));
     return { error: "Musixmatch request failed - connection error or service unreachable" };
   }
 }
+
+// Warm the signing key in the background so the first song does not pay for the ~3MB bundle (needs a token).
+setTimeout(() => {
+  try {
+    if (localStorage.getItem("lyricsPlusMusixmatchToken")) mxmLoadKey(false).catch(() => {});
+  } catch (e) { /* ignore */ }
+}, 4000);
 
 // Extract synced lyrics from the fetchMusixmatchLyrics result
 function musixmatchGetSynced(body) {
