@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.63
+// @version      17.63.modals
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,7 +16,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.63): TOKEN MODALS (DOUBLE-CLICK ON SPOTIFY / MUSIXMATCH) FIT MOBILE AND NO LONGER FORCE THE KEYBOARD
+// RESOLVED (17.63): TOKEN MODALS (DOUBLE-CLICK ON SPOTIFY / MUSIXMATCH) FIT MOBILE BETTER NOW AND NO LONGER FORCE THE KEYBOARD
 // The two modals were near-copies (min-width 350px, 100vw/100vh overlay, no max-height, no scrolling) that
 // covered almost the whole phone screen, and both ended with input.focus(), which popped the keyboard
 // open over the instructions every time. The user had to press back to read them, then reopen the
