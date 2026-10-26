@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.64
+// @version      17.65
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,12 +16,22 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
+// RESOLVED (17.65): AUTO-READ SPOTIFY TOKEN IS NOW ALWAYS KEPT IN LOCALSTORAGE (UPDATES 17.64)
+// 17.64 only wrote the token to localStorage at the moment it was freshly read from the web player. While the token
+// was served from the in-memory cache nothing was written, so if the stored copy disappeared in the meantime (the
+// 401 handler removes it, or site data / localStorage was cleared) the double-click modal opened with an empty field
+// until the token expired up to an hour later. Now every successful get(), cached or fresh, makes sure the stored
+// copy matches (a write only happens when it differs). The 401 handler also drops the in-memory copy together with the
+// stored one, so a rejected token is never written back.
+// Undo: restore SpotifyAutoToken.get() and the usedManual 401 branch from 17.64.
+
 // RESOLVED (17.64): SPOTIFY TOKEN IS READ AUTOMATICALLY FROM THE WEB PLAYER (NO MORE DEVTOOLS COPY / HOURLY EXPIRY)
 // The Spotify provider used to need a hand-copied token (DevTools > Network > spclient > authorization), which
 // expired every hour and on every reload. The Web Player already keeps a fresh token itself, so the script now asks
 // the page for it: it finds Spotify's React root, takes the service registry from it and calls
 // TokenProvider.getToken() (the same call the player makes). The token is cached in memory until ~30s before it
-// expires, a 401 triggers one re-read, anonymous (logged-out) tokens are ignored.
+// expires, a 401 triggers one re-read, anonymous (logged-out) tokens are ignored. Every token read this way is also
+// saved to localStorage under the same key as a manual Save, so the double-click modal shows it in the field.
 // Fallback: if the lookup fails (Spotify renamed an internal, or the userscript manager runs the script in an
 // isolated world that cannot see the page's React data), a failed lookup is not retried for 60s and the old
 // manual token from the double-click modal is used exactly as before. Musixmatch is unchanged (its token lives
@@ -5023,7 +5033,9 @@ const PLAY_WORDS = [
     });
   }
 
-  function showSpotifyTokenModal() {
+  async function showSpotifyTokenModal() {
+    // Make sure the automatic token has been read (and saved to storage) before the field is filled.
+    try { await SpotifyAutoToken.get(); } catch (_) {}
     showTokenModal({
       key: "spotify",
       provider: "Spotify",
@@ -5948,14 +5960,24 @@ const SpotifyAutoToken = (() => {
     return { token: t.accessToken, expiresAtMs: Number(t.accessTokenExpirationTimestampMs) || (Date.now() + 5 * 60 * 1000) };
   }
 
+  // Keep localStorage in step with the token in use (no write when it already matches).
+  function persist(token) {
+    try {
+      if (localStorage.getItem("lyricsPlusSpotifyToken") !== token) localStorage.setItem("lyricsPlusSpotifyToken", token);
+    } catch (_) {}
+  }
+
   return {
     async get() {
       const now = Date.now();
-      if (cached && cached.expiresAtMs - now > 30000) return cached.token;
+      if (cached && cached.expiresAtMs - now > 30000) { persist(cached.token); return cached.token; }
       if (now < failUntil) return null;
       try {
-        cached = await readToken();
-        return cached.token;
+        const fresh = await readToken();
+        cached = fresh;
+        // Save it exactly like a manual Save, so the double-click modal shows it in the field.
+        persist(fresh.token);
+        return fresh.token;
       } catch (e) {
         platform = null;
         cached = null;
@@ -6033,6 +6055,7 @@ const ProviderSpotify = {
         if (res.status === 401) {
           if (usedManual) {
             localStorage.removeItem("lyricsPlusSpotifyToken");
+            SpotifyAutoToken.reset(); // don't let the cached (rejected) token be written back
             DEBUG.info('Provider', 'Spotify 401: Manual token expired or invalid. Cleared from storage.');
             console.log("[Spotify Debug] ✗ Authentication failed - manual token expired or invalid. Cleared from storage.");
             return { error: "Double click on the Spotify provider and follow the instructions. Manual Spotify tokens expire every hour/upon page reload." };
