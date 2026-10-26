@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.65
+// @version      17.66
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,15 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.66): "CANNOT FETCH SPOTIFY LYRICS - TRACK ID NOT AVAILABLE" (TRACK ID LOOKUP BROKE WITH THE NEW PLAYER BAR)
+// Same cause as 17.62: getCurrentTrackId() looked for a[data-testid="context-link"][data-context-item-type="track"],
+// which the rebuilt player bar no longer has. Title and artist were fixed in 17.62, the track id was not, so the
+// Spotify provider (the only one that needs the id) stopped with "track ID not available" while the token was fine.
+// Now the id comes only from the web player's own PlayerAPI state (getState().item.uri), reached through the same
+// registry lookup the automatic token uses, so it no longer depends on any player bar markup. A failed lookup is not
+// retried for 30s.
+// Undo: restore getCurrentTrackId() from 17.65 and delete SpotifyAutoToken.currentTrackId().
 
 // RESOLVED (17.65): AUTO-READ SPOTIFY TOKEN IS NOW ALWAYS KEPT IN LOCALSTORAGE (UPDATES 17.64)
 // 17.64 only wrote the token to localStorage at the moment it was freshly read from the web player. While the token
@@ -2345,15 +2354,8 @@ document.head.appendChild(buttonGroupScrollStyle);
   // ------------------------
 
   function getCurrentTrackId() {
-    const contextLink = document.querySelector('a[data-testid="context-link"][data-context-item-type="track"][href*="uri=spotify%3Atrack%3A"]');
-    if (contextLink) {
-      const href = contextLink.getAttribute('href');
-      const match = decodeURIComponent(href).match(/spotify:track:([a-zA-Z0-9]{22})/);
-      if (match) {
-        return match[1];
-      }
-    }
-    return null;
+    // 17.66: read from the web player's own PlayerAPI state (item.uri), not from the player bar's DOM.
+    try { return SpotifyAutoToken.currentTrackId(); } catch (_) { return null; }
   }
 
   function getCurrentTrackInfo() {
@@ -5903,6 +5905,7 @@ const ProviderGenius = {
 const SpotifyAutoToken = (() => {
   let platform = null;
   let cached = null;      // { token, expiresAtMs }
+  let playerFailUntil = 0; // same idea for the track id lookup
   let failUntil = 0;      // don't rescan the DOM on every track change after a failure
   let warned = false;
 
@@ -5987,6 +5990,28 @@ const SpotifyAutoToken = (() => {
       }
     },
     reset() { cached = null; platform = null; failUntil = 0; },
+    // Id of the track the web player is playing right now, from its PlayerAPI state (null if unavailable).
+    currentTrackId() {
+      const now = Date.now();
+      if (now < playerFailUntil) return null;
+      try {
+        if (!platform) platform = findPlatform();
+        if (!platform) throw new Error('web player root not found');
+        const registry = platform.getRegistry();
+        let key = null;
+        for (const k of registry._map.keys()) {
+          if (k && k.description === 'PlayerAPI') { key = k; break; }
+        }
+        if (!key) throw new Error('PlayerAPI not in registry');
+        const st = registry.resolve(key).getState();
+        const m = /^spotify:track:([a-zA-Z0-9]{22})$/.exec((st && st.item && st.item.uri) || '');
+        return m ? m[1] : null;
+      } catch (e) {
+        platform = null;
+        playerFailUntil = now + 30000;
+        return null;
+      }
+    },
   };
 })();
 
