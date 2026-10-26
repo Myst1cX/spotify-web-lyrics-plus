@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.62
+// @version      17.63
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,19 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.63): TOKEN MODALS (DOUBLE-CLICK ON SPOTIFY / MUSIXMATCH) FIT MOBILE AND NO LONGER FORCE THE KEYBOARD
+// The two modals were near-copies (min-width 350px, 100vw/100vh overlay, no max-height, no scrolling) that
+// covered almost the whole phone screen, and both ended with input.focus(), which popped the keyboard
+// open over the instructions every time. The user had to press back to read them, then reopen the
+// keyboard to paste the token.
+// Fix: both now go through one helper, showTokenModal(cfg). The card is capped to the visible viewport
+// (visualViewport-aware, so it also fits above the keyboard), the instructions scroll inside it while the
+// token field + Save/Cancel stay pinned at the bottom, instructions are expanded only when no token is saved
+// yet, a Paste button reads the clipboard directly, Escape / backdrop tap closes, and input.focus() now runs
+// on desktop only (pointer: fine). Element ids (lyrics-plus-spotify-modal, ...-musixmatch-modal) are unchanged.
+// Behavior kept: same storage keys, "Bearer " prefix still stripped for Spotify, lyrics reload after Save.
+// Undo: restore showSpotifyTokenModal / showMusixmatchTokenModal from 17.62.
 
 // RESOLVED (17.62): LYRICS NEVER LOAD - TRACK TITLE AND ARTIST SELECTORS UPDATED FOR SPOTIFY'S NEW PLAYER BAR
 // Spotify rebuilt the player bar's DOM (the widget test id went from now-playing-widget to
@@ -4805,183 +4818,214 @@ const PLAY_WORDS = [
   // --- Musixmatch ---
 
   // Musixmatch token prompt and storage
-  function showMusixmatchTokenModal() {
-  // Remove any existing modal
-  const old = document.getElementById("lyrics-plus-musixmatch-modal");
-  if (old) old.remove();
+  // ------------------------
+  // Shared token modal (Spotify + Musixmatch)
+  // ------------------------
+  // Mobile-first. The card never grows past the visible viewport: the instructions scroll INSIDE it
+  // while the token field and Save/Cancel stay pinned at the bottom. The keyboard is NOT opened
+  // automatically on touch devices (it used to cover the instructions, forcing a back-press before
+  // they could be read). The card follows window.visualViewport, so once the user taps the field it
+  // shrinks to fit above the keyboard instead of hiding behind it. A "Paste" button reads the
+  // clipboard directly, so the common path needs no keyboard at all.
+  function showTokenModal(cfg) {
+    const base = "lyrics-plus-" + cfg.key + "-modal"; // same ids as before
+    const old = document.getElementById(base);
+    if (old) { if (old._lpClose) old._lpClose(); else old.remove(); }
 
-  // Inject style for the modal, only once
-  if (!document.getElementById("lyrics-plus-musixmatch-modal-style")) {
-    const style = document.createElement("style");
-    style.id = "lyrics-plus-musixmatch-modal-style";
-    style.textContent = `
-      #lyrics-plus-musixmatch-modal {
-        position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
-        background: rgba(0,0,0,0.7); z-index: 100001; display: flex;
-        align-items: center; justify-content: center;
-      }
-      #lyrics-plus-musixmatch-modal-box {
-        background: #181818; color: #fff; border-radius: 14px;
-        padding: 30px 28px 22px 28px; min-width: 350px; max-width: 90vw;
-        box-shadow: 0 2px 24px #000b;
-        font-family: inherit;
-        position: relative;
-        box-sizing: border-box;
-      }
-      #lyrics-plus-musixmatch-modal-title {
-        color: #1db954;
-        font-size: 1.35em;
-        font-weight: 700;
-        margin-bottom: 13px;
-        text-align: center;
-        letter-spacing: 0.3px;
-      }
-      #lyrics-plus-musixmatch-modal .modal-footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 25px;
-        margin-top: 18px;
-        padding: 0;
-      }
-      #lyrics-plus-musixmatch-modal .lyrics-btn {
-        background: #222;
-        color: #fff;
-        border: none;
-        border-radius: 20px;
-        padding: 8px 0;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 1px 4px #0003;
-        transition: background 0.13s, color 0.13s;
-        outline: none;
-        min-width: 90px;
-        width: 90px;
-        text-align: center;
-        flex: 0 0 90px;
-        margin: 0;
-      }
-      #lyrics-plus-musixmatch-modal .lyrics-btn:hover {
-        background: #1db954;
-        color: #181818;
-      }
-      #lyrics-plus-musixmatch-modal-close {
-        background: #222;
-        color: #fff;
-        border: none;
-        border-radius: 14px;
-        font-size: 1.25em;
-        font-weight: 700;
-        width: 36px;
-        height: 36px;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        cursor: pointer;
-        transition: background 0.13s, color 0.13s;
-        z-index: 1;
-        line-height: 1;
-        margin: 0;
-      }
-      #lyrics-plus-musixmatch-modal-close:hover {
-        background: #1db954;
-        color: #181818;
-      }
-      #lyrics-plus-musixmatch-modal a {
-        color: #1db954;
-        text-decoration: none;
-        transition: color .12s;
-        font-weight: 600;
-      }
-      #lyrics-plus-musixmatch-modal a:hover {
-        color: #fff;
-        text-decoration: underline;
-      }
-      #lyrics-plus-musixmatch-modal input[type="text"],
-      #lyrics-plus-musixmatch-modal input[type="password"] {
-        background: #222;
-        color: #fff;
-        border: 1px solid #333;
-        border-radius: 5px;
-        width: 100%;
-        padding: 8px 10px;
-        margin: 14px 0 8px 0;
-        font-size: 1em;
-        box-sizing: border-box;
-        display: block;
-      }
+    if (!document.getElementById("lyrics-plus-token-modal-style")) {
+      const style = document.createElement("style");
+      style.id = "lyrics-plus-token-modal-style";
+      style.textContent = `
+        .lp-token-modal {
+          position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh;
+          background: rgba(0,0,0,0.7); z-index: 100001; display: flex;
+          align-items: center; justify-content: center;
+          padding: 12px; box-sizing: border-box;
+        }
+        .lp-token-modal .lp-token-box {
+          background: #181818; color: #fff; border-radius: 14px;
+          box-shadow: 0 2px 24px #000b; font-family: inherit; box-sizing: border-box;
+          width: min(100%, 420px); max-height: 100%;
+          display: flex; flex-direction: column; overflow: hidden;
+        }
+        .lp-token-modal .lp-token-head {
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 8px; padding: 12px 12px 6px 16px; flex: 0 0 auto;
+        }
+        .lp-token-modal .lp-token-title {
+          color: #1db954; font-size: 1.1em; font-weight: 700; letter-spacing: 0.3px;
+        }
+        .lp-token-modal .lp-token-close {
+          background: #222; color: #fff; border: none; border-radius: 12px;
+          font-size: 1.2em; font-weight: 700; width: 32px; height: 32px; padding: 0;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; line-height: 1; margin: 0; flex: 0 0 auto;
+        }
+        .lp-token-modal .lp-token-scroll {
+          flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 16px;
+          -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+          font-size: 13px; line-height: 1.5;
+        }
+        .lp-token-modal .lp-token-help summary {
+          cursor: pointer; color: #1db954; font-weight: 600; padding: 6px 0;
+        }
+        .lp-token-modal .lp-token-help ol { margin: 4px 0 8px; padding-left: 20px; }
+        .lp-token-modal .lp-token-help li { margin-bottom: 4px; }
+        .lp-token-modal .lp-token-warn { color: #e57373; font-size: 12px; margin: 2px 0 10px; }
+        .lp-token-modal a { color: #1db954; text-decoration: none; font-weight: 600; }
+        .lp-token-modal a:hover { color: #fff; text-decoration: underline; }
+        .lp-token-modal .lp-token-foot {
+          flex: 0 0 auto; padding: 10px 16px 14px; border-top: 1px solid #2a2a2a;
+        }
+        .lp-token-modal .lp-token-row { display: flex; gap: 8px; }
+        .lp-token-modal input.lp-token-input {
+          flex: 1 1 auto; min-width: 0; background: #222; color: #fff;
+          border: 1px solid #333; border-radius: 6px; padding: 9px 10px;
+          margin: 0; font-size: 16px; box-sizing: border-box; display: block;
+        }
+        .lp-token-modal .lp-token-actions { display: flex; gap: 10px; margin-top: 10px; }
+        .lp-token-modal .lp-token-btn {
+          flex: 1 1 0; background: #222; color: #fff; border: none; border-radius: 20px;
+          padding: 9px 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin: 0;
+          text-align: center; transition: background 0.13s, color 0.13s;
+        }
+        .lp-token-modal .lp-token-btn.primary { background: #1db954; color: #181818; }
+        .lp-token-modal .lp-token-btn:hover,
+        .lp-token-modal .lp-token-close:hover { background: #1db954; color: #181818; }
+        .lp-token-modal .lp-token-row .lp-token-btn { flex: 0 0 auto; }
+      `;
+      document.head.appendChild(style);
+    }
+
+    const savedToken = localStorage.getItem(cfg.storageKey) || "";
+
+    const modal = document.createElement("div");
+    modal.id = base;
+    modal.className = "lp-token-modal";
+    modal.innerHTML = `
+      <div class="lp-token-box" id="${base}-box" role="dialog" aria-modal="true" aria-labelledby="${base}-title">
+        <div class="lp-token-head">
+          <div class="lp-token-title" id="${base}-title">${cfg.title}</div>
+          <button type="button" class="lp-token-close" id="${base}-close" title="Close" aria-label="Close">&times;</button>
+        </div>
+        <div class="lp-token-scroll">
+          <details class="lp-token-help"${savedToken ? "" : " open"}>
+            <summary>How to get your token</summary>
+            <ol>${cfg.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+          </details>
+          <div class="lp-token-warn"><b>WARNING:</b> Keep your token private! Do not share it with others.</div>
+        </div>
+        <div class="lp-token-foot">
+          <div class="lp-token-row">
+            <input type="text" class="lp-token-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+            <button type="button" class="lp-token-btn lp-token-paste">Paste</button>
+          </div>
+          <div class="lp-token-actions">
+            <button type="button" class="lp-token-btn primary lp-token-save">Save</button>
+            <button type="button" class="lp-token-btn lp-token-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
     `;
-    document.head.appendChild(style);
+
+    const input = modal.querySelector(".lp-token-input");
+    input.placeholder = cfg.placeholder;
+    input.value = savedToken; // set via property, never through innerHTML
+
+    // Keep the card inside the visible area (above the on-screen keyboard once it opens).
+    const vv = window.visualViewport;
+    const fit = () => {
+      if (!vv) return;
+      modal.style.left = vv.offsetLeft + "px";
+      modal.style.top = vv.offsetTop + "px";
+      modal.style.width = vv.width + "px";
+      modal.style.height = vv.height + "px";
+    };
+    const onKey = (e) => { if (e.key === "Escape") close(); };
+    function close() {
+      if (vv) { vv.removeEventListener("resize", fit); vv.removeEventListener("scroll", fit); }
+      document.removeEventListener("keydown", onKey, true);
+      modal.remove();
+    }
+    modal._lpClose = close;
+    if (vv) { vv.addEventListener("resize", fit); vv.addEventListener("scroll", fit); }
+    document.addEventListener("keydown", onKey, true);
+
+    modal.querySelector(".lp-token-close").onclick = close;
+    modal.querySelector(".lp-token-cancel").onclick = close;
+    // Tap on the dim backdrop closes, unless the user already typed/pasted something.
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal && input.value.trim() === savedToken.trim()) close();
+    });
+
+    modal.querySelector(".lp-token-paste").onclick = async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text && text.trim()) { input.value = text.trim(); return; }
+      } catch (e) { /* clipboard blocked or empty: fall back to the normal keyboard paste */ }
+      input.focus();
+    };
+
+    modal.querySelector(".lp-token-save").onclick = () => {
+      const raw = input.value.trim();
+      localStorage.setItem(cfg.storageKey, cfg.normalize ? cfg.normalize(raw) : raw);
+      close();
+      // Reload lyrics if the popup is open on this provider
+      const popup = document.getElementById("lyrics-plus-popup");
+      if (popup && Providers.current === cfg.provider) {
+        const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+        if (lyricsContainer) setLyricsStatusMessage(lyricsContainer, "Loading lyrics...");
+        updateLyricsContent(popup, getCurrentTrackInfo());
+      }
+    };
+
+    document.body.appendChild(modal);
+    fit();
+    // Desktop only: focus for quick paste. On touch devices this would pop the keyboard up over
+    // the instructions, so the user taps the field (or Paste) when ready.
+    if (window.matchMedia && window.matchMedia("(pointer: fine)").matches) input.focus();
   }
 
-  const modal = document.createElement("div");
-  modal.id = "lyrics-plus-musixmatch-modal";
-
-  const box = document.createElement("div");
-  box.id = "lyrics-plus-musixmatch-modal-box";
-  box.innerHTML = `
-    <button id="lyrics-plus-musixmatch-modal-close" title="Close">&times;</button>
-    <div id="lyrics-plus-musixmatch-modal-title">Set your Musixmatch User Token</div>
-    <div style="font-size:14px;line-height:1.6;margin-bottom:12px">
-      <b>How to retrieve your token:</b><br>
-      1. Go to <a href="https://www.musixmatch.com/" target="_blank">Musixmatch</a> and click on Login.<br>
-      2. Select [Community] as your product.<br>
-      3. Open DevTools (Press F12 or Right click and Inspect). <br>
-      4. Go to the Network tab &gt; Click on the www.musixmatch.com domain &gt; Cookies.<br>
-      5. Right-click on the content of the musixmatchUserToken and select Copy value.<br>
-      6. Go to <a href="https://jsonformatter.curiousconcept.com/" target="_blank">JSON Formatter</a> &gt; Paste the content &gt; Click Process.<br>
-      7. Copy the value of web-desktop-app-v1.0 > Paste the token below and press Save.<br>
-      <span style="color:#e57373;"><b>WARNING:</b> Keep your token private! Do not share it with others.</span>
-    </div>
-  `;
-
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = "Enter your Musixmatch user token here";
-  input.value = localStorage.getItem("lyricsPlusMusixmatchToken") || "";
-  box.appendChild(input);
-
-  // Footer with Save & Cancel
-  const footer = document.createElement("div");
-  footer.className = "modal-footer";
-
-  const btnSave = document.createElement("button");
-btnSave.textContent = "Save";
-btnSave.className = "lyrics-btn";
-btnSave.onclick = () => {
-  localStorage.setItem("lyricsPlusMusixmatchToken", input.value.trim());
-  modal.remove();
-  // Optionally: reload lyrics if popup open and provider is Musixmatch
-  const popup = document.getElementById("lyrics-plus-popup");
-  if (popup && Providers.current === "Musixmatch") {
-    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-    if (lyricsContainer) setLyricsStatusMessage(lyricsContainer, "Loading lyrics...");
-    updateLyricsContent(popup, getCurrentTrackInfo());
+  function showMusixmatchTokenModal() {
+    showTokenModal({
+      key: "musixmatch",
+      provider: "Musixmatch",
+      storageKey: "lyricsPlusMusixmatchToken",
+      title: "Set your Musixmatch User Token",
+      placeholder: "Enter your Musixmatch user token here",
+      steps: [
+        'Go to <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a> and click on Login.',
+        'Select [Community] as your product.',
+        'Open DevTools (Press F12 or Right click and Inspect).',
+        'Go to the Network tab &gt; Click on the www.musixmatch.com domain &gt; Cookies.',
+        'Right-click on the content of the musixmatchUserToken and select Copy value.',
+        'Go to <a href="https://jsonformatter.curiousconcept.com/" target="_blank" rel="noopener">JSON Formatter</a> &gt; Paste the content &gt; Click Process.',
+        'Copy the value of web-desktop-app-v1.0 &gt; Paste the token below and press Save.',
+      ],
+    });
   }
-};
 
-  const btnCancel = document.createElement("button");
-  btnCancel.textContent = "Cancel";
-  btnCancel.className = "lyrics-btn";
-  btnCancel.onclick = () => modal.remove();
-
-  footer.appendChild(btnSave);
-  footer.appendChild(btnCancel);
-  box.appendChild(footer);
-
-  // Close (X) button
-  box.querySelector('#lyrics-plus-musixmatch-modal-close').onclick = () => modal.remove();
-
-  modal.appendChild(box);
-  document.body.appendChild(modal);
-
-  // Focus input for fast paste
-  input.focus();
-}
+  function showSpotifyTokenModal() {
+    showTokenModal({
+      key: "spotify",
+      provider: "Spotify",
+      storageKey: "lyricsPlusSpotifyToken",
+      title: "Set your Spotify User Token",
+      placeholder: "Enter your Spotify user token here",
+      normalize: (v) => (v.startsWith("Bearer ") ? v.slice(7) : v),
+      steps: [
+        'Go to <a href="https://open.spotify.com/" target="_blank" rel="noopener">Spotify Web Player</a> and log in. Play a song.',
+        'Open DevTools (Press F12 or Right click and Inspect).',
+        'Go to the Network tab and search for "spclient".',
+        'You may have to wait a little for it to load.',
+        'Click on one of the spclient domains and go to the Headers section.',
+        'Under Response Headers, locate the authorization request header.',
+        "If there isn't one, try a different spclient domain.",
+        'Right-click on the content of the authorization request header and select Copy value.',
+        'Paste the token below and press Save.',
+      ],
+    });
+  }
 
 function parseMusixmatchSyncedLyrics(subtitleBody) {
   // Split into lines
@@ -5823,188 +5867,6 @@ const ProviderGenius = {
 };
 
   // --- Spotify ---
-  function showSpotifyTokenModal() {
-  // Remove any existing modal
-  const old = document.getElementById("lyrics-plus-spotify-modal");
-  if (old) old.remove();
-  // Inject style for the modal, only once
-  if (!document.getElementById("lyrics-plus-spotify-modal-style")) {
-    const style = document.createElement("style");
-    style.id = "lyrics-plus-spotify-modal-style";
-    style.textContent = `
-      #lyrics-plus-spotify-modal {
-        position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
-        background: rgba(0,0,0,0.7); z-index: 100001; display: flex;
-        align-items: center; justify-content: center;
-      }
-      #lyrics-plus-spotify-modal-box {
-        background: #181818; color: #fff; border-radius: 14px;
-        padding: 30px 28px 22px 28px; min-width: 350px; max-width: 90vw;
-        box-shadow: 0 2px 24px #000b;
-        font-family: inherit;
-        position: relative;
-        box-sizing: border-box;
-      }
-      #lyrics-plus-spotify-modal-title {
-        color: #1db954;
-        font-size: 1.35em;
-        font-weight: 700;
-        margin-bottom: 13px;
-        text-align: center;
-        letter-spacing: 0.3px;
-      }
-      #lyrics-plus-spotify-modal .modal-footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 25px;
-        margin-top: 18px;
-        padding: 0;
-      }
-      #lyrics-plus-spotify-modal .lyrics-btn {
-        background: #222;
-        color: #fff;
-        border: none;
-        border-radius: 20px;
-        padding: 8px 0;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 1px 4px #0003;
-        transition: background 0.13s, color 0.13s;
-        outline: none;
-        min-width: 90px;
-        width: 90px;
-        text-align: center;
-        flex: 0 0 90px;
-        margin: 0;
-      }
-      #lyrics-plus-spotify-modal .lyrics-btn:hover {
-        background: #1db954;
-        color: #181818;
-      }
-      #lyrics-plus-spotify-modal-close {
-        background: #222;
-        color: #fff;
-        border: none;
-        border-radius: 14px;
-        font-size: 1.25em;
-        font-weight: 700;
-        width: 36px;
-        height: 36px;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        cursor: pointer;
-        transition: background 0.13s, color 0.13s;
-        z-index: 1;
-        line-height: 1;
-        margin: 0;
-      }
-      #lyrics-plus-spotify-modal-close:hover {
-        background: #1db954;
-        color: #181818;
-      }
-      #lyrics-plus-spotify-modal a {
-        color: #1db954;
-        text-decoration: none;
-        transition: color .12s;
-        font-weight: 600;
-      }
-      #lyrics-plus-spotify-modal a:hover {
-        color: #fff;
-        text-decoration: underline;
-      }
-      #lyrics-plus-spotify-modal input[type="text"],
-      #lyrics-plus-musixmatch-modal input[type="password"] {
-        background: #222;
-        color: #fff;
-        border: 1px solid #333;
-        border-radius: 5px;
-        width: 100%;
-        padding: 8px 10px;
-        margin: 14px 0 8px 0;
-        font-size: 1em;
-        box-sizing: border-box;
-        display: block;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  const modal = document.createElement("div");
-  modal.id = "lyrics-plus-spotify-modal";
-
-  const box = document.createElement("div");
-  box.id = "lyrics-plus-spotify-modal-box";
-  box.innerHTML = `
-    <button id="lyrics-plus-spotify-modal-close" title="Close">&times;</button>
-    <div id="lyrics-plus-spotify-modal-title">Set your Spotify User Token</div>
-    <div style="font-size:14px;line-height:1.6;margin-bottom:12px">
-      <b>How to retrieve your token:</b><br>
-      1. Go to <a href="https://open.spotify.com/" target="_blank">Spotify Web Player</a> and log in. Play a song.<br>
-      2. Open DevTools (Press F12 or Right click and Inspect).<br>
-      3. Go to the Network tab and search for "spclient".<br>
-      4. You may have to wait a little for it to load.<br>
-      5. Click on one of the spclient domains and go to the Headers section.<br>
-      6. Under Response Headers, locate the authorization request header.<br>
-      7. If there isn't one, try a different spclient domain.<br>
-      8. Right-click on the content of the authorization request header and select Copy value.<br>
-      9. Paste the token below and press Save.<br>
-      <span style="color:#e57373;"><b>WARNING:</b> Keep your token private! Do not share it with others.</span>
-    </div>
-  `;
-
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = "Enter your Spotify user token here";
-  input.value = localStorage.getItem("lyricsPlusSpotifyToken") || "";
-  box.appendChild(input);
-
-  // Footer with Save & Cancel
-  const footer = document.createElement("div");
-  footer.className = "modal-footer";
-
-  const btnSave = document.createElement("button");
-  btnSave.textContent = "Save";
-  btnSave.className = "lyrics-btn";
-  btnSave.onclick = () => {
-    const rawValue = input.value.trim();
-    const bearerPrefix = "Bearer ";
-    const tokenValue = rawValue.startsWith(bearerPrefix) ? rawValue.slice(bearerPrefix.length) : rawValue;
-    localStorage.setItem("lyricsPlusSpotifyToken", tokenValue);
-    modal.remove();
-  // Optionally: reload lyrics if popup open and provider is Spotify
-  const popup = document.getElementById("lyrics-plus-popup");
-  if (popup && Providers.current === "Spotify") {
-    const lyricsContainer = popup.querySelector("#lyrics-plus-content");
-    if (lyricsContainer) setLyricsStatusMessage(lyricsContainer, "Loading lyrics...");
-    updateLyricsContent(popup, getCurrentTrackInfo());
-  }
-};
-
-  const btnCancel = document.createElement("button");
-  btnCancel.textContent = "Cancel";
-  btnCancel.className = "lyrics-btn";
-  btnCancel.onclick = () => modal.remove();
-
-  footer.appendChild(btnSave);
-  footer.appendChild(btnCancel);
-  box.appendChild(footer);
-
-  // Close (X) button
-  box.querySelector('#lyrics-plus-spotify-modal-close').onclick = () => modal.remove();
-
-  modal.appendChild(box);
-  document.body.appendChild(modal);
-
-  // Focus input for fast paste
-  input.focus();
-}
-
 const ProviderSpotify = {
   async findLyrics(info, lyricsType = 'auto') {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
