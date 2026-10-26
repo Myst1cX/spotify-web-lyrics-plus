@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.63.modals4
+// @version      17.64
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -16,7 +16,19 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.63): TOKEN MODALS (DOUBLE-CLICK ON SPOTIFY / MUSIXMATCH) FIT MOBILE BETTER NOW AND NO LONGER FORCE THE KEYBOARD
+// RESOLVED (17.64): SPOTIFY TOKEN IS READ AUTOMATICALLY FROM THE WEB PLAYER (NO MORE DEVTOOLS COPY / HOURLY EXPIRY)
+// The Spotify provider used to need a hand-copied token (DevTools > Network > spclient > authorization), which
+// expired every hour and on every reload. The Web Player already keeps a fresh token itself, so the script now asks
+// the page for it: it finds Spotify's React root, takes the service registry from it and calls
+// TokenProvider.getToken() (the same call the player makes). The token is cached in memory until ~30s before it
+// expires, a 401 triggers one re-read, anonymous (logged-out) tokens are ignored.
+// Fallback: if the lookup fails (Spotify renamed an internal, or the userscript manager runs the script in an
+// isolated world that cannot see the page's React data), a failed lookup is not retried for 60s and the old
+// manual token from the double-click modal is used exactly as before. Musixmatch is unchanged (its token lives
+// on another site's cookie, which this page cannot read).
+// Undo: restore ProviderSpotify.findLyrics from 17.63 and delete the SpotifyAutoToken block above it.
+
+// RESOLVED (17.63): TOKEN MODALS (DOUBLE-CLICK ON SPOTIFY / MUSIXMATCH) FIT MOBILE AND NO LONGER FORCE THE KEYBOARD
 // The two modals were near-copies (min-width 350px, 100vw/100vh overlay, no max-height, no scrolling) that
 // covered almost the whole phone screen, and both ended with input.focus(), which popped the keyboard
 // open over the instructions every time. The user had to press back to read them, then reopen the
@@ -1299,7 +1311,7 @@
 
 // CONSIDER CONVERTING TO BROWSER EXTENSION:
 // Converting the userscript into a browser extension would unlock two things:
-// 1. Auto fetch spotify token for user when it expires and apply it --> tried, CSP prevents it. (plan was: maybe for Musixmatch too if user logged in inside browser)
+// 1. Auto fetch spotify token for user when it expires and apply it --> a direct fetch was blocked by CSP, but 17.64 reads it from the page's own TokenProvider instead (Spotify only; Musixmatch still manual).
 
 // PROBABLY NOT:
 // Add Deezer provider (synced and unsynced)
@@ -5872,6 +5884,90 @@ const ProviderGenius = {
   },
 };
 
+  // --- Spotify automatic web token ---
+// Reads the Web Player's own access token from inside the page (same lookup the player uses itself):
+// React root -> service registry -> TokenProvider.getToken(). Returns null on any failure so the caller
+// can fall back to the manually pasted token.
+const SpotifyAutoToken = (() => {
+  let platform = null;
+  let cached = null;      // { token, expiresAtMs }
+  let failUntil = 0;      // don't rescan the DOM on every track change after a failure
+  let warned = false;
+
+  // Firefox/Violentmonkey can wrap page objects (Xray); wrappedJSObject gives the real expandos.
+  const raw = (el) => (el && el.wrappedJSObject) || el;
+
+  function platformFromRoot(el) {
+    const e = raw(el);
+    let key;
+    try { key = Object.keys(e).find(k => k.startsWith('__reactContainer$')); } catch (_) { return null; }
+    if (!key) return null;
+    const stack = [e[key]];
+    let guard = 0;
+    while (stack.length && guard++ < 60000) {
+      const f = stack.pop();
+      if (!f) continue;
+      const v = f.memoizedProps && f.memoizedProps.value;
+      if (v && typeof v === 'object' && typeof v.getRegistry === 'function') return v;
+      if (f.sibling) stack.push(f.sibling);
+      if (f.child) stack.push(f.child);
+    }
+    return null;
+  }
+
+  function findPlatform() {
+    const quick = [document.getElementById('main'), document.getElementById('root'), document.body, document.documentElement];
+    for (const el of quick) {
+      const p = el && platformFromRoot(el);
+      if (p) return p;
+    }
+    const host = document.getElementById('main') || document.body;
+    for (const el of host.querySelectorAll('*')) {
+      const p = platformFromRoot(el);
+      if (p) return p;
+    }
+    return null;
+  }
+
+  async function readToken() {
+    if (!platform) platform = findPlatform();
+    if (!platform) throw new Error('web player root not found');
+    const registry = platform.getRegistry();
+    let tokenKey = null;
+    for (const k of registry._map.keys()) {
+      if (k && k.description === 'TokenProvider') { tokenKey = k; break; }
+    }
+    if (!tokenKey) throw new Error('TokenProvider not in registry');
+    const provider = registry.resolve(tokenKey);
+    const t = await Promise.race([
+      provider.getToken(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('getToken timed out')), 5000)),
+    ]);
+    if (!t || typeof t.accessToken !== 'string' || !t.accessToken) throw new Error('no accessToken in result');
+    if (t.isAnonymous) throw new Error('anonymous (logged-out) token');
+    return { token: t.accessToken, expiresAtMs: Number(t.accessTokenExpirationTimestampMs) || (Date.now() + 5 * 60 * 1000) };
+  }
+
+  return {
+    async get() {
+      const now = Date.now();
+      if (cached && cached.expiresAtMs - now > 30000) return cached.token;
+      if (now < failUntil) return null;
+      try {
+        cached = await readToken();
+        return cached.token;
+      } catch (e) {
+        platform = null;
+        cached = null;
+        failUntil = now + 60000;
+        if (!warned) { warned = true; console.log('[Spotify Debug] Automatic token unavailable, using manual token:', e && e.message || e); }
+        return null;
+      }
+    },
+    reset() { cached = null; platform = null; failUntil = 0; },
+  };
+})();
+
   // --- Spotify ---
 const ProviderSpotify = {
   async findLyrics(info, lyricsType = 'auto') {
@@ -5883,14 +5979,15 @@ const ProviderSpotify = {
       artist: info.artist
     });
 
-    const token = localStorage.getItem("lyricsPlusSpotifyToken");
+    const autoToken = await SpotifyAutoToken.get();
+    const manualToken = localStorage.getItem("lyricsPlusSpotifyToken");
 
-    if (!token) {
-      DEBUG.info('Provider', 'Spotify: No token found in localStorage.');
+    if (!autoToken && !manualToken) {
+      DEBUG.info('Provider', 'Spotify: No automatic or manual token available.');
       console.log("[Spotify Debug] ✗ No token found - double click on the provider to  set it up.");
-      return { error: "Double click on the Spotify provider to set up your token.\n" + "A fresh token is required every hour/upon page reload for security." };
+      return { error: "Couldn't read your Spotify token automatically (are you logged in?).\n" + "Double click on the Spotify provider to set one manually." };
     }
-    console.log("[Spotify Debug] ✓ Token found (length:", token.length, "characters)");
+    console.log("[Spotify Debug] ✓ Token source:", autoToken ? "automatic (web player)" : "manual (length: " + manualToken.length + ")");
 
     if (!info.trackId) {
       console.log("[Spotify Debug] ✗ No trackId provided in song info");
@@ -5902,14 +5999,30 @@ const ProviderSpotify = {
     console.log("[Spotify Debug] Using Authorization: Bearer ***TOKEN***");
 
     try {
-      const res = await fetch(endpoint, {
+      const doFetch = (tok) => fetch(endpoint, {
         method: "GET",
         headers: {
           "app-platform": "WebPlayer",
           "User-Agent": navigator.userAgent,
-          "Authorization": "Bearer " + token,
+          "Authorization": "Bearer " + tok,
         },
       });
+
+      let res = null;
+      let usedManual = false;
+      if (autoToken) {
+        res = await doFetch(autoToken);
+        if (res.status === 401) {
+          // Re-read once: the page may have refreshed its token since we cached it.
+          SpotifyAutoToken.reset();
+          const fresh = await SpotifyAutoToken.get();
+          if (fresh && fresh !== autoToken) res = await doFetch(fresh);
+        }
+      }
+      if (!res || (res.status === 401 && manualToken)) {
+        res = await doFetch(manualToken);
+        usedManual = true;
+      }
 
       console.log(`[Spotify Debug] Response status: ${res.status} ${res.statusText}`);
 
@@ -5918,10 +6031,14 @@ const ProviderSpotify = {
         console.log("[Spotify Debug] Response body:", text.substring(0, 200));
 
         if (res.status === 401) {
-          localStorage.removeItem("lyricsPlusSpotifyToken");
-          DEBUG.info('Provider', 'Spotify 401: Token expired or invalid. Cleared from storage.');
-          console.log("[Spotify Debug] ✗ Authentication failed - token expired or invalid. Cleared from storage.");
-          return { error: "Double click on the Spotify provider and follow the instructions. Spotify requires a fresh token every hour/upon page reload for security." };
+          if (usedManual) {
+            localStorage.removeItem("lyricsPlusSpotifyToken");
+            DEBUG.info('Provider', 'Spotify 401: Manual token expired or invalid. Cleared from storage.');
+            console.log("[Spotify Debug] ✗ Authentication failed - manual token expired or invalid. Cleared from storage.");
+            return { error: "Double click on the Spotify provider and follow the instructions. Manual Spotify tokens expire every hour/upon page reload." };
+          }
+          console.log("[Spotify Debug] ✗ Authentication failed - automatic token rejected.");
+          return { error: "Spotify rejected the automatic token. Reload the page, or double click on the Spotify provider to set a token manually." };
         }
         if (res.status === 404) {
           console.log("[Spotify Debug] ✗ Track not found or no lyrics available");
