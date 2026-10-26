@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.68
+// @version      17.68.b
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -18,7 +18,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.68): MUSIXMATCH AUTOFETCH WORKS AGAIN (NEW SIGNED WEB API)
+// RESOLVED (17.68.b): MUSIXMATCH AUTOFETCH WORKS AGAIN (NEW SIGNED WEB API)
 // Musixmatch removed apic-desktop (token.get returns a dummy token, other calls 404 "endpoint not found"). Lookup now uses what musixmatch.com itself uses:
 // https://www.musixmatch.com/ws/1.1/ track.search -> track.subtitles.get (LRC) or track.lyrics.get, app_id=mxm-com-v1.0, with the logged-in token the app already captures (unchanged).
 // Each request is signed: signature = base64(HMAC-SHA256(key, fullUrl + local YYYYMMDD)), sent as &signature=...&signature_protocol=sha256 plus Referer and x-mxm-app-version.
@@ -27,6 +27,7 @@
 // Transport: in the app AndBridge.nativeFetch (native HTTP, no CORS/CSP; a browser User-Agent is required or the edge answers 403); desktop userscript manager uses GM_xmlhttpRequest
 // (@connect musixmatch.com, mxmcdn.net). A plain browser without a userscript manager cannot reach the API. No app update needed.
 // Search: no q_duration (hard filter); title/artist/duration scored locally; retries once with first artist + cleaned title.
+// Token modals: Spotify gets the in-app automatic-token lines; Musixmatch in-app step no longer requires the Contribute tab, and the manual step names mxm-com-v1.0 (the cookie has no web-desktop-app-v1.0 entry any more).
 // Undo: restore fetchMusixmatchLyrics from 17.67.fix4mid (its apic-desktop endpoints no longer exist), remove the mxm* helpers and the two @connect lines.
 
 // RESOLVED (17.67): MUSIXMATCH TOKEN IS FETCHED AUTOMATICALLY INSIDE THE ANDROID APP (APP 1.65+)
@@ -5058,7 +5059,7 @@ const PLAY_WORDS = [
       steps: [
         ...((window.AndBridge && typeof window.AndBridge.openMusixmatchLogin === "function") ? [
           'In the app, tap <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a> and sign in on the screen that opens (your song keeps playing).',
-          'Press the [Contribute] tab. It takes you to musixmatch.com/contribute, and the app reads your token there and fills the field below. Nothing to paste.',
+          'The app reads your token right after you sign in, fills the field below and closes that screen by itself. Nothing to paste. (If nothing happens, press the [Contribute] tab.)',
           'Or get it manually:',
         ] : []),
         'Go to <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a> and click on Login.',
@@ -5067,7 +5068,7 @@ const PLAY_WORDS = [
         'Go to the Network tab &gt; Click on the www.musixmatch.com domain &gt; Cookies.',
         'Right-click on the content of the musixmatchUserToken and select Copy value.',
         'Go to <a href="https://jsonformatter.curiousconcept.com/" target="_blank" rel="noopener">JSON Formatter</a> &gt; Paste the content &gt; Click Process.',
-        'Copy the value of web-desktop-app-v1.0 &gt; Paste the token below and press Save.',
+        'Copy the value of mxm-com-v1.0 &gt; Paste the token below and press Save.',
       ],
     });
   }
@@ -5099,6 +5100,10 @@ const PLAY_WORDS = [
       placeholder: "Enter your Spotify user token here",
       normalize: (v) => (v.startsWith("Bearer ") ? v.slice(7) : v),
       steps: [
+        ...(window.AndBridge ? [
+          'In the app, the token is read from the Spotify page automatically when Spotify lyrics load, and fills the field below. Nothing to paste.',
+          'If the field is empty, play a song and select the Spotify tab. Or get it manually:',
+        ] : []),
         'Go to <a href="https://open.spotify.com/" target="_blank" rel="noopener">Spotify Web Player</a> and log in. Play a song.',
         'Open DevTools (Press F12 or Right click and Inspect).',
         'Go to the Network tab and search for "spclient".',
