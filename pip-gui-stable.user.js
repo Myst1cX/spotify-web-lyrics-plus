@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.63
+// @version      17.63-test
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -24,7 +24,7 @@
 // Fix: both now go through one helper, showTokenModal(cfg). The card is capped to the visible viewport
 // (visualViewport-aware, so it also fits above the keyboard), the instructions scroll inside it while the
 // token field + Save/Cancel stay pinned at the bottom, instructions are expanded only when no token is saved
-// yet, a Paste button reads the clipboard directly, Escape / backdrop tap closes, and input.focus() now runs
+// yet, Escape / backdrop tap closes, and input.focus() now runs
 // on desktop only (pointer: fine). Element ids (lyrics-plus-spotify-modal, ...-musixmatch-modal) are unchanged.
 // Behavior kept: same storage keys, "Bearer " prefix still stripped for Spotify, lyrics reload after Save.
 // Undo: restore showSpotifyTokenModal / showMusixmatchTokenModal from 17.62.
@@ -4825,8 +4825,7 @@ const PLAY_WORDS = [
   // while the token field and Save/Cancel stay pinned at the bottom. The keyboard is NOT opened
   // automatically on touch devices (it used to cover the instructions, forcing a back-press before
   // they could be read). The card follows window.visualViewport, so once the user taps the field it
-  // shrinks to fit above the keyboard instead of hiding behind it. A "Paste" button reads the
-  // clipboard directly, so the common path needs no keyboard at all.
+  // shrinks to fit above the keyboard instead of hiding behind it.
   function showTokenModal(cfg) {
     const base = "lyrics-plus-" + cfg.key + "-modal"; // same ids as before
     const old = document.getElementById(base);
@@ -4865,12 +4864,19 @@ const PLAY_WORDS = [
           flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 16px;
           -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
           font-size: 13px; line-height: 1.5;
+          scrollbar-width: thin; scrollbar-color: #444 transparent;
         }
+        .lp-token-modal .lp-token-scroll::-webkit-scrollbar { width: 3px; }
+        .lp-token-modal .lp-token-scroll::-webkit-scrollbar-track { background: transparent; }
+        .lp-token-modal .lp-token-scroll::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
         .lp-token-modal .lp-token-help summary {
           cursor: pointer; color: #1db954; font-weight: 600; padding: 6px 0;
         }
-        .lp-token-modal .lp-token-help ol { margin: 4px 0 8px; padding-left: 20px; }
-        .lp-token-modal .lp-token-help li { margin-bottom: 4px; }
+        .lp-token-modal .lp-token-steps { margin: 4px 0 8px; padding: 0; list-style: none; }
+        .lp-token-modal .lp-token-steps li {
+          display: flex; gap: 6px; margin: 0 0 4px; padding: 0; list-style: none;
+        }
+        .lp-token-modal .lp-token-steps .lp-step-num { flex: 0 0 auto; min-width: 1.4em; }
         .lp-token-modal .lp-token-warn { color: #e57373; font-size: 12px; margin: 2px 0 10px; }
         .lp-token-modal a { color: #1db954; text-decoration: none; font-weight: 600; }
         .lp-token-modal a:hover { color: #fff; text-decoration: underline; }
@@ -4892,7 +4898,6 @@ const PLAY_WORDS = [
         .lp-token-modal .lp-token-btn.primary { background: #1db954; color: #181818; }
         .lp-token-modal .lp-token-btn:hover,
         .lp-token-modal .lp-token-close:hover { background: #1db954; color: #181818; }
-        .lp-token-modal .lp-token-row .lp-token-btn { flex: 0 0 auto; }
       `;
       document.head.appendChild(style);
     }
@@ -4911,14 +4916,13 @@ const PLAY_WORDS = [
         <div class="lp-token-scroll">
           <details class="lp-token-help"${savedToken ? "" : " open"}>
             <summary>How to get your token</summary>
-            <ol>${cfg.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+            <ol class="lp-token-steps">${cfg.steps.map((s, i) => `<li><span class="lp-step-num">${i + 1}.</span><span>${s}</span></li>`).join("")}</ol>
           </details>
           <div class="lp-token-warn"><b>WARNING:</b> Keep your token private! Do not share it with others.</div>
         </div>
         <div class="lp-token-foot">
           <div class="lp-token-row">
             <input type="text" class="lp-token-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-            <button type="button" class="lp-token-btn lp-token-paste">Paste</button>
           </div>
           <div class="lp-token-actions">
             <button type="button" class="lp-token-btn primary lp-token-save">Save</button>
@@ -4958,14 +4962,6 @@ const PLAY_WORDS = [
       if (e.target === modal && input.value.trim() === savedToken.trim()) close();
     });
 
-    modal.querySelector(".lp-token-paste").onclick = async () => {
-      try {
-        const text = await navigator.clipboard.readText();
-        if (text && text.trim()) { input.value = text.trim(); return; }
-      } catch (e) { /* clipboard blocked or empty: fall back to the normal keyboard paste */ }
-      input.focus();
-    };
-
     modal.querySelector(".lp-token-save").onclick = () => {
       const raw = input.value.trim();
       localStorage.setItem(cfg.storageKey, cfg.normalize ? cfg.normalize(raw) : raw);
@@ -4982,7 +4978,7 @@ const PLAY_WORDS = [
     document.body.appendChild(modal);
     fit();
     // Desktop only: focus for quick paste. On touch devices this would pop the keyboard up over
-    // the instructions, so the user taps the field (or Paste) when ready.
+    // the instructions, so the user taps the field when ready.
     if (window.matchMedia && window.matchMedia("(pointer: fine)").matches) input.focus();
   }
 
