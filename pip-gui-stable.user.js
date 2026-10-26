@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.63-test
+// @version      17.63
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -4871,7 +4871,17 @@ const PLAY_WORDS = [
         .lp-token-modal .lp-token-scroll::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
         .lp-token-modal .lp-token-help summary {
           cursor: pointer; color: #1db954; font-weight: 600; padding: 6px 0;
+          list-style: none; display: flex; align-items: center; gap: 10px;
         }
+        .lp-token-modal .lp-token-help summary::-webkit-details-marker { display: none; }
+        .lp-token-modal .lp-token-help summary::marker { content: ""; }
+        .lp-token-modal .lp-token-help summary::before {
+          content: ""; flex: 0 0 auto; width: 0; height: 0;
+          border-left: 6px solid currentColor;
+          border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+          transition: transform 0.15s;
+        }
+        .lp-token-modal .lp-token-help[open] summary::before { transform: rotate(90deg); }
         .lp-token-modal .lp-token-steps { margin: 4px 0 8px; padding: 0; list-style: none; }
         .lp-token-modal .lp-token-steps li {
           display: flex; gap: 6px; margin: 0 0 4px; padding: 0; list-style: none;
