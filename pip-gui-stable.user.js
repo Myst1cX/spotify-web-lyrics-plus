@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.67.fix2
+// @version      17.67.fix3
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -21,7 +21,7 @@
 // stopped playback. When window.AndBridge.openMusixmatchLogin exists, the link click is cancelled and the app opens its own login
 // screen (separate WebView). When the musixmatchUserToken cookie shows up the app calls window.__lpSetMusixmatchToken(token),
 // which saves it as lyricsPlusMusixmatchToken (shown in the token field, like the automatic Spotify token) and reloads the lyrics. Without the bridge (desktop) nothing changes.
-// Inside the app the modal shows the automatic steps first (sign in, press Community -> /contribute, token is read there), then the original manual steps; elsewhere only the manual steps.
+// Inside the app the modal shows the automatic steps first (sign in, press Contribute -> /contribute, token is read there), then the original manual steps; elsewhere only the manual steps.
 // Undo: remove openLink from showMusixmatchTokenModal / showTokenModal and delete window.__lpSetMusixmatchToken.
 
 // RESOLVED (17.66): "CANNOT FETCH SPOTIFY LYRICS - TRACK ID NOT AVAILABLE" (TRACK ID LOOKUP BROKE WITH THE NEW PLAYER BAR)
@@ -5045,7 +5045,7 @@ const PLAY_WORDS = [
       steps: [
         ...((window.AndBridge && typeof window.AndBridge.openMusixmatchLogin === "function") ? [
           'In the app, tap <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a> and sign in on the screen that opens (your song keeps playing).',
-          'Press the [Community] tab. It takes you to musixmatch.com/contribute, and the app reads your token there and fills the field below. Nothing to paste.',
+          'Press the [Contribute] tab. It takes you to musixmatch.com/contribute, and the app reads your token there and fills the field below. Nothing to paste.',
           'Or get it manually:',
         ] : []),
         'Go to <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a> and click on Login.',
