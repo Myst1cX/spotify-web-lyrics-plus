@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.66
+// @version      17.67
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -15,6 +15,14 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.67): MUSIXMATCH TOKEN IS FETCHED AUTOMATICALLY INSIDE THE ANDROID APP (APP 1.65+)
+// Tapping the Musixmatch link in the token modal used to load musixmatch.com in the main WebView, which unloaded Spotify and
+// stopped playback. When window.AndBridge.openMusixmatchLogin exists, the link click is cancelled and the app opens its own login
+// screen (separate WebView). When the musixmatchUserToken cookie shows up the app calls window.__lpSetMusixmatchToken(token),
+// which saves it as lyricsPlusMusixmatchToken, closes the modal and reloads the lyrics. Without the bridge (desktop) nothing changes.
+// Inside the app the modal shows the automatic steps (sign in, press Community -> /discover, token is read there); elsewhere the manual steps.
+// Undo: remove openLink from showMusixmatchTokenModal / showTokenModal and delete window.__lpSetMusixmatchToken.
 
 // RESOLVED (17.66): "CANNOT FETCH SPOTIFY LYRICS - TRACK ID NOT AVAILABLE" (TRACK ID LOOKUP BROKE WITH THE NEW PLAYER BAR)
 // Same cause as 17.62: getCurrentTrackId() looked for a[data-testid="context-link"][data-context-item-type="track"],
@@ -4990,6 +4998,11 @@ const PLAY_WORDS = [
     document.addEventListener("keydown", onKey, true);
 
     modal.querySelector(".lp-token-close").onclick = close;
+    // 17.67: a provider can take over link taps (cfg.openLink returns true when it handled the tap).
+    modal.addEventListener("click", (e) => {
+      const a = e.target.closest && e.target.closest("a[href]");
+      if (a && cfg.openLink && cfg.openLink(a.href)) e.preventDefault();
+    }, true);
     modal.querySelector(".lp-token-cancel").onclick = close;
     // Tap on the dim backdrop closes, unless the user already typed/pasted something.
     modal.addEventListener("click", (e) => {
@@ -5022,8 +5035,19 @@ const PLAY_WORDS = [
       provider: "Musixmatch",
       storageKey: "lyricsPlusMusixmatchToken",
       title: "Set your Musixmatch User Token",
+      openLink: (href) => {
+        if (!/^https:\/\/www\.musixmatch\.com\/?$/.test(href)) return false;
+        if (!(window.AndBridge && typeof window.AndBridge.openMusixmatchLogin === "function")) return false;
+        window.AndBridge.openMusixmatchLogin();
+        return true;
+      },
       placeholder: "Enter your Musixmatch user token here",
-      steps: [
+      steps: (window.AndBridge && typeof window.AndBridge.openMusixmatchLogin === "function") ? [
+        'Tap <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a>. A sign-in screen opens inside the app (your song keeps playing).',
+        'Sign in.',
+        'Press the [Community] tab. It takes you to musixmatch.com/discover, and the app reads your token there.',
+        'The screen closes, the token is saved and the lyrics reload. Nothing to paste.',
+      ] : [
         'Go to <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a> and click on Login.',
         'Select [Community] as your product.',
         'Open DevTools (Press F12 or Right click and Inspect).',
@@ -5034,6 +5058,19 @@ const PLAY_WORDS = [
       ],
     });
   }
+
+  // 17.67: called by the app (MusixmatchLoginActivity) with the token it read from the Musixmatch cookie.
+  window.__lpSetMusixmatchToken = function (token) {
+    localStorage.setItem("lyricsPlusMusixmatchToken", token);
+    const modal = document.getElementById("lyrics-plus-musixmatch-modal");
+    if (modal && modal._lpClose) modal._lpClose();
+    const popup = document.getElementById("lyrics-plus-popup");
+    if (popup && Providers.current === "Musixmatch") {
+      const lyricsContainer = popup.querySelector("#lyrics-plus-content");
+      if (lyricsContainer) setLyricsStatusMessage(lyricsContainer, "Loading lyrics...");
+      updateLyricsContent(popup, getCurrentTrackInfo());
+    }
+  };
 
   async function showSpotifyTokenModal() {
     // Make sure the automatic token has been read (and saved to storage) before the field is filled.
