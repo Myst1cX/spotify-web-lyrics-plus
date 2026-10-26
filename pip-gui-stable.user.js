@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.68.b
+// @version      17.68
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -18,24 +18,24 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
 
-// RESOLVED (17.68.b): MUSIXMATCH AUTOFETCH WORKS AGAIN (NEW SIGNED WEB API)
+// RESOLVED (17.68): MUSIXMATCH AUTOFETCH WORKS AGAIN (NEW SIGNED WEB API)
 // Musixmatch removed apic-desktop (token.get returns a dummy token, other calls 404 "endpoint not found"). Lookup now uses what musixmatch.com itself uses:
 // https://www.musixmatch.com/ws/1.1/ track.search -> track.subtitles.get (LRC) or track.lyrics.get, app_id=mxm-com-v1.0, with the logged-in token the app already captures (unchanged).
 // Each request is signed: signature = base64(HMAC-SHA256(key, fullUrl + local YYYYMMDD)), sent as &signature=...&signature_protocol=sha256 plus Referer and x-mxm-app-version.
 // The key is read live from the site: GET /search -> _app-*.js bundle (~3MB) -> string before .split, reversed + base64-decoded. Cached 6h in localStorage (lyricsPlusMxmSigningKey_v1),
 // prefetched 4s after load and right after the token is saved. A 401/403 refreshes the key once and retries; only a second rejection clears the token.
-// Transport: in the app AndBridge.nativeFetch (native HTTP, no CORS/CSP; a browser User-Agent is required or the edge answers 403); desktop userscript manager uses GM_xmlhttpRequest
-// (@connect musixmatch.com, mxmcdn.net). A plain browser without a userscript manager cannot reach the API. No app update needed.
+// Transport: in the app AndBridge.nativeFetch (native HTTP, no CORS/CSP; send the browser User-Agent; the site's edge answers 403 to some requests); desktop userscript manager uses GM_xmlhttpRequest
+// (@connect musixmatch.com, mxmcdn.net). A plain browser without a userscript manager is not supported. No app update needed.
 // Search: no q_duration (hard filter); title/artist/duration scored locally; retries once with first artist + cleaned title.
-// Token modals: Spotify gets the in-app automatic-token lines; Musixmatch in-app step no longer requires the Contribute tab, and the manual step names mxm-com-v1.0 (the cookie has no web-desktop-app-v1.0 entry any more).
+// Token windows: Spotify gets the in-app automatic-token lines; Musixmatch in-app step no longer requires the Contribute tab, and the manual step names mxm-com-v1.0 (the cookie has no web-desktop-app-v1.0 entry any more).
 // Undo: restore fetchMusixmatchLyrics from 17.67.fix4mid (its apic-desktop endpoints no longer exist), remove the mxm* helpers and the two @connect lines.
 
 // RESOLVED (17.67): MUSIXMATCH TOKEN IS FETCHED AUTOMATICALLY INSIDE THE ANDROID APP (APP 1.65+)
 // Tapping the Musixmatch link in the token modal used to load musixmatch.com in the main WebView, which unloaded Spotify and
 // stopped playback. When window.AndBridge.openMusixmatchLogin exists, the link click is cancelled and the app opens its own login
-// screen (separate WebView). When the musixmatchUserToken cookie shows up the app calls window.__lpSetMusixmatchToken(token),
+// screen (separate WebView). When the app sees the logged-in token in the profile request that follows sign-in, it calls window.__lpSetMusixmatchToken(token),
 // which saves it as lyricsPlusMusixmatchToken (shown in the token field, like the automatic Spotify token) and reloads the lyrics. Without the bridge (desktop) nothing changes.
-// Inside the app the modal shows the automatic steps first (sign in, press Contribute -> /contribute, token is read there), then the original manual steps; elsewhere only the manual steps.
+// Inside the app the modal shows the automatic step first (sign in; the token is read right after sign-in, no tab to press), then the original manual steps; elsewhere only the manual steps.
 // Undo: remove openLink from showMusixmatchTokenModal / showTokenModal and delete window.__lpSetMusixmatchToken.
 
 // RESOLVED (17.66): "CANNOT FETCH SPOTIFY LYRICS - TRACK ID NOT AVAILABLE" (TRACK ID LOOKUP BROKE WITH THE NEW PLAYER BAR)
@@ -1352,7 +1352,7 @@
 
 // CONSIDER CONVERTING TO BROWSER EXTENSION:
 // Converting the userscript into a browser extension would unlock two things:
-// 1. Auto fetch spotify token for user when it expires and apply it --> a direct fetch was blocked by CSP, but 17.64 reads it from the page's own TokenProvider instead (Spotify only; Musixmatch still manual).
+// 1. Auto fetch spotify token for user when it expires and apply it --> a direct fetch was blocked by CSP, but 17.64 reads it from the page's own TokenProvider instead (Spotify only; Musixmatch is automatic in the Android app since 17.67 through the app's own login screen, manual elsewhere).
 
 // PROBABLY NOT:
 // Add Deezer provider (synced and unsynced)
