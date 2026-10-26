@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.67
+// @version      17.67-fix1
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -20,8 +20,8 @@
 // Tapping the Musixmatch link in the token modal used to load musixmatch.com in the main WebView, which unloaded Spotify and
 // stopped playback. When window.AndBridge.openMusixmatchLogin exists, the link click is cancelled and the app opens its own login
 // screen (separate WebView). When the musixmatchUserToken cookie shows up the app calls window.__lpSetMusixmatchToken(token),
-// which saves it as lyricsPlusMusixmatchToken, closes the modal and reloads the lyrics. Without the bridge (desktop) nothing changes.
-// Inside the app the modal shows the automatic steps (sign in, press Community -> /discover, token is read there); elsewhere the manual steps.
+// which saves it as lyricsPlusMusixmatchToken (shown in the token field, like the automatic Spotify token) and reloads the lyrics. Without the bridge (desktop) nothing changes.
+// Inside the app the modal shows the automatic steps first (sign in, press Community -> /discover, token is read there), then the original manual steps; elsewhere only the manual steps.
 // Undo: remove openLink from showMusixmatchTokenModal / showTokenModal and delete window.__lpSetMusixmatchToken.
 
 // RESOLVED (17.66): "CANNOT FETCH SPOTIFY LYRICS - TRACK ID NOT AVAILABLE" (TRACK ID LOOKUP BROKE WITH THE NEW PLAYER BAR)
@@ -5042,12 +5042,12 @@ const PLAY_WORDS = [
         return true;
       },
       placeholder: "Enter your Musixmatch user token here",
-      steps: (window.AndBridge && typeof window.AndBridge.openMusixmatchLogin === "function") ? [
-        'Tap <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a>. A sign-in screen opens inside the app (your song keeps playing).',
-        'Sign in.',
-        'Press the [Community] tab. It takes you to musixmatch.com/discover, and the app reads your token there.',
-        'The screen closes, the token is saved and the lyrics reload. Nothing to paste.',
-      ] : [
+      steps: [
+        ...((window.AndBridge && typeof window.AndBridge.openMusixmatchLogin === "function") ? [
+          'In the app, tap <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a> and sign in on the screen that opens (your song keeps playing).',
+          'Press the [Community] tab. It takes you to musixmatch.com/discover, and the app reads your token there and fills the field below. Nothing to paste.',
+          'Or get it manually:',
+        ] : []),
         'Go to <a href="https://www.musixmatch.com/" target="_blank" rel="noopener">Musixmatch</a> and click on Login.',
         'Select [Community] as your product.',
         'Open DevTools (Press F12 or Right click and Inspect).',
@@ -5062,8 +5062,10 @@ const PLAY_WORDS = [
   // 17.67: called by the app (MusixmatchLoginActivity) with the token it read from the Musixmatch cookie.
   window.__lpSetMusixmatchToken = function (token) {
     localStorage.setItem("lyricsPlusMusixmatchToken", token);
+    // Like the automatic Spotify token: stored in localStorage, and shown in the token field if the window is open.
     const modal = document.getElementById("lyrics-plus-musixmatch-modal");
-    if (modal && modal._lpClose) modal._lpClose();
+    const field = modal && modal.querySelector(".lp-token-input");
+    if (field) field.value = token;
     const popup = document.getElementById("lyrics-plus-popup");
     if (popup && Providers.current === "Musixmatch") {
       const lyricsContainer = popup.querySelector("#lyrics-plus-content");
