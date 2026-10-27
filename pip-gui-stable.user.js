@@ -7227,8 +7227,15 @@ const Providers = {
     const fontSizeSelect = document.createElement("button");
     fontSizeSelect.id = "lyrics-plus-font-size-select";
     fontSizeSelect.title = "Change lyrics font size";
-    fontSizeSelect.textContent = currentFontSize + "px \u25BE";
+    const fontSizeLabel = document.createElement("span");
+    fontSizeLabel.textContent = currentFontSize + "px";
+    fontSizeSelect.appendChild(fontSizeLabel);
+    fontSizeSelect.insertAdjacentHTML("beforeend", `<svg viewBox="0 0 10 6" width="10" height="6" style="flex-shrink:0"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`);
     Object.assign(fontSizeSelect.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      textAlign: "left",
       cursor: "pointer",
       background: "#121212",
       border: "none",
@@ -7237,7 +7244,7 @@ const Providers = {
       lineHeight: "1",
       height: "28px",
       width: "64px",
-      padding: "0",
+      padding: "0 4px",
       flexShrink: "0",
       boxSizing: "border-box",
     });
@@ -7291,7 +7298,7 @@ const Providers = {
         currentFontSize = size;
         localStorage.setItem("lyricsPlusFontSize", size);
         console.info("📝 [Lyrics+ UI] Font size changed to:", size + "px");
-        fontSizeSelect.textContent = size + "px \u25BE";
+        fontSizeLabel.textContent = size + "px";
         fontSizeDropdown.style.display = "none";
         removeFontSizeHideHandler();
         const lyricsContent = document.getElementById("lyrics-plus-content");
