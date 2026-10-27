@@ -28,7 +28,6 @@
 // Undo: remove the mousedown preventDefault, the font-size-dropdown / font-size-option additions (cleanup + two AMOLED CSS spots), and the FONT_SIZES / currentFontSize refactor;
 // restore the select's onchange handler (save to lyricsPlusFontSize, update #lyrics-plus-content font size) and the old select styling (width 64px, no padding/margin/tabular-nums).
 
-
 // RESOLVED (17.68): MUSIXMATCH AUTOFETCH WORKS AGAIN (NEW SIGNED WEB API)
 // Musixmatch removed apic-desktop (token.get returns a dummy token, other calls 404 "endpoint not found"). Lookup now uses what musixmatch.com itself uses:
 // https://www.musixmatch.com/ws/1.1/ track.search -> track.subtitles.get (LRC) or track.lyrics.get, app_id=mxm-com-v1.0, with the logged-in token the app already captures (unchanged).
