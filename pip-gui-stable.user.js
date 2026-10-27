@@ -20,9 +20,9 @@
 
 // RESOLVED (17.69): FONT SIZE PICKER INSIDE THE APP SHOWED A WHITE NATIVE POPUP INSTEAD OF THE LYRICS+ THEME
 // Cause: the font size control was a native <select>; its opened list is drawn by the WebView, not the page, so the theme never applied.
-// Fix: replaced with a button (same id and size) that opens a body-level div dropdown #lyrics-plus-font-size-dropdown, built like the download dropdown
+// Fix: the closed <select> is unchanged; its native popup is blocked (mousedown preventDefault) and a body-level div dropdown #lyrics-plus-font-size-dropdown opens instead, built like the download dropdown
 // and included in the AMOLED CSS and the popup cleanup. Same sizes, same lyricsPlusFontSize key.
-// Undo: restore the <select> from 17.68 and remove the font-size-dropdown / font-size-option additions (cleanup + two AMOLED CSS spots).
+// Undo: remove the mousedown preventDefault and the font-size-dropdown / font-size-option additions (cleanup + two AMOLED CSS spots).
 
 // RESOLVED (17.68): MUSIXMATCH AUTOFETCH WORKS AGAIN (NEW SIGNED WEB API)
 // Musixmatch removed apic-desktop (token.get returns a dummy token, other calls 404 "endpoint not found"). Lookup now uses what musixmatch.com itself uses:
@@ -7224,30 +7224,29 @@ const Providers = {
     const FONT_SIZES = ["16", "22", "28", "32", "38", "44", "50", "56"];
     let currentFontSize = localStorage.getItem("lyricsPlusFontSize") || "22";
 
-    const fontSizeSelect = document.createElement("button");
+    const fontSizeSelect = document.createElement("select");
     fontSizeSelect.id = "lyrics-plus-font-size-select";
     fontSizeSelect.title = "Change lyrics font size";
-    const fontSizeLabel = document.createElement("span");
-    fontSizeLabel.textContent = currentFontSize + "px";
-    fontSizeSelect.appendChild(fontSizeLabel);
-    fontSizeSelect.insertAdjacentHTML("beforeend", `<svg viewBox="0 0 10 6" width="10" height="6" style="flex-shrink:0"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`);
-    Object.assign(fontSizeSelect.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      textAlign: "left",
-      cursor: "pointer",
-      background: "#121212",
-      border: "none",
-      color: "white",
-      fontSize: "14px",
-      lineHeight: "1",
-      height: "28px",
-      width: "64px",
-      padding: "0 4px",
-      flexShrink: "0",
-      boxSizing: "border-box",
+    fontSizeSelect.style.cursor = "pointer";
+    fontSizeSelect.style.background = "#121212";
+    fontSizeSelect.style.border = "none";
+    fontSizeSelect.style.color = "white";
+    fontSizeSelect.style.fontSize = "14px";
+    fontSizeSelect.style.lineHeight = "1";
+    fontSizeSelect.style.height = "28px";
+    fontSizeSelect.style.width = "64px";
+    fontSizeSelect.style.flexShrink = "0";
+    fontSizeSelect.style.boxSizing = "border-box";
+    fontSizeSelect.style.fontVariantNumeric = "tabular-nums";
+    FONT_SIZES.forEach(size => {
+      const opt = document.createElement("option");
+      opt.value = size;
+      opt.textContent = size + "px";
+      fontSizeSelect.appendChild(opt);
     });
+    fontSizeSelect.value = currentFontSize;
+    // Closed select keeps its native look; its native popup is replaced by the dropdown below.
+    fontSizeSelect.addEventListener("mousedown", (e) => e.preventDefault());
 
     const fontSizeDropdown = document.createElement("div");
     fontSizeDropdown.id = "lyrics-plus-font-size-dropdown";
@@ -7298,7 +7297,7 @@ const Providers = {
         currentFontSize = size;
         localStorage.setItem("lyricsPlusFontSize", size);
         console.info("📝 [Lyrics+ UI] Font size changed to:", size + "px");
-        fontSizeLabel.textContent = size + "px";
+        fontSizeSelect.value = size;
         fontSizeDropdown.style.display = "none";
         removeFontSizeHideHandler();
         const lyricsContent = document.getElementById("lyrics-plus-content");
