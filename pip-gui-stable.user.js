@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.68
+// @version      17.69
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -17,6 +17,12 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.69): FONT SIZE PICKER INSIDE THE APP SHOWED A WHITE NATIVE POPUP INSTEAD OF THE LYRICS+ THEME
+// Cause: the font size control was a native <select>; its opened list is drawn by the WebView, not the page, so the theme never applied.
+// Fix: replaced with a button (same id and size) that opens a body-level div dropdown #lyrics-plus-font-size-dropdown, built like the download dropdown
+// and included in the AMOLED CSS and the popup cleanup. Same sizes, same lyricsPlusFontSize key.
+// Undo: restore the <select> from 17.68 and remove the font-size-dropdown / font-size-option additions (cleanup + two AMOLED CSS spots).
 
 // RESOLVED (17.68): MUSIXMATCH AUTOFETCH WORKS AGAIN (NEW SIGNED WEB API)
 // Musixmatch removed apic-desktop (token.get returns a dummy token, other calls 404 "endpoint not found"). Lookup now uses what musixmatch.com itself uses:
@@ -6479,6 +6485,8 @@ const Providers = {
       // be removed by existing.remove() below, so clean it up explicitly.
       const orphanedDownloadDropdown = document.getElementById("lyrics-plus-download-dropdown");
       if (orphanedDownloadDropdown) orphanedDownloadDropdown.remove();
+      const orphanedFontSizeDropdown = document.getElementById("lyrics-plus-font-size-dropdown");
+      if (orphanedFontSizeDropdown) orphanedFontSizeDropdown.remove();
 
       existing.remove();
       DEBUG.debug('Cleanup', 'Popup element and all observers removed from DOM');
@@ -7211,34 +7219,115 @@ const Providers = {
     };
 
     // --- Font Size Selector ---
-    const fontSizeSelect = document.createElement("select");
+    // Custom button + body-level dropdown (same approach as downloadDropdown) instead of a
+    // native <select>, whose popup is drawn by the WebView/OS and ignores page theming.
+    const FONT_SIZES = ["16", "22", "28", "32", "38", "44", "50", "56"];
+    let currentFontSize = localStorage.getItem("lyricsPlusFontSize") || "22";
+
+    const fontSizeSelect = document.createElement("button");
     fontSizeSelect.id = "lyrics-plus-font-size-select";
     fontSizeSelect.title = "Change lyrics font size";
-    fontSizeSelect.style.cursor = "pointer";
-    fontSizeSelect.style.background = "#121212";
-    fontSizeSelect.style.border = "none";
-    fontSizeSelect.style.color = "white";
-    fontSizeSelect.style.fontSize = "14px";
-    fontSizeSelect.style.lineHeight = "1";
-    fontSizeSelect.style.height = "28px";
-    fontSizeSelect.style.width = "64px";
-    fontSizeSelect.style.flexShrink = "0";
-    fontSizeSelect.style.boxSizing = "border-box";
-    ["16", "22", "28", "32", "38", "44", "50", "56"].forEach(size => {
-      const opt = document.createElement("option");
-      opt.value = size;
-      opt.textContent = size + "px";
-      fontSizeSelect.appendChild(opt);
+    fontSizeSelect.textContent = currentFontSize + "px \u25BE";
+    Object.assign(fontSizeSelect.style, {
+      cursor: "pointer",
+      background: "#121212",
+      border: "none",
+      color: "white",
+      fontSize: "14px",
+      lineHeight: "1",
+      height: "28px",
+      width: "64px",
+      padding: "0",
+      flexShrink: "0",
+      boxSizing: "border-box",
     });
-    fontSizeSelect.value = localStorage.getItem("lyricsPlusFontSize") || "22";
-    console.info("✅ [Lyrics+ UI] Font size selector created with options: 16-56px, current value:", fontSizeSelect.value + "px");
-    fontSizeSelect.onchange = () => {
-      localStorage.setItem("lyricsPlusFontSize", fontSizeSelect.value);
-      console.info("📝 [Lyrics+ UI] Font size changed to:", fontSizeSelect.value + "px");
-      const lyricsContent = document.getElementById("lyrics-plus-content");
-      if (lyricsContent) {
-        lyricsContent.style.fontSize = fontSizeSelect.value + "px";
+
+    const fontSizeDropdown = document.createElement("div");
+    fontSizeDropdown.id = "lyrics-plus-font-size-dropdown";
+    Object.assign(fontSizeDropdown.style, {
+      position: "fixed",
+      top: "0",
+      left: "0",
+      minWidth: "64px",
+      backgroundColor: "#121212",
+      border: "1px solid #444",
+      borderRadius: "8px",
+      boxShadow: "0 2px 12px #0009",
+      zIndex: 100001,
+      display: "none",
+      flexDirection: "column",
+      padding: "4px 4px",
+      overflowY: "auto",
+    });
+    fontSizeDropdown.tabIndex = -1;
+
+    let fontSizeHideHandler = null;
+    const removeFontSizeHideHandler = () => {
+      if (fontSizeHideHandler) {
+        document.removeEventListener("mousedown", fontSizeHideHandler, { capture: true });
+        document.removeEventListener("contextmenu", fontSizeHideHandler, { capture: true });
+        fontSizeHideHandler = null;
       }
+    };
+
+    FONT_SIZES.forEach(size => {
+      const opt = document.createElement("button");
+      opt.className = "lyrics-plus-font-size-option";
+      opt.textContent = size + "px";
+      Object.assign(opt.style, {
+        background: "#121212",
+        color: "#fff",
+        border: "none",
+        padding: "8px 10px",
+        cursor: "pointer",
+        textAlign: "left",
+        fontSize: "14px",
+        borderRadius: "5px",
+        flexShrink: "0",
+      });
+      opt.onmouseenter = () => { opt.style.background = "#333"; };
+      opt.onmouseleave = () => { opt.style.background = "#121212"; };
+      opt.onclick = () => {
+        currentFontSize = size;
+        localStorage.setItem("lyricsPlusFontSize", size);
+        console.info("📝 [Lyrics+ UI] Font size changed to:", size + "px");
+        fontSizeSelect.textContent = size + "px \u25BE";
+        fontSizeDropdown.style.display = "none";
+        removeFontSizeHideHandler();
+        const lyricsContent = document.getElementById("lyrics-plus-content");
+        if (lyricsContent) {
+          lyricsContent.style.fontSize = size + "px";
+        }
+      };
+      fontSizeDropdown.appendChild(opt);
+    });
+    document.body.appendChild(fontSizeDropdown);
+    console.info("✅ [Lyrics+ UI] Font size selector created with options: 16-56px, current value:", currentFontSize + "px");
+
+    fontSizeSelect.onclick = () => {
+      if (fontSizeDropdown.style.display === "flex") {
+        fontSizeDropdown.style.display = "none";
+        removeFontSizeHideHandler();
+        return;
+      }
+      const btnRect = fontSizeSelect.getBoundingClientRect();
+      const top = btnRect.bottom + 4;
+      fontSizeDropdown.style.top = top + "px";
+      fontSizeDropdown.style.left = btnRect.left + "px";
+      fontSizeDropdown.style.maxHeight = (window.innerHeight - top - 8) + "px";
+      fontSizeDropdown.style.display = "flex";
+      setTimeout(() => {
+        removeFontSizeHideHandler();
+        const hide = (ev) => {
+          if (!fontSizeDropdown.contains(ev.target) && !fontSizeSelect.contains(ev.target)) {
+            fontSizeDropdown.style.display = "none";
+            removeFontSizeHideHandler();
+          }
+        };
+        fontSizeHideHandler = hide;
+        document.addEventListener("mousedown", hide, { capture: true });
+        document.addEventListener("contextmenu", hide, { capture: true });
+      }, 1);
     };
 
     // Toggle offset section
@@ -8653,6 +8742,8 @@ popup._headerWheelHandler = onHeaderWheel;
       .lyrics-plus-amoled-theme #lyrics-plus-progress-wrapper,
       .lyrics-plus-amoled-theme #lyrics-plus-font-size-select,
       .lyrics-plus-amoled-theme #lyrics-plus-download-dropdown,
+      .lyrics-plus-amoled-theme #lyrics-plus-font-size-dropdown,
+      .lyrics-plus-amoled-theme .lyrics-plus-font-size-option,
       .lyrics-plus-amoled-theme #lyrics-plus-download-sync,
       .lyrics-plus-amoled-theme #lyrics-plus-download-unsync {
         background: #000 !important;
@@ -8667,7 +8758,8 @@ popup._headerWheelHandler = onHeaderWheel;
 
       /* Hover states for AMOLED theme */
       .lyrics-plus-amoled-theme #lyrics-plus-download-sync:hover,
-      .lyrics-plus-amoled-theme #lyrics-plus-download-unsync:hover {
+      .lyrics-plus-amoled-theme #lyrics-plus-download-unsync:hover,
+      .lyrics-plus-amoled-theme .lyrics-plus-font-size-option:hover {
         background: #1a1a1a !important;
       }
     `;
