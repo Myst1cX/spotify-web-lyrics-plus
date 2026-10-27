@@ -20,9 +20,14 @@
 
 // RESOLVED (17.69): FONT SIZE PICKER INSIDE THE APP SHOWED A WHITE NATIVE POPUP INSTEAD OF THE LYRICS+ THEME
 // Cause: the font size control was a native <select>; its opened list is drawn by the WebView, not the page, so the theme never applied.
-// Fix: the closed <select> is unchanged; its native popup is blocked (mousedown preventDefault) and a body-level div dropdown #lyrics-plus-font-size-dropdown opens instead, built like the download dropdown
+// Fix: the native popup is blocked (mousedown preventDefault) and a body-level div dropdown #lyrics-plus-font-size-dropdown opens instead, built like the download dropdown
 // and included in the AMOLED CSS and the popup cleanup. Same sizes, same lyricsPlusFontSize key.
-// Undo: remove the mousedown preventDefault and the font-size-dropdown / font-size-option additions (cleanup + two AMOLED CSS spots).
+// The closed <select> keeps its native look but is slightly narrower (54px, was 64px) with 2px left padding, 2px right margin and tabular-nums, so the number sits next to the arrow and the header spacing matches the other buttons.
+// The select's onchange handler is replaced by option-button onclick handlers (FONT_SIZES / currentFontSize hold the state).
+// Also: removed "(podcast?)" from one debug message (no behavior change).
+// Undo: remove the mousedown preventDefault, the font-size-dropdown / font-size-option additions (cleanup + two AMOLED CSS spots), and the FONT_SIZES / currentFontSize refactor;
+// restore the select's onchange handler (save to lyricsPlusFontSize, update #lyrics-plus-content font size) and the old select styling (width 64px, no padding/margin/tabular-nums).
+
 
 // RESOLVED (17.68): MUSIXMATCH AUTOFETCH WORKS AGAIN (NEW SIGNED WEB API)
 // Musixmatch removed apic-desktop (token.get returns a dummy token, other calls 404 "endpoint not found"). Lookup now uses what musixmatch.com itself uses:
@@ -7234,7 +7239,14 @@ const Providers = {
     fontSizeSelect.style.fontSize = "14px";
     fontSizeSelect.style.lineHeight = "1";
     fontSizeSelect.style.height = "28px";
-    fontSizeSelect.style.width = "64px";
+    // Keep the native arrow; just shrink the box so the number sits right next to it, and
+    // pad/margin 2px so the gaps to the neighbouring buttons match the header's ~14px icon rhythm.
+    fontSizeSelect.style.width = "54px";
+    fontSizeSelect.style.paddingLeft = "2px";
+    fontSizeSelect.style.marginRight = "2px";
+    // Tell the webview this control is dark-themed so its native arrow is drawn light, matching the
+    // white number (some webviews otherwise paint the arrow in a dim default gray).
+    fontSizeSelect.style.colorScheme = "dark";
     fontSizeSelect.style.flexShrink = "0";
     fontSizeSelect.style.boxSizing = "border-box";
     fontSizeSelect.style.fontVariantNumeric = "tabular-nums";
@@ -10757,7 +10769,7 @@ popup._headerWheelHandler = onHeaderWheel;
       const stray = document.getElementById("lyrics-plus-btn");
       if (stray) {
         stray.remove();
-        DEBUG.info('Button', 'Lyrics+ button removed - no visible mic button in current player (podcast?)');
+        DEBUG.info('Button', 'Lyrics+ button removed - no visible mic button in current player');
       }
       lyricsButtonInjected = false;
       return;
