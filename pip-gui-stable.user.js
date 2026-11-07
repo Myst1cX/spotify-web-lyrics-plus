@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.72
+// @version      17.73
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -17,6 +17,14 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.73): NATIVE PIP DID NOT REDRAW WHEN FONT SIZE, TRANSLATION, TRANSLITERATION OR CHINESE CONVERSION CHANGED WHILE IT WAS OPEN
+// Cause: maybePushNativePipFrame() only compared the lyrics array, the rendered line index, the unsynced length, the status message and the theme, so a change that alters what
+// drawPipFrame() draws without changing any of those (font size, translation or transliteration toggled, Chinese conversion) was not pushed until the next line change.
+// Fix: a sixth tracker, pipLastPushedTextSig. Its value is the font size setting plus the text groups (lyric line, translation, transliteration) of the previous, rendered and next line,
+// read through getPipLineGroupText() exactly as drawPipFrame() reads them (the first two lines before the first lyric line). Any change to it pushes a frame.
+// It is reset in the same two places as the other five (onNativePipOpened, finishClosingPip). Script only; the app is unchanged by this entry.
+// Undo: remove pipLastPushedTextSig, the textSig lines in maybePushNativePipFrame() and the two resets.
 
 // RESOLVED (17.72): MAIN POPUP STATUS TEXT IS NOW GRAY
 // Status messages ("Loading lyrics...", "No lyrics found from any provider", errors) had no color set and inherited the popup's white. They now use #b3b3b3, the same gray as the PiP status text.
@@ -3005,6 +3013,7 @@ document.head.appendChild(buttonGroupScrollStyle);
   let pipLastPushedUnsyncedLen;
   let pipLastPushedStatusMsg;
   let pipLastPushedTheme;
+  let pipLastPushedTextSig;
 
   function drawPipFrame() {
       if (!pipCtx || !pipCanvas || !pipVideo) {
@@ -3252,12 +3261,23 @@ document.head.appendChild(buttonGroupScrollStyle);
     const unsyncedLen = currentUnsyncedLyrics ? currentUnsyncedLyrics.length : 0;
     const statusMsg = currentLyricsStatusMessage || '';
 
+    // 17.73: signature of what drawPipFrame() reads besides the values above: the font size
+    // setting and the text groups (lyric, translation, transliteration) of the lines it draws,
+    // read the same way (the first two lines while no line is active yet).
+    let textSig = localStorage.getItem(STORAGE_KEYS.FONT_SIZE) || '22';
+    if (currentSyncedLyrics && currentSyncedLyrics.length > 0) {
+      const first = pipRenderedIndex === -1 ? 0 : pipRenderedIndex - 1;
+      const last = pipRenderedIndex === -1 ? 1 : pipRenderedIndex + 1;
+      for (let i = first; i <= last; i++) textSig += '\u0001' + getPipLineGroupText(i).join('\u0002');
+    }
+
     const changed = (
       pipRenderedLyricsRef !== pipLastPushedLyricsRef ||
       pipRenderedIndex !== pipLastPushedIndex ||
       unsyncedLen !== pipLastPushedUnsyncedLen ||
       statusMsg !== pipLastPushedStatusMsg ||
-      theme !== pipLastPushedTheme
+      theme !== pipLastPushedTheme ||
+      textSig !== pipLastPushedTextSig
     );
     if (!changed) return;
 
@@ -3266,6 +3286,7 @@ document.head.appendChild(buttonGroupScrollStyle);
     pipLastPushedUnsyncedLen = unsyncedLen;
     pipLastPushedStatusMsg = statusMsg;
     pipLastPushedTheme = theme;
+    pipLastPushedTextSig = textSig;
 
     try {
       const dataUrl = pipCanvas.toDataURL('image/png');
@@ -3442,6 +3463,7 @@ document.head.appendChild(buttonGroupScrollStyle);
     pipLastPushedUnsyncedLen = undefined;
     pipLastPushedStatusMsg = undefined;
     pipLastPushedTheme = undefined;
+    pipLastPushedTextSig = undefined;
     pipRenderedLyricsRef = null;
     pipRenderedIndex = -1;
   }
@@ -3473,6 +3495,7 @@ document.head.appendChild(buttonGroupScrollStyle);
     pipLastPushedUnsyncedLen = undefined;
     pipLastPushedStatusMsg = undefined;
     pipLastPushedTheme = undefined;
+    pipLastPushedTextSig = undefined;
     drawPipFrameTick();
   };
 
