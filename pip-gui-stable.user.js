@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.71
+// @version      17.72
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -17,6 +17,11 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.72): MAIN POPUP STATUS TEXT IS NOW GRAY
+// Status messages ("Loading lyrics...", "No lyrics found from any provider", errors) had no color set and inherited the popup's white. They now use #b3b3b3, the same gray as the PiP status text.
+// Change: new renderLyricsStatusText(container, message) writes the message in a gray <span>; setLyricsStatusMessage() and the restore after PiP closes use it.
+// Undo: restore `lyricsContainer.textContent = ...` in those two places and remove renderLyricsStatusText().
 
 // RESOLVED (17.71): NATIVE AND BROWSER PIP SHOWED A BLANK SQUARE BEFORE THE FIRST LYRIC LINE (INTRO) INSTEAD OF THE UPCOMING LINES
 // Cause: in drawPipFrame() the synced branch only drew anything when activeIndex !== -1; with the song position before the first line's timestamp (intro, new song, seek back to the start) only the background was drawn.
@@ -1552,13 +1557,22 @@
    * PiP notice, and the status text is stored so drawPipFrame() can mirror it inside
    * the PiP window itself, where it belongs while no synced/unsynced lyrics exist yet.
    */
+  // 17.72: status text is gray (#b3b3b3, same as the PiP canvas status text) instead of inheriting the popup's white.
+  function renderLyricsStatusText(container, message) {
+    container.textContent = '';
+    const span = document.createElement('span');
+    span.style.color = '#b3b3b3';
+    span.textContent = message;
+    container.appendChild(span);
+  }
+
   function setLyricsStatusMessage(lyricsContainer, message) {
     currentLyricsStatusMessage = message;
     if (!lyricsContainer) return;
     if (isPipActive || isPagePipActive) {
       enterPipInLyricsContainer();
     } else {
-      lyricsContainer.textContent = message;
+      renderLyricsStatusText(lyricsContainer, message);
     }
   }
 
@@ -2829,7 +2843,7 @@ document.head.appendChild(buttonGroupScrollStyle);
       // saved <p> element to restore above — put the status text back now that the
       // PiP notice is gone, so the main container doesn't end up blank.
       if (currentLyricsStatusMessage && !currentSyncedLyrics && !currentUnsyncedLyrics) {
-        lyricsContainer.textContent = currentLyricsStatusMessage;
+        renderLyricsStatusText(lyricsContainer, currentLyricsStatusMessage);
       }
     }
     applyHiddenPipVideoStyle();
