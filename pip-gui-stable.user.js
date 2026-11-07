@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.69
+// @version      17.70
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -17,6 +17,16 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.70): NATIVE PIP WAS BLACK ON OPEN UNTIL THE NEXT LINE CHANGE, AND SCROLLED THROUGH EVERY LINE AFTER A SEEK
+// Black on open: the first frame is drawn and pushed about 30 ms after togglePip(), before Android is actually in PiP mode and before the native overlay exists.
+// AndBridge.updatePipFrame ignores frames while not in PiP mode, but maybePushNativePipFrame() had already counted it as pushed, so nothing was sent again until the line changed.
+// Fix: the app (1.73+) calls window.onNativePipOpened() from onPictureInPictureModeChanged(true) once the overlay exists (Lyrics+ PiP only). It resets the five pipLastPushed*
+// trackers and draws and pushes the current frame at once. With an older app nothing calls it and behavior is as before.
+// Scroll after a seek: pipRenderedLyricsRef/pipRenderedIndex were never reset on close (the 17.59 comment claiming they reset was wrong). Reopening on the same song kept the old index,
+// and the one-step-per-tick forward catch-up walked through every line up to the current one. Backward seeks snapped, so they only showed the black-on-open problem.
+// Fix: finishClosingPip() also sets pipRenderedLyricsRef = null and pipRenderedIndex = -1, so the first frame of the next session starts on the current line. Seeks while PiP is open still catch up as before.
+// Undo: remove window.onNativePipOpened and the two reset lines in finishClosingPip().
 
 // RESOLVED (17.69): FONT SIZE PICKER INSIDE THE APP SHOWED A WHITE NATIVE POPUP INSTEAD OF THE LYRICS+ THEME
 // Cause: the font size control was a native <select>; its opened list is drawn by the WebView, not the page, so the theme never applied.
@@ -3365,14 +3375,17 @@ document.head.appendChild(buttonGroupScrollStyle);
     // same lyric line is still current would compare against this closed
     // session's last-pushed values, see "no change", and silently skip
     // pushing the new session's first frame - native PiP would then keep
-    // showing nothing/stale until the next actual line change, even though
-    // pipRenderedLyricsRef/pipRenderedIndex themselves reset correctly (they
-    // just start fresh from drawPipFrame()'s next call regardless).
+    // showing nothing/stale until the next actual line change.
+    // 17.70: pipRenderedLyricsRef/pipRenderedIndex are reset here too. They used to
+    // be left alone, so a reopen on the same song kept the old index and the
+    // one-step-per-tick catch-up in drawPipFrame() scrolled through every line.
     pipLastPushedLyricsRef = undefined;
     pipLastPushedIndex = undefined;
     pipLastPushedUnsyncedLen = undefined;
     pipLastPushedStatusMsg = undefined;
     pipLastPushedTheme = undefined;
+    pipRenderedLyricsRef = null;
+    pipRenderedIndex = -1;
   }
 
   // Native-wrapper counterpart to the 'leavepictureinpicture'/
@@ -3389,6 +3402,20 @@ document.head.appendChild(buttonGroupScrollStyle);
   // has nothing here to reset.
   window.onNativePipClosed = function() {
     finishClosingPip();
+  };
+
+  // 17.70: counterpart to onNativePipClosed(). MainActivity.onPictureInPictureModeChanged(true)
+  // calls it right after building the native overlay (canvas-fed Lyrics+ PiP only). Frames
+  // pushed before that point are dropped by AndBridge.updatePipFrame (not in PiP mode yet),
+  // yet were counted as pushed, so reset the trackers and push the current frame now.
+  window.onNativePipOpened = function() {
+    if (!isPipActive) return;
+    pipLastPushedLyricsRef = undefined;
+    pipLastPushedIndex = undefined;
+    pipLastPushedUnsyncedLen = undefined;
+    pipLastPushedStatusMsg = undefined;
+    pipLastPushedTheme = undefined;
+    drawPipFrameTick();
   };
 
   /**
