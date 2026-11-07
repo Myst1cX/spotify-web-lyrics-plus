@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.70
+// @version      17.71
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -17,6 +17,13 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.71): NATIVE AND BROWSER PIP SHOWED A BLANK SQUARE BEFORE THE FIRST LYRIC LINE (INTRO) INSTEAD OF THE UPCOMING LINES
+// Cause: in drawPipFrame() the synced branch only drew anything when activeIndex !== -1; with the song position before the first line's timestamp (intro, new song, seek back to the start) only the background was drawn.
+// The main Lyrics+ popup shows the lyrics in gray at that point.
+// Fix: when activeIndex === -1 the first two lines are drawn exactly like the other non-active (context) lines: same gray rgba(255, 255, 255, 0.7), regular weight, same size, translation/transliteration sub-lines in their usual context colors (via getPipLineGroupText()).
+// Nothing else changes: once line 0 is active the frame is the normal prev/active/next layout.
+// Undo: remove the `else` branch after the `if (activeIndex !== -1)` block in drawPipFrame().
 
 // RESOLVED (17.70): NATIVE PIP WAS BLACK ON OPEN UNTIL THE NEXT LINE CHANGE, AND SCROLLED THROUGH EVERY LINE AFTER A SEEK
 // Black on open: the first frame is drawn and pushed about 30 ms after togglePip(), before Android is actually in PiP mode and before the native overlay exists.
@@ -3120,6 +3127,43 @@ document.head.appendChild(buttonGroupScrollStyle);
             pipCtx.fillStyle = row.color;
             pipCtx.fillText(row.text, centerX, drawY, textMaxWidth);
             drawY += row.lineHeight;
+          });
+        } else {
+          // 17.71: before the first line (intro / new song / seek to the start) show the
+          // first two lines in gray, regular weight (same style as the other context lines), like the main popup, instead of a blank square.
+          const upcomingBlocks = [];
+          for (let i = 0; i < Math.min(2, currentSyncedLyrics.length); i++) {
+            const groupTexts = getPipLineGroupText(i);
+            const fallbackText = (currentSyncedLyrics[i]?.text || '').trim();
+            upcomingBlocks.push({
+              texts: groupTexts.length ? groupTexts : (fallbackText ? [fallbackText] : []),
+              primaryFont: `${contextFontSize}px sans-serif`,
+              primaryLineHeight: contextLineHeight,
+            });
+          }
+          const upcomingRows = [];
+          upcomingBlocks.forEach((block, idx) => {
+            const blockTexts = block.texts.filter(Boolean);
+            if (!blockTexts.length) return;
+            const blockRows = flattenPipBlockRows(
+              pipCtx, blockTexts, textMaxWidth,
+              block.primaryFont, block.primaryLineHeight,
+              `${sublineFontSize}px sans-serif`, sublineLineHeight,
+              'rgba(255, 255, 255, 0.7)', 'context'
+            );
+            upcomingRows.push(...blockRows);
+            if (idx < upcomingBlocks.length - 1 && blockRows.length > 0) {
+              upcomingRows.push({ spacer: true, lineHeight: blockGap });
+            }
+          });
+          const upcomingHeight = upcomingRows.reduce((sum, row) => sum + (row.lineHeight || 0), 0);
+          let upcomingY = Math.round(centerY - (upcomingHeight / 2));
+          upcomingRows.forEach(row => {
+            if (row.spacer) { upcomingY += row.lineHeight; return; }
+            pipCtx.font = row.font;
+            pipCtx.fillStyle = row.color;
+            pipCtx.fillText(row.text, centerX, upcomingY, textMaxWidth);
+            upcomingY += row.lineHeight;
           });
         }
       } else if (currentUnsyncedLyrics && currentUnsyncedLyrics.length > 0) {
