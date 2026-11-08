@@ -1,5 +1,7 @@
 ## SPOTIFY WEB LYRICS+
 
+_Applies to script version **17.73**._
+
 > Injects a powerful lyrics popup into the Spotify Web Player.  
 > Supports **synced & unsynced lyrics** from multiple providers, **adjusting the lyric offset**, **live translation**, **lyrics download**,   
 > **Chinese script conversion** and **transliteration** (the  latter is limited to KPoe provider, when available in the lyric source).  
@@ -12,12 +14,13 @@
 
 > **MULTI-PROVIDER LYRICS (LRCLIB, Spotify, KPoe, Musixmatch, Genius)**  
 > Get lyrics from LRCLIB, Spotify, KPoe (combines Apple Music/Musixmatch/QQ Music as sources), Musixmatch or Genius.  
-> Spotify and Musixmatch require a user token, guides for both are further down in the README file.
+> Musixmatch needs a user token (captured automatically after you sign in inside the Spotifuck Spotify Web app, otherwise copied by hand). The Spotify provider reads a fresh token straight from the Spotify Web Player by itself, with a manual token kept as a fallback. Guides for both are further down in the README file.
 > 
 > **POPUP WINDOW**  
 > Move and resize anywhere on your screen.  
 > Remembers position, size, font, provider, and translation settings.  
-> Reset button <img src="icons/header/reset.svg" width="16" height="16" align="absmiddle" alt="reset icon"/> to restore default popup position/size.
+> Reset button <img src="icons/header/reset.svg" width="16" height="16" align="absmiddle" alt="reset icon"/> to restore default popup position/size.  
+> When [Spotifuck Mobile](https://github.com/Myst1cX/spotifuck-userscript) is installed, the popup stays clear of its bottom nav bar, player bar and search header while you open, drag, resize or reset it, and re-clamps by itself when that layout changes (player expanded/collapsed, compact mode toggled).
 > 
 > **FONT SIZE PICKER**  
 > Choose your favorite lyrics text size.  
@@ -38,7 +41,9 @@
 > without consuming another fetch request.   
 > 
 > **SEEKBAR**  
-> Jump to any position in the track by dragging or clicking on the seekbar. 
+> Jump to any position in the track by dragging or clicking on the seekbar.  
+> It looks and behaves like Spotify's own progress bar: white with the handle hidden at rest, green with the handle shown while hovering behind the playhead, and a white seek-preview trail with a time tooltip while hovering ahead of it.  
+> Click the duration label to switch between the total length and the time remaining, like on Spotify's native bar.  
 > Enable the seekbar from the <img src="icons/header/settings.svg" width="16" height="16" align="absmiddle" alt="settings icon"/> settings menu.
 >
 > **PLAYBACK CONTROLS**  
@@ -57,6 +62,7 @@
 > **LYRICS DOWNLOAD**  
 > Download lyrics in either synced (.lrc) on unsynced/plain text format (.txt) depending on provider availability,   
 > using the dedicated <img src="icons/header/download.svg" width="16" height="16" align="absmiddle" alt="download icon"/> download button.   
+> Also works inside the Spotifuck Spotify Web app: the app shows its own save popup, where the file can be renamed and the folder picked.   
 > 
 > **LIVE TRANSLATION**  
 > Instantly translate any lyrics (70+ languages, using the Google translate api).
@@ -83,6 +89,16 @@
 > "This video is playing in Picture-in-Picture mode". The lyrics appear in the floating PiP window that just opened.  
 > When the floating PiP window is closed or the button is toggled off, the original lyrics container is restored.   
 > On browsers that don't support the native PIP view, an unsupported placeholder message is displayed instead: "Picture-in-Picture mode isn't available in this browser".   
+> Inside the Spotifuck Spotify Web app the PiP button opens Android's own Picture-in-Picture window instead, showing the same lyrics canvas (themed to match the popup, including translation, transliteration and status messages).  
+> While the PiP window is open it redraws immediately when you change the font size, translation, transliteration or Chinese conversion.  
+> Before the first lyric line (an intro, a new song, or after seeking back to the start), the first two lines are shown in gray instead of a blank window, in both native and browser PiP.   
+
+> **SPOTIFY WEB APP INTEGRATION (`window.AndBridge`)**  
+> The same script runs inside the Spotifuck Spotify Web Android app's WebView and detects it by the presence of `window.AndBridge`, an object that only exists there (never in a normal browser or userscript manager). Every bridge method is feature-detected, so an older app just falls back to the browser behavior. What the script and the app do together:  
+> - **Download:** `AndBridge.saveTextFile` hands the lyrics file to the app's save popup (app 1.58+). A browser WebView can't save blob downloads, so without it the buttons would do nothing.  
+> - **Native PiP:** the PiP button calls `AndBridge.enterPip` (with the AMOLED flag, so the floating window matches the popup theme) and then pushes the drawn lyrics canvas as image frames through `AndBridge.updatePipFrame`, only when something visible changed. The app calls back `window.onNativePipOpened` (app 1.73+) once the native window exists so the current line appears at once, and `window.onNativePipClosed` when Android closes it.  
+> - **Musixmatch token:** tapping the Musixmatch link in the token window calls `AndBridge.openMusixmatchLogin` (app 1.65+), so the app opens its own login screen in a separate WebView instead of loading musixmatch.com over Spotify (which would stop playback). Right after sign-in the app calls back `window.__lpSetMusixmatchToken(token)`, which saves the token, fills the field and reloads the lyrics.  
+> - **Musixmatch requests:** sent through `AndBridge.nativeFetch` (native HTTP, no CORS/CSP limits). In a normal browser they go through your userscript manager's `GM_xmlhttpRequest` instead, so Musixmatch cannot work in a plain browser without a userscript manager.  
 
 ## Screenshots
 
@@ -184,6 +200,10 @@ Click on "Original" to remove the translated lines.
 
 ## Retrieve your Musixmatch user token
 
+> Double-click the Musixmatch provider tab to open the token window. It fits phone screens, keeps the token field and Save/Cancel pinned at the bottom, folds the instructions away once a token is saved, and only focuses the field automatically on desktop.  
+> **Inside the Spotifuck Spotify Web app (app 1.65+): no copying needed.** Tap the Musixmatch link in that window and sign in on the screen that opens (your song keeps playing). The app reads your token right after you sign in, fills the field and closes that screen by itself.  
+> **Otherwise, get it manually:**
+
 > 1. Go to [Musixmatch](https://www.musixmatch.com/) and click on the Login button at the top of the screen.  
 > 2. Select `Community` as your product and sign in using your Google account.  
 > 3. Open DevTools (Press F12 or Right click and Inspect).      
@@ -191,10 +211,13 @@ Click on "Original" to remove the translated lines.
 > 5. Click on `www.musixmatch.com` and go to the Cookies section.  
 > 6. Find `musixmatchUserToken`, right-click its content and select Copy value.  
 > 7. Go to [JSON Formatter](https://jsonformatter.curiousconcept.com/), paste the content, and click Process. 
-> 8. Copy the value of `web-desktop-app-v1.0` — this is your user token.  
+> 8. Copy the value of `mxm-com-v1.0` — this is your user token.  
 > 9. In the Lyrics+ popup, double-click on the Musixmatch provider, paste your token and press Save.
 
-## Retrieve your Spotify user token
+## Retrieve your Spotify user token (manual fallback)
+
+> **You normally don't need this.** The script asks the Spotify Web Player itself for its current token, so it is always fresh and never expires hourly or on reload. The token is also saved for you, so the field in the token window (double-click the Spotify provider tab) is already filled. In the Spotifuck Spotify Web app it is read when the Spotify lyrics load.  
+> Only if the Spotify tab says it couldn't read your token automatically (not logged in, Spotify changed something internally, or your userscript manager runs the script in an isolated context that can't see the page) copy one by hand as below. Manual tokens expire every hour and on page reload.  
 
 > 1. Go to [Spotify Web Player](https://open.spotify.com/) and login. Play a song.  
 > 2. Open DevTools (Press F12 or Right click and Inspect).   
@@ -211,6 +234,10 @@ Click on "Original" to remove the translated lines.
 ## Troubleshooting
 
 > **Lyrics out of sync?** - Adjust the timing offset from the <img src="icons/header/settings.svg" width="16" height="16" align="absmiddle" alt="settings icon"/> settings menu.  
+> 
+> **Spotify provider says it couldn't read your token?** - Make sure you're logged in and a song is playing, then select the Spotify tab again. If it still fails, use the [manual token steps](#retrieve-your-spotify-user-token-manual-fallback).  
+> 
+> **Musixmatch asks for a token again?** - Musixmatch rejected the saved one (it is cleared automatically). Sign in again inside the app, or repeat the [manual steps](#retrieve-your-musixmatch-user-token).  
 > 
 > **For feedback or bug reports, open an issue:**    
 > [https://github.com/Myst1cX/spotify-web-lyrics-plus/issues](https://github.com/Myst1cX/spotify-web-lyrics-plus/issues)
