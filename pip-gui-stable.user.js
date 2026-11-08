@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Lyrics+ Stable
 // @namespace    https://github.com/Myst1cX/spotify-web-lyrics-plus
-// @version      17.73
+// @version      17.74
 // @icon         https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/icons/icon.png
 // @description  Display synced and unsynced lyrics from multiple sources (LRCLIB, Spotify, KPoe, Musixmatch, Genius) in a floating popup on Spotify Web. Both formats are downloadable. Optionally toggle a line by line lyrics translation. Lyrics window can be expanded to include playback and seek controls.
 // @author       Myst1cX
@@ -17,6 +17,15 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js
 // ==/UserScript==
+
+// RESOLVED (17.74): TRANSLATION LANGUAGE PICKER INSIDE THE APP SHOWED A WHITE NATIVE POPUP INSTEAD OF THE LYRICS+ THEME
+// Same issue as 17.69, on the language <select> under the translation toggle (the translate icon in the header): its opened list is drawn by the WebView, not the page, so the theme never applied.
+// Fix: same approach as 17.69. The native popup is blocked (mousedown preventDefault) and a body-level div dropdown #lyrics-plus-lang-dropdown opens instead, built like the font size dropdown
+// and included in the AMOLED CSS (two spots) and the popup cleanup. Same language list (TRANSLATION_LANGUAGES), same lyricsPlusTranslationLang key.
+// The closed <select> is unchanged (same look and size). The list is as wide as the select, scrolls (70+ languages, max height = space below the select), and opens with the saved language highlighted green and scrolled into view.
+// The select's onchange logic moved into setTranslationLang(code), called by the option buttons and kept on the select's onchange for keyboard changes. Behavior is the same as before: save the language, remove the translated lines, reset lastTranslatedLang.
+// Undo: remove the mousedown preventDefault, the lang-dropdown / lang-option additions (cleanup + two AMOLED CSS spots) and restore langSelect.onchange to the original inline body
+// (saveTranslationLang(langSelect.value), log, removeTranslatedLyrics(), lastTranslatedLang = null).
 
 // RESOLVED (17.73): NATIVE PIP DID NOT REDRAW WHEN FONT SIZE, TRANSLATION, TRANSLITERATION OR CHINESE CONVERSION CHANGED WHILE IT WAS OPEN
 // Cause: maybePushNativePipFrame() only compared the lyrics array, the rendered line index, the unsynced length, the status message and the theme, so a change that alters what
@@ -6599,6 +6608,8 @@ const Providers = {
       if (orphanedDownloadDropdown) orphanedDownloadDropdown.remove();
       const orphanedFontSizeDropdown = document.getElementById("lyrics-plus-font-size-dropdown");
       if (orphanedFontSizeDropdown) orphanedFontSizeDropdown.remove();
+      const orphanedLangDropdown = document.getElementById("lyrics-plus-lang-dropdown");
+      if (orphanedLangDropdown) orphanedLangDropdown.remove();
 
       existing.remove();
       DEBUG.debug('Cleanup', 'Popup element and all observers removed from DOM');
@@ -6953,11 +6964,114 @@ const Providers = {
     langSelect.style.fontWeight = '400';
     langSelect.style.boxSizing = 'border-box';
     console.info("✅ [Lyrics+ UI] Translation language dropdown created, current language:", getSavedTranslationLang());
-    langSelect.onchange = () => {
-      saveTranslationLang(langSelect.value);
-      console.info("📝 [Lyrics+ UI] Translation language changed to:", langSelect.value);
+    langSelect.id = "lyrics-plus-lang-select";
+    const setTranslationLang = (code) => {
+      saveTranslationLang(code);
+      console.info("📝 [Lyrics+ UI] Translation language changed to:", code);
       removeTranslatedLyrics();
       lastTranslatedLang = null;
+    };
+    // Keyboard changes on the focused (closed) select still go through the native change event.
+    langSelect.onchange = () => setTranslationLang(langSelect.value);
+
+    // Same approach as the font size picker (17.69): the native <select> popup is drawn by the
+    // WebView/OS (white) and ignores page theming, so block it and open a themed body-level div
+    // dropdown instead. Body-level + fixed so it escapes any overflow clipping of the popup.
+    langSelect.addEventListener("mousedown", (e) => e.preventDefault());
+
+    const langDropdown = document.createElement("div");
+    langDropdown.id = "lyrics-plus-lang-dropdown";
+    Object.assign(langDropdown.style, {
+      position: "fixed",
+      top: "0",
+      left: "0",
+      minWidth: "120px",
+      backgroundColor: "#121212",
+      border: "1px solid #444",
+      borderRadius: "8px",
+      boxShadow: "0 2px 12px #0009",
+      zIndex: 100001,
+      display: "none",
+      flexDirection: "column",
+      padding: "4px 4px",
+      overflowY: "auto",
+    });
+    langDropdown.tabIndex = -1;
+
+    let langHideHandler = null;
+    const removeLangHideHandler = () => {
+      if (langHideHandler) {
+        document.removeEventListener("mousedown", langHideHandler, { capture: true });
+        document.removeEventListener("contextmenu", langHideHandler, { capture: true });
+        langHideHandler = null;
+      }
+    };
+
+    const langOptionBtns = [];
+    for (const [code, name] of Object.entries(TRANSLATION_LANGUAGES)) {
+      const opt = document.createElement("button");
+      opt.className = "lyrics-plus-lang-option";
+      opt.dataset.code = code;
+      opt.textContent = name;
+      Object.assign(opt.style, {
+        background: "#121212",
+        color: "#fff",
+        border: "none",
+        padding: "8px 10px",
+        cursor: "pointer",
+        textAlign: "left",
+        fontSize: "14px",
+        borderRadius: "5px",
+        flexShrink: "0",
+        whiteSpace: "nowrap",
+      });
+      opt.onmouseenter = () => { opt.style.background = "#333"; };
+      opt.onmouseleave = () => { opt.style.background = "#121212"; };
+      opt.onclick = () => {
+        langSelect.value = code;
+        langDropdown.style.display = "none";
+        removeLangHideHandler();
+        setTranslationLang(code);
+      };
+      langDropdown.appendChild(opt);
+      langOptionBtns.push(opt);
+    }
+    document.body.appendChild(langDropdown);
+
+    langSelect.onclick = () => {
+      if (langDropdown.style.display === "flex") {
+        langDropdown.style.display = "none";
+        removeLangHideHandler();
+        return;
+      }
+      const btnRect = langSelect.getBoundingClientRect();
+      const top = btnRect.bottom + 4;
+      langDropdown.style.top = top + "px";
+      langDropdown.style.left = btnRect.left + "px";
+      langDropdown.style.minWidth = btnRect.width + "px";
+      langDropdown.style.maxHeight = Math.max(120, window.innerHeight - top - 8) + "px";
+      // Highlight the saved language (green) and scroll it into view.
+      let selectedBtn = null;
+      langOptionBtns.forEach(b => {
+        const isSel = b.dataset.code === langSelect.value;
+        b.style.color = isSel ? "#1ed760" : "#fff";
+        b.style.fontWeight = isSel ? "700" : "400";
+        if (isSel) selectedBtn = b;
+      });
+      langDropdown.style.display = "flex";
+      if (selectedBtn) selectedBtn.scrollIntoView({ block: "center" });
+      setTimeout(() => {
+        removeLangHideHandler();
+        const hide = (ev) => {
+          if (!langDropdown.contains(ev.target) && !langSelect.contains(ev.target)) {
+            langDropdown.style.display = "none";
+            removeLangHideHandler();
+          }
+        };
+        langHideHandler = hide;
+        document.addEventListener("mousedown", hide, { capture: true });
+        document.addEventListener("contextmenu", hide, { capture: true });
+      }, 1);
     };
 
     // Translate button
@@ -8869,6 +8983,8 @@ popup._headerWheelHandler = onHeaderWheel;
       .lyrics-plus-amoled-theme #lyrics-plus-download-dropdown,
       .lyrics-plus-amoled-theme #lyrics-plus-font-size-dropdown,
       .lyrics-plus-amoled-theme .lyrics-plus-font-size-option,
+      .lyrics-plus-amoled-theme #lyrics-plus-lang-dropdown,
+      .lyrics-plus-amoled-theme .lyrics-plus-lang-option,
       .lyrics-plus-amoled-theme #lyrics-plus-download-sync,
       .lyrics-plus-amoled-theme #lyrics-plus-download-unsync {
         background: #000 !important;
@@ -8884,7 +9000,8 @@ popup._headerWheelHandler = onHeaderWheel;
       /* Hover states for AMOLED theme */
       .lyrics-plus-amoled-theme #lyrics-plus-download-sync:hover,
       .lyrics-plus-amoled-theme #lyrics-plus-download-unsync:hover,
-      .lyrics-plus-amoled-theme .lyrics-plus-font-size-option:hover {
+      .lyrics-plus-amoled-theme .lyrics-plus-font-size-option:hover,
+      .lyrics-plus-amoled-theme .lyrics-plus-lang-option:hover {
         background: #1a1a1a !important;
       }
     `;
