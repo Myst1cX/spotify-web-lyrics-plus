@@ -90,12 +90,12 @@ _Applies to script version **17.74**._
 > "This video is playing in Picture-in-Picture mode". The lyrics appear in the floating PiP window that just opened.  
 > When the floating PiP window is closed or the button is toggled off, the original lyrics container is restored.   
 > On browsers that don't support the native PIP view, an unsupported placeholder message is displayed instead: "Picture-in-Picture mode isn't available in this browser".   
-> Inside the Spotifuck Spotify Web app the PiP button opens Android's own Picture-in-Picture window instead, showing the same lyrics canvas (themed to match the popup, including translation, transliteration and status messages).  
+> Inside the Spotify Web app the PiP button opens Android's own Picture-in-Picture window instead, showing the same lyrics canvas (themed to match the popup, including translation, transliteration and status messages).  
 > While the PiP window is open it redraws immediately when you change the font size, translation, transliteration or Chinese conversion.  
 > Before the first lyric line (an intro, a new song, or after seeking back to the start), the first two lines are shown in gray instead of a blank window, in both native and browser PiP.   
 
 > **SPOTIFY WEB APP INTEGRATION (`window.AndBridge`)**  
-> The same script runs inside the Spotifuck Spotify Web Android app's WebView and detects it by the presence of `window.AndBridge`, an object that only exists there (never in a normal browser or userscript manager). Every bridge method is feature-detected, so an older app just falls back to the browser behavior. What the script and the app do together:  
+> The same script runs inside the Spotify Web app's WebView and detects it by the presence of `window.AndBridge`, an object that only exists there (never in a normal browser or userscript manager). Every bridge method is feature-detected, so an older app just falls back to the browser behavior. What the script and the app do together:  
 > - **Download:** `AndBridge.saveTextFile` hands the lyrics file to the app's save popup (app 1.58+). A browser WebView can't save blob downloads, so without it the buttons would do nothing.  
 > - **Native PiP:** the PiP button calls `AndBridge.enterPip` (with the AMOLED flag, so the floating window matches the popup theme) and then pushes the drawn lyrics canvas as image frames through `AndBridge.updatePipFrame`, only when something visible changed. The app calls back `window.onNativePipOpened` (app 1.73+) once the native window exists so the current line appears at once, and `window.onNativePipClosed` when Android closes it.  
 > - **Musixmatch token:** tapping the Musixmatch link in the token window calls `AndBridge.openMusixmatchLogin` (app 1.65+), so the app opens its own login screen in a separate WebView instead of loading musixmatch.com over Spotify (which would stop playback). Right after sign-in the app calls back `window.__lpSetMusixmatchToken(token)`, which saves the token, fills the field and reloads the lyrics.  
@@ -202,7 +202,7 @@ Click on "Original" to remove the translated lines.
 ## Retrieve your Musixmatch user token
 
 > Double-click the Musixmatch provider tab to open the token window. It fits phone screens, keeps the token field and Save/Cancel pinned at the bottom, folds the instructions away once a token is saved, and only focuses the field automatically on desktop.  
-> **Inside the Spotifuck Spotify Web app (app 1.65+): no copying needed.** Tap the Musixmatch link in that window and sign in on the screen that opens (your song keeps playing). The app reads your token right after you sign in, fills the field and closes that screen by itself.  
+> **Inside the Spotify Web app (app 1.65+): no copying needed.** Tap the Musixmatch link in that window and sign in on the screen that opens (your song keeps playing). The app reads your token right after you sign in, fills the field and closes that screen by itself.  
 > **Otherwise, get it manually:**
 
 > 1. Go to [Musixmatch](https://www.musixmatch.com/) and click on the Login button at the top of the screen.  
@@ -217,7 +217,7 @@ Click on "Original" to remove the translated lines.
 
 ## Retrieve your Spotify user token (manual fallback)
 
-> **You normally don't need this.** The script asks the Spotify Web Player itself for its current token, so it is always fresh and never expires hourly or on reload. The token is also saved for you, so the field in the token window (double-click the Spotify provider tab) is already filled. In the Spotifuck Spotify Web app it is read when the Spotify lyrics load.  
+> **You normally don't need this.** The script asks the Spotify Web Player itself for its current token, so it is always fresh and never expires hourly or on reload. The token is also saved for you, so the field in the token window (double-click the Spotify provider tab) is already filled. In the Spotify Web app it is read when the Spotify lyrics load.  
 > Only if the Spotify tab says it couldn't read your token automatically (not logged in, Spotify changed something internally, or your userscript manager runs the script in an isolated context that can't see the page) copy one by hand as below. Manual tokens expire every hour and on page reload.  
 
 > 1. Go to [Spotify Web Player](https://open.spotify.com/) and login. Play a song.  
