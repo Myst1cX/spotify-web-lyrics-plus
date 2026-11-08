@@ -22,10 +22,11 @@
 // Same issue as 17.69, on the language <select> under the translation toggle (the translate icon in the header): its opened list is drawn by the WebView, not the page, so the theme never applied.
 // Fix: same approach as 17.69. The native popup is blocked (mousedown preventDefault) and a body-level div dropdown #lyrics-plus-lang-dropdown opens instead, built like the font size dropdown
 // and included in the AMOLED CSS (two spots) and the popup cleanup. Same language list (TRANSLATION_LANGUAGES), same lyricsPlusTranslationLang key.
-// The closed <select> is unchanged (same look and size). The list is centered in the window like the native picker was, 180px wide, short (max height 260px or 60% of the window, whichever is smaller) and scrolls (70+ languages)
+// The closed <select> is unchanged (same look and size). The list opens directly below the select (left-aligned, as wide as the select, like the font size picker), is capped at 260px (about 7 rows, less if the window is short) and scrolls (70+ languages)
 // with a thin 4px scrollbar (::-webkit-scrollbar, scrollbar-width: thin only where webkit scrollbars are unsupported). It opens with the saved language highlighted green and scrolled into view.
 // The select's onchange logic moved into setTranslationLang(code), called by the option buttons and kept on the select's onchange for keyboard changes. Behavior is the same as before: save the language, remove the translated lines, reset lastTranslatedLang.
-// Undo: remove the mousedown preventDefault, the lang-dropdown / lang-option additions (cleanup + two AMOLED CSS spots + the thin scrollbar rules) and restore langSelect.onchange to the original inline body
+// The 17.69 font size dropdown is otherwise unchanged; it only gets the same thin scrollbar (landscape showed the default fat one).
+// Undo: remove the mousedown preventDefault, the lang-dropdown / lang-option additions (cleanup + two AMOLED CSS spots + the thin scrollbar rules, font size selectors included) and restore langSelect.onchange to the original inline body
 // (saveTranslationLang(langSelect.value), log, removeTranslatedLyrics(), lastTranslatedLang = null).
 
 // RESOLVED (17.73): NATIVE PIP DID NOT REDRAW WHEN FONT SIZE, TRANSLATION, TRANSLITERATION OR CHINESE CONVERSION CHANGED WHILE IT WAS OPEN
@@ -6984,13 +6985,9 @@ const Providers = {
     langDropdown.id = "lyrics-plus-lang-dropdown";
     Object.assign(langDropdown.style, {
       position: "fixed",
-      // Centered in the window like the native picker was (not anchored under the select).
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      width: "180px",
-      maxWidth: "80vw",
-      boxSizing: "border-box",
+      top: "0",
+      left: "0",
+      minWidth: "120px",
       backgroundColor: "#121212",
       border: "1px solid #444",
       borderRadius: "8px",
@@ -7049,8 +7046,14 @@ const Providers = {
         removeLangHideHandler();
         return;
       }
-      // Short list (scrolls): about 6-7 rows, never more than 60% of the window height.
-      langDropdown.style.maxHeight = Math.min(260, Math.round(window.innerHeight * 0.6)) + "px";
+      // Same placement as the font size picker: directly below the select, left-aligned, as wide as the select.
+      const btnRect = langSelect.getBoundingClientRect();
+      const top = btnRect.bottom + 4;
+      langDropdown.style.top = top + "px";
+      langDropdown.style.left = btnRect.left + "px";
+      langDropdown.style.minWidth = btnRect.width + "px";
+      // Capped at 260px (about 7 rows) so it never runs to the bottom of the window; scrolls beyond that.
+      langDropdown.style.maxHeight = Math.min(260, Math.max(120, window.innerHeight - top - 8)) + "px";
       // Highlight the saved language (green) and scroll it into view.
       let selectedBtn = null;
       langOptionBtns.forEach(b => {
@@ -9006,12 +9009,16 @@ popup._headerWheelHandler = onHeaderWheel;
         background: #1a1a1a !important;
       }
 
-      /* Thin scrollbar for the translation language dropdown */
-      #lyrics-plus-lang-dropdown::-webkit-scrollbar { width: 4px; }
-      #lyrics-plus-lang-dropdown::-webkit-scrollbar-track { background: transparent; }
-      #lyrics-plus-lang-dropdown::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
+      /* Thin scrollbar for the translation language and font size dropdowns */
+      #lyrics-plus-lang-dropdown::-webkit-scrollbar,
+      #lyrics-plus-font-size-dropdown::-webkit-scrollbar { width: 4px; }
+      #lyrics-plus-lang-dropdown::-webkit-scrollbar-track,
+      #lyrics-plus-font-size-dropdown::-webkit-scrollbar-track { background: transparent; }
+      #lyrics-plus-lang-dropdown::-webkit-scrollbar-thumb,
+      #lyrics-plus-font-size-dropdown::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
       @supports not selector(::-webkit-scrollbar) {
-        #lyrics-plus-lang-dropdown { scrollbar-width: thin; scrollbar-color: #555 transparent; }
+        #lyrics-plus-lang-dropdown,
+        #lyrics-plus-font-size-dropdown { scrollbar-width: thin; scrollbar-color: #555 transparent; }
       }
     `;
     document.head.appendChild(checkboxStyle);
