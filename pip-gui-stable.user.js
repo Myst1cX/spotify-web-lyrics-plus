@@ -25,8 +25,8 @@
 // The closed <select> is unchanged (same look and size). The list opens directly below the select (left-aligned, as wide as the select, like the font size picker), is capped at 260px (about 7 rows, less if the window is short) and scrolls (70+ languages)
 // with a thin 4px scrollbar (::-webkit-scrollbar, scrollbar-width: thin only where webkit scrollbars are unsupported). It opens with the saved language highlighted green and scrolled into view.
 // The select's onchange logic moved into setTranslationLang(code), called by the option buttons and kept on the select's onchange for keyboard changes. Behavior is the same as before: save the language, remove the translated lines, reset lastTranslatedLang.
-// The 17.69 font size dropdown is otherwise unchanged; it only gets the same thin scrollbar (landscape showed the default fat one).
-// Undo: remove the mousedown preventDefault, the lang-dropdown / lang-option additions (cleanup + two AMOLED CSS spots + the thin scrollbar rules, font size selectors included) and restore langSelect.onchange to the original inline body
+// The 17.69 font size dropdown is otherwise unchanged; it only gets the same thin scrollbar (landscape showed the default fat one) and the same green highlight on the current size (scrolled into view when the list scrolls).
+// Undo: remove the mousedown preventDefault, the lang-dropdown / lang-option additions (cleanup + two AMOLED CSS spots + the thin scrollbar rules, font size selectors included; in the font size onclick, the selectedSizeBtn block) and restore langSelect.onchange to the original inline body
 // (saveTranslationLang(langSelect.value), log, removeTranslatedLyrics(), lastTranslatedLang = null).
 
 // RESOLVED (17.73): NATIVE PIP DID NOT REDRAW WHEN FONT SIZE, TRANSLATION, TRANSLITERATION OR CHINESE CONVERSION CHANGED WHILE IT WAS OPEN
@@ -7558,7 +7558,16 @@ const Providers = {
       fontSizeDropdown.style.top = top + "px";
       fontSizeDropdown.style.left = btnRect.left + "px";
       fontSizeDropdown.style.maxHeight = (window.innerHeight - top - 8) + "px";
+      // 17.74: highlight the current size (green, bold) like the language picker.
+      let selectedSizeBtn = null;
+      fontSizeDropdown.querySelectorAll(".lyrics-plus-font-size-option").forEach(b => {
+        const isSel = b.textContent === currentFontSize + "px";
+        b.style.color = isSel ? "#1ed760" : "#fff";
+        b.style.fontWeight = isSel ? "700" : "400";
+        if (isSel) selectedSizeBtn = b;
+      });
       fontSizeDropdown.style.display = "flex";
+      if (selectedSizeBtn) selectedSizeBtn.scrollIntoView({ block: "center" });
       setTimeout(() => {
         removeFontSizeHideHandler();
         const hide = (ev) => {
